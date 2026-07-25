@@ -31,8 +31,8 @@ else
             <h2>@L["Language"]</h2>
             <div class="settings-row">
                 <select class="settings-input" style="max-width:200px" value="@L.Lang" @onchange="OnLangChanged">
-                    <option value="fr">@L["LangFr"]</option>
                     <option value="en">@L["LangEn"]</option>
+                    <option value="fr">@L["LangFr"]</option>
                 </select>
             </div>
         </section>
@@ -393,7 +393,7 @@ else
     }
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
-    private void OnLangChanged(ChangeEventArgs e) => AppSettings.Language = (string?)e.Value ?? "fr";
+    private void OnLangChanged(ChangeEventArgs e) => AppSettings.Language = (string?)e.Value ?? "en";
     public void Dispose() => L.OnLanguageChanged -= OnLanguageChanged;
 
     private async Task ReloadAllAsync()

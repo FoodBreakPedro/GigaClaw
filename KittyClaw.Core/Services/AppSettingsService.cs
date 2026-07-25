@@ -105,7 +105,7 @@ public class AppSettingsService
 
     private class AppSettingsData
     {
-        public string Language { get; set; } = "fr";
+        public string Language { get; set; } = "en";
         public bool OnboardingSeen { get; set; } = false;
         public string? UpdateDismissedVersion { get; set; }
         public DateTime? UpdateCheckLastRun { get; set; }
