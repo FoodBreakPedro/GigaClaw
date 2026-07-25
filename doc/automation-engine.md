@@ -15,6 +15,7 @@ Background service that watches each project for events and dispatches agents in
 - `KittyClaw.Core/Automation/Triggers/` — trigger implementations.
 - `KittyClaw.Core/Automation/GitRepositoryWatcher.cs` — backs the `gitCommit` trigger.
 - `KittyClaw.Core/Automation/RunConcurrencyGate.cs` — serializes runs sharing a `concurrencyGroup`.
+- `KittyClaw.Core/Automation/ConcurrencyLockReaper.cs` — background service polling every 30s; force-stops any `runAgent` run that has been idle past its `RunAgentActionSpec.LockTimeoutMinutes` (opt-in per-automation). Idleness is measured via `AgentRun.LastActivityAt` (heartbeat updated on every streamed event). Prevents a hung subprocess from holding a `concurrencyGroup` lock forever and starving later dispatches.
 - `KittyClaw.Core/Automation/TriggerStateStore.cs` — persists each interval/cron automation's next scheduled fire time (`NextRunAt`) in the per-project SQLite DB (`automation_trigger_state` table). Computed once at registration and saved immediately (not recomputed from "now" on every tick), so a restart that straddles the scheduled moment still fires on time; a missed occurrence catches up with a single immediate fire on the next tick.
 
 ## Model

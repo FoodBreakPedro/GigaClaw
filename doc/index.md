@@ -10,6 +10,7 @@ For a high-level overview see the root [README.md](../README.md). For repo layou
 
 - [Onboarding](./onboarding.md) — step-by-step guide for first-time users: create a project, move tickets, and use agents.
 - [Automation engine](./automation-engine.md) — triggers, conditions, and actions that dispatch agents.
+- [Ticket scheduling](./ticket-scheduling.md) — park tickets with a future fire time; `ScheduledPromotionService` auto-promotes them when due.
 - [Agent dispatch](./agent-dispatch.md) — running the `claude` CLI as a subprocess and streaming its output.
 - [Project template](./project-template.md) — embedded `ProjectTemplate/` files copied into each workspace on Initialize.
 - [REST API](./rest-api.md) — OpenAPI-driven endpoints under `/api`, with auto-generated Markdown docs.
