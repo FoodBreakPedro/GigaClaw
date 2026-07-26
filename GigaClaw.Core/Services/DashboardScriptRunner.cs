@@ -52,7 +52,8 @@ public sealed class DashboardScriptRunner
                 args = $"\"{scriptPath}\"";
                 break;
             case ".py":
-                interpreter = "python";
+                // Windows ships `python` (python3 is often a Store stub); macOS/Linux ship `python3`.
+                interpreter = OperatingSystem.IsWindows() ? "python" : "python3";
                 args = $"\"{scriptPath}\"";
                 break;
             default:

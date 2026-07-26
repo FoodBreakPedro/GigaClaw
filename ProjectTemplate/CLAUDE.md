@@ -5,7 +5,9 @@ This workspace is orchestrated by the **GigaClaw** app (a kanban that dispatches
 ## GigaClaw API
 
 The full and up-to-date API documentation is available at:
-http://localhost:5230/api/docs
+`${GIGACLAW_API_URL}/api/docs`
+
+(`GIGACLAW_API_URL` is injected into every agent run by the orchestrator — never hardcode a host or port; the default install serves on `http://localhost:5230`, but test instances use other ports.)
 
 Consult it before interacting with the API. All ticket, comment, column, member, automation and run endpoints live there.
 

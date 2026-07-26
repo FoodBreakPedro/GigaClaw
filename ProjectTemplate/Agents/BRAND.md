@@ -4,9 +4,14 @@ This file defines the shared brand context, target audience, value proposition, 
 
 ## Core Brand Identity
 
-- **Brand Name**: GigaClaw Content Studio
+> Fill in the placeholders below when setting up your project — content agents read this file verbatim.
+
+- **Brand Name**: `<Your Brand>`
 - **Mission**: Produce high-value, evidence-backed, search-optimized, and AI-citable content that answers reader queries cleanly and accurately.
 - **Target Audience**: Technical builders, software engineers, product managers, and digital creators.
+- **Canonical domain**: `<https://example.com>` (blog-writer uses this for canonical URLs; flag if unset)
+- **Target locales**: `<none>` (e.g. `es, de, fr` — blog-translator blocks when no locales are specified here or on the ticket)
+- **Default niche**: `<your niche>` (e.g. `ai`, `marketing` — trend-researcher's fallback when a ticket names none; see `NICHE_SUBREDDIT_MAP` in `.agents/scripts/reddit_trends.py` for mapped values)
 
 ## Key Content Pillars
 

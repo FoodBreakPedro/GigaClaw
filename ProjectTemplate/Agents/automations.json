@@ -20,9 +20,6 @@
             "producer",
             "qa-tester",
             "groomer",
-            "committer",
-            "code-janitor",
-            "evaluator",
             "blog-writer",
             "blog-reviewer",
             "blog-researcher",
@@ -97,7 +94,7 @@
         {
           "type": "runAgent",
           "agent": "groomer",
-          "maxTurns": 100,
+          "maxTurns": 30,
           "concurrencyGroup": "groomer",
           "mutuallyExclusiveWith": [],
           "env": {},
@@ -133,7 +130,7 @@
           "mutuallyExclusiveWith": [],
           "env": {},
           "model": "claude-sonnet-4-6",
-          "restoreStatusOnFail": true
+          "restoreStatusOnFail": false
         },
         {
           "type": "consolidateAgentMemory",
@@ -201,7 +198,7 @@
           "concurrencyGroup": "evaluator",
           "mutuallyExclusiveWith": [],
           "env": {},
-          "model": "claude-sonnet-4-6",
+          "model": "claude-haiku-4-5",
           "restoreStatusOnFail": true
         },
         {
@@ -227,12 +224,12 @@
         {
           "type": "runAgent",
           "agent": "code-janitor",
-          "maxTurns": 150,
-          "concurrencyGroup": "code-janitor",
+          "maxTurns": 80,
+          "concurrencyGroup": "git",
           "mutuallyExclusiveWith": [],
           "env": {},
-          "model": "claude-haiku-4-5",
-          "restoreStatusOnFail": true
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
         },
         {
           "type": "consolidateAgentMemory",
@@ -269,7 +266,7 @@
         },
         {
           "type": "addComment",
-          "content": "Tous les sous-tickets sont en Done. Parent deplace en Review automatiquement.",
+          "content": "All sub-tickets are Done. Parent moved to Review automatically.",
           "author": "system"
         }
       ]
@@ -291,12 +288,8 @@
           "type": "assignedTo",
           "slugs": [
             "programmer",
-            "producer",
             "qa-tester",
             "groomer",
-            "committer",
-            "code-janitor",
-            "evaluator",
             "blog-writer",
             "blog-reviewer",
             "blog-researcher",
@@ -407,7 +400,10 @@
         "type": "gitCommit",
         "pollSeconds": 60,
         "ignoreAuthors": [
-          "documentalist@gigaclaw.local"
+          "documentalist@gigaclaw.local",
+          "code-janitor@gigaclaw.local",
+          "memory@gigaclaw.local",
+          "noreply@anthropic.com"
         ]
       },
       "conditions": [],
@@ -416,11 +412,12 @@
           "type": "runAgent",
           "agent": "documentalist",
           "maxTurns": 100,
-          "concurrencyGroup": "documentalist",
+          "concurrencyGroup": "git",
           "mutuallyExclusiveWith": [],
           "env": {},
           "model": "claude-sonnet-4-6",
-          "restoreStatusOnFail": true
+          "restoreStatusOnFail": false,
+          "context": "No commit range is provided in this prompt. Derive it yourself: run `git log --format='%H %ae %s' -n 20` and process the commits since your last own commit (author documentalist@gigaclaw.local). If you cannot find one, process only HEAD."
         },
         {
           "type": "consolidateAgentMemory",
@@ -451,9 +448,6 @@
             "producer",
             "qa-tester",
             "groomer",
-            "committer",
-            "code-janitor",
-            "evaluator",
             "blog-writer",
             "blog-reviewer",
             "blog-researcher",
@@ -542,7 +536,244 @@
           "agent": "blog-reviewer"
         }
       ]
+    },
+    {
+      "id": "ui-audit-on-review",
+      "name": "UI Auditor: anti-slop audit when a ui-designer ticket reaches Review",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Review"
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "ui-auditor",
+          "maxTurns": 100,
+          "concurrencyGroup": "ui-auditor",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "ui-auditor"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "ui-auditor"
+        }
+      ]
+    },
+    {
+      "id": "growth-approval-on-review",
+      "name": "Approval gate: externally-bound growth content reaching Review",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Review"
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "growth-writer",
+            "lead-magnet-creator",
+            "email-copywriter"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "approval-gatekeeper",
+          "maxTurns": 60,
+          "concurrencyGroup": "approval-gatekeeper",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "approval-gatekeeper"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "approval-gatekeeper"
+        }
+      ]
+    },
+    {
+      "id": "approval-gate-on-review",
+      "name": "Approval gate: labeled external/publish/deploy tickets reaching Review",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Review"
+      },
+      "conditions": [
+        {
+          "type": "labels",
+          "labels": [
+            "external",
+            "publish",
+            "deploy",
+            "outbound"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "approval-gatekeeper",
+          "maxTurns": 60,
+          "concurrencyGroup": "approval-gatekeeper",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "approval-gatekeeper"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "approval-gatekeeper"
+        }
+      ]
+    },
+    {
+      "id": "system-watchdog-hourly",
+      "name": "System Watchdog: hourly ticketless health probe",
+      "enabled": true,
+      "trigger": {
+        "type": "interval",
+        "cron": "0 * * * *"
+      },
+      "conditions": [],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "system-watchdog",
+          "maxTurns": 40,
+          "concurrencyGroup": "system-watchdog",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-haiku-4-5",
+          "restoreStatusOnFail": true
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "system-watchdog"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "system-watchdog"
+        }
+      ]
+    },
+    {
+      "id": "trend-brief-weekly",
+      "name": "Trend Researcher: weekly trend brief ticket every Monday",
+      "enabled": true,
+      "trigger": {
+        "type": "interval",
+        "cron": "0 8 * * MON"
+      },
+      "conditions": [],
+      "actions": [
+        {
+          "type": "createTicket",
+          "title": "Weekly trend brief {monday}",
+          "description": "Run the trend research pass for the week starting {monday}. Niche: use the ticket's niche if the owner edits one in; otherwise fall back to the 'Default niche' field in .agents/BRAND.md. Write the brief to content/research/ and follow your skill's hand-off rules.",
+          "status": "Todo",
+          "assignedTo": "trend-researcher",
+          "priority": "NiceToHave",
+          "createdBy": "automation",
+          "skipIfExists": true
+        }
+      ]
+    },
+    {
+      "id": "decision-receipt-on-done",
+      "name": "Decision Engine: ADR receipt when a decision-labeled ticket closes",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Done"
+      },
+      "conditions": [
+        {
+          "type": "labels",
+          "labels": [
+            "decision",
+            "adr"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "decision-engine",
+          "maxTurns": 40,
+          "concurrencyGroup": "decision-engine",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "decision-engine"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "decision-engine"
+        }
+      ]
+    },
+    {
+      "id": "stale-blocked-nudge",
+      "name": "Nudge: ping the owner about tickets stuck in Blocked",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketInColumn",
+        "seconds": 3600,
+        "columns": [
+          "Blocked"
+        ],
+        "debounceSeconds": 86400
+      },
+      "conditions": [
+        {
+          "type": "ticketAge",
+          "field": "updatedAt",
+          "mode": "olderThan",
+          "hours": 72
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "system",
+          "content": "This ticket has been Blocked for 3+ days. @owner - unblock, re-scope, or close?"
+        }
+      ]
     }
   ]
 }
-

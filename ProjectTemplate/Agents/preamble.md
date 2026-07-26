@@ -37,6 +37,18 @@ curl -s "$api/api/projects/{project-slug}/tickets/{id}"
 
 **Always check the HTTP status of write calls** (`POST`, `PATCH`, `PUT`, `DELETE`). `curl -s` swallows errors silently — a 4xx/5xx looks identical to success. Use `-w "\n%{http_code}"` (or `--fail-with-body`) and verify the code is 2xx before relying on the result. If a write fails, do not act as if it succeeded.
 
+## Board discipline — end of turn
+
+If your run is tied to a ticket sitting in `InProgress`, you MUST move it out of `InProgress` before your turn ends — your SKILL says where (typically `Review` when delivered, `Todo` reassigned to `owner` when unclear, `Blocked` when stuck). A ticket left in `InProgress` re-dispatches you every ~30 s at a large turn budget, burning tokens doing nothing. If your SKILL gives no specific rule: `Review` on success, `Blocked` with an explanatory comment otherwise.
+
+Every board write (comment `POST`, status or ticket `PATCH`) requires an `"author"` field set to your agent slug. Never author anything as `"owner"` — owner-authored comments re-dispatch assignees via the `owner-feedback` automation.
+
+(Exception: memory-consolidation passes never touch the board or the API — when this section conflicts with consolidation instructions, the consolidation instructions win.)
+
+## Helper scripts
+
+Invoke bundled Python helpers as `python3 .agents/scripts/<tool>.py <args>`. If `python3` is not on PATH (common on Windows), use `python` or `py -3` instead.
+
 ## Cross-platform paths
 
 Never use `/tmp` or other Linux-only filesystem paths — they do not exist on Windows. If you need a scratch file (patch, JSON body, …), write it in the current workspace (e.g. `body.json`, `full.patch`) and delete it once you are done.

@@ -11,7 +11,20 @@ Audits:
 import sys
 import re
 
+def strip_non_prose(text):
+    """Drop frontmatter, fenced code, embedded scripts, and table rows so
+    paragraph metrics reflect the prose only."""
+    text = re.sub(r'\A---\n.*?\n---\n', '', text, flags=re.DOTALL)
+    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+    text = re.sub(r'<script\b.*?</script>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    # Drop table rows and list items: a bullet list is not a fatigue paragraph.
+    lines = [ln for ln in text.splitlines()
+             if not ln.lstrip().startswith('|')
+             and not re.match(r'^\s*(?:[-*+]|\d{1,3}\.)\s+', ln)]
+    return '\n'.join(lines)
+
 def analyze_cognitive_load(text):
+    text = strip_non_prose(text)
     paragraphs = [p.strip() for p in text.split('\n\n') if p.strip() and not p.strip().startswith('#')]
     
     total_paragraphs = len(paragraphs)
@@ -49,6 +62,9 @@ def main():
         
     res = analyze_cognitive_load(content)
     print("=== COGNITIVE LOAD REPORT ===")
+    if res['total_paragraphs'] == 0:
+        print("No prose paragraphs found — nothing to analyze.")
+        sys.exit(0)
     print(f"Total Paragraphs: {res['total_paragraphs']}")
     print(f"Reading Fatigue Risk Paragraphs: {res['fatigue_paragraphs']}")
     

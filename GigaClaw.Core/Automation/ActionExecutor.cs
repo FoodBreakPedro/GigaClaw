@@ -869,7 +869,9 @@ internal sealed class ActionExecutor
 
                 var ticketSuffix = firing?.TicketId is int tid ? $" (#{tid})" : "";
                 var msg = $"chore(memory): {agent}{ticketSuffix}";
-                var commit = await RunGitAsync(gitCwd, $"commit --no-verify -m \"{msg}\" -- {pathArgs}");
+                // Dedicated identity so gitCommit-triggered automations (documentalist) can filter
+                // memory commits via ignoreAuthors instead of relying on the ambient git identity.
+                var commit = await RunGitAsync(gitCwd, $"-c user.name=\"GigaClaw Memory\" -c user.email=\"memory@gigaclaw.local\" commit --no-verify -m \"{msg}\" -- {pathArgs}");
                 if (commit.exitCode != 0)
                 {
                     _logger.LogWarning("commitAgentMemory: git commit failed for {Agent}: {Err}", agent, commit.stderr);
