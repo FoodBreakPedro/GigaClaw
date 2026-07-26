@@ -1,6 +1,6 @@
 # Architecture documentation
 
-This folder documents how KittyClaw is structured, one file per feature.
+This folder documents how GigaClaw is structured, one file per feature.
 Each feature page covers its purpose, key components, entry points, and external dependencies.
 Concepts are explained in exactly one place — other pages cross-link via relative links.
 

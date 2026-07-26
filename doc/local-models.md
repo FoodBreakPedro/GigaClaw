@@ -1,6 +1,6 @@
 # Local models (Ollama)
 
-KittyClaw can dispatch agents to a local model served by Ollama instead of Anthropic's cloud API. No proxy is required: since Ollama 0.14, Ollama exposes a native Anthropic Messages API endpoint at `http://localhost:11434/v1/messages` that the `claude` CLI uses directly.
+GigaClaw can dispatch agents to a local model served by Ollama instead of Anthropic's cloud API. No proxy is required: since Ollama 0.14, Ollama exposes a native Anthropic Messages API endpoint at `http://localhost:11434/v1/messages` that the `claude` CLI uses directly.
 
 ## Prerequisites
 
@@ -12,11 +12,11 @@ KittyClaw can dispatch agents to a local model served by Ollama instead of Anthr
    ```
 3. Ollama starts automatically and listens on `http://localhost:11434`.
 
-## Configuration in KittyClaw
+## Configuration in GigaClaw
 
 1. Open **Project Settings** for your project.
 2. In the **Local model (Ollama)** section, enter the **Base URL** (e.g. `http://localhost:11434`).
-3. Click **Discover** — KittyClaw fetches the available models from Ollama's `/api/tags` endpoint.
+3. Click **Discover** — GigaClaw fetches the available models from Ollama's `/api/tags` endpoint.
 4. Select a default model from the dropdown and click **Save**.
 5. The model list is also available in the **Automation Editor** where each action can pick any discovered Ollama model.
 
@@ -55,7 +55,7 @@ If a non-Claude model is selected but no **Base URL** is configured, the dispatc
 
 ## Verifying a run
 
-After a run completes, open the run log under `%APPDATA%/KittyClaw/runs/<run-id>/`. The `launch` event in the log will show the effective model name and the injected environment variables.
+After a run completes, open the run log under `%APPDATA%/GigaClaw/runs/<run-id>/`. The `launch` event in the log will show the effective model name and the injected environment variables.
 
 ## Limitations
 

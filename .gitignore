@@ -31,7 +31,7 @@ appsettings.Development.json
 *.db
 *.db-shm
 *.db-wal
-KittyClaw.Web/data/
+GigaClaw.Web/data/
 
 # OS
 .DS_Store

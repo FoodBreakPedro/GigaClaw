@@ -168,7 +168,7 @@ git diff --cached --quiet && { echo "no doc changes to commit"; exit 0; }
 # Commit with a dedicated identity so the documentalist-on-commit trigger
 # can ignore these commits (ignoreAuthors filters by author email).
 git -c user.name="documentalist" \
-    -c user.email="documentalist@kittyclaw.local" \
+    -c user.email="documentalist@gigaclaw.local" \
     commit -m "docs: <one-line summary of what changed>
 
 <optional 1-3 line body listing the affected docs>"
@@ -179,7 +179,7 @@ Rules:
 - **Stage explicitly.** Only the doc files you touched. Never `-A`, `-a`, or wildcard outside `doc/` / known top-level docs.
 - **Don't push.** The owner controls when changes leave the local repo.
 - **Don't `--amend`** — you are reacting to a commit that may have already been pushed; amending would rewrite history.
-- **No `Co-Authored-By` trailer.** The dedicated `documentalist@kittyclaw.local` author is what keeps the trigger from looping on your own commits.
+- **No `Co-Authored-By` trailer.** The dedicated `documentalist@gigaclaw.local` author is what keeps the trigger from looping on your own commits.
 
 ## Strict rules
 

@@ -1,0 +1,75 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\*.json">
+      <LogicalName>GigaClaw.Core.Localization.%(Filename)%(Extension)</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Template files for new project initialization. Source of truth lives under
+         ProjectTemplate/Agents/ at the repo root (Agents/ without the dot to avoid the
+         workspace .gitignore that hides any `.agents/` runtime data). LogicalName prefixes
+         are kept stable so AgentsTemplateService doesn't need to know about the on-disk
+         layout — it discovers resources by prefix, not by source path. The destination at
+         Initialize time is still `<workspace>/.agents/`. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\memory-consolidation.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/memory-consolidation.md</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\preamble.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/preamble.md</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\automations.json">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/automations.json</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\**\SKILL.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/%(RecursiveDir)SKILL.md</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <!-- New per-topic memory layout: each agent ships a memory/MEMORY.md index skeleton. Topic
+         files are created at runtime by the consolidation pass, so only the index is embedded. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\**\memory\*.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <!-- Files copied to the workspace root on Initialize (e.g. CLAUDE.md). The glob excludes
+         the Agents/ subtree since those go through the AgentsTemplate prefix above. -->
+    <EmbeddedResource Include="..\ProjectTemplate\**\*.*" Exclude="..\ProjectTemplate\Agents\**\*.*">
+      <LogicalName>GigaClaw.Core.AgentsTemplateRoot/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>GigaClaw.Core.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
+    <!-- Pins the transitive SQLitePCLRaw bundle above 2.1.11 (CVE-2025-6965 / GHSA-2m69-gcr7-jv3q). -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
+    <PackageReference Include="Markdig" Version="1.1.2" />
+    <PackageReference Include="NCrontab" Version="3.3.3" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
+</Project>

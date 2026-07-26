@@ -1,17 +1,17 @@
-# KittyClaw
+# GigaClaw
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=nqDHH1T5TwA">
-    <img src="https://img.youtube.com/vi/nqDHH1T5TwA/maxresdefault.jpg" alt="KittyClaw demo" width="800" />
+    <img src="https://img.youtube.com/vi/nqDHH1T5TwA/maxresdefault.jpg" alt="GigaClaw demo" width="800" />
   </a>
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.webp" alt="KittyClaw demo" width="800" />
+  <img src="docs/assets/demo.webp" alt="GigaClaw demo" width="800" />
 </p>
 
 <p align="center">
-  <a href="https://kittyclaw.dev">kittyclaw.dev</a> · <a href="https://kittyclaw.dev/#waitlist">Get early access</a>
+  <a href="https://gigaclaw.dev">gigaclaw.dev</a> · <a href="https://gigaclaw.dev/#waitlist">Get early access</a>
 </p>
 
 A kanban board that **orchestrates agentic projects**. Each column is a workflow stage (`Backlog`, `Todo`, `InProgress`, `Blocked`, `Scheduled`, `Review`, `Done`). Each project has members that can be human owners or **LLM agents** (programmer, groomer, producer, qa-tester, committer, code-janitor, evaluator, documentalist). A background `AutomationEngine` dispatches these agents based on triggers (column changes, comments, intervals, git commits, …), running them as `claude` CLI subprocesses whose output streams into an in-app drawer.
@@ -43,7 +43,7 @@ run.bat        (Windows)
 ./run.sh       (macOS / Linux)
 ```
 
-Both wrap `dotnet watch --project KittyClaw.Web --non-interactive` and serve the app at **http://localhost:5230** with hot reload enabled.
+Both wrap `dotnet watch --project GigaClaw.Web --non-interactive` and serve the app at **http://localhost:5230** with hot reload enabled.
 
 ### Creating a project
 
@@ -55,11 +55,11 @@ From the home page, type a name and click **Create**. A popup asks you to set a 
 4. Create a member for each agent slug found in the template.
 5. Navigate to the board.
 
-The workspace folder itself is never deleted by KittyClaw, even when you delete a project.
+The workspace folder itself is never deleted by GigaClaw, even when you delete a project.
 
 ### Data Storage
 
-All KittyClaw data is stored locally in `%APPDATA%/KittyClaw/`:
+All GigaClaw data is stored locally in `%APPDATA%/GigaClaw/`:
 
 - `registry.db` — project registry
 - `projects/{slug}.db` — per-project database (tickets, comments, labels, columns, members)
@@ -73,11 +73,11 @@ Per-project agent state lives **in the workspace**: `<workspace>/.agents/{agent}
 
 | Path | Description |
 |---|---|
-| **KittyClaw.Core** | Domain models, EF Core contexts, services, automation engine, embedded project template |
-| **KittyClaw.Core.Tests** | xUnit tests (conditions, triggers, signals, JSON polymorphism) |
-| **KittyClaw.Web** | Blazor Server UI + REST API |
-| **KittyClaw.QaRunner** | Isolated test-instance launcher (Playwright + scenario runner) used by the qa-tester agent |
-| **KittyClaw.ClaudeMock** | Mock `claude` CLI used by `KittyClaw.QaRunner` for hermetic agent dispatch in tests |
+| **GigaClaw.Core** | Domain models, EF Core contexts, services, automation engine, embedded project template |
+| **GigaClaw.Core.Tests** | xUnit tests (conditions, triggers, signals, JSON polymorphism) |
+| **GigaClaw.Web** | Blazor Server UI + REST API |
+| **GigaClaw.QaRunner** | Isolated test-instance launcher (Playwright + scenario runner) used by the qa-tester agent |
+| **GigaClaw.ClaudeMock** | Mock `claude` CLI used by `GigaClaw.QaRunner` for hermetic agent dispatch in tests |
 | **ProjectTemplate/** | Source of truth for new-project initialization. Files under `Agents/` are written to `<workspace>/.agents/`; `CLAUDE.md` is written to the workspace root. |
 | **tools/** | Repo helpers (e.g. `publish-stable.ps1` to bundle Web + QaRunner + ClaudeMock for a stable channel) |
 
@@ -136,7 +136,7 @@ This app is designed to be operated by AI agents through its REST API. Here's ho
 Each project has a customizable **Dashboard** view alongside the kanban board. Tiles are free-dragged, auto-refresh on a schedule, and can be created or edited from the in-app AI chat panel — the agent writes the tile's folder for you.
 
 <p align="center">
-  <img src="docs/assets/dashboard.png" alt="KittyClaw dashboard" width="800" />
+  <img src="docs/assets/dashboard.png" alt="GigaClaw dashboard" width="800" />
 </p>
 
 ### Tile types
@@ -191,10 +191,10 @@ Tiles can be created from the dashboard's AI chat panel by describing what you w
 
 ## Telemetry
 
-KittyClaw sends **one anonymous heartbeat per day** to a self-hosted-friendly analytics service ([Umami](https://umami.is)) so we know how many instances are alive and which versions run in the wild. The payload contains exactly three fields and nothing else:
+GigaClaw sends **one anonymous heartbeat per day** to a self-hosted-friendly analytics service ([Umami](https://umami.is)) so we know how many instances are alive and which versions run in the wild. The payload contains exactly three fields and nothing else:
 
 - a random instance id (a GUID generated locally on first run — not tied to any user, machine, or project data)
-- the KittyClaw version
+- the GigaClaw version
 - the OS family (`Windows` / `macOS` / `Linux`)
 
 No ticket content, project names, hostnames, or usage details are ever sent. Failures are silent and never affect the app. Development instances never send telemetry.
@@ -203,7 +203,7 @@ No ticket content, project names, hostnames, or usage details are ever sent. Fai
 
 ## More Projects & Contact
 
-→ **Site + demo:** [kittyclaw.dev](https://kittyclaw.dev)
+→ **Site + demo:** [gigaclaw.dev](https://gigaclaw.dev)
 
 Check out my other projects at **[ekioo.com](https://ekioo.com)**.
 

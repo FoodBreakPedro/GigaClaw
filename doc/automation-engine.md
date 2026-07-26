@@ -4,19 +4,19 @@
 Background service that watches each project for events and dispatches agents in response. Drives the agentic workflow: when a ticket moves, a comment is posted, a commit lands, an interval elapses, etc., the engine evaluates configured automations and runs the matching actions.
 
 ## Key components
-- `KittyClaw.Core/Automation/AutomationEngine.cs` — top-level wiring only; delegates to `TriggerHandler` and `RunStateManager`.
-- `KittyClaw.Core/Automation/TriggerHandler.cs` — owns the tick loop (urgent drain + per-project poll).
-- `KittyClaw.Core/Automation/RunStateManager.cs` — encapsulates the 5 dispatch-gate checks (`ShouldSkipAsync`); shared by `AutomationEngine` and `ActionExecutor`.
-- `KittyClaw.Core/Automation/ActionExecutor.cs` — condition evaluation and all `Execute*Async` action implementations; delegates skip checks to `RunStateManager`. Holds `_inFlightChains` (`ConcurrentDictionary` keyed by `"{automationId}:{ticketId}"`) to serialize action chains per (automation, ticket) pair — a second firing is dropped while one is already in progress.
-- `KittyClaw.Core/Automation/ProjectRuntimeManager.cs` — per-project runtime dictionary and signal fan-out.
-- `KittyClaw.Core/Automation/ProjectRuntime.cs` — data class holding per-project run state.
-- `KittyClaw.Core/Automation/AutomationConfig.cs` — JSON-deserialized automation definitions (triggers, conditions, actions).
-- `KittyClaw.Core/Automation/AutomationStore.cs` — loads/persists `automations.json` from each workspace's `.agents/` folder.
-- `KittyClaw.Core/Automation/Triggers/` — trigger implementations.
-- `KittyClaw.Core/Automation/GitRepositoryWatcher.cs` — backs the `gitCommit` trigger.
-- `KittyClaw.Core/Automation/RunConcurrencyGate.cs` — serializes runs sharing a `concurrencyGroup`.
-- `KittyClaw.Core/Automation/ConcurrencyLockReaper.cs` — background service polling every 30s; force-stops any `runAgent` run that has been idle past its `RunAgentActionSpec.LockTimeoutMinutes` (opt-in per-automation). Idleness is measured via `AgentRun.LastActivityAt` (heartbeat updated on every streamed event). Prevents a hung subprocess from holding a `concurrencyGroup` lock forever and starving later dispatches.
-- `KittyClaw.Core/Automation/TriggerStateStore.cs` — persists each interval/cron automation's next scheduled fire time (`NextRunAt`) in the per-project SQLite DB (`automation_trigger_state` table). Computed once at registration and saved immediately (not recomputed from "now" on every tick), so a restart that straddles the scheduled moment still fires on time; a missed occurrence catches up with a single immediate fire on the next tick.
+- `GigaClaw.Core/Automation/AutomationEngine.cs` — top-level wiring only; delegates to `TriggerHandler` and `RunStateManager`.
+- `GigaClaw.Core/Automation/TriggerHandler.cs` — owns the tick loop (urgent drain + per-project poll).
+- `GigaClaw.Core/Automation/RunStateManager.cs` — encapsulates the 5 dispatch-gate checks (`ShouldSkipAsync`); shared by `AutomationEngine` and `ActionExecutor`.
+- `GigaClaw.Core/Automation/ActionExecutor.cs` — condition evaluation and all `Execute*Async` action implementations; delegates skip checks to `RunStateManager`. Holds `_inFlightChains` (`ConcurrentDictionary` keyed by `"{automationId}:{ticketId}"`) to serialize action chains per (automation, ticket) pair — a second firing is dropped while one is already in progress.
+- `GigaClaw.Core/Automation/ProjectRuntimeManager.cs` — per-project runtime dictionary and signal fan-out.
+- `GigaClaw.Core/Automation/ProjectRuntime.cs` — data class holding per-project run state.
+- `GigaClaw.Core/Automation/AutomationConfig.cs` — JSON-deserialized automation definitions (triggers, conditions, actions).
+- `GigaClaw.Core/Automation/AutomationStore.cs` — loads/persists `automations.json` from each workspace's `.agents/` folder.
+- `GigaClaw.Core/Automation/Triggers/` — trigger implementations.
+- `GigaClaw.Core/Automation/GitRepositoryWatcher.cs` — backs the `gitCommit` trigger.
+- `GigaClaw.Core/Automation/RunConcurrencyGate.cs` — serializes runs sharing a `concurrencyGroup`.
+- `GigaClaw.Core/Automation/ConcurrencyLockReaper.cs` — background service polling every 30s; force-stops any `runAgent` run that has been idle past its `RunAgentActionSpec.LockTimeoutMinutes` (opt-in per-automation). Idleness is measured via `AgentRun.LastActivityAt` (heartbeat updated on every streamed event). Prevents a hung subprocess from holding a `concurrencyGroup` lock forever and starving later dispatches.
+- `GigaClaw.Core/Automation/TriggerStateStore.cs` — persists each interval/cron automation's next scheduled fire time (`NextRunAt`) in the per-project SQLite DB (`automation_trigger_state` table). Computed once at registration and saved immediately (not recomputed from "now" on every tick), so a restart that straddles the scheduled moment still fires on time; a missed occurrence catches up with a single immediate fire on the next tick.
 
 ## Model
 - **Triggers**: `interval`, `ticketInColumn`, `statusChange`, `subTicketStatus`, `ticketCommentAdded`, `gitCommit`, `boardIdle`, `agentInactivity`.
@@ -30,7 +30,7 @@ Background service that watches each project for events and dispatches agents in
 - **Debounce stamped at chain completion**: `ITrigger.CommitFiringAsync` accepts an optional `DateTime? completedAt` parameter. `ActionExecutor` passes `DateTime.UtcNow` at the moment the entire action chain finishes (including post-run actions), so interval/cron debounce timestamps reflect chain completion time rather than emission time. Triggers that ignore `completedAt` (most non-interval ones) use their own internal timestamp unchanged.
 
 ## Entry points
-- Hosted at app startup via DI in `KittyClaw.Web/Program.cs`.
+- Hosted at app startup via DI in `GigaClaw.Web/Program.cs`.
 - Per-project configuration loaded from `<workspace>/.agents/automations.json` (seeded by the [project template](./project-template.md)).
 - Editable from the in-app **Automations** page.
 

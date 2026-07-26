@@ -1,10 +1,10 @@
 # Graphic charter
 
-Single source of truth for KittyClaw's visual language. When adding new UI, reuse
+Single source of truth for GigaClaw's visual language. When adding new UI, reuse
 existing CSS variables and component patterns rather than introducing one-off colors,
 radii, or font sizes.
 
-All variables are defined at the top of [`KittyClaw.Web/wwwroot/app.css`](../KittyClaw.Web/wwwroot/app.css).
+All variables are defined at the top of [`GigaClaw.Web/wwwroot/app.css`](../GigaClaw.Web/wwwroot/app.css).
 
 ## Palette
 

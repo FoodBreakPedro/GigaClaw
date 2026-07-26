@@ -1,2 +1,2 @@
 @echo off
-dotnet watch --project KittyClaw.Web --non-interactive
+dotnet watch --project GigaClaw.Web --non-interactive

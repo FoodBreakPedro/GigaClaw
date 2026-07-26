@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="GigaClaw.ClaudeMock/GigaClaw.ClaudeMock.csproj" />
+  <Project Path="GigaClaw.Core/GigaClaw.Core.csproj" />
+  <Project Path="GigaClaw.Core.Tests/GigaClaw.Core.Tests.csproj" />
+  <Project Path="GigaClaw.QaRunner/GigaClaw.QaRunner.csproj" />
+  <Project Path="GigaClaw.Web/GigaClaw.Web.csproj" />
+</Solution>

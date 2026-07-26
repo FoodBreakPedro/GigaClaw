@@ -19,19 +19,19 @@ All content you produce — commit messages, memory updates, agent-to-agent note
 
 Never add `Co-Authored-By`, `Generated-By`, or any AI-attribution trailer to commit messages. Clean commits only.
 
-## KittyClaw API
+## GigaClaw API
 
 The full and up-to-date API documentation is available at:
-${KITTYCLAW_API_URL}/api/docs
+${GIGACLAW_API_URL}/api/docs
 
 Consult it before interacting with the API.
 
-**Always reference the API as `${KITTYCLAW_API_URL}`** in your bash invocations — never hardcode `http://localhost:5230`. The orchestrator injects `KITTYCLAW_API_URL` to point at the *current* host instance, which may not be on the default port (e.g. when running inside an isolated test instance spawned by a QA tool).
+**Always reference the API as `${GIGACLAW_API_URL}`** in your bash invocations — never hardcode `http://localhost:5230`. The orchestrator injects `GIGACLAW_API_URL` to point at the *current* host instance, which may not be on the default port (e.g. when running inside an isolated test instance spawned by a QA tool).
 
 For convenience, define a local at the start of any block that does several calls:
 
 ```bash
-api="${KITTYCLAW_API_URL}"
+api="${GIGACLAW_API_URL}"
 curl -s "$api/api/projects/{project-slug}/tickets/{id}"
 ```
 

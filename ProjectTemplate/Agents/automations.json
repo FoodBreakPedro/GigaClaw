@@ -369,7 +369,7 @@
         "type": "gitCommit",
         "pollSeconds": 60,
         "ignoreAuthors": [
-          "documentalist@kittyclaw.local"
+          "documentalist@gigaclaw.local"
         ]
       },
       "conditions": [],

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Opt-in pattern.** The helper scripts and the automation placeholder shipped here exist so a project *can* adopt per-ticket worktrees, but `ProjectTemplate/Agents/**` does **not** enable it by default. A freshly initialized KittyClaw project keeps all agents working in the single project workspace.
+**Opt-in pattern.** The helper scripts and the automation placeholder shipped here exist so a project *can* adopt per-ticket worktrees, but `ProjectTemplate/Agents/**` does **not** enable it by default. A freshly initialized GigaClaw project keeps all agents working in the single project workspace.
 
 Adopt this pattern only if you need filesystem isolation between concurrent agentic work on different tickets (e.g. several programmers in flight simultaneously, or a desire to keep `main` clean while work is in progress).
 
@@ -39,7 +39,7 @@ You need three things in the project's `<workspace>/.agents/`:
 
 ## Caveats
 
-- **Live host serves `main`, not the worktree.** The orchestrator (`KITTYCLAW_WEB_EXE`) runs the published stable, which reflects `main`. Agents that need to test their changes (`qa-tester` typically) must build the worktree themselves and pass the resulting binary to `KittyClaw.QaRunner --web-exe …`, not rely on `${KITTYCLAW_API_URL}` for verification.
+- **Live host serves `main`, not the worktree.** The orchestrator (`GIGACLAW_WEB_EXE`) runs the published stable, which reflects `main`. Agents that need to test their changes (`qa-tester` typically) must build the worktree themselves and pass the resulting binary to `GigaClaw.QaRunner --web-exe …`, not rely on `${GIGACLAW_API_URL}` for verification.
 - **`.agents/` is not copied into worktrees.** That is intentional: preamble + SKILL are injected into the prompt by the orchestrator (sourced from the primary `<workspace>/.agents/`), and memory writes belong in that single location so they survive `git worktree remove`.
 - **`bin/` and `obj/` must stay gitignored** so a worktree build does not show up in `git status` and get swept into the ticket commit.
 - **`git worktree remove --force`** is used by `worktree-merge.ps1` because Debug build artifacts (untracked) would otherwise block the cleanup.
@@ -47,7 +47,7 @@ You need three things in the project's `<workspace>/.agents/`:
 ## Entry points
 
 - `tools/worktree-ensure.ps1`, `tools/worktree-merge.ps1` — invoked by whichever agent SKILLs the project chooses to wire them into.
-- `KittyClaw.Core/Automation/ActionExecutor.cs` and `RunStateManager.cs` — perform the `{ticketId}` substitution in `concurrencyGroup` and `mutuallyExclusiveWith`.
+- `GigaClaw.Core/Automation/ActionExecutor.cs` and `RunStateManager.cs` — perform the `{ticketId}` substitution in `concurrencyGroup` and `mutuallyExclusiveWith`.
 
 ## External dependencies
 

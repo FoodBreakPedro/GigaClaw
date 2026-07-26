@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to KittyClaw.
+All notable changes to GigaClaw.
 
 ## [v0.10] — 2026-07-24
 
@@ -23,7 +23,7 @@ This release also lands a broad hardening pass: stored XSS in markdown rendering
 - **Per-ticket token cost**: usage and `total_cost_usd` captured from CLI result events, per-run accumulation, durable per-ticket totals and workspace cost-log; badges on board card, ticket panel, and run drawer; runs API exposes token fields.
 - **Concurrency-lock dead man's switch** (ticket #98): opt-in per-automation inactivity timeout (`LockTimeoutMinutes`), per-run activity heartbeat, a reaper that force-stops idle runs, and `GET /projects/{slug}/concurrency-groups` for lock observability.
 - **Anonymous daily usage heartbeat** to Umami Cloud: one event per instance per 24h (instance GUID, version, OS family), silent-fail, disabled in Development.
-- **Isolated debug instance**: `kittyclaw-web-debug` launch config on :5232 with its own data dir and a mock claude CLI, so end-to-end verification never touches real projects.
+- **Isolated debug instance**: `gigaclaw-web-debug` launch config on :5232 with its own data dir and a mock claude CLI, so end-to-end verification never touches real projects.
 - **CI**: GitHub Actions build + test workflow on every push/PR to main/dev, with the mock claude built explicitly for hermetic integration tests.
 - **Memory index links**: agent `MEMORY.md` index lines are now markdown links to their topic files; the consolidation pass rewrites legacy lines on touch.
 
@@ -157,7 +157,7 @@ Escape-key handling makes progress: the label and member managers now close on E
 - **Agent running indicator** on project cards.
 - **Release-update banner** with version compare and a dev simulate endpoint.
 - **Markdown fallback** for deep content in chat; shared markdown pipeline now renders comment line breaks.
-- `KITTYCLAW_TICKET_ID` env var exposed to agent subprocesses.
+- `GIGACLAW_TICKET_ID` env var exposed to agent subprocesses.
 
 ### Changed
 - **Versioning via MinVer**: assembly version is derived from the latest `vX.Y.Z` git tag — no more manual csproj edits.
@@ -243,10 +243,10 @@ Customizable dashboards, AutomationEngine refactor, architecture docs.
 End-to-end QA runner, mock claude CLI, publish tooling.
 
 ### Added
-- **`KittyClaw.QaRunner`** — Playwright-based end-to-end QA runner (isolated test instance + scenario runner).
-- **`KittyClaw.ClaudeMock`** — mock `claude` CLI for token-free dogfooding and hermetic agent dispatch.
+- **`GigaClaw.QaRunner`** — Playwright-based end-to-end QA runner (isolated test instance + scenario runner).
+- **`GigaClaw.ClaudeMock`** — mock `claude` CLI for token-free dogfooding and hermetic agent dispatch.
 - `tools/publish-stable.ps1` — publish Web + QaRunner + ClaudeMock as siblings.
-- `KITTYCLAW_DATA_DIR` override for isolated instances; `KITTYCLAW_API_URL` injected into agent skills.
+- `GIGACLAW_DATA_DIR` override for isolated instances; `GIGACLAW_API_URL` injected into agent skills.
 - QA launch profile on port 5231 with an isolated data dir.
 - Per-project quota fallback model.
 
@@ -268,7 +268,7 @@ Chat with agents, run history, demo & early-access launch.
 ### Added
 - **Chat** with agents: persistent messages, session management, target selection, SSE stream reattachment with optional timestamp filter, stop button for active runs.
 - **Run history** drawer with related UI components.
-- Per-ticket "updated" indicator that clears only on open ([#95](https://github.com/Ekioo/KittyClaw/pull/95)).
+- Per-ticket "updated" indicator that clears only on open ([#95](https://github.com/Ekioo/GigaClaw/pull/95)).
 - `createTicket` automation action with localization and UI.
 - `RunConcurrencyGate` to manage simultaneous `claude` subprocesses.
 - Multiple-assignee support for the assignee-resume automation.
@@ -290,10 +290,10 @@ Chat with agents, run history, demo & early-access launch.
 
 ## [v0.2] — 2026-04-23
 
-Project rebrand to **KittyClaw**, agentic engine, onboarding.
+Project rebrand to **GigaClaw**, agentic engine, onboarding.
 
 ### Added
-- **Renamed `Todo` → `KittyClaw`** across solution, projects, and namespaces.
+- **Renamed `Todo` → `GigaClaw`** across solution, projects, and namespaces.
 - **Onboarding** modal and project-creation workflow with workspace setup.
 - **`AgentsTemplateService`** + embedded `ProjectTemplate/` written into each new workspace.
 - Initial agent roster: code-janitor, committer, evaluator, groomer, producer, programmer, qa-tester (skills + memory).

@@ -1,4 +1,4 @@
-# Getting started with KittyClaw
+# Getting started with GigaClaw
 
 This guide picks up after installation and walks you through your first project end to end.
 
@@ -10,13 +10,13 @@ Open the app at **http://localhost:5230**. If `claude` or `git` are missing from
 
 1. On the home page, type a project name and click **Create**.
 2. In the popup that appears, enter an absolute path for the workspace folder (an existing repo or a new folder).
-3. Click **Initialize**. KittyClaw will:
+3. Click **Initialize**. GigaClaw will:
    - Create the project database.
    - Copy the agent template into `<workspace>/.agents/` (skills, memory, automations) and `CLAUDE.md` into the workspace root.
    - Run `git init` if the folder is not already a repo.
    - Add one board member per built-in agent role.
 
-The workspace folder is never deleted by KittyClaw; deleting a project only removes its database entry.
+The workspace folder is never deleted by GigaClaw; deleting a project only removes its database entry.
 
 ## The kanban board
 
@@ -30,7 +30,7 @@ The **Scheduled** column holds tickets that have a future dispatch time set. The
 
 ## Agents and automation
 
-KittyClaw ships with a set of pre-configured agent roles: `programmer`, `groomer`, `producer`, `qa-tester`, `committer`, `code-janitor`, `evaluator`, and `documentalist`.
+GigaClaw ships with a set of pre-configured agent roles: `programmer`, `groomer`, `producer`, `qa-tester`, `committer`, `code-janitor`, `evaluator`, and `documentalist`.
 
 To have an agent work a ticket:
 1. Assign the ticket to an agent (e.g. `programmer`) and move it to **Todo**.
