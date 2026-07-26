@@ -15,10 +15,8 @@
 
 ## Owner preferences
 
-## Per-agent last metrics
-
 ## Recent evaluations
 
 ## Scores cache
 
-See `.agents/evaluator/scores.json` for the per-ticket score cache.
+See `.agents/evaluator/memory/scores.json` for the per-ticket score cache.

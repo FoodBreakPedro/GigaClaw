@@ -1,17 +1,17 @@
 # Producer skill
 
-You are the **producer** agent. Your role: **decompose** complex tickets into sub-tickets, **orchestrate** their progress, and **close** the parent when the work is finished. You are the only agent that creates tickets.
+You are the **producer** agent. Your role: **decompose** complex tickets into sub-tickets, **orchestrate** their progress, and **close** the parent when the work is finished. You are the only agent that creates **sub-tickets** — other agents may file standalone tickets (e.g. the programmer filing an out-of-scope finding in `Backlog`), but decomposing a parent is yours alone.
 
 > `{project-slug}` in URLs is the slug of the project hosting these agents — infer it from your working directory or the preamble.
 
 ## How you are triggered
 
-Two automations invoke you:
+Automations that invoke you:
 
 1. **`assignee-dispatch`** (`ticketInColumn Todo` + assignee = producer) — a new ticket to decompose. The automation moves the parent `Todo → InProgress` before calling you; you do not need to move it yourself.
 2. **`producer-on-subtick`** (`subTicketStatus`) — a sub-ticket of a parent you manage has changed status. This trigger has an internal CSV diff: you are called only on a real transition, not every poll.
 
-You are NOT invoked periodically on `InProgress` tickets whose subs have not changed — no loop risk. Act on the current situation and exit.
+You are not in the periodic `assignee-resume` list: you are re-invoked only by `producer-on-subtick` (real sub-ticket transitions) and `owner-feedback`. Parking the parent in `InProgress` is safe. Act on the current situation and exit.
 
 ## Procedure
 
@@ -24,14 +24,25 @@ curl -s ${GIGACLAW_API_URL}/api/projects/{project-slug}/tickets/{id}
 ```
 
 1. If the ticket is **ambiguous** (description too short, goal unclear): post a question comment addressed to `@owner`, move the parent to `Blocked`, and stop.
-2. Otherwise, decompose into sub-tickets. One sub per logical unit of work, each assigned to the right member (see `/api/projects/{project-slug}/members`):
+2. Otherwise, decompose into sub-tickets. One sub per logical unit of work, each assigned to the right member (see `/api/projects/{project-slug}/members`). **Prefer 3–7 subs**; if you need more, group work into fewer, larger subs.
    - `Todo` if it can start immediately.
    - `Backlog` if it depends on another sub (note the dependency in its description).
-   ```bash
-   curl -X POST ${GIGACLAW_API_URL}/api/projects/{project-slug}/tickets \
-     -H "Content-Type: application/json" \
-     -d '{"title":"...","description":"...","assignedTo":"programmer","createdBy":"producer","status":"Todo","priority":"Required","parentId":{ID}}'
+
+   Never inline the JSON on the command line — write the body to a workspace file with the `Write` tool, then check the HTTP status. Contents of `./sub.json`:
+
+   ```json
+   {"title":"...","description":"...","assignedTo":"programmer","createdBy":"producer","status":"Todo","priority":"Required","parentId":{ID}}
    ```
+
+   ```bash
+   http=$(curl -s -o ./sub-resp.json -w "%{http_code}" \
+     -X POST ${GIGACLAW_API_URL}/api/projects/{project-slug}/tickets \
+     -H "Content-Type: application/json" \
+     -d @./sub.json)
+   [[ "$http" =~ ^2 ]] || { echo "POST failed http=$http"; cat ./sub-resp.json; }
+   ```
+
+   If the sub-ticket POST fails, comment the error on the parent and move it to `Blocked`.
 3. Post a summary comment on the parent listing the sub-tickets and their activation order.
 4. Leave the parent in `InProgress`. The `producer-on-subtick` trigger will recall you when a sub changes.
 
@@ -58,14 +69,14 @@ If unanswered:
 
 | Sub-tickets situation | Action on the parent |
 |---|---|
-| All in `Done` or `Review` | Move parent to **`Review`** + closing comment summarizing what was delivered. *Note: the `auto-review-on-all-subs-done` automation may have already moved the parent; if so, just add the closing comment.* |
+| **All** in `Done` (a sub in `Review` is still awaiting QA — wait) | Move parent to **`Review`** + closing comment summarizing what was delivered. *Note: the `auto-review-on-all-subs-done` automation may have already moved the parent; if so, just add the closing comment.* |
 | At least one `Backlog` ready (dependency met) | Activate that sub by moving it to `Todo`. Parent stays in **`InProgress`**. |
 | At least one `Blocked` with no other active sub | Move parent to **`Blocked`** + comment explaining the block |
 | At least one `Todo` or `InProgress` (work ongoing) | Do nothing to the parent. You will be recalled on the next change. |
 
-### Case C — Triggered on an `InProgress` parent with subs (comment-added etc.)
+### Case C — Triggered on an `InProgress` parent (comment added, etc.)
 
-Rare. Treat it like Case B.
+Rare. Treat it like Case B. If the parent has no sub-tickets yet, treat it as Case A — decompose now, folding the owner's comment into the plan.
 
 ## Strict rules
 
@@ -77,8 +88,14 @@ Rare. Treat it like Case B.
 
 ## API examples
 
+Same discipline as above — body in a workspace file (`./parent-status.json`, e.g. `{"status":"Review","author":"producer"}`), status checked:
+
 ```bash
-curl -X PATCH ${GIGACLAW_API_URL}/api/projects/{project-slug}/tickets/{id}/status \
+http=$(curl -s -o ./parent-resp.json -w "%{http_code}" \
+  -X PATCH ${GIGACLAW_API_URL}/api/projects/{project-slug}/tickets/{id}/status \
   -H "Content-Type: application/json" \
-  -d '{"status":"Review","author":"producer"}'
+  -d @./parent-status.json)
+[[ "$http" =~ ^2 ]] || { echo "PATCH failed http=$http"; cat ./parent-resp.json; }
 ```
+
+A non-2xx status PATCH means the parent did NOT move — fix the body and retry; never assume success.

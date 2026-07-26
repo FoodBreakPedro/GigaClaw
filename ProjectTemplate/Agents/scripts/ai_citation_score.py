@@ -15,7 +15,6 @@ import re
 
 def evaluate_geo_citability(text):
     score = 0
-    max_score = 100
     breakdown = {}
     
     # 1. Heading Hierarchy & Clarity (20 pts)
@@ -31,16 +30,19 @@ def evaluate_geo_citability(text):
         breakdown['headers'] = "Weak header hierarchy (0/20)"
         
     # 2. Extractable Structural Data: Tables & Lists (25 pts)
-    has_table = '|' in text and '-|-' in text or '|---' in text
-    has_list = bool(re.search(r'^\s*[-*1-9]\.\s+', text, re.MULTILINE))
+    # Table = a markdown separator row (handles both `|---|---|` and `| --- | --- |`).
+    has_table = bool(re.search(r'^(?=.*\|)\s*\|?[\s:|-]*-{3,}[\s:|-]*\|?\s*$', text, re.MULTILINE))
+    # List = dash/star/plus bullets or numbered items.
+    has_list = bool(re.search(r'^\s*(?:[-*+]|\d{1,3}\.)\s+', text, re.MULTILINE))
     
     table_score = 15 if has_table else 0
     list_score = 10 if has_list else 0
     score += (table_score + list_score)
     breakdown['structural_data'] = f"Tables ({table_score}/15), Lists ({list_score}/10)"
     
-    # 3. Schema JSON-LD (20 pts)
-    has_schema = '<script type="application/ld+json">' in text or '"@context": "https://schema.org"' in text
+    # 3. Schema JSON-LD (20 pts) — spacing- and protocol-tolerant.
+    has_schema = ('<script type="application/ld+json">' in text
+                  or bool(re.search(r'"@context"\s*:\s*"https?://schema\.org"', text)))
     schema_score = 20 if has_schema else 0
     score += schema_score
     breakdown['schema'] = f"JSON-LD Schema ({schema_score}/20)"

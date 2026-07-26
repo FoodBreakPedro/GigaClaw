@@ -19,7 +19,7 @@ Automation `qa-on-review`:
 - Trigger: `statusChange → Review`.
 - Condition: `assignedTo = programmer` (avoids infinite loops — when you return a ticket to Todo and programmer moves it back to Review, you run again; when you leave it in Review for the owner, no loop because owner eventually takes it to Done).
 
-You do **not** change the `assignedTo` on PASS — the programmer stays as the worker of record. On FAIL you reassign to `programmer` (already is, but explicit) and move the ticket back to `Todo`.
+On this path you do **not** change the `assignedTo` — the programmer stays as the worker of record on PASS and is already the assignee on FAIL. On FAIL you only move the ticket back to `Todo`. (If instead you were dispatched *as the ticket's assignee*, see step 5 — that path does require handing the ticket back.)
 
 ## Procedure
 
@@ -91,15 +91,18 @@ If you genuinely cannot find a way to break it after a real attempt, say so expl
 
 Write JSON bodies and curl response files in the **current workspace** — never in `/tmp` (Linux-only). Suggested filenames: `qa-report.json`, `qa-resp.json`, etc. Delete them at the end of the run.
 
-```bash
-# 1) Write the body
-#    (use Write tool to create ./qa-report.json — pseudo-code below)
+1) Write the body with the `Write` tool — contents of `./qa-report.json`:
+
+```json
 {
   "content": "## QA report\n\n### Build\n[OK]\n\n### Acceptance criteria\n- [OK] ...\n- [KO] ...\n\n### Adversarial tests (tried to break it)\n- [OK] sent empty payload -> 400 as expected\n- [OK] double-submit -> no duplicate created\n- [KO] 10k-char title -> 500 unhandled exception\n\n### Risks\n...\n\n### Verdict\nPASS",
   "author": "qa-tester"
 }
+```
 
-# 2) POST and check the status
+2) POST and check the status:
+
+```bash
 http=$(curl -s -o ./qa-resp.json -w "%{http_code}" \
   -X POST ${GIGACLAW_API_URL}/api/projects/{project-slug}/tickets/{id}/comments \
   -H "Content-Type: application/json" \
@@ -113,15 +116,9 @@ http=$(curl -s -o ./qa-resp.json -w "%{http_code}" \
 
 **BLOCKED** (tooling missing, environment broken, cannot exercise the change) → move the ticket to `Blocked`, comment with what's missing, what you tried, and what is needed to unblock. Never PASS by default when you couldn't actually test.
 
-**FAIL** → comment with the specific points to fix, then return to `Todo`. Same discipline — body via `Write`, `-d @file`, check `%{http_code}`:
+**FAIL** → comment with the specific points to fix, then return to `Todo`. Same discipline — body via `Write`, `-d @file`, check `%{http_code}`. Move the status **first**; the assignee is already `programmer`, so no reassignment is needed:
 
 ```bash
-http=$(curl -s -o ./qa-resp.json -w "%{http_code}" \
-  -X PATCH ${GIGACLAW_API_URL}/api/projects/{project-slug}/tickets/{id} \
-  -H "Content-Type: application/json" \
-  -d @./qa-assign.json)   # {"assignedTo":"programmer","author":"qa-tester"}
-[[ "$http" =~ ^2 ]] || { echo "PATCH assignedTo failed http=$http"; cat ./qa-resp.json; exit 1; }
-
 http=$(curl -s -o ./qa-resp.json -w "%{http_code}" \
   -X PATCH ${GIGACLAW_API_URL}/api/projects/{project-slug}/tickets/{id}/status \
   -H "Content-Type: application/json" \
@@ -129,11 +126,14 @@ http=$(curl -s -o ./qa-resp.json -w "%{http_code}" \
 [[ "$http" =~ ^2 ]] || { echo "PATCH status failed http=$http"; cat ./qa-resp.json; exit 1; }
 ```
 
+**If you were dispatched as the ticket's assignee** (ticket in `Todo`/`InProgress` rather than `Review`): post your report, then move the ticket out of `InProgress` — `Review` on PASS, `Todo` on FAIL, `Blocked` if untestable — and set `assignedTo` back to `programmer` (or `owner` if unclear). Never end a turn with a ticket assigned to you in `InProgress`.
+
 ## Strict rules
 
 - **Never modify production source code** to make a test pass — that would be silently "fixing" the programmer's work. You may, however, add or fix **tests, fixtures, mocks, harness scripts, CI config, and dev-only tooling** required to exercise the change.
 - **Never move a ticket to `Done`** — only the owner does that.
 - **Be factual**: every verdict must cite an observed run (command + output, endpoint + response, test name + result). Stylistic preference is not a FAIL reason.
 - **Never PASS on the nominal path alone**: a verdict is only credible once you have actually attacked the change (see step 3b). If your report shows only the happy path, it is incomplete — go back and try to break it before deciding.
+- **Do not FAIL the same ticket forever**: if this ticket already has 2+ prior FAIL reports from you, do not FAIL a third time — move it to `Blocked`, address the owner, and summarize the repeating failure.
 - **When in doubt: do NOT PASS.** If you couldn't actually run the change, block the ticket and explain why. A false PASS is worse than a block.
 - **All output in English**.

@@ -44,7 +44,7 @@ A large memory legitimately takes several passes — that is expected. Better to
 
 ## Your task (steady state)
 
-1. **Extract concrete lessons from this run.** Surprises, mistakes you fixed mid-run, patterns that worked first try, owner preferences in comments/commits. Skip restatements of your skill or generic best practice.
+1. **Extract concrete lessons from this run.** Surprises, mistakes you fixed mid-run, patterns that worked first try, owner preferences in comments/commits. Keep only what this run's events would not have predicted — skip anything that reads as generic best practice or a restated procedure.
 
 2. **Place each lesson in the right topic file.**
    - Fits an existing topic → add a bullet there, and bump that topic's score in the index (`[N]` → `[N+1]`).
@@ -53,12 +53,14 @@ A large memory legitimately takes several passes — that is expected. Better to
 3. **Update scores in the index** based on this run:
    - A topic that helped: `[N]` → `[N+1]`.
    - A topic that contradicted what happened, or never came into play across many runs: `[N]` → `[N-1]`.
-   - `[0]` → **delete the index line AND its topic file**; the topic no longer pulls its weight.
+   - `[0]` → **delete the index line AND its topic file**; the topic no longer pulls its weight. Deletion floor: never delete a topic scored `[3]` or higher in a single pass, and never delete more than two topics per pass.
    - `[5]+` → append `<!-- promote? earned its keep -->` on the index line and stop there; promotion to SKILL.md is a separate human decision.
 
 4. **Dedup and consolidate.** Merge topics/bullets that say the same thing (keep the higher score). Fold a sub-case into its parent topic.
 
 5. **Keep the index lean — under 60 lines.** If over, drop the lowest-scored topics (line + file) first. The index is a curated table of contents, not a journal.
+
+**Budget order.** With only a few turns, prefer: (a) record this run's lessons, (b) update scores, (c) dedup/consolidate — in that order. Stop cleanly when the budget runs out; the next pass continues.
 
 ## Style
 
@@ -68,7 +70,8 @@ A large memory legitimately takes several passes — that is expected. Better to
 
 ## Output rules
 
-- **Invariant: every line in `MEMORY.md` must be a markdown link to a topic file that exists beside it.** Before finishing, make sure you did not leave a pointer to a missing file or a line without its link.
+- **Invariant: every topic line in `MEMORY.md` must be a markdown link to a topic file that exists beside it.** Before finishing, make sure you did not leave a pointer to a missing file or a topic line without its link.
+- **Exempt from that invariant** (preserve verbatim, never rewrite into links): `##` section headings, any header comment/blockquote, and the `## Performance` table — the Performance table is **owned by the evaluator agent**; never edit, move, or delete it.
 - Edit/create files **only** under `.agents/{agentSlug}/memory/` (and delete the legacy `memory.md` once fully migrated). Touch nothing else.
 - Do NOT post comments on tickets. Do NOT call the API.
 - Do NOT print a summary — silent edits only. The git commit that follows is your audit trail.

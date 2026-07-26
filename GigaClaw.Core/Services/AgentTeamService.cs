@@ -46,7 +46,7 @@ public sealed class AgentTeamService
         new(
             UxDesignSlug,
             "UX & Product Design",
-            "Anti-slop web application UI design, 57-gate design audits, and design DNA research.",
+            "Anti-slop web application UI design, multi-gate design audits, and design DNA research.",
             "🎨",
             new[] { "ui-designer", "ui-auditor", "design-researcher", "programmer", "producer", "committer", "evaluator", "documentalist" }
         ),
@@ -67,7 +67,7 @@ public sealed class AgentTeamService
         new(
             HealthPerformanceSlug,
             "Health & Performance",
-            "Wellness coaching, desk ergonomics, gaming focus nutrition, and content series planning.",
+            "Health & fitness content vertical: sourced wellness guides, training and ergonomics articles, and multi-part content series planning.",
             "🏋️",
             new[] { "wellness-coach", "content-series-planner", "blog-writer", "producer", "evaluator", "documentalist" }
         )

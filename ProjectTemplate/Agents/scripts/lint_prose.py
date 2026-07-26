@@ -26,7 +26,9 @@ BANNED_CLICHES = [
     r"seamlessly",
     r"empower",
     r"harness the power of",
-    r"rich tapestry",
+    r"\btapestry\b",
+    r"\bleverage\b",
+    r"seamless integration",
 ]
 
 PASSIVE_PATTERNS = [
@@ -48,7 +50,17 @@ def count_syllables(word):
     matches = re.findall(r'[aeiouy]{1,2}', word)
     return max(1, len(matches))
 
+def strip_non_prose(text):
+    """Drop frontmatter, fenced code, embedded scripts, and table rows so
+    readability metrics reflect the prose only."""
+    text = re.sub(r'\A---\n.*?\n---\n', '', text, flags=re.DOTALL)
+    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+    text = re.sub(r'<script\b.*?</script>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    lines = [ln for ln in text.splitlines() if not ln.lstrip().startswith('|')]
+    return '\n'.join(lines)
+
 def analyze_prose(text):
+    text = strip_non_prose(text)
     sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
     words = re.findall(r'\b[A-Za-z]+\b', text)
     
@@ -103,8 +115,14 @@ def main():
     except Exception as e:
         print(f"Error reading file {filepath}: {e}")
         sys.exit(1)
-        
+
+    # Curly quotes defeat apostrophe-based cliché patterns — normalize first.
+    content = content.replace('’', "'").replace('‘', "'")
+
     res = analyze_prose(content)
+    if 'error' in res:
+        print(f"=== PROSE LINT REPORT ===\n{res['error']} — nothing to analyze.")
+        sys.exit(0)
     print("=== PROSE LINT REPORT ===")
     print(f"Word Count: {res['word_count']}")
     print(f"Sentence Count: {res['sentence_count']}")

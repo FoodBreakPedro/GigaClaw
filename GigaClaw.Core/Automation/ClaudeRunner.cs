@@ -634,9 +634,13 @@ public sealed class ClaudeRunner
             return userMsg + imagesBlock;
         }
 
-        // Automation resume on a ticket: ping the agent that the owner posted new feedback.
+        // Automation resume on a ticket. This fires for owner-feedback AND for periodic re-dispatch
+        // polls (assignee-resume), so it must not assert that feedback exists when none was posted.
         if (isResume && ctx.TicketId is not null)
-            return $"The owner has posted feedback on ticket #{ctx.TicketId}: {ctx.TicketTitle}\nRead ALL owner comments on this ticket and address them.";
+            return $"You have been re-dispatched on ticket #{ctx.TicketId}: {ctx.TicketTitle}\n" +
+                   "Re-read the ticket first and check for NEW owner comments since your last turn. " +
+                   "If there are any, address them. Otherwise continue or finish your pending work on this ticket. " +
+                   "If nothing remains to do, follow your end-of-turn rules (move the ticket out of InProgress) instead of inventing new work.";
 
         var prefix = await BuildPreambleAsync(ctx, ct);
 

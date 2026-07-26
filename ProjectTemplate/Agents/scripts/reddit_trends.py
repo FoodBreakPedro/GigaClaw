@@ -6,7 +6,6 @@ reddit_trends.py - API-free Reddit trend & pain point research helper for GigaCl
 import sys
 import json
 import urllib.request
-import re
 
 NICHE_SUBREDDIT_MAP = {
     "solopreneur": ["entrepreneur", "freelance", "sidehustle", "smallbusiness"],
@@ -37,8 +36,9 @@ def fetch_subreddit_top(subreddit):
                         "permalink": f"https://reddit.com{p.get('permalink', '')}"
                     })
                 return posts
+            print(f"  [HTTP {response.status}] r/{subreddit} - treating as no data")
     except Exception as e:
-        return []
+        print(f"  [FETCH ERROR] r/{subreddit}: {e}")
     return []
 
 def main():
@@ -47,26 +47,37 @@ def main():
         sys.exit(1)
 
     niche_input = sys.argv[1].lower().strip()
-    subreddits = NICHE_SUBREDDIT_MAP.get(niche_input, [niche_input])
+    if niche_input in NICHE_SUBREDDIT_MAP:
+        subreddits = NICHE_SUBREDDIT_MAP[niche_input]
+    else:
+        subreddits = [niche_input]
+        print(f"[NOTE] '{niche_input}' is not a mapped niche - treating it as a literal subreddit name.")
 
     print(f"=== REDDIT TREND REPORT: {niche_input.upper()} ===")
     all_posts = []
+    seen = set()
 
     for sub in subreddits:
         posts = fetch_subreddit_top(sub)
         print(f"\nSubreddit r/{sub}: fetched {len(posts)} top posts this month")
-        all_posts.extend(posts)
+        for p in posts:
+            if p["permalink"] not in seen:
+                seen.add(p["permalink"])
+                all_posts.append(p)
 
     if not all_posts:
-        print("\n[WARNING] Could not fetch live Reddit data (rate limited or offline). Using fallback trend heuristic.")
-        sys.exit(0)
+        # No fallback exists. Exit non-zero so callers can tell failure from an empty niche.
+        print("\n[ERROR] No live Reddit data could be fetched (rate limited, blocked, or offline).")
+        print("Do NOT fabricate trends from this run - report the data gap instead.")
+        sys.exit(2)
 
     # Sort by comments (engagement resonance)
     sorted_by_comments = sorted(all_posts, key=lambda x: x["num_comments"], reverse=True)
 
-    print("\n--- Top 5 Highest Engagement Discussions (Pain Points & Content Gaps) ---")
+    print("\n--- Top 5 Highest Engagement Discussions (by comment count) ---")
     for idx, p in enumerate(sorted_by_comments[:5], 1):
         print(f"{idx}. {p['title']} ({p['num_comments']} comments, {p['score']} upvotes)")
+        print(f"   source: {p['permalink']}")
 
 if __name__ == "__main__":
     main()
