@@ -7,6 +7,9 @@ public sealed class AgentTeamService
     public const string AllTeamsSlug = "all";
     public const string SoftwareEngineeringSlug = "software-engineering";
     public const string ContentEngineSlug = "content-engine";
+    public const string GrowthMarketingSlug = "growth-marketing";
+    public const string UxDesignSlug = "ux-design";
+    public const string DataIntelligenceSlug = "data-intelligence";
 
     private static readonly IReadOnlyList<AgentTeam> DefaultTeams = new List<AgentTeam>
     {
@@ -30,6 +33,27 @@ public sealed class AgentTeamService
             "Blog writing, quality review, topic research, SEO & GEO auditing, and translation.",
             "✍️",
             new[] { "blog-writer", "blog-reviewer", "blog-researcher", "blog-seo", "blog-translator", "producer", "committer", "evaluator", "documentalist" }
+        ),
+        new(
+            GrowthMarketingSlug,
+            "Growth Marketing",
+            "LinkedIn & social ghostwriting, lead magnets, trend listening, and cold email copy.",
+            "📢",
+            new[] { "growth-writer", "lead-magnet-creator", "trend-researcher", "email-copywriter", "producer", "committer", "evaluator", "documentalist" }
+        ),
+        new(
+            UxDesignSlug,
+            "UX & Product Design",
+            "Anti-slop web application UI design, 57-gate design audits, and design DNA research.",
+            "🎨",
+            new[] { "ui-designer", "ui-auditor", "design-researcher", "programmer", "producer", "committer", "evaluator", "documentalist" }
+        ),
+        new(
+            DataIntelligenceSlug,
+            "Data & Intelligence",
+            "SQL query building, dataset analysis, Mermaid data charts, and competitive market research.",
+            "📊",
+            new[] { "data-analyst", "competitive-analyst", "producer", "evaluator", "documentalist" }
         )
     };
 
