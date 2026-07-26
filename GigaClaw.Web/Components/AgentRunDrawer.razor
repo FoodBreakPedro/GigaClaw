@@ -1,0 +1,369 @@
+@using GigaClaw.Core.Automation
+@using GigaClaw.Web.Services
+@using Markdig
+@inject AgentRunsState RunsState
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject LocalizationService L
+@implements IAsyncDisposable
+
+@if (_run is not null)
+{
+    <div class="agent-drawer-overlay" @onclick="Close"></div>
+    <div class="agent-drawer" @onclick:stopPropagation>
+        <div class="agent-drawer-header">
+            <div class="agent-drawer-title">
+                <span class="agent-name">@_run.AgentName</span>
+                @if (_run.TicketId is not null)
+                {
+                    <span class="agent-ticket">#@_run.TicketId</span>
+                }
+                <span class="agent-status agent-status-@_run.Status.ToString().ToLowerInvariant()">@_run.Status</span>
+                @if (_run.Status is AgentRunStatus.Failed or AgentRunStatus.Stopped)
+                {
+                    <button class="agent-retry-btn" @onclick="Retry" disabled="@_retrying" title="@L["RetryAgent"]">↻ @L["Retry"]</button>
+                }
+            </div>
+            <div class="agent-drawer-meta">
+                <span title="Skill">@_run.SkillFile</span>
+                <span title="Session">@(_run.SessionId?[..8] ?? "—")</span>
+                <span title="Group">@_run.ConcurrencyGroup</span>
+                @if (!string.IsNullOrEmpty(_run.Model))
+                {
+                    <span class="agent-drawer-model" title="Model">@_run.Model</span>
+                }
+                @if (_run.HasUsage)
+                {
+                    <span class="agent-drawer-cost" title="@($"{_run.TotalTokens:N0} tokens (in {_run.InputTokens:N0} / out {_run.OutputTokens:N0} / cache {_run.CacheReadTokens + _run.CacheWriteTokens:N0})")">
+                        ⛁ @TokenDisplay.Compact(_run.TotalTokens)@(_run.TotalCostUsd is decimal c ? $" · {TokenDisplay.Usd((double)c)}" : "")
+                    </span>
+                }
+                <span>@FormatElapsed(_run.StartedAt)</span>
+            </div>
+            <div class="agent-drawer-actions">
+                @if (_run.Status == AgentRunStatus.Running)
+                {
+                    <button class="agent-stop-btn" @onclick="Stop" title="@L["StopAgent"]">⏹ @L["Stop"]</button>
+                }
+                <button class="agent-close-btn" @onclick="Close" title="@L["Close"]">×</button>
+            </div>
+        </div>
+
+        <div class="agent-drawer-console" @ref="_consoleRef">
+            @foreach (var ev in _events.ToList())
+            {
+                @if (ev.Kind == "tool_use")
+                {
+                    <div class="console-line console-tool_use">
+                        <span class="console-time">@ev.At.ToLocalTime().ToString("HH:mm:ss")</span>
+                        <details class="console-tool-block">
+                            <summary class="console-tool-summary">
+                                <span class="console-tool-icon">⚙</span>
+                                <span class="console-tool-name">@ev.Text</span>
+                                <span class="console-tool-preview">@GetToolPreview(ev.Text, ev.Detail)</span>
+                            </summary>
+                            <pre class="console-tool-detail">@((MarkupString)HighlightJson(ev.Detail))</pre>
+                        </details>
+                    </div>
+                }
+                else if (ev.Kind == "rate_limit_event")
+                {
+                    <div class="console-line console-tool_use">
+                        <span class="console-time">@ev.At.ToLocalTime().ToString("HH:mm:ss")</span>
+                        <details class="console-tool-block console-rate-limit-block">
+                            <summary class="console-tool-summary">
+                                <span class="console-tool-icon">⏳</span>
+                                <span class="console-tool-name">rate_limit_event</span>
+                                <span class="console-tool-preview">@GetRateLimitPreview(ev.Text)</span>
+                            </summary>
+                            <pre class="console-tool-detail">@((MarkupString)HighlightJson(ev.Text))</pre>
+                        </details>
+                    </div>
+                }
+                else if (ev.Kind == "result")
+                {
+                    <div class="console-line console-tool_use">
+                        <span class="console-time">@ev.At.ToLocalTime().ToString("HH:mm:ss")</span>
+                        <details class="console-tool-block console-result-block">
+                            <summary class="console-tool-summary">
+                                <span class="console-tool-icon">✓</span>
+                                <span class="console-tool-name">result</span>
+                                <span class="console-tool-preview">@GetResultPreview(ev.Text)</span>
+                            </summary>
+                            <pre class="console-tool-detail">@((MarkupString)HighlightJson(ev.Text))</pre>
+                        </details>
+                    </div>
+                }
+                else if (ev.Kind is "user" or "assistant" or "system")
+                {
+                    var msgBody = GetMessageBody(ev.Text);
+                    if (!string.IsNullOrWhiteSpace(msgBody))
+                    {
+                        var isShortMsg = msgBody.Length <= 300;
+                        var msgPreview = SharedRenderHelpers.Truncate(msgBody, 200);
+                        <div class="console-line console-@ev.Kind">
+                            <span class="console-time">@ev.At.ToLocalTime().ToString("HH:mm:ss")</span>
+                            <details class="console-msg-block" open="@(isShortMsg ? "open" : null)">
+                                <summary class="console-msg-summary">
+                                    <span class="console-msg-role console-msg-role-@ev.Kind">@ev.Kind</span>
+                                    @if (!isShortMsg)
+                                    {
+                                        <span class="console-msg-preview">@msgPreview</span>
+                                    }
+                                </summary>
+                                @if (SharedRenderHelpers.IsJson(msgBody))
+                                {
+                                    <pre class="console-tool-detail console-msg-json">@((MarkupString)HighlightJson(msgBody))</pre>
+                                }
+                                else
+                                {
+                                    <div class="console-msg-detail markdown">@((MarkupString)RenderMarkdown(msgBody))</div>
+                                }
+                            </details>
+                        </div>
+                    }
+                }
+                else
+                {
+                    var (tag, body) = ParseBracketTag(ev.Text);
+                    <div class="console-line console-@ev.Kind">
+                        <span class="console-time">@ev.At.ToLocalTime().ToString("HH:mm:ss")</span>
+                        @if (tag is not null)
+                        {
+                            <span class="console-tag">@tag</span>
+                        }
+                        else
+                        {
+                            <span class="console-kind">@ev.Kind</span>
+                        }
+                        <span class="console-text markdown">@((MarkupString)RenderMarkdown(body))</span>
+                    </div>
+                }
+            }
+            @if (_events.Count == 0)
+            {
+                <div class="console-empty">@L["WaitingForOutput"]</div>
+            }
+        </div>
+
+        @if (_run.Status == AgentRunStatus.Running)
+        {
+            <div class="agent-drawer-steer">
+                <textarea @bind="_steerText" @bind:event="oninput"
+                          placeholder="@L["SteerPlaceholder"]"
+                          @onkeydown="OnSteerKeyDown"></textarea>
+                <button @onclick="Steer" disabled="@string.IsNullOrWhiteSpace(_steerText)">@L["Send"]</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string? RunId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnRetried { get; set; }
+
+    private AgentRun? _run;
+    private readonly List<StreamEvent> _events = new();
+    private string _steerText = "";
+    private bool _retrying;
+    private IJSObjectReference? _sseModule;
+    private string? _activeStreamId;
+    private ElementReference _consoleRef;
+    private bool _needsInitScroll;
+    private bool _needsScroll;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_sseModule is null) return;
+        if (_needsInitScroll)
+        {
+            _needsInitScroll = false;
+            await _sseModule.InvokeVoidAsync("initAutoScroll", _consoleRef);
+        }
+        if (_needsScroll)
+        {
+            _needsScroll = false;
+            await _sseModule.InvokeVoidAsync("scrollIfNeeded");
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RunId is null)
+        {
+            if (_run is not null) { await StopStream(); _events.Clear(); _run = null; }
+            return;
+        }
+        if (RunId == _activeStreamId) return;
+        await StopStream();
+        _events.Clear();
+        _run = RunsState.Get(RunId);
+        if (_run is null) return;
+
+        _events.AddRange(_run.SnapshotBuffer());
+        _run.OnEvent += HandleEvent;
+
+        _sseModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/agent-sse.js");
+        _activeStreamId = RunId;
+        _needsInitScroll = true;
+        StateHasChanged();
+    }
+
+    private void HandleEvent(StreamEvent ev)
+    {
+        // OnEvent fires on the runner's background thread; _events is enumerated by the
+        // renderer, so mutate it on the sync context only.
+        InvokeAsync(() =>
+        {
+            _events.Add(ev);
+            while (_events.Count > 500) _events.RemoveAt(0);
+            _needsScroll = true;
+            StateHasChanged();
+        });
+    }
+
+    private async Task Close()
+    {
+        await StopStream();
+        if (OnClose.HasDelegate) await OnClose.InvokeAsync();
+    }
+
+    private async Task StopStream()
+    {
+        if (_run is not null) _run.OnEvent -= HandleEvent;
+        if (_sseModule is not null && _activeStreamId is not null)
+            try { await _sseModule.InvokeVoidAsync("disposeAutoScroll"); } catch { }
+        _activeStreamId = null;
+    }
+
+    private async Task OnSteerKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await Steer();
+        }
+    }
+
+    private async Task Steer()
+    {
+        if (_run is null || string.IsNullOrWhiteSpace(_steerText)) return;
+        var payload = new { text = _steerText };
+        using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
+        try
+        {
+            await http.PostAsJsonAsync($"/api/projects/{_run.ProjectSlug}/runs/{_run.RunId}/steer", payload);
+            _events.Add(new StreamEvent(DateTime.UtcNow, "user", _steerText));
+            _steerText = "";
+        }
+        catch { }
+    }
+
+    private async Task Stop()
+    {
+        if (_run is null) return;
+        using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
+        try { await http.PostAsync($"/api/projects/{_run.ProjectSlug}/runs/{_run.RunId}/stop", null); } catch { }
+    }
+
+    private async Task Retry()
+    {
+        if (_run is null || _retrying) return;
+        _retrying = true;
+        try
+        {
+            using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
+            var resp = await http.PostAsync($"/api/projects/{_run.ProjectSlug}/runs/{_run.RunId}/retry", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadFromJsonAsync<RetryResponse>();
+                if (body is not null && OnRetried.HasDelegate)
+                    await OnRetried.InvokeAsync(body.RunId);
+            }
+        }
+        catch { }
+        finally { _retrying = false; }
+    }
+
+    private sealed record RetryResponse(string RunId);
+
+    private static string GetMessageBody(string? text)
+    {
+        var (_, body) = ParseBracketTag(text);
+        return body;
+    }
+
+    private static string Truncate(string text, int max) => SharedRenderHelpers.Truncate(text, max);
+
+    private static (string? Tag, string Body) ParseBracketTag(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return (null, "");
+        if (!text.StartsWith('[')) return (null, text);
+        var close = text.IndexOf(']');
+        if (close < 1) return (null, text);
+        var tag = text[1..close];
+        var body = text[(close + 1)..].TrimStart();
+        return (tag, body);
+    }
+
+    private static string GetResultPreview(string text)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(text);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("result", out var r) && r.ValueKind == System.Text.Json.JsonValueKind.String)
+                return Truncate(r.GetString() ?? "", 80);
+            if (root.TryGetProperty("subtype", out var s))
+                return s.GetString() ?? "result";
+        }
+        catch { }
+        return Truncate(text, 80);
+    }
+
+    private static string GetRateLimitPreview(string text)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(text);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("rate_limits", out var limits) && limits.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                var parts = limits.EnumerateArray()
+                    .Select(l => l.TryGetProperty("name", out var n) && l.TryGetProperty("remaining", out var r)
+                        ? $"{n.GetString()}={r}" : null)
+                    .Where(s => s is not null);
+                var preview = string.Join(", ", parts);
+                return preview.Length > 0 ? preview : text;
+            }
+        }
+        catch { }
+        return Truncate(text, 80);
+    }
+
+    private static string GetToolPreview(string toolName, string? detail) =>
+        SharedRenderHelpers.GetToolPreview(toolName, detail);
+
+    private static string HighlightJson(string? json) => SharedRenderHelpers.HighlightJson(json);
+
+    private static readonly MarkdownPipeline _mdPipeline =
+        new MarkdownPipelineBuilder().UseAdvancedExtensions().DisableHtml().Build();
+
+    private static string RenderMarkdown(string? text) =>
+        string.IsNullOrEmpty(text) ? "" : Markdig.Markdown.ToHtml(text, _mdPipeline);
+
+    private static string FormatElapsed(DateTime start)
+    {
+        var d = DateTime.UtcNow - start;
+        return d.TotalHours >= 1 ? $"{(int)d.TotalHours}h{d.Minutes:D2}" : $"{d.Minutes:D2}:{d.Seconds:D2}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopStream();
+        if (_sseModule is not null)
+        {
+            try { await _sseModule.DisposeAsync(); } catch { }
+        }
+    }
+}

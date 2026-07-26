@@ -1,0 +1,45 @@
+# Kanban UI
+
+## Purpose
+Blazor Server frontend for managing the board: visualize columns and tickets, edit them, browse activity, and watch agent runs live.
+
+## Key components
+- `GigaClaw.Web/` — Blazor Server app (`@rendermode InteractiveServer`).
+- `GigaClaw.Web/wwwroot/app.css` — single global stylesheet.
+- `GigaClaw.Web/wwwroot/js/` — JS interop helpers.
+- `GigaClaw.Web/Services/BoardFilterState.cs` — per-circuit (scoped) service holding the board search filter text. Registered as `AddScoped` so each browser tab gets an independent instance; a Singleton registration would cause filter text typed in one tab to appear in all other open tabs.
+- `GigaClaw.Web/Services/BoardSortState.cs` — singleton service that holds per-column sort settings (mode + direction) keyed by `slug\0column`. Exposes `ApplySort` to reorder a ticket list by Title, Priority, Assignee, CreatedAt, or UpdatedAt with ascending/descending direction. Manual mode (default) leaves the original order unchanged.
+- `GigaClaw.Web/Markdown/CommentMarkdownPipeline.cs` — shared Markdig pipeline used to render ticket comments and activity entries; enables advanced extensions and treats soft line breaks as hard breaks so newlines typed in comments render visibly.
+- `GigaClaw.Web/wwwroot/js/board.js` — `saveColumnScrollPositions` / `restoreColumnScrollPositions`: snapshots each `.column-body` `scrollTop` into a module-level map by index, then replays it. Called by `Board.razor` on `SelectTicket` and `ClosePanel`; `_restoreScrollAfterRender` flag triggers the restore in `OnAfterRenderAsync` after Blazor re-renders (column `<div>` elements use `@key="col.Id"` to prevent DOM recycling that would otherwise reset scroll positions).
+- `GigaClaw.Web/wwwroot/js/chat-drawer.js` `chatDrawerInstallPasteHandler` — listens for `paste` events on the chat textarea, extracts image clipboard items (JPEG, PNG, GIF, WebP; max 5 MB each; max 5 per turn), reads them as data URLs via `FileReader`, and bridges results to the Blazor component through `JSInvokable` callbacks (`OnImagePasted` / `OnImagePasteError`). Plain-text pastes are not intercepted.
+- `GigaClaw.Web/Markdown/ChatMarkdownRenderer.cs` — static renderer for the chat drawer; wraps Markdig with a try/catch so a malformed message (e.g. deeply nested lists/quotes that trigger a Markdig nesting-depth error) falls back to HTML-encoded plain text with an inline warning instead of crashing the UI.
+- `GigaClaw.Web/Services/AgentRunsState.cs` — singleton service that tracks which agent runs are currently active, keyed by project slug. `Home.razor` injects it and subscribes to `OnChange` (via `InvokeAsync(StateHasChanged)`) to reactively render a `.project-card-agent-badge` spinner on cards where `ActiveForProject(slug).Any()` is true.
+- `GigaClaw.Web/Services/EscapeKeyStack.cs` + `EscapeKeyStackExtensions.cs` — scoped LIFO stack of Escape handlers. Components register a close callback via `Push` (or `PushWithFocus` to also save/restore focus through `wwwroot/js/escape-stack.js`) and dispose the returned token when their popup closes. `Components/EscapeKeyHost.razor` is mounted once in `MainLayout` and routes browser Escape keydowns to the topmost handler. Both `EscapeKeyHost.razor` and `MainLayout.razor` must declare `@rendermode InteractiveServer`; without it the JS interop call (`escapeStack.init`) is never executed and all Escape keydowns are silently dropped.
+- Components consume the [storage](./storage.md) services directly via DI rather than self-calling the [REST API](./rest-api.md).
+
+## Features
+- Onboarding popup on first launch with Claude Code + Git detection.
+- Project creation popup with workspace selection + one-click agent template initialization.
+- Kanban board with drag-and-drop.
+- Ticket detail panel with comments and activity timeline.
+- Live agent run drawer (SSE stream of Claude Code output, steer + stop controls).
+- Animated spinner badge on project cards (`Home.razor`) when one or more agent runs are active for that project (sourced from `AgentRunsState`).
+- New-instruction chat drawer to send an ad-hoc prompt to an agent, with image paste support (paste screenshots or images directly into the textarea; thumbnails shown before send; up to 5 images per turn). When the agent invokes `AskUserQuestion`, the chat drawer renders an interactive prompt widget — either multiple-choice buttons or a free-text textarea — and the user's answer is sent back via the `/steer` endpoint. Answered widgets are locked in place so history remains readable.
+- Automations page: list, enable/disable, edit (triggers / conditions / actions), reload from disk, re-initialize agent template.
+- Markdown rendering with `@mention`, `#id`, and `#{slug}:{id}` cross-project ticket references.
+- Advanced search syntax: `#42`, `@owner`, `>date`, `priority:critical`, `label:bug`, `by:owner`.
+- Sub-tickets with parent/child relationships and progress tracking.
+- Column management (create, reorder, customize colors), image upload. Label and member management are available from the dedicated Settings page.
+- Column scroll preservation: opening or closing the ticket detail panel saves all `.column-body` scroll positions via `board.js` (`saveColumnScrollPositions`) and restores them in `OnAfterRenderAsync` via `restoreColumnScrollPositions` once Blazor has re-rendered.
+- Right-click context menu on column headers to sort tickets bidirectionally (Title, Priority, Assignee, Created date, Due date) or reset to manual order. Sort state is held in `BoardSortState` and survives navigation within the same circuit.
+- Per-ticket token cost badges: board cards and ticket panel show cumulative token usage and USD cost sourced from `Tickets.AgentTokens` / `Tickets.AgentCostUsd`; run drawer header shows the same totals for the current run. Formatted by `GigaClaw.Web/Services/TokenDisplay.cs`.
+- Ticket scheduling UI: ticket panel shows the schedule (local time + target column) for tickets in the Scheduled column, editable via a datetime-local input and a column select. Non-scheduled tickets get a **Schedule…** button. Moving a ticket out of Scheduled clears `FireAt`/`ScheduleTarget` immediately. See [Ticket scheduling](./ticket-scheduling.md) for the backend.
+- Escape key closes the topmost open popup, drawer, or menu (board ticket panel, run drawer, chat drawer, project/automation dialogs, board context menus), with previously-focused element restoration. When a ticket panel is opened via URL param (`?ticketId=N`) rather than a click, `Board.razor` registers the ESC handler in `OnAfterRenderAsync` (guarded by `_selectedTicket is not null && _escTicketPanel is null`). On `TicketId` parameter change, `OnParametersSetAsync` disposes and nulls the stale token so the post-render guard re-registers it for the new ticket. The fullscreen description/comment editor (`OpenFullscreen`) also registers an ESC handler via `EscapeStack.PushWithFocus`; it records `_fullscreenOriginalText` on open, and pressing ESC triggers a dirty-check — if `_fullscreenText != _fullscreenOriginalText`, a native Blazor modal (`_showDiscardConfirm`) is shown asking the user to discard or keep editing (replaces the old `JS.InvokeAsync<bool>("confirm",…)` call). The ESC callback is synchronous (non-async); `InvokeAsync` is used for thread marshalling. If the user cancels the discard, `CancelDiscard` re-registers the ESC handler so subsequent ESC presses still trigger the dirty-check. `_escFullscreenEditor` is disposed in both `CancelFullscreen` and `SaveFullscreen` so the handler is never left dangling.
+
+## Entry points
+- `http://localhost:5230/` (default port served by `dotnet watch`).
+
+## External dependencies
+- [Storage](./storage.md) — domain services for tickets, columns, members, labels.
+- [Agent dispatch](./agent-dispatch.md) — backs the run drawer and the new-instruction chat.
+- [Automation engine](./automation-engine.md) — backs the Automations page.

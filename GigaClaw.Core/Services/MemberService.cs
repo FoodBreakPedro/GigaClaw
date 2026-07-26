@@ -1,0 +1,138 @@
+using Microsoft.EntityFrameworkCore;
+using GigaClaw.Core.Data;
+using GigaClaw.Core.Models;
+
+namespace GigaClaw.Core.Services;
+
+public enum DeleteMemberResult
+{
+    Deleted,
+    NotFound,
+    ProtectedOwner
+}
+
+public class MemberService
+{
+    private readonly ProjectService _projectService;
+
+    public MemberService(ProjectService projectService)
+    {
+        _projectService = projectService;
+    }
+
+    private static async Task EnsureMemberTableAsync(TodoDbContext db)
+    {
+        // DDL is memoized; the owner seed below is data-dependent and stays per-call.
+        await MigrationGate.RunOnceAsync(db, "members-table", static async d =>
+        {
+            await d.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS Members (
+                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL,
+                    Slug TEXT NOT NULL DEFAULT '',
+                    IsAgent INTEGER NOT NULL DEFAULT 0
+                )
+            """);
+            // Add Slug column if missing (migration for existing DBs)
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Members ADD COLUMN Slug TEXT NOT NULL DEFAULT ''");
+            // Old Skill column, kept around for DBs that have it (unused now).
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Members ADD COLUMN Skill TEXT NULL");
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Members ADD COLUMN IsAgent INTEGER NOT NULL DEFAULT 0");
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Members ADD COLUMN DefaultModel TEXT NULL");
+        });
+
+        // Owner is the human user — referenced by string literal "owner" throughout the
+        // codebase (createdBy default, mention rendering, assignee dropdown). Seed it here
+        // so it exists on every project (new ones AND legacy DBs created before this fix).
+        if (!await db.Members.AnyAsync(m => m.Slug == "owner"))
+        {
+            db.Members.Add(new Member { Name = "Owner", Slug = "owner" });
+            await db.SaveChangesAsync();
+        }
+    }
+
+    public async Task<List<Member>> ListMembersAsync(string projectSlug)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureMemberTableAsync(db);
+        await BackfillSlugsAsync(db);
+        return await db.Members.OrderBy(m => m.Name).ToListAsync();
+    }
+
+    public async Task<Member?> GetMemberBySlugAsync(string projectSlug, string slug)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureMemberTableAsync(db);
+        await BackfillSlugsAsync(db);
+        return await db.Members.FirstOrDefaultAsync(m => m.Slug == slug);
+    }
+
+    public async Task<bool> MemberExistsAsync(string projectSlug, string slug)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureMemberTableAsync(db);
+        await BackfillSlugsAsync(db);
+        return await db.Members.AnyAsync(m => m.Slug == slug);
+    }
+
+    /// <summary>
+    /// Backfill slugs for members that were created before the Slug column existed.
+    /// </summary>
+    private static async Task BackfillSlugsAsync(TodoDbContext db)
+    {
+        var needsSlug = await db.Members.Where(m => m.Slug == "").ToListAsync();
+        if (needsSlug.Count == 0) return;
+        foreach (var m in needsSlug)
+            m.Slug = Member.ToSlug(m.Name);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<Member> CreateMemberAsync(string projectSlug, string name)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureMemberTableAsync(db);
+        await BackfillSlugsAsync(db);
+        var member = new Member { Name = name, Slug = Member.ToSlug(name) };
+        db.Members.Add(member);
+        await db.SaveChangesAsync();
+        return member;
+    }
+
+    public async Task<Member?> UpdateMemberAsync(string projectSlug, int memberId, string? name = null, string? defaultModel = null)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureMemberTableAsync(db);
+        var member = await db.Members.FindAsync(memberId);
+        if (member is null) return null;
+        if (name is not null)
+        {
+            member.Name = name;
+            member.Slug = Member.ToSlug(name);
+        }
+        if (defaultModel is not null) member.DefaultModel = defaultModel;
+        await db.SaveChangesAsync();
+        return member;
+    }
+
+    public async Task<DeleteMemberResult> DeleteMemberAsync(string projectSlug, int memberId)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureMemberTableAsync(db);
+        var member = await db.Members.FindAsync(memberId);
+        if (member is null) return DeleteMemberResult.NotFound;
+        if (member.Slug == "owner") return DeleteMemberResult.ProtectedOwner;
+        var slug = member.Slug;
+        // Removal and unassignment must land atomically; a crash in between would leave
+        // tickets assigned to a member that no longer exists.
+        await using var tx = await db.Database.BeginTransactionAsync();
+        db.Members.Remove(member);
+        await db.SaveChangesAsync();
+        if (!string.IsNullOrEmpty(slug))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE Tickets SET AssignedTo = NULL WHERE AssignedTo = {0}", slug);
+        }
+        await tx.CommitAsync();
+        return DeleteMemberResult.Deleted;
+    }
+}
