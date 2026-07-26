@@ -73,6 +73,34 @@ public static partial class Endpoints
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status404NotFound);
 
+        api.MapPatch("/projects/{slug}/tickets/{id:int}/transition", async (string slug, int id, TransitionTicketRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
+        {
+            try
+            {
+                var ticket = await ts.TransitionTicketAsync(
+                    slug,
+                    id,
+                    req.Status,
+                    req.AssignedTo,
+                    req.Author,
+                    req.ExpectedStatus);
+                if (ticket is not null) notifier.NotifyProjectUpdated(slug);
+                return ticket is null ? Results.NotFound() : Results.Ok(ticket);
+            }
+            catch (TicketTransitionConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithTags("Tickets")
+        .Produces<Ticket>()
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
         api.MapPatch("/projects/{slug}/tickets/{id:int}/schedule", async (string slug, int id, ScheduleTicketRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
         {
             try

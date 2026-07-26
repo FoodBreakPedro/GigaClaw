@@ -220,6 +220,8 @@ public sealed class RunLogStore
 public sealed class AgentRunRegistry
 {
     private readonly ConcurrentDictionary<string, AgentRun> _runs = new();
+    private readonly ConcurrentDictionary<string, byte> _deferredCompletions = new();
+    private readonly ConcurrentDictionary<string, (AgentRunStatus Status, int? ExitCode)> _pendingCompletions = new();
     private readonly RunLogStore? _store;
 
     public event Action<AgentRun>? OnRunStarted;
@@ -255,6 +257,22 @@ public sealed class AgentRunRegistry
     public void Complete(string runId, AgentRunStatus status, int? exitCode)
     {
         if (!_runs.TryGetValue(runId, out var run)) return;
+
+        // Automation action chains reserve their run before dispatch. The subprocess may
+        // finish before trigger-state commit and post-run actions do; keep the run visibly
+        // Running until the owner releases the reservation so ActiveForProject(...).Any()
+        // is a reliable "the whole chain is done" signal.
+        if (_deferredCompletions.ContainsKey(runId))
+        {
+            _pendingCompletions.TryAdd(runId, (status, exitCode));
+            return;
+        }
+
+        ApplyCompletion(run, status, exitCode);
+    }
+
+    private void ApplyCompletion(AgentRun run, AgentRunStatus status, int? exitCode)
+    {
         // Idempotent: a terminal status must never be downgraded by a stray second call.
         if (run.Status != AgentRunStatus.Running) return;
         run.Status = status;
@@ -262,6 +280,41 @@ public sealed class AgentRunRegistry
         run.ExitCode = exitCode;
         _store?.Save(run);
         OnRunEnded?.Invoke(run);
+    }
+
+    /// <summary>
+    /// Defers the terminal registry transition for an automation-owned run until its
+    /// trigger commit and post-run action chain have completed.
+    /// </summary>
+    internal void ReserveCompletion(string runId) => _deferredCompletions.TryAdd(runId, 0);
+
+    /// <summary>Returns the subprocess outcome even while its registry completion is deferred.</summary>
+    internal AgentRunStatus EffectiveStatus(string runId)
+    {
+        if (_pendingCompletions.TryGetValue(runId, out var pending))
+            return pending.Status;
+        return _runs.TryGetValue(runId, out var run) ? run.Status : AgentRunStatus.Failed;
+    }
+
+    internal int? EffectiveExitCode(string runId)
+    {
+        if (_pendingCompletions.TryGetValue(runId, out var pending))
+            return pending.ExitCode;
+        return _runs.TryGetValue(runId, out var run) ? run.ExitCode : -1;
+    }
+
+    /// <summary>
+    /// Releases an automation-owned run after all trigger/post-run work. Any terminal
+    /// subprocess result captured by <see cref="Complete"/> becomes observable atomically.
+    /// </summary>
+    internal void ReleaseCompletion(string runId)
+    {
+        _deferredCompletions.TryRemove(runId, out _);
+        if (_pendingCompletions.TryRemove(runId, out var pending)
+            && _runs.TryGetValue(runId, out var run))
+        {
+            ApplyCompletion(run, pending.Status, pending.ExitCode);
+        }
     }
 
     public AgentRun? Get(string runId) => _runs.TryGetValue(runId, out var r) ? r : null;
@@ -291,7 +344,12 @@ public sealed class AgentRunRegistry
         return _runs.Values.Any(r => r.ProjectSlug == projectSlug && set.Contains(r.ConcurrencyGroup) && r.Status == AgentRunStatus.Running);
     }
 
-    public void Remove(string runId) => _runs.TryRemove(runId, out _);
+    public void Remove(string runId)
+    {
+        _deferredCompletions.TryRemove(runId, out _);
+        _pendingCompletions.TryRemove(runId, out _);
+        _runs.TryRemove(runId, out _);
+    }
 
     public AgentRun? LastCompletedForChatTarget(string projectSlug, string chatTarget) =>
         _runs.Values

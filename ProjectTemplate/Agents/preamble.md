@@ -45,6 +45,24 @@ Every board write (comment `POST`, status or ticket `PATCH`) requires an `"autho
 
 (Exception: memory-consolidation passes never touch the board or the API — when this section conflicts with consolidation instructions, the consolidation instructions win.)
 
+### Atomic hand-offs and bounded failures
+
+When both `assignedTo` and `status` must change, use one atomic request:
+
+```bash
+# {"status":"Todo","assignedTo":"next-agent","expectedStatus":"InProgress","author":"your-slug"}
+PATCH ${GIGACLAW_API_URL}/api/projects/{project-slug}/tickets/{id}/transition
+```
+
+Do not issue separate assignment and status PATCHes: the dispatcher can observe the
+intermediate state and run the wrong agent. `expectedStatus` is an optimistic
+concurrency guard; on a mismatch, re-read the ticket before deciding what to do.
+
+Retry a failed board write at most once after correcting a concrete request error.
+If it still fails, do not loop and do not claim delivery. Exit non-zero with the
+operation, HTTP status, and response body in the run log. The automation engine
+applies persisted backoff and a finite attempt budget to re-dispatches.
+
 ## Helper scripts
 
 Invoke bundled Python helpers as `python3 .agents/scripts/<tool>.py <args>`. If `python3` is not on PATH (common on Windows), use `python` or `py -3` instead.

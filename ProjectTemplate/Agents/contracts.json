@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "defaults": {
+    "maxDispatchAttempts": 3,
+    "retryBackoffSeconds": 300,
+    "requireAtomicHandoff": true,
+    "requireAuthorOnBoardWrites": true
+  },
+  "agents": {
+    "programmer": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["**"],
+      "riskClass": "code-write"
+    },
+    "groomer": {
+      "dispatches": ["backlog", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Backlog", "Todo"],
+      "allowedWriteGlobs": [],
+      "riskClass": "board-write"
+    },
+    "producer": {
+      "dispatches": ["assignment", "sub-ticket-change", "owner-feedback"],
+      "ticketExit": ["InProgress", "Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": [],
+      "riskClass": "board-write"
+    },
+    "qa-tester": {
+      "dispatches": ["qa-on-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["**/*Tests*", "**/tests/**"],
+      "riskClass": "test-write"
+    },
+    "committer": {
+      "dispatches": ["committer-on-done"],
+      "ticketExit": ["Done"],
+      "allowedWriteGlobs": [".git/**"],
+      "riskClass": "git-write"
+    },
+    "code-janitor": {
+      "dispatches": ["code-janitor-nightly"],
+      "ticketExit": [],
+      "allowedWriteGlobs": ["**"],
+      "riskClass": "code-write"
+    },
+    "evaluator": {
+      "dispatches": ["evaluator-on-done"],
+      "ticketExit": ["Done"],
+      "allowedWriteGlobs": [".agents/*/memory/MEMORY.md", ".agents/evaluator/memory/scores.json"],
+      "riskClass": "memory-write"
+    },
+    "documentalist": {
+      "dispatches": ["documentalist-on-commit"],
+      "ticketExit": [],
+      "allowedWriteGlobs": ["README.md", "CLAUDE.md", "doc/**", ".agents/documentalist/memory/state.json"],
+      "riskClass": "docs-git-write"
+    },
+    "blog-researcher": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/briefs/**"],
+      "riskClass": "content-write"
+    },
+    "blog-writer": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/posts/**"],
+      "riskClass": "content-write",
+      "maxReviewCycles": 2
+    },
+    "blog-reviewer": {
+      "dispatches": ["blog-reviewer-on-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/reviews/**"],
+      "riskClass": "content-review",
+      "maxReviewCycles": 2
+    },
+    "blog-seo": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/posts/**"],
+      "riskClass": "content-write"
+    },
+    "blog-translator": {
+      "dispatches": ["blog-translation-on-seo-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Blocked"],
+      "allowedWriteGlobs": ["content/posts/**"],
+      "riskClass": "content-write"
+    },
+    "growth-writer": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/social/**"],
+      "riskClass": "outbound-content"
+    },
+    "lead-magnet-creator": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/leadmagnets/**", "content/social/**"],
+      "riskClass": "outbound-content"
+    },
+    "trend-researcher": {
+      "dispatches": ["assignment", "trend-brief-weekly", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/research/**"],
+      "riskClass": "research"
+    },
+    "email-copywriter": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/emails/**"],
+      "riskClass": "outbound-content"
+    },
+    "ui-designer": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["design/**"],
+      "riskClass": "design-write",
+      "maxReviewCycles": 2
+    },
+    "ui-auditor": {
+      "dispatches": ["ui-audit-on-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["design/audits/**"],
+      "riskClass": "design-review",
+      "maxReviewCycles": 2
+    },
+    "design-researcher": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Todo", "Blocked"],
+      "allowedWriteGlobs": ["design/specs/**"],
+      "riskClass": "research"
+    },
+    "data-analyst": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["data/reports/**"],
+      "riskClass": "read-only-data"
+    },
+    "competitive-analyst": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["research/**"],
+      "riskClass": "research"
+    },
+    "approval-gatekeeper": {
+      "dispatches": ["approval-gate-on-review", "growth-approval-on-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Blocked"],
+      "allowedWriteGlobs": [],
+      "riskClass": "approval"
+    },
+    "system-watchdog": {
+      "dispatches": ["system-watchdog-hourly", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Blocked"],
+      "allowedWriteGlobs": [".agents/system-watchdog/memory/probes.json"],
+      "riskClass": "monitoring"
+    },
+    "decision-engine": {
+      "dispatches": ["decision-receipt-on-done", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked", "Done"],
+      "allowedWriteGlobs": ["doc/decisions/**", "doc/index.md", ".git/**"],
+      "riskClass": "docs-git-write"
+    },
+    "wellness-coach": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/health/**"],
+      "riskClass": "health-content"
+    },
+    "content-series-planner": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["content/series/**"],
+      "riskClass": "board-write"
+    }
+  }
+}

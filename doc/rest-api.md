@@ -21,6 +21,8 @@ Exposes the project, ticket, comment, member, label, column, and automation data
 - Cross-project ticket reference syntax in comments: `#id` (same project) and `#{slug}:{id}` (other project).
 - Ticket endpoints declare typed response schemas via `.Produces<T>()` and `.ProducesProblem()`. The OpenAPI spec at `/openapi/v1.json` includes full response types and error codes (400, 404) for all ticket CRUD operations. `GET /api/docs` renders these schemas with accurate example values (e.g. `"author": "owner"` is shown in every mutating request body).
 - `GET /api/projects/{slug}/tickets` returns `TicketSummary[]` (a lighter projection), while individual ticket endpoints return the full `Ticket` type.
+- `PATCH /api/projects/{slug}/tickets/{id}/transition` atomically changes status and assignee. Supply `expectedStatus` for compare-and-set handoffs; a stale caller receives `409 Conflict` instead of overwriting newer board state.
+- `PATCH /api/projects/{slug}/tickets/{id}/labels` atomically adds and removes label IDs, avoiding the lost-update race inherent in read/replace/write label changes.
 
 ## Member deletion
 - `DELETE /api/projects/{slug}/members/{memberId}` — removes a member and unassigns them from all tickets.

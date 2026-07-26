@@ -15,13 +15,25 @@ public interface ITrigger
     Task<IReadOnlyList<TriggerFiring>> EvaluateAsync(TriggerContext ctx, CancellationToken ct);
 
     /// <summary>
-    /// Called by the engine once the firing has been successfully dispatched
-    /// (gate checks like concurrency/dedup/budget passed). Triggers that keep
-    /// persistent "seen" state (snapshot, debounce) should persist it here so
-    /// that a firing skipped by a transient gate is retried next poll instead
-    /// of being silently dropped.
+    /// Called by the engine after the firing's full action chain completes successfully.
+    /// Triggers that keep persistent "seen" state (snapshot, debounce) should persist
+    /// it here so a firing skipped by a transient gate or ending in failure is retried
+    /// instead of being silently dropped.
     /// </summary>
     Task CommitFiringAsync(TriggerContext ctx, TriggerFiring firing, DateTime? completedAt = null) => Task.CompletedTask;
+
+    /// <summary>
+    /// Called exactly once when an action chain reaches a terminal outcome. The default
+    /// preserves the historical contract: successful chains commit trigger state, while
+    /// failed/stopped chains remain eligible for retry. Triggers with bounded retry state
+    /// can override this method to record both outcomes.
+    /// </summary>
+    Task CompleteFiringAsync(
+        TriggerContext ctx,
+        TriggerFiring firing,
+        bool succeeded,
+        DateTime? completedAt = null) =>
+        succeeded ? CommitFiringAsync(ctx, firing, completedAt) : Task.CompletedTask;
 
     /// <summary>
     /// Called by the engine when an external signal is pushed via
