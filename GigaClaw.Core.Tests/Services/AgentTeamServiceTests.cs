@@ -14,13 +14,15 @@ public sealed class AgentTeamServiceTests
         var teams = _sut.GetTeams();
 
         Assert.NotNull(teams);
-        Assert.True(teams.Count >= 6);
+        Assert.True(teams.Count >= 8);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.AllTeamsSlug);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.SoftwareEngineeringSlug);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.ContentEngineSlug);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.GrowthMarketingSlug);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.UxDesignSlug);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.DataIntelligenceSlug);
+        Assert.Contains(teams, t => t.Slug == AgentTeamService.GovernanceOpsSlug);
+        Assert.Contains(teams, t => t.Slug == AgentTeamService.HealthPerformanceSlug);
     }
 
     [Fact]
@@ -58,42 +60,40 @@ public sealed class AgentTeamServiceTests
     }
 
     [Fact]
-    public void FilterMembersByTeam_UxDesign_IncludesDesignAgentsAndProgrammer()
+    public void FilterMembersByTeam_GovernanceOps_IncludesGovernanceAgents()
     {
         var members = new List<Member>
         {
             new() { Id = 1, Name = "Owner", Slug = "owner" },
-            new() { Id = 2, Name = "UI Designer", Slug = "ui-designer" },
-            new() { Id = 3, Name = "UI Auditor", Slug = "ui-auditor" },
-            new() { Id = 4, Name = "Programmer", Slug = "programmer" },
-            new() { Id = 5, Name = "Blog Writer", Slug = "blog-writer" }
-        };
-
-        var filtered = _sut.FilterMembersByTeam(AgentTeamService.UxDesignSlug, members);
-
-        Assert.Contains(filtered, m => m.Slug == "owner");
-        Assert.Contains(filtered, m => m.Slug == "ui-designer");
-        Assert.Contains(filtered, m => m.Slug == "ui-auditor");
-        Assert.Contains(filtered, m => m.Slug == "programmer");
-        Assert.DoesNotContain(filtered, m => m.Slug == "blog-writer");
-    }
-
-    [Fact]
-    public void FilterMembersByTeam_DataIntelligence_IncludesDataAgents()
-    {
-        var members = new List<Member>
-        {
-            new() { Id = 1, Name = "Owner", Slug = "owner" },
-            new() { Id = 2, Name = "Data Analyst", Slug = "data-analyst" },
-            new() { Id = 3, Name = "Competitive Analyst", Slug = "competitive-analyst" },
+            new() { Id = 2, Name = "Approval Gatekeeper", Slug = "approval-gatekeeper" },
+            new() { Id = 3, Name = "System Watchdog", Slug = "system-watchdog" },
             new() { Id = 4, Name = "Programmer", Slug = "programmer" }
         };
 
-        var filtered = _sut.FilterMembersByTeam(AgentTeamService.DataIntelligenceSlug, members);
+        var filtered = _sut.FilterMembersByTeam(AgentTeamService.GovernanceOpsSlug, members);
 
         Assert.Contains(filtered, m => m.Slug == "owner");
-        Assert.Contains(filtered, m => m.Slug == "data-analyst");
-        Assert.Contains(filtered, m => m.Slug == "competitive-analyst");
+        Assert.Contains(filtered, m => m.Slug == "approval-gatekeeper");
+        Assert.Contains(filtered, m => m.Slug == "system-watchdog");
+        Assert.DoesNotContain(filtered, m => m.Slug == "programmer");
+    }
+
+    [Fact]
+    public void FilterMembersByTeam_HealthPerformance_IncludesWellnessAgents()
+    {
+        var members = new List<Member>
+        {
+            new() { Id = 1, Name = "Owner", Slug = "owner" },
+            new() { Id = 2, Name = "Wellness Coach", Slug = "wellness-coach" },
+            new() { Id = 3, Name = "Content Series Planner", Slug = "content-series-planner" },
+            new() { Id = 4, Name = "Programmer", Slug = "programmer" }
+        };
+
+        var filtered = _sut.FilterMembersByTeam(AgentTeamService.HealthPerformanceSlug, members);
+
+        Assert.Contains(filtered, m => m.Slug == "owner");
+        Assert.Contains(filtered, m => m.Slug == "wellness-coach");
+        Assert.Contains(filtered, m => m.Slug == "content-series-planner");
         Assert.DoesNotContain(filtered, m => m.Slug == "programmer");
     }
 }

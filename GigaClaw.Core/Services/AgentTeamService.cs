@@ -10,6 +10,8 @@ public sealed class AgentTeamService
     public const string GrowthMarketingSlug = "growth-marketing";
     public const string UxDesignSlug = "ux-design";
     public const string DataIntelligenceSlug = "data-intelligence";
+    public const string GovernanceOpsSlug = "governance-ops";
+    public const string HealthPerformanceSlug = "health-performance";
 
     private static readonly IReadOnlyList<AgentTeam> DefaultTeams = new List<AgentTeam>
     {
@@ -54,6 +56,20 @@ public sealed class AgentTeamService
             "SQL query building, dataset analysis, Mermaid data charts, and competitive market research.",
             "📊",
             new[] { "data-analyst", "competitive-analyst", "producer", "evaluator", "documentalist" }
+        ),
+        new(
+            GovernanceOpsSlug,
+            "Governance & Ops",
+            "Human-in-the-loop approval gates, runtime health probes, and decision receipts.",
+            "🛡️",
+            new[] { "approval-gatekeeper", "system-watchdog", "decision-engine", "producer", "committer", "evaluator", "documentalist" }
+        ),
+        new(
+            HealthPerformanceSlug,
+            "Health & Performance",
+            "Wellness coaching, desk ergonomics, gaming focus nutrition, and content series planning.",
+            "🏋️",
+            new[] { "wellness-coach", "content-series-planner", "blog-writer", "producer", "evaluator", "documentalist" }
         )
     };
 

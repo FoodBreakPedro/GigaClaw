@@ -36,7 +36,12 @@
             "ui-auditor",
             "design-researcher",
             "data-analyst",
-            "competitive-analyst"
+            "competitive-analyst",
+            "approval-gatekeeper",
+            "system-watchdog",
+            "decision-engine",
+            "wellness-coach",
+            "content-series-planner"
           ]
         },
         {
@@ -305,7 +310,12 @@
             "ui-auditor",
             "design-researcher",
             "data-analyst",
-            "competitive-analyst"
+            "competitive-analyst",
+            "approval-gatekeeper",
+            "system-watchdog",
+            "decision-engine",
+            "wellness-coach",
+            "content-series-planner"
           ]
         }
       ],
@@ -457,7 +467,12 @@
             "ui-auditor",
             "design-researcher",
             "data-analyst",
-            "competitive-analyst"
+            "competitive-analyst",
+            "approval-gatekeeper",
+            "system-watchdog",
+            "decision-engine",
+            "wellness-coach",
+            "content-series-planner"
           ]
         },
         {
