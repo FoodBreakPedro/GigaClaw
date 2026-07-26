@@ -22,7 +22,12 @@
             "groomer",
             "committer",
             "code-janitor",
-            "evaluator"
+            "evaluator",
+            "blog-writer",
+            "blog-reviewer",
+            "blog-researcher",
+            "blog-seo",
+            "blog-translator"
           ]
         },
         {
@@ -277,7 +282,12 @@
             "groomer",
             "committer",
             "code-janitor",
-            "evaluator"
+            "evaluator",
+            "blog-writer",
+            "blog-reviewer",
+            "blog-researcher",
+            "blog-seo",
+            "blog-translator"
           ]
         }
       ],
@@ -415,7 +425,12 @@
             "groomer",
             "committer",
             "code-janitor",
-            "evaluator"
+            "evaluator",
+            "blog-writer",
+            "blog-reviewer",
+            "blog-researcher",
+            "blog-seo",
+            "blog-translator"
           ]
         },
         {
@@ -447,6 +462,45 @@
           "agent": "{assignee}"
         }
       ]
+    },
+    {
+      "id": "blog-reviewer-on-review",
+      "name": "Blog Reviewer: 5-category quality rubric audit when content reaches Review",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Review"
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "blog-writer"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "blog-reviewer",
+          "maxTurns": 100,
+          "concurrencyGroup": "blog-reviewer",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "blog-reviewer"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "blog-reviewer"
+        }
+      ]
     }
   ]
 }
+

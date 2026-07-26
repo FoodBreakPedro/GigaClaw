@@ -17,6 +17,7 @@
 @inject LabelService LabelService
 @inject ColumnService ColumnService
 @inject MemberService MemberService
+@inject AgentTeamService AgentTeamService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject LocalizationService L
@@ -396,11 +397,21 @@ else
                         }
                     </div>
 
+                    <label class="field-label">@L["AgentTeam"]</label>
+                    <div class="assignee-picker-wrapper" style="margin-bottom:0.5rem;">
+                        <select class="assignee-select" value="@_selectedTeamSlug" @onchange="OnTeamChanged">
+                            @foreach (var team in AgentTeamService.GetTeams())
+                            {
+                                <option value="@team.Slug">@GetTeamDisplayName(team)</option>
+                            }
+                        </select>
+                    </div>
+
                     <label class="field-label">@L["AssignTo"]</label>
                     <div class="assignee-picker-wrapper">
                         <select class="assignee-select" @bind="_newTicketAssignedTo">
                             <option value="">@L["Unassigned"]</option>
-                            @foreach (var member in _allMembers)
+                            @foreach (var member in FilteredMembers)
                             {
                                 <option value="@member.Slug">@member.Name (@member.Slug)</option>
                             }
@@ -506,9 +517,19 @@ else
                            @onfocus="OpenAssigneeDropdown"
                            @onblur="OnAssigneeBlur"
                            @onkeydown="HandleAssigneeKeyDown" />
-                    @if (_assigneeDropdownOpen && GetAssigneeSuggestions().Any())
+                    @if (_assigneeDropdownOpen)
                     {
                         <div class="label-dropdown">
+                            <div class="team-filter-pills" style="padding:0.25rem 0.5rem; border-bottom:1px solid var(--border); display:flex; gap:0.25rem; flex-wrap:wrap;">
+                                @foreach (var team in AgentTeamService.GetTeams())
+                                {
+                                    <button class="header-action-btn @(_selectedTeamSlug == team.Slug ? "settings-primary" : "")"
+                                            style="font-size:0.75rem; padding:2px 6px;"
+                                            @onmousedown="() => SelectDetailTeam(team.Slug)">
+                                        @GetTeamDisplayName(team)
+                                    </button>
+                                }
+                            </div>
                             @foreach (var member in GetAssigneeSuggestions())
                             {
                                 <button class="label-dropdown-item" @onmousedown="() => SetAssignee(member.Slug)">
@@ -2173,11 +2194,37 @@ else
         CloseLabelDropdown();
     }
 
-    // ── Assignee autocomplete ──
+    // ── Agent Teams & Assignee autocomplete ──
+    private string _selectedTeamSlug = AgentTeamService.AllTeamsSlug;
+
+    private IEnumerable<Member> FilteredMembers => AgentTeamService.FilterMembersByTeam(_selectedTeamSlug, _allMembers);
+
+    private void OnTeamChanged(ChangeEventArgs e)
+    {
+        _selectedTeamSlug = (string?)e.Value ?? AgentTeamService.AllTeamsSlug;
+        if (!string.IsNullOrEmpty(_newTicketAssignedTo) && !FilteredMembers.Any(m => m.Slug.Equals(_newTicketAssignedTo, StringComparison.OrdinalIgnoreCase)))
+        {
+            _newTicketAssignedTo = "";
+        }
+    }
+
+    private void SelectDetailTeam(string teamSlug)
+    {
+        _selectedTeamSlug = teamSlug;
+    }
+
+    private string GetTeamDisplayName(AgentTeam team) => team.Slug switch
+    {
+        AgentTeamService.SoftwareEngineeringSlug => L["TeamSoftwareEngineering"],
+        AgentTeamService.ContentEngineSlug => L["TeamContentEngine"],
+        _ => L["AllTeams"]
+    };
+
     private List<Member> GetAssigneeSuggestions()
     {
         var query = _assigneeSearch?.Trim() ?? "";
-        return _allMembers
+        var teamFiltered = AgentTeamService.FilterMembersByTeam(_selectedTeamSlug, _allMembers);
+        return teamFiltered
             .Where(m => string.IsNullOrEmpty(query)
                 || m.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
                 || m.Slug.Contains(query, StringComparison.OrdinalIgnoreCase))

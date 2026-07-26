@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -31,6 +31,18 @@
     </EmbeddedResource>
     <EmbeddedResource Include="..\ProjectTemplate\Agents\automations.json">
       <LogicalName>GigaClaw.Core.AgentsTemplate/automations.json</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\BRAND.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/BRAND.md</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\VOICE.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/VOICE.md</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\scripts\**\*.*">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/scripts/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
     <EmbeddedResource Include="..\ProjectTemplate\Agents\**\SKILL.md">
