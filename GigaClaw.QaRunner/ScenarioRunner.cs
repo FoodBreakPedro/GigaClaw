@@ -38,7 +38,12 @@ public sealed class ScenarioRunner
         }
 
         using var pw = await Playwright.CreateAsync();
-        await using var browser = await pw.Chromium.LaunchAsync(new() { Headless = true });
+        var browserExe = Environment.GetEnvironmentVariable("GIGACLAW_BROWSER_EXE");
+        await using var browser = await pw.Chromium.LaunchAsync(new()
+        {
+            Headless = true,
+            ExecutablePath = string.IsNullOrWhiteSpace(browserExe) ? null : browserExe,
+        });
         await using var ctxBrowser = await browser.NewContextAsync(new()
         {
             ViewportSize = new() { Width = 1440, Height = 900 },

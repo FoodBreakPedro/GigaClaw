@@ -39,7 +39,14 @@ if (webExe is null || !File.Exists(webExe))
     return 2;
 }
 
-// First-run Playwright bootstrap: download Chromium if missing.
+// Prefer an existing system browser so local QA does not require Playwright's
+// separate ~150 MB Chromium bundle. Fall back to the managed browser when needed.
+var browserExe = ResolveBrowserExe();
+if (browserExe is not null)
+{
+    Environment.SetEnvironmentVariable("GIGACLAW_BROWSER_EXE", browserExe);
+    Console.Error.WriteLine($"[qa-runner] using system browser: {browserExe}");
+}
 await EnsurePlaywrightAsync();
 
 Scenario scenario;
@@ -119,6 +126,14 @@ static string? ResolveWebExe()
 
 static async Task EnsurePlaywrightAsync()
 {
+    var browserExe = Environment.GetEnvironmentVariable("GIGACLAW_BROWSER_EXE");
+    if (!string.IsNullOrWhiteSpace(browserExe))
+    {
+        if (!File.Exists(browserExe))
+            throw new InvalidOperationException($"GIGACLAW_BROWSER_EXE does not exist: {browserExe}");
+        return;
+    }
+
     var pwHome = Environment.GetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH")
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ms-playwright");
     if (Directory.Exists(pwHome) && Directory.EnumerateDirectories(pwHome, "chromium*").Any())
@@ -127,4 +142,49 @@ static async Task EnsurePlaywrightAsync()
     var exitCode = await Task.Run(() => Microsoft.Playwright.Program.Main(new[] { "install", "chromium" }));
     if (exitCode != 0)
         throw new InvalidOperationException($"playwright install chromium failed with exit {exitCode}");
+}
+
+static string? ResolveBrowserExe()
+{
+    var configured = Environment.GetEnvironmentVariable("GIGACLAW_BROWSER_EXE");
+    if (!string.IsNullOrWhiteSpace(configured))
+        return configured;
+
+    string[] candidates;
+    if (OperatingSystem.IsMacOS())
+    {
+        candidates =
+        [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+        ];
+    }
+    else if (OperatingSystem.IsWindows())
+    {
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        candidates =
+        [
+            Path.Combine(programFiles, "Google", "Chrome", "Application", "chrome.exe"),
+            Path.Combine(programFilesX86, "Google", "Chrome", "Application", "chrome.exe"),
+            Path.Combine(localAppData, "Google", "Chrome", "Application", "chrome.exe"),
+            Path.Combine(programFiles, "Microsoft", "Edge", "Application", "msedge.exe"),
+            Path.Combine(programFilesX86, "Microsoft", "Edge", "Application", "msedge.exe"),
+        ];
+    }
+    else
+    {
+        candidates =
+        [
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable",
+            "/usr/bin/chromium",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/microsoft-edge",
+        ];
+    }
+
+    return candidates.FirstOrDefault(File.Exists);
 }

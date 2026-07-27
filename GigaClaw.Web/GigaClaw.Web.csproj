@@ -5,13 +5,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Markdig" Version="1.1.2" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+    <PackageReference Include="Markdig" Version="1.3.2" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <!-- Pins the transitive Microsoft.OpenApi above the vulnerable 2.0.0 (NU1903 / GHSA-v5pm-xwqc-g5wc). -->
+    <!-- ASP.NET Core OpenAPI 10.x source generators still target the
+         Microsoft.OpenApi 2.x mutable model. Version 3.x makes generated
+         IOpenApiMediaType.Example assignments uncompilable. -->
     <PackageReference Include="Microsoft.OpenApi" Version="2.10.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
     <!-- Pins the transitive SQLitePCLRaw bundle above 2.1.11 (CVE-2025-6965 / GHSA-2m69-gcr7-jv3q). -->
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
   </ItemGroup>
 
   <PropertyGroup>

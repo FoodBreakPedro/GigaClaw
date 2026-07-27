@@ -201,9 +201,12 @@ Issues a GET request and asserts a field in the JSON response. On mismatch, the 
 - `passOn: "all-asserts-pass"` (default) — verdict is `PASS` only if every assertion passes.
 - `passOn: "manual"` — verdict starts at `PASS`; the caller post-processes the result.
 
-## First run
+## Browser
 
-Downloads Chromium (~150 MB) into `%LOCALAPPDATA%\ms-playwright`. One-time per machine.
+The runner first uses `GIGACLAW_BROWSER_EXE` when set, then looks for a system
+installation of Google Chrome, Chromium, or Microsoft Edge. If no compatible
+browser is available, it downloads Playwright Chromium (~150 MB) into the normal
+Playwright cache. This fallback is one-time per machine.
 
 ## Scope
 
