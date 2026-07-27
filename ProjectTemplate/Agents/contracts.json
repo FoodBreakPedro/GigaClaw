@@ -143,6 +143,41 @@
       "allowedWriteGlobs": ["research/**"],
       "riskClass": "research"
     },
+    "local-media-director": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["media/specs/**", "media/manifests/**"],
+      "riskClass": "media-direction",
+      "maxReviewCycles": 2
+    },
+    "local-image-artist": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Backlog", "Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["media/specs/**", "media/renders/**", "media/receipts/**"],
+      "riskClass": "local-media-execution",
+      "maxReviewCycles": 2
+    },
+    "local-motion-artist": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Backlog", "Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["media/specs/**", "media/renders/**", "media/receipts/**"],
+      "riskClass": "local-media-execution",
+      "maxReviewCycles": 2
+    },
+    "local-media-compositor": {
+      "dispatches": ["assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["media/manifests/**", "media/renders/**", "media/receipts/**"],
+      "riskClass": "local-media-composition",
+      "maxReviewCycles": 2
+    },
+    "local-media-reviewer": {
+      "dispatches": ["local-media-reviewer-on-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["media/reviews/**"],
+      "riskClass": "local-media-review",
+      "maxReviewCycles": 2
+    },
     "approval-gatekeeper": {
       "dispatches": ["approval-gate-on-review", "growth-approval-on-review", "assignment", "resume", "owner-feedback"],
       "ticketExit": ["Review", "Blocked"],

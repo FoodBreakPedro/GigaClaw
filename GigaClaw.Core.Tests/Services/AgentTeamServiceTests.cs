@@ -14,7 +14,7 @@ public sealed class AgentTeamServiceTests
         var teams = _sut.GetTeams();
 
         Assert.NotNull(teams);
-        Assert.True(teams.Count >= 8);
+        Assert.True(teams.Count >= 9);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.AllTeamsSlug);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.SoftwareEngineeringSlug);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.ContentEngineSlug);
@@ -23,6 +23,7 @@ public sealed class AgentTeamServiceTests
         Assert.Contains(teams, t => t.Slug == AgentTeamService.DataIntelligenceSlug);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.GovernanceOpsSlug);
         Assert.Contains(teams, t => t.Slug == AgentTeamService.HealthPerformanceSlug);
+        Assert.Contains(teams, t => t.Slug == AgentTeamService.LocalMediaCreationSlug);
     }
 
     [Fact]
@@ -94,6 +95,31 @@ public sealed class AgentTeamServiceTests
         Assert.Contains(filtered, m => m.Slug == "owner");
         Assert.Contains(filtered, m => m.Slug == "wellness-coach");
         Assert.Contains(filtered, m => m.Slug == "content-series-planner");
+        Assert.DoesNotContain(filtered, m => m.Slug == "programmer");
+    }
+
+    [Fact]
+    public void FilterMembersByTeam_LocalMediaCreation_IncludesMediaAgentsAndOwner()
+    {
+        var members = new List<Member>
+        {
+            new() { Id = 1, Name = "Owner", Slug = "owner" },
+            new() { Id = 2, Name = "Local Media Director", Slug = "local-media-director" },
+            new() { Id = 3, Name = "Local Image Artist", Slug = "local-image-artist" },
+            new() { Id = 4, Name = "Local Motion Artist", Slug = "local-motion-artist" },
+            new() { Id = 5, Name = "Local Media Compositor", Slug = "local-media-compositor" },
+            new() { Id = 6, Name = "Local Media Reviewer", Slug = "local-media-reviewer" },
+            new() { Id = 7, Name = "Programmer", Slug = "programmer" }
+        };
+
+        var filtered = _sut.FilterMembersByTeam(AgentTeamService.LocalMediaCreationSlug, members);
+
+        Assert.Contains(filtered, m => m.Slug == "owner");
+        Assert.Contains(filtered, m => m.Slug == "local-media-director");
+        Assert.Contains(filtered, m => m.Slug == "local-image-artist");
+        Assert.Contains(filtered, m => m.Slug == "local-motion-artist");
+        Assert.Contains(filtered, m => m.Slug == "local-media-compositor");
+        Assert.Contains(filtered, m => m.Slug == "local-media-reviewer");
         Assert.DoesNotContain(filtered, m => m.Slug == "programmer");
     }
 }

@@ -102,6 +102,12 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         "POST /api/projects/{slug}/chat/start",
         // Images
         "POST /api/images",
+        // Local Media
+        "GET /api/projects/{slug}/media/jobs",
+        "GET /api/projects/{slug}/media/jobs/{id}",
+        "POST /api/projects/{slug}/media/jobs",
+        "POST /api/projects/{slug}/media/jobs/{id}/cancel",
+        "POST /api/projects/{slug}/media/jobs/{id}/review",
         // Dashboard
         "GET /api/projects/{slug}/dashboard/tiles",
         "DELETE /api/projects/{slug}/dashboard/tiles/{tileSlug}",
@@ -189,6 +195,11 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         ["DELETE /api/projects/{slug}/chat/session"] = "Chat",
         ["POST /api/projects/{slug}/chat/start"] = "Chat",
         ["POST /api/images"] = "Images",
+        ["GET /api/projects/{slug}/media/jobs"] = "Local Media",
+        ["GET /api/projects/{slug}/media/jobs/{id}"] = "Local Media",
+        ["POST /api/projects/{slug}/media/jobs"] = "Local Media",
+        ["POST /api/projects/{slug}/media/jobs/{id}/cancel"] = "Local Media",
+        ["POST /api/projects/{slug}/media/jobs/{id}/review"] = "Local Media",
         ["GET /api/projects/{slug}/dashboard/tiles"] = "Dashboard",
         ["DELETE /api/projects/{slug}/dashboard/tiles/{tileSlug}"] = "Dashboard",
         ["PATCH /api/projects/{slug}/dashboard/tiles/{tileSlug}/position"] = "Dashboard",
@@ -247,6 +258,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
             $"/api/projects/{slug}/skills",
             $"/api/projects/{slug}/runs",
             $"/api/projects/{slug}/chat/targets",
+            $"/api/projects/{slug}/media/jobs",
             $"/api/projects/{slug}/dashboard/tiles",
         })
         {
@@ -285,6 +297,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
             "Endpoints.Runs.cs",
             "Endpoints.Chat.cs",
             "Endpoints.Images.cs",
+            "Endpoints.Media.cs",
             "Endpoints.Dashboard.cs",
             "Endpoints.Ollama.cs",
         };

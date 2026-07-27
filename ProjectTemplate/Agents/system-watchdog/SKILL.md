@@ -20,6 +20,10 @@ atomically and never put credentials or response bodies in it.
 1. **Runtime Probe Verification** — probe, in this order:
    - **The orchestrator itself**: `GET ${GIGACLAW_API_URL}/api/projects` must answer 2xx.
    - **The project's own declared endpoints**: read them out of the project (config files, `.env` samples, `README.md`, `doc/`). Probe only what the project actually declares — never assume a host, port, or vendor.
+     When the project declares local media, run
+     `python3 .agents/scripts/media_generate.py probe --spec <approved-spec>` against one approved
+     execution spec. This is a read-only provider probe: it must not generate media, change provider,
+     or replace a failed provider with another runtime. Treat a missing approved spec as `unknown`.
    - **Run state**: `GET ${GIGACLAW_API_URL}/api/projects/{project-slug}/runs` for active runs, and `GET ${GIGACLAW_API_URL}/api/projects/{project-slug}/concurrency-groups` for `lastActivityAt` / `lockTimeoutMinutes`. Flag any run whose last activity is older than its lock timeout — that is a stuck run holding a concurrency group.
 2. **Hygiene & Resource Audit**:
    - Detect stale locks, abandoned temporary files, and orphaned agent scratch files left in the workspace.
