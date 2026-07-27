@@ -55,10 +55,16 @@ public sealed class TicketCommentAddedTrigger : ITrigger
         return firings;
     }
 
+    // One cursor per automation: two ticketCommentAdded automations polling the same
+    // workspace must not advance each other's last-seen ids, or whichever polls first
+    // swallows the comment for both. Falls back to the legacy shared key on first read
+    // so existing installs don't re-fire on historical comments.
+    private static string CursorKey(TriggerContext ctx) => "_lastCommentIds:" + ctx.Automation.Id;
+
     private static Dictionary<int, int> LoadLastCommentIds(TriggerContext ctx)
     {
         var state = ctx.Sessions.Load(ctx.WorkspacePath);
-        var node = state["_lastCommentIds"] as JsonObject;
+        var node = state[CursorKey(ctx)] as JsonObject ?? state["_lastCommentIds"] as JsonObject;
         var dict = new Dictionary<int, int>();
         if (node is null) return dict;
         foreach (var kv in node)
@@ -97,7 +103,7 @@ public sealed class TicketCommentAddedTrigger : ITrigger
         {
             var obj = new JsonObject();
             foreach (var kv in ids) obj[kv.Key.ToString()] = kv.Value;
-            state["_lastCommentIds"] = obj;
+            state[CursorKey(ctx)] = obj;
         });
     }
 }
