@@ -33,6 +33,10 @@
       <LogicalName>GigaClaw.Core.AgentsTemplate/automations.json</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\contracts.json">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/contracts.json</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\ProjectTemplate\Agents\BRAND.md">
       <LogicalName>GigaClaw.Core.AgentsTemplate/BRAND.md</LogicalName>
       <WithCulture>false</WithCulture>

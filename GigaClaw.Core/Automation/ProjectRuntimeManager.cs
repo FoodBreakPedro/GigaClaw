@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using GigaClaw.Core.Automation.Triggers;
+using GigaClaw.Core.Services;
 
 namespace GigaClaw.Core.Automation;
 
@@ -16,14 +17,20 @@ internal sealed class ProjectRuntimeManager
         Channel.CreateUnbounded<UrgentEntry>(new UnboundedChannelOptions { SingleReader = true });
     private readonly AutomationStore _store;
     private readonly ITriggerStateStore _triggerState;
+    private readonly ColumnService _columns;
     private readonly ILogger _logger;
 
     internal sealed record UrgentEntry(string Slug, Automation Automation, ITrigger Trigger, TriggerFiring Firing);
 
-    public ProjectRuntimeManager(AutomationStore store, ITriggerStateStore triggerState, ILogger logger)
+    public ProjectRuntimeManager(
+        AutomationStore store,
+        ITriggerStateStore triggerState,
+        ProjectService projects,
+        ILogger logger)
     {
         _store = store;
         _triggerState = triggerState;
+        _columns = new ColumnService(projects);
         _logger = logger;
     }
 
@@ -128,7 +135,7 @@ internal sealed class ProjectRuntimeManager
             {
                 trigger = a.Trigger switch
                 {
-                    TicketInColumnTriggerSpec t     => new TicketInColumnTrigger(t),
+                    TicketInColumnTriggerSpec t     => await BuildTicketInColumnTriggerAsync(slug, a.Id, t),
                     GitCommitTriggerSpec t          => new GitCommitTrigger(t),
                     StatusChangeTriggerSpec t       => new StatusChangeTrigger(t),
                     SubTicketStatusTriggerSpec t    => new SubTicketStatusTrigger(t),
@@ -141,6 +148,27 @@ internal sealed class ProjectRuntimeManager
             map[a.Id] = trigger;
         }
         return map;
+    }
+
+    private async Task<ITrigger> BuildTicketInColumnTriggerAsync(
+        string slug,
+        string automationId,
+        TicketInColumnTriggerSpec spec)
+    {
+        if (!string.IsNullOrWhiteSpace(spec.ExhaustedStatus))
+        {
+            var columns = await _columns.ListColumnsAsync(slug);
+            if (!columns.Any(c =>
+                string.Equals(c.Name, spec.ExhaustedStatus, StringComparison.OrdinalIgnoreCase)))
+            {
+                _logger.LogWarning(
+                    "Skipping ticketInColumn automation {Id}: exhaustedStatus column {Status} does not exist",
+                    automationId,
+                    spec.ExhaustedStatus);
+                return new NullTrigger();
+            }
+        }
+        return new TicketInColumnTrigger(spec);
     }
 
     private sealed class NullTrigger : ITrigger

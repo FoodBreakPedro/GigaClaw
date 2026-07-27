@@ -50,52 +50,46 @@ Run available python scripts against the target post before scoring:
 python3 .agents/scripts/lint_prose.py <filepath>
 python3 .agents/scripts/cognitive_load.py <filepath>
 python3 .agents/scripts/ai_citation_score.py <filepath>
+python3 .agents/scripts/content_contract.py <filepath> --check-external
 ```
 
-Also load `.agents/VOICE.md` and check its full banned-phrase list by hand — the linter covers only a subset of it.
+`content_contract.py` failures are P0 issues. Also load `.agents/VOICE.md` and check its full banned-phrase list by hand — the linter covers only a subset of it.
 
 ## Review Execution Protocol
 
-1. Read the article file — use the path from the ticket, defaulting to `content/posts/<slug>.md`.
-2. Run quality scripts and analyze prose metrics.
-3. Score each of the 5 categories (Total max = 100).
-4. Categorize issues (defect classes only — the score is a separate gate):
+1. Read the article file — use the path from the ticket, defaulting to `content/posts/<slug>.md`. Compute its digest with `agent_ticket.py digest`; never trust a digest copied from an earlier comment.
+2. Search comments for `BLOG-REVIEW (APPROVE|REJECT) ... artifact-sha256:<current-digest>`. If a verdict already exists for this exact version, exit without adding a comment or changing state.
+3. Run quality scripts and analyze prose metrics.
+4. Score each of the 5 categories (Total max = 100).
+5. Categorize issues (defect classes only — the score is a separate gate):
    - **P0 Critical**: Fabricated or unsourced statistics, broken or invalid schema, broken links, banned AI clichés present.
    - **P1 Important**: Low burstiness, missing comparison tables, weak meta description.
    - **P2 Advisory**: Minor formatting polish.
-5. **Enforce the gate**: the article passes only with **score >= 90 AND zero P0 issues**.
+6. **Enforce the gate**: the article passes only with **score >= 90 AND zero P0 issues**.
+7. Count prior `BLOG-REVIEW REJECT cycle N/2` and `BLOG-SEO RETURN cycle N/2` receipts. The next correction number is one greater than the highest prior number; never infer it from memory.
 
 ## Verdict Actions
 
 Post the verdict comment first, then move the ticket. Write each JSON body to a workspace file (never `/tmp`), send it with `-d @file -w "%{http_code}"`, verify the status is 2xx before continuing, and delete the scratch files at the end of the run.
 
-**APPROVE** (score >= 90, zero P0) → comment with the full score breakdown, then hand the ticket to `blog-seo` for the schema/meta pass: PATCH `assignedTo` to `blog-seo`, then PATCH status to `Todo` (assignee first, so the dispatcher sees the right worker).
+**APPROVE** (score >= 90, zero P0) → comment with the full score breakdown and current artifact receipt, then hand the ticket to `blog-seo` in `Todo`.
 
-The approve comment **must start with the literal token `APPROVE`** on its first line — e.g. `APPROVE — score 93/100` — followed by the breakdown. Downstream agents gate on that token: `blog-translator` refuses to translate a post without a `blog-reviewer` APPROVE verdict in the comment trail.
+The approve comment **must start with the literal token `APPROVE`** on its first line — e.g. `APPROVE — score 93/100` — and include `BLOG-REVIEW APPROVE v1 artifact-sha256:<digest>`. Downstream agents must require a verdict whose digest matches the current source, not merely any historic APPROVE.
+
+Put the full approve report in `./rv-verdict.md`, then use the version marker as the helper idempotency key:
 
 ```bash
-api="${GIGACLAW_API_URL}"
-# ./rv-comment.json -> {"content":"APPROVE — score 93/100\n\n## Review\n\n...","author":"blog-reviewer"}
-http=$(curl -s -o ./rv-resp.json -w "%{http_code}" -X POST \
-  "$api/api/projects/{project-slug}/tickets/{id}/comments" \
-  -H "Content-Type: application/json" -d @./rv-comment.json)
-[[ "$http" =~ ^2 ]] || { echo "POST comment failed http=$http"; cat ./rv-resp.json; exit 1; }
-
-# ./rv-assign.json -> {"assignedTo":"blog-seo","author":"blog-reviewer"}   (APPROVE only)
-http=$(curl -s -o ./rv-resp.json -w "%{http_code}" -X PATCH \
-  "$api/api/projects/{project-slug}/tickets/{id}" \
-  -H "Content-Type: application/json" -d @./rv-assign.json)
-[[ "$http" =~ ^2 ]] || { echo "PATCH assignedTo failed http=$http"; cat ./rv-resp.json; exit 1; }
-
-# ./rv-status.json -> {"status":"Todo","author":"blog-reviewer"}
-http=$(curl -s -o ./rv-resp.json -w "%{http_code}" -X PATCH \
-  "$api/api/projects/{project-slug}/tickets/{id}/status" \
-  -H "Content-Type: application/json" -d @./rv-status.json)
-[[ "$http" =~ ^2 ]] || { echo "PATCH status failed http=$http"; cat ./rv-resp.json; exit 1; }
+python3 .agents/scripts/agent_ticket.py \
+  --project {project-slug} --ticket {id} --author blog-reviewer \
+  handoff --assignee blog-seo --status Todo --expected-status Review \
+  --content-file ./rv-verdict.md \
+  --marker "BLOG-REVIEW APPROVE v1 artifact-sha256:<digest>"
 ```
 
-**REJECT** (score < 90 or any P0) → comment with the prioritized fix list (P0 first), then PATCH `assignedTo` to `blog-writer` and PATCH status to `Todo` (assignee first). Set `assignedTo` explicitly on every dispatch path: if you were assigned the ticket directly, leaving the assignee unchanged would re-dispatch *you* on your own rejection instead of the writer.
+**REJECT cycle 1/2** (score < 90 or any P0) → put the prioritized fix list in `./rv-verdict.md`; its first line is `REJECT — score N/100`, and it includes `BLOG-REVIEW REJECT cycle 1/2 artifact-sha256:<digest>`. Hand off to `blog-writer` in `Todo` using the same helper shape with `--assignee blog-writer`.
 
-**BLOCKED** (the article file is missing or unreadable) → PATCH status to `Blocked` with a comment naming the path you tried.
+**REJECT cycle 2/2** → do **not** start a third writer/reviewer loop. Post the verdict receipt, hand the ticket to `owner` in `Blocked`, and state which issues remain. This is an escalation, not an approval.
+
+**BLOCKED** (the article file is missing/unreadable, external links cannot be verified, or the cycle limit is reached) → atomically hand to `owner` in `Blocked` and comment with the exact reason. Use `agent_ticket.py`; delete scratch report files after success.
 
 **Never end a turn with the ticket in `InProgress`** — including runs where you were assigned the ticket directly instead of triggered by `blog-reviewer-on-review`.

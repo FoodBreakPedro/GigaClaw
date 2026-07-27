@@ -10,7 +10,11 @@
         "columns": [
           "Todo"
         ],
-        "debounceSeconds": 0
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 3,
+        "retryBackoffSeconds": 300,
+        "exhaustedStatus": "Blocked",
+        "exhaustedComment": "Automation stopped after 3 unchanged dispatch attempts. Add owner feedback or revise the ticket before retrying."
       },
       "conditions": [
         {
@@ -34,6 +38,11 @@
             "design-researcher",
             "data-analyst",
             "competitive-analyst",
+            "local-media-director",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor",
+            "local-media-reviewer",
             "approval-gatekeeper",
             "system-watchdog",
             "decision-engine",
@@ -87,7 +96,11 @@
           "Backlog"
         ],
         "assigneeSlug": "groomer",
-        "debounceSeconds": 0
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 3,
+        "retryBackoffSeconds": 600,
+        "exhaustedStatus": "Blocked",
+        "exhaustedComment": "Grooming stopped after 3 unchanged attempts. Add missing context or revise the ticket before retrying."
       },
       "conditions": [],
       "actions": [
@@ -120,7 +133,16 @@
         "pollSeconds": 30,
         "to": "Done"
       },
-      "conditions": [],
+      "conditions": [
+        {
+          "type": "labels",
+          "labels": [
+            "decision",
+            "adr"
+          ],
+          "negate": true
+        }
+      ],
       "actions": [
         {
           "type": "runAgent",
@@ -281,7 +303,11 @@
         "columns": [
           "InProgress"
         ],
-        "debounceSeconds": 0
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 3,
+        "retryBackoffSeconds": 300,
+        "exhaustedStatus": "Blocked",
+        "exhaustedComment": "Agent resume stopped after 3 unchanged attempts. Add owner feedback or revise the ticket before retrying."
       },
       "conditions": [
         {
@@ -304,6 +330,11 @@
             "design-researcher",
             "data-analyst",
             "competitive-analyst",
+            "local-media-director",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor",
+            "local-media-reviewer",
             "approval-gatekeeper",
             "system-watchdog",
             "decision-engine",
@@ -317,7 +348,7 @@
           "type": "runAgent",
           "agent": "{assignee}",
           "concurrencyGroup": "{assignee}",
-          "maxTurns": 200,
+          "maxTurns": 100,
           "mutuallyExclusiveWith": [],
           "env": {},
           "model": "claude-sonnet-4-6",
@@ -402,6 +433,7 @@
         "ignoreAuthors": [
           "documentalist@gigaclaw.local",
           "code-janitor@gigaclaw.local",
+          "decision-engine@gigaclaw.local",
           "memory@gigaclaw.local",
           "noreply@anthropic.com"
         ]
@@ -417,7 +449,7 @@
           "env": {},
           "model": "claude-sonnet-4-6",
           "restoreStatusOnFail": false,
-          "context": "No commit range is provided in this prompt. Derive it yourself: run `git log --format='%H %ae %s' -n 20` and process the commits since your last own commit (author documentalist@gigaclaw.local). If you cannot find one, process only HEAD."
+          "context": "No commit range is provided in this prompt. Follow the documentalist durable-cursor protocol: read `.agents/documentalist/memory/state.json`, validate the recorded commit is an ancestor of HEAD, process the complete cursor..HEAD range, and advance the cursor only after documentation validation and commit succeed. Do not substitute a fixed git-log window or HEAD-only fallback."
         },
         {
           "type": "consolidateAgentMemory",
@@ -462,6 +494,11 @@
             "design-researcher",
             "data-analyst",
             "competitive-analyst",
+            "local-media-director",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor",
+            "local-media-reviewer",
             "approval-gatekeeper",
             "system-watchdog",
             "decision-engine",
@@ -576,6 +613,46 @@
       ]
     },
     {
+      "id": "blog-translation-on-seo-review",
+      "name": "Blog Translator: localize an approved, SEO-complete post when requested",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Review"
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "blog-seo"
+          ]
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "translate",
+            "localize"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "assignTicket",
+          "slug": "blog-translator"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Todo"
+        },
+        {
+          "type": "addComment",
+          "content": "SEO checks passed and localization was requested. Handed off to blog-translator.",
+          "author": "automation"
+        }
+      ]
+    },
+    {
       "id": "growth-approval-on-review",
       "name": "Approval gate: externally-bound growth content reaching Review",
       "enabled": true,
@@ -657,6 +734,73 @@
       ]
     },
     {
+      "id": "approval-clear-on-revision",
+      "name": "Approval gate: invalidate approval labels when work returns to Todo",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Todo"
+      },
+      "conditions": [
+        {
+          "type": "labels",
+          "labels": [
+            "pending-approval",
+            "approved"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "setLabels",
+          "remove": [
+            "pending-approval",
+            "approved"
+          ]
+        },
+        {
+          "type": "addComment",
+          "content": "Approval invalidated because the ticket returned to Todo. A fresh artifact receipt is required on the next Review.",
+          "author": "automation"
+        }
+      ]
+    },
+    {
+      "id": "approval-mark-on-done",
+      "name": "Approval gate: mark owner-approved outbound work",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Done"
+      },
+      "conditions": [
+        {
+          "type": "labels",
+          "labels": [
+            "pending-approval"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "setLabels",
+          "add": [
+            "approved"
+          ],
+          "remove": [
+            "pending-approval"
+          ]
+        },
+        {
+          "type": "addComment",
+          "content": "Owner approval recorded. Outbound automations must require the `approved` label before acting.",
+          "author": "automation"
+        }
+      ]
+    },
+    {
       "id": "system-watchdog-hourly",
       "name": "System Watchdog: hourly ticketless health probe",
       "enabled": true,
@@ -731,7 +875,7 @@
           "type": "runAgent",
           "agent": "decision-engine",
           "maxTurns": 40,
-          "concurrencyGroup": "decision-engine",
+          "concurrencyGroup": "git",
           "mutuallyExclusiveWith": [],
           "env": {},
           "model": "claude-sonnet-4-6",
@@ -748,6 +892,46 @@
       ]
     },
     {
+      "id": "local-media-reviewer-on-review",
+      "name": "Local Media Reviewer: validate provenance and technical quality in Review",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Review"
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "local-media-reviewer",
+          "maxTurns": 60,
+          "concurrencyGroup": "local-media-reviewer",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "local-media-reviewer"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "local-media-reviewer"
+        }
+      ]
+    },
+    {
       "id": "stale-blocked-nudge",
       "name": "Nudge: ping the owner about tickets stuck in Blocked",
       "enabled": true,
@@ -757,7 +941,9 @@
         "columns": [
           "Blocked"
         ],
-        "debounceSeconds": 86400
+        "debounceSeconds": 86400,
+        "maxConsecutiveFirings": 3,
+        "retryBackoffSeconds": 86400
       },
       "conditions": [
         {

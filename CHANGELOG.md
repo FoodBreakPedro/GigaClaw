@@ -2,6 +2,18 @@
 
 All notable changes to GigaClaw.
 
+## Unreleased
+
+### Added
+
+- **Local Media Creation team** with dedicated direction, ComfyUI image, ComfyUI/Phosphene motion,
+  OpenMontage composition, and independent review agents.
+- **Durable governed media jobs** with per-project SQLite state, idempotent submission, provider
+  resource locks, cancellation, timeout, restart interruption recovery, provenance receipts, REST
+  endpoints, and board-state reconciliation.
+- **OpenMontage execution gates** that require explicit providers, approved Layer 3 skills, locked
+  output roots, and completed human-approved project/pipeline checkpoints for clip generation.
+
 ## [v0.10] — 2026-07-24
 
 Scheduled tickets, per-ticket token cost, a rebuilt cron scheduler — and a deep security & reliability hardening pass.

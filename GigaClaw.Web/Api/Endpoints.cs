@@ -19,6 +19,7 @@ public static partial class Endpoints
         MapRuns(api);
         MapChat(api);
         MapImages(api);
+        MapMedia(api);
         MapDashboard(api);
         MapOllama(api);
     }

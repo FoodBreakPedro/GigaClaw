@@ -42,6 +42,8 @@ builder.Services.AddSingleton(appSettings);
 builder.Services.AddSingleton(new GigaClaw.Core.Services.LocalizationService(appSettings));
 builder.Services.AddSingleton(new ProjectService(dataDir));
 builder.Services.AddSingleton<TicketService>();
+builder.Services.AddSingleton<LocalMediaJobService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<LocalMediaJobService>());
 builder.Services.AddSingleton<LabelService>();
 builder.Services.AddSingleton<ColumnService>();
 builder.Services.AddSingleton<MemberService>();

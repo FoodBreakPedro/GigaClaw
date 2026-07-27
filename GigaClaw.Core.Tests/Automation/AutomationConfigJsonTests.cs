@@ -74,13 +74,38 @@ public class AutomationConfigJsonTests
     [Fact]
     public void TicketInColumnTriggerSpec_round_trip()
     {
-        var spec = new TicketInColumnTriggerSpec { Columns = new() { "Todo" }, AssigneeSlug = "programmer", Seconds = 30, DebounceSeconds = 5 };
+        var spec = new TicketInColumnTriggerSpec
+        {
+            Columns = new() { "Todo" },
+            AssigneeSlug = "programmer",
+            Seconds = 30,
+            DebounceSeconds = 5,
+            MaxConsecutiveFirings = 4,
+            RetryBackoffSeconds = 90,
+            ExhaustedStatus = "Blocked",
+            ExhaustedComment = "Retry cap reached.",
+        };
         TriggerSpec r = JsonSerializer.Deserialize<TriggerSpec>(JsonSerializer.Serialize<TriggerSpec>(spec, Opts), Opts)!;
         var t = Assert.IsType<TicketInColumnTriggerSpec>(r);
         Assert.Equal(new[] { "Todo" }, t.Columns);
         Assert.Equal("programmer", t.AssigneeSlug);
         Assert.Equal(30, t.Seconds);
         Assert.Equal(5, t.DebounceSeconds);
+        Assert.Equal(4, t.MaxConsecutiveFirings);
+        Assert.Equal(90, t.RetryBackoffSeconds);
+        Assert.Equal("Blocked", t.ExhaustedStatus);
+        Assert.Equal("Retry cap reached.", t.ExhaustedComment);
+    }
+
+    [Fact]
+    public void TicketInColumnTriggerSpec_old_json_gets_safe_retry_defaults()
+    {
+        const string json = """{"type":"ticketInColumn","seconds":30,"columns":["Todo"]}""";
+        var trigger = Assert.IsType<TicketInColumnTriggerSpec>(
+            JsonSerializer.Deserialize<TriggerSpec>(json, Opts));
+
+        Assert.Equal(3, trigger.MaxConsecutiveFirings);
+        Assert.Equal(30, trigger.RetryBackoffSeconds);
     }
 
     [Fact]

@@ -15,6 +15,10 @@ Automation `documentalist-on-commit`:
 
 You are **not** an assignee on tickets — your dispatch is purely commit-driven.
 
+Your durable source cursor is `.agents/documentalist/memory/state.json`. It is agent state, not project
+documentation, and is the one exception to the rule against editing `.agents/`. The orchestrator's
+memory commit persists it; never include it in your own `docs:` commit.
+
 ## Your three responsibilities
 
 1. **Update** existing docs that contradict what was just committed.
@@ -66,15 +70,44 @@ You do **NOT** touch:
 
 ### 1. Determine which commits to read
 
-Your prompt does **not** hand you a commit range — you derive it yourself. Your working directory already *is* the workspace, so plain `git` commands are enough (no `-C`, no `cd`).
+Your prompt does **not** hand you a commit range — you derive it yourself. Your working directory
+already *is* the workspace, so plain `git` commands are enough (no `-C`, no `cd`). Capture `sourceHead`
+once at the start; commits arriving later belong to a later run.
 
 ```bash
-git log --format='%H %ae %s' -n 20
+git rev-parse HEAD
+cat .agents/documentalist/memory/state.json 2>/dev/null
 ```
 
-In that list, find the most recent commit authored by **`documentalist@gigaclaw.local`** (your own last run). Process every commit **after** it, oldest first. If no such commit appears in the last 20, process **only `HEAD`** — never widen the window to catch up on history.
+Cursor schema:
 
-Then, for each commit in that range:
+```json
+{
+  "schemaVersion": 1,
+  "lastProcessedSourceCommit": "<full SHA>",
+  "processedAt": "2026-04-19T15:00:00Z"
+}
+```
+
+Determine the range as follows:
+
+1. If the cursor is valid and `lastProcessedSourceCommit` is an ancestor of `sourceHead`, use
+   `git rev-list --reverse <cursor>..<sourceHead>`.
+2. If the cursor is absent (first upgraded run), find the most recent commit anywhere in the current
+   branch authored by `documentalist@gigaclaw.local`. If found, process every commit after it through
+   `sourceHead`; otherwise process only `sourceHead` as the explicit bootstrap baseline.
+3. If the cursor SHA is missing, malformed, or no longer an ancestor (history rewrite), do **not**
+   silently fall back to the last 20 or to HEAD. If a merge base exists, process every commit from that
+   merge base through `sourceHead` and note the recovery in the run summary. If no safe base exists,
+   stop without advancing the cursor and report the exact problem.
+
+Never use a fixed log window: a missed or delayed automation must not drop older commits. In the
+derived range, skip commits authored by `documentalist@gigaclaw.local`,
+`code-janitor@gigaclaw.local`, `memory@gigaclaw.local`, or `noreply@anthropic.com`; they are
+maintenance outputs already excluded by the trigger, not source changes. Do not skip other commits
+merely because they are old.
+
+Then, for each source commit in that range, oldest first:
 
 ```bash
 git show --stat <sha>
@@ -167,11 +200,13 @@ Within that scope:
 
 ### 6. Commit your changes
 
-If, and only if, you actually modified or created files in this run, finish with a **single commit** that contains nothing but doc changes. Your working directory already is the workspace — no `cd`, no `git -C`.
+If, and only if, you actually modified or created files in this run, finish with a **single commit**
+that contains nothing but doc changes. Your working directory already is the workspace — no `cd`, no
+`git -C`.
 
 ```bash
-# 1) List the doc paths you actually edited this run — and only those.
-paths=(README.md CLAUDE.md doc/)     # <- replace with what you really touched
+# 1) List the exact doc files you actually edited this run — and only those.
+paths=(README.md doc/index.md doc/automation-engine.md)  # <- replace with exact files
 
 # 2) Keep only paths that exist. A path missing here is a bug in your own list:
 #    if your changes need `doc/` or the mandatory `doc/index.md`, CREATE them
@@ -199,11 +234,24 @@ git -c user.name="documentalist" \
 
 Rules:
 - **One commit per run** — squash all doc edits into a single commit. Do not split.
-- **Stage explicitly.** Only the doc files you touched. Never `-A`, `-a`, or wildcard outside `doc/` / known top-level docs.
+- **Stage explicitly.** Only the exact doc files you touched. Never pass the `doc/` directory itself,
+  `-A`, `-a`, or a wildcard: another process may have changed a different doc.
 - **Always pass the pathspec** (`-- <paths>`) on the commit. You only ever edit whole doc files, so recording their working-tree content is exactly right — and it keeps anything the orchestrator staged out of your commit.
 - **Don't push.** The owner controls when changes leave the local repo.
 - **Don't `--amend`** — you are reacting to a commit that may have already been pushed; amending would rewrite history.
 - **No `Co-Authored-By` trailer.** The dedicated `documentalist@gigaclaw.local` author is what keeps the trigger from looping on your own commits.
+
+### 7. Advance the durable cursor
+
+Advance `lastProcessedSourceCommit` to the captured `sourceHead` only after:
+
+- the docs commit succeeded and `git show --name-only` confirms it contains only the intended docs; or
+- the complete derived range was inspected and required no doc changes.
+
+Write a complete `state.json` to a same-directory temporary file, parse it back, and atomically rename
+it into place. Never advance on an incomplete scan, failed edit, failed validation, failed staging, or
+failed commit. If a crash happens after the docs commit but before the cursor advances, the next run
+will safely inspect the same source range again and should find no additional doc diff.
 
 ## Strict rules
 
@@ -211,7 +259,10 @@ Rules:
 - **Never modify code.** No `.cs`, `.ts`, `.js`, `.py`, `.razor`, `.css`, etc. The only structured data you may edit is the YAML frontmatter of a markdown doc you are already updating.
 - **Stay in scope.** Process only the commits you identified in step 1; don't scan the full history.
 - **English everywhere.** Even if existing docs are partly in another language, keep new content English-first; only switch if the entire doc is non-English.
-- **Don't touch agent files.** `.agents/` (skills, automations config, memories) is out of scope.
+- **Don't touch agent files.** `.agents/` (skills, automations config, memories) is out of scope except
+  for your exact cursor file `.agents/documentalist/memory/state.json`.
+- **Never lose history.** A fixed `git log -n N` is forbidden. The durable source cursor is advanced
+  only after the whole range is successfully handled.
 
 ## Run summary
 
@@ -221,6 +272,6 @@ Summarize what you changed in your **final message** — it lands in the run log
 - Docs created: path + reason.
 - Docs flagged obsolete: path + reason.
 - Systems still undocumented (if any obvious gap remains).
+- Source range processed (`<old>..<sourceHead>`) and whether the cursor advanced.
 
 If you made no changes (nothing in the commits required doc work), say so explicitly — silence is ambiguous.
-

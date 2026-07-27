@@ -51,6 +51,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         "PATCH /api/projects/{slug}/tickets/{id}",
         "GET /api/projects/{slug}/tickets/{id}",
         "PATCH /api/projects/{slug}/tickets/{id}/status",
+        "PATCH /api/projects/{slug}/tickets/{id}/transition",
         "DELETE /api/projects/{slug}/tickets/{id}",
         "PUT /api/projects/{slug}/tickets/{id}/parent",
         "DELETE /api/projects/{slug}/tickets/{id}/parent",
@@ -67,6 +68,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         "PATCH /api/projects/{slug}/labels/{labelId}",
         "GET /api/projects/{slug}/tickets/{id}/labels",
         "PUT /api/projects/{slug}/tickets/{id}/labels",
+        "PATCH /api/projects/{slug}/tickets/{id}/labels",
         // Members
         "GET /api/projects/{slug}/members",
         "POST /api/projects/{slug}/members",
@@ -100,6 +102,12 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         "POST /api/projects/{slug}/chat/start",
         // Images
         "POST /api/images",
+        // Local Media
+        "GET /api/projects/{slug}/media/jobs",
+        "GET /api/projects/{slug}/media/jobs/{id}",
+        "POST /api/projects/{slug}/media/jobs",
+        "POST /api/projects/{slug}/media/jobs/{id}/cancel",
+        "POST /api/projects/{slug}/media/jobs/{id}/review",
         // Dashboard
         "GET /api/projects/{slug}/dashboard/tiles",
         "DELETE /api/projects/{slug}/dashboard/tiles/{tileSlug}",
@@ -145,6 +153,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         ["PATCH /api/projects/{slug}/tickets/{id}"] = "Tickets",
         ["GET /api/projects/{slug}/tickets/{id}"] = "Tickets",
         ["PATCH /api/projects/{slug}/tickets/{id}/status"] = "Tickets",
+        ["PATCH /api/projects/{slug}/tickets/{id}/transition"] = "Tickets",
         ["DELETE /api/projects/{slug}/tickets/{id}"] = "Tickets",
         ["PUT /api/projects/{slug}/tickets/{id}/parent"] = "Tickets",
         ["DELETE /api/projects/{slug}/tickets/{id}/parent"] = "Tickets",
@@ -160,6 +169,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         ["PATCH /api/projects/{slug}/labels/{labelId}"] = "Labels",
         ["GET /api/projects/{slug}/tickets/{id}/labels"] = "Labels",
         ["PUT /api/projects/{slug}/tickets/{id}/labels"] = "Labels",
+        ["PATCH /api/projects/{slug}/tickets/{id}/labels"] = "Labels",
         ["GET /api/projects/{slug}/members"] = "Members",
         ["POST /api/projects/{slug}/members"] = "Members",
         ["PATCH /api/projects/{slug}/members/{memberId}"] = "Members",
@@ -185,6 +195,11 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         ["DELETE /api/projects/{slug}/chat/session"] = "Chat",
         ["POST /api/projects/{slug}/chat/start"] = "Chat",
         ["POST /api/images"] = "Images",
+        ["GET /api/projects/{slug}/media/jobs"] = "Local Media",
+        ["GET /api/projects/{slug}/media/jobs/{id}"] = "Local Media",
+        ["POST /api/projects/{slug}/media/jobs"] = "Local Media",
+        ["POST /api/projects/{slug}/media/jobs/{id}/cancel"] = "Local Media",
+        ["POST /api/projects/{slug}/media/jobs/{id}/review"] = "Local Media",
         ["GET /api/projects/{slug}/dashboard/tiles"] = "Dashboard",
         ["DELETE /api/projects/{slug}/dashboard/tiles/{tileSlug}"] = "Dashboard",
         ["PATCH /api/projects/{slug}/dashboard/tiles/{tileSlug}/position"] = "Dashboard",
@@ -243,6 +258,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
             $"/api/projects/{slug}/skills",
             $"/api/projects/{slug}/runs",
             $"/api/projects/{slug}/chat/targets",
+            $"/api/projects/{slug}/media/jobs",
             $"/api/projects/{slug}/dashboard/tiles",
         })
         {
@@ -281,6 +297,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
             "Endpoints.Runs.cs",
             "Endpoints.Chat.cs",
             "Endpoints.Images.cs",
+            "Endpoints.Media.cs",
             "Endpoints.Dashboard.cs",
             "Endpoints.Ollama.cs",
         };

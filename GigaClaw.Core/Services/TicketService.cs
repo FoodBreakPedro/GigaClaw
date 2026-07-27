@@ -4,6 +4,8 @@ using GigaClaw.Core.Models;
 
 namespace GigaClaw.Core.Services;
 
+public sealed class TicketTransitionConflictException(string message) : InvalidOperationException(message);
+
 public class TicketService
 {
     private readonly ProjectService _projectService;
@@ -293,6 +295,71 @@ public class TicketService
     }
 
     /// <summary>
+    /// Atomically changes status and, optionally, assignee. Agent hand-offs should
+    /// use this method instead of two independent PATCH requests so the dispatcher
+    /// never observes a new status with the old worker.
+    /// </summary>
+    public async Task<Ticket?> TransitionTicketAsync(
+        string projectSlug,
+        int ticketId,
+        string newStatus,
+        string? assignedTo,
+        string author,
+        string? expectedStatus = null)
+    {
+        if (string.IsNullOrWhiteSpace(author))
+            throw new InvalidOperationException("The 'author' field is required.");
+        if (!string.IsNullOrEmpty(assignedTo) && !await _memberService.MemberExistsAsync(projectSlug, assignedTo))
+            throw new InvalidOperationException($"Member '{assignedTo}' does not exist.");
+
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureActivityTableAsync(db);
+        await EnsureScheduleColumnsAsync(db);
+        await EnsureAssignedToColumnAsync(db);
+        await ColumnService.EnsureBoardColumnsTableAsync(db);
+
+        if (!await db.BoardColumns.AnyAsync(column => column.Name == newStatus))
+            throw new InvalidOperationException($"Column '{newStatus}' does not exist.");
+
+        var ticket = await db.Tickets.FindAsync(ticketId);
+        if (ticket is null) return null;
+        if (expectedStatus is not null &&
+            !string.Equals(ticket.Status, expectedStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new TicketTransitionConflictException(
+                $"Ticket status changed concurrently: expected '{expectedStatus}', found '{ticket.Status}'.");
+        }
+
+        var oldStatus = ticket.Status;
+        var oldAssignee = ticket.AssignedTo;
+        var newAssignee = assignedTo is null ? oldAssignee : assignedTo.Length == 0 ? null : assignedTo;
+        var statusChanged = !string.Equals(oldStatus, newStatus, StringComparison.OrdinalIgnoreCase);
+        var assigneeChanged = !string.Equals(oldAssignee, newAssignee, StringComparison.OrdinalIgnoreCase);
+        if (!statusChanged && !assigneeChanged) return ticket;
+
+        ticket.Status = newStatus;
+        ticket.AssignedTo = newAssignee;
+        if (string.Equals(oldStatus, "Scheduled", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(newStatus, "Scheduled", StringComparison.OrdinalIgnoreCase))
+        {
+            ticket.FireAt = null;
+            ticket.ScheduleTarget = null;
+        }
+        ticket.UpdatedAt = DateTime.UtcNow;
+        db.ActivityEntries.Add(new ActivityEntry
+        {
+            TicketId = ticketId,
+            Author = author,
+            Text = $"transitioned ticket: {oldStatus}/{oldAssignee ?? "unassigned"} → {newStatus}/{newAssignee ?? "unassigned"}"
+        });
+        await db.SaveChangesAsync();
+
+        if (statusChanged)
+            TicketStatusChanged?.Invoke(projectSlug, ticketId, oldStatus, newStatus);
+        return ticket;
+    }
+
+    /// <summary>
     /// Moves a ticket into the "Scheduled" column with a future <paramref name="fireAt"/> instant.
     /// The <see cref="ScheduledPromotionService"/> promotes it to <paramref name="targetStatus"/> once
     /// <paramref name="fireAt"/> is reached. This keeps calendar-dated work out of "Blocked".
@@ -532,6 +599,56 @@ public class TicketService
         ticket.Labels = labels;
         await db.SaveChangesAsync();
         return true;
+    }
+
+    /// <summary>
+    /// Atomically adds and removes labels without requiring a read/replace cycle.
+    /// This is the safe API for agents: concurrent label writers cannot erase labels
+    /// they did not own. Unknown label ids requested for addition are rejected.
+    /// </summary>
+    public async Task<List<Label>?> PatchTicketLabelsAsync(
+        string projectSlug,
+        int ticketId,
+        IReadOnlyCollection<int> addLabelIds,
+        IReadOnlyCollection<int> removeLabelIds,
+        string author)
+    {
+        if (string.IsNullOrWhiteSpace(author))
+            throw new InvalidOperationException("The 'author' field is required.");
+
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureLabelTablesAsync(db);
+        await EnsureActivityTableAsync(db);
+
+        var ticket = await db.Tickets
+            .Include(t => t.Labels)
+            .FirstOrDefaultAsync(t => t.Id == ticketId);
+        if (ticket is null) return null;
+
+        var remove = removeLabelIds.ToHashSet();
+        ticket.Labels.RemoveAll(label => remove.Contains(label.Id));
+
+        var current = ticket.Labels.Select(label => label.Id).ToHashSet();
+        var requestedAdds = addLabelIds.Where(id => !current.Contains(id)).Distinct().ToList();
+        if (requestedAdds.Count > 0)
+        {
+            var additions = await db.Labels.Where(label => requestedAdds.Contains(label.Id)).ToListAsync();
+            var missing = requestedAdds.Except(additions.Select(label => label.Id)).ToList();
+            if (missing.Count > 0)
+                throw new InvalidOperationException($"Unknown label id(s): {string.Join(", ", missing)}.");
+            ticket.Labels.AddRange(additions);
+        }
+
+        ticket.UpdatedAt = DateTime.UtcNow;
+        db.ActivityEntries.Add(new ActivityEntry
+        {
+            TicketId = ticketId,
+            Author = author,
+            Text = $"updated labels (+{string.Join(",", addLabelIds)}, -{string.Join(",", removeLabelIds)})"
+        });
+        await db.SaveChangesAsync();
+
+        return ticket.Labels.OrderBy(label => label.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     public async Task<bool> UpdateCommentAsync(string projectSlug, int ticketId, int commentId, string content, string author = "owner")

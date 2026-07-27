@@ -6,7 +6,7 @@ namespace GigaClaw.Core.Automation;
 /// <summary>
 /// Reads/writes .agents/channel/dispatch-state.json. Format preserved for
 /// compatibility with the legacy dispatcher.mjs files (keys: _sessions,
-/// _lastProcessedCommit, _ticketSnapshot, _learnedTickets, _committedTickets,
+/// _lastProcessedCommit, _ticketSnapshot, _ticketSnapshots, _learnedTickets, _committedTickets,
 /// producer.lastSubStatuses, {agent}.lastDispatched).
 ///
 /// The concurrency gate allows several runs in the same workspace at once, so every
@@ -111,7 +111,24 @@ public sealed class SessionRegistry
     public Dictionary<int, string> TicketSnapshot(string workspacePath)
     {
         var s = Load(workspacePath);
-        var snap = s["_ticketSnapshot"] as JsonObject;
+        return ParseTicketSnapshot(s["_ticketSnapshot"] as JsonObject);
+    }
+
+    /// <summary>
+    /// Returns the status snapshot owned by one automation. Existing workspaces fall
+    /// back to the legacy shared snapshot until that automation writes its first
+    /// isolated snapshot.
+    /// </summary>
+    public Dictionary<int, string> TicketSnapshot(string workspacePath, string automationId)
+    {
+        var s = Load(workspacePath);
+        var snapshots = s["_ticketSnapshots"] as JsonObject;
+        var isolated = snapshots?[automationId] as JsonObject;
+        return ParseTicketSnapshot(isolated ?? s["_ticketSnapshot"] as JsonObject);
+    }
+
+    private static Dictionary<int, string> ParseTicketSnapshot(JsonObject? snap)
+    {
         var dict = new Dictionary<int, string>();
         if (snap is null) return dict;
         foreach (var kv in snap)
@@ -127,6 +144,26 @@ public sealed class SessionRegistry
             var obj = new JsonObject();
             foreach (var kv in snap) obj[kv.Key.ToString()] = kv.Value;
             s["_ticketSnapshot"] = obj;
+        });
+    }
+
+    /// <summary>
+    /// Atomically saves a status snapshot for one automation. Keeping these isolated
+    /// prevents one successful status-change workflow from acknowledging a different
+    /// workflow that was skipped and still needs to retry.
+    /// </summary>
+    public void SaveTicketSnapshot(
+        string workspacePath,
+        string automationId,
+        IReadOnlyDictionary<int, string> snap)
+    {
+        Update(workspacePath, s =>
+        {
+            var snapshots = s["_ticketSnapshots"] as JsonObject ?? new JsonObject();
+            var obj = new JsonObject();
+            foreach (var kv in snap) obj[kv.Key.ToString()] = kv.Value;
+            snapshots[automationId] = obj;
+            s["_ticketSnapshots"] = snapshots;
         });
     }
 

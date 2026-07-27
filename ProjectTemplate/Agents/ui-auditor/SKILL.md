@@ -14,7 +14,7 @@ Audits UIs across 4 key visual dimensions, **25 points each (100 total)**:
 ### 2. Color System & Contrast — 25 pts
 - Refuse generic blue/purple SaaS gradients unless explicitly branded.
 - Verify cohesive color anchor, background, surface, and border contrast.
-- Ensure accessible contrast ratios (WCAG AA). Compute them from the resolved CSS custom-property values using the relative luminance formula, and show the computed ratio for every failing pair.
+- Ensure accessible contrast ratios (WCAG AA). Use browser-computed foreground/background colors in each state, not raw CSS text, and show the computed ratio for every failing pair.
 
 ### 3. Microstructure & Micro-Interactions — 25 pts
 - Verify active hover, focus, and transition states for interactive elements.
@@ -27,32 +27,30 @@ Audits UIs across 4 key visual dimensions, **25 points each (100 total)**:
 
 ## Operating Procedure
 
-1. Read the target file: `design/<feature>.html`, named in the ticket or in ui-designer's delivery comment. Parse its `/* macrostructure: ... */` stamp — a missing stamp is a Layout & Macrostructure deduction.
-2. Evaluate against the checklist above.
-3. Score each dimension out of 25 and sum to a 0-100 total. **The report must show the per-dimension subtotal, not just the total.**
+1. Read the target file and compute its digest. If a `UI-AUDIT PASS|FAIL ... artifact-sha256:<same-digest>` receipt exists, do not duplicate the verdict. A FAIL receipt proves its atomic handoff completed; for a PASS receipt on a directly dispatched ticket still in `InProgress`, perform only the missing move to `Review`, otherwise exit.
+2. Run `python3 .agents/scripts/html_contract.py design/<feature>.html --kind ui`. A failure is at least a P1 finding and must affect the score.
+3. Render at **375×812** and **1440×900**. Inspect computed styles and capture screenshots. Use the available browser accessibility scanner; exercise keyboard order, visible focus, hover, reduced motion, and narrow overflow. If browser execution is unavailable, move to `Blocked`: static parsing cannot establish PASS.
+4. Parse the `/* macrostructure: ... */` stamp and evaluate against the checklist using rendered evidence.
+5. Score each dimension out of 25 and sum to a 0-100 total. **The report must show each subtotal, exact failing line/selector, computed contrast ratio, screenshot paths, viewport, and scanner result.**
    - **PASS** = total ≥ 80 **and** no individual dimension below 15. Anything else is a FAIL.
-4. Write the full report to `design/audits/<slug>-audit.md` (so scores stay trackable over time) and post it as a ticket comment, with a punch list of anti-patterns at exact line numbers.
+6. Write the report to `design/audits/<slug>-audit.md`, compute a combined digest of source + report for traceability, and post it with the source-specific receipt below.
 
 ## Verdict & exit
 
-- **PASS** → post the report; the ticket ends in `Review`. Normally it is already there (the audit automation fires on `Review`), so leave it untouched — the owner takes it to `Done`. If you were dispatched directly onto an `InProgress` ticket assigned to you, move it to `Review` yourself.
-- **FAIL** → post the line-numbered punch list, then PATCH `assignedTo` to `ui-designer` and status to `Todo`.
+- **PASS** → start the report with `PASS`, include `UI-AUDIT PASS v1 artifact-sha256:<source-digest>`, and leave an existing Review ticket untouched. If dispatched directly on `InProgress`, transition to `Review`.
+- **FAIL cycle 1/2** → include `UI-AUDIT FAIL cycle 1/2 artifact-sha256:<source-digest>`, then atomically hand to `ui-designer` in `Todo`.
+- **FAIL cycle 2/2** → do not start a third designer/auditor loop. Include the receipt, atomically hand to `owner` in `Blocked`, and identify unresolved blockers. Determine the cycle by counting prior FAIL receipts, never from memory.
 - **Cannot read the target file** (path missing, file absent) → move to `Blocked` and comment with what you looked for.
 - **Never end a turn with a ticket assigned to you sitting in `InProgress`.**
 
-Every write carries an `author` field, goes into a workspace file (never inline JSON, never `/tmp`), and has its HTTP status asserted:
+Use `.agents/scripts/agent_ticket.py` for every write. For a first failure:
 
 ```bash
-api="${GIGACLAW_API_URL}/api/projects/{project-slug}"
-# ./ua-assign.json  ->  {"assignedTo":"ui-designer","author":"ui-auditor"}
-http=$(curl -s -o ./ua-resp.json -w "%{http_code}" -X PATCH "$api/tickets/{id}" \
-  -H "Content-Type: application/json" -d @./ua-assign.json)
-[[ "$http" =~ ^2 ]] || { echo "assign PATCH failed http=$http"; cat ./ua-resp.json; }
-
-# ./ua-status.json  ->  {"status":"Todo","author":"ui-auditor"}
-http=$(curl -s -o ./ua-resp.json -w "%{http_code}" -X PATCH "$api/tickets/{id}/status" \
-  -H "Content-Type: application/json" -d @./ua-status.json)
-[[ "$http" =~ ^2 ]] || { echo "status PATCH failed http=$http"; cat ./ua-resp.json; }
+python3 .agents/scripts/agent_ticket.py \
+  --project {project-slug} --ticket {id} --author ui-auditor \
+  handoff --assignee ui-designer --status Todo --expected-status Review \
+  --content-file design/audits/<slug>-audit.md \
+  --marker "UI-AUDIT FAIL cycle 1/2 artifact-sha256:<source-digest>"
 ```
 
-A non-2xx means the ticket did not move — fix the body and retry; never assume success. Delete the scratch files at the end of the run.
+The helper uses the atomic transition endpoint and writes the marker receipt last. PASS comments use `comment --marker`; delete only scratch files, never the durable audit report.

@@ -46,5 +46,27 @@ public static partial class Endpoints
             if (ok) notifier.NotifyProjectUpdated(slug);
             return ok ? Results.NoContent() : Results.NotFound();
         }).WithTags("Labels");
+
+        api.MapPatch("/projects/{slug}/tickets/{id:int}/labels", async (string slug, int id, PatchTicketLabelsRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
+        {
+            try
+            {
+                var labels = await ts.PatchTicketLabelsAsync(
+                    slug,
+                    id,
+                    req.AddLabelIds ?? [],
+                    req.RemoveLabelIds ?? [],
+                    req.Author);
+                if (labels is not null) notifier.NotifyProjectUpdated(slug);
+                return labels is null ? Results.NotFound() : Results.Ok(labels);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithTags("Labels")
+        .Produces<List<GigaClaw.Core.Models.Label>>()
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound);
     }
 }

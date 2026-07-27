@@ -672,7 +672,7 @@ public sealed class ClaudeRunner
         }
     }
 
-    private static async Task<string> BuildPreambleAsync(ClaudeRunContext ctx, CancellationToken ct)
+    internal static async Task<string> BuildPreambleAsync(ClaudeRunContext ctx, CancellationToken ct)
     {
         var sb = new StringBuilder();
 
@@ -684,9 +684,99 @@ public sealed class ClaudeRunner
             sb.AppendLine();
         }
 
+        var contract = await LoadAgentContractAsync(ctx.WorkspacePath, ctx.AgentName, ct);
+        if (contract is not null)
+        {
+            sb.AppendLine("[Agent contract]");
+            sb.AppendLine(contract);
+            sb.AppendLine();
+        }
+
         await AppendMemoryAsync(sb, ctx, ct);
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Loads only the current agent's compact contract from the optional shared manifest.
+    /// Both <c>{"agents":{"slug":{...}}}</c> and a direct <c>{"slug":{...}}</c>
+    /// map are accepted so the manifest can evolve without breaking older workspaces.
+    /// A present malformed manifest fails closed instead of silently dropping guardrails.
+    /// </summary>
+    internal static async Task<string?> LoadAgentContractAsync(
+        string workspacePath,
+        string agentName,
+        CancellationToken ct)
+    {
+        var contractFile = Path.Combine(workspacePath, ".agents", "contracts.json");
+        if (!File.Exists(contractFile)) return null;
+
+        JsonDocument document;
+        try
+        {
+            await using var stream = File.OpenRead(contractFile);
+            document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidDataException($"Malformed agent contract manifest: {contractFile}", ex);
+        }
+
+        using (document)
+        {
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+                throw new InvalidDataException($"Agent contract manifest must be a JSON object: {contractFile}");
+
+            var root = document.RootElement;
+            var map = root;
+            var nestedManifest = TryGetPropertyIgnoreCase(root, "agents", out var agents);
+            if (nestedManifest)
+            {
+                if (agents.ValueKind != JsonValueKind.Object)
+                    throw new InvalidDataException($"Agent contract manifest 'agents' must be a JSON object: {contractFile}");
+                map = agents;
+            }
+
+            if (!TryGetPropertyIgnoreCase(map, agentName, out var contract))
+                return null;
+            if (contract.ValueKind != JsonValueKind.Object)
+                throw new InvalidDataException($"Contract for agent '{agentName}' must be a JSON object: {contractFile}");
+
+            if (!nestedManifest)
+                return JsonSerializer.Serialize(contract);
+
+            var selected = new System.Text.Json.Nodes.JsonObject
+            {
+                ["agentSlug"] = agentName,
+                ["agent"] = System.Text.Json.Nodes.JsonNode.Parse(contract.GetRawText()),
+            };
+            if (TryGetPropertyIgnoreCase(root, "version", out var version))
+                selected["version"] = System.Text.Json.Nodes.JsonNode.Parse(version.GetRawText());
+            if (TryGetPropertyIgnoreCase(root, "defaults", out var defaults))
+            {
+                if (defaults.ValueKind != JsonValueKind.Object)
+                    throw new InvalidDataException($"Agent contract manifest 'defaults' must be a JSON object: {contractFile}");
+                selected["defaults"] = System.Text.Json.Nodes.JsonNode.Parse(defaults.GetRawText());
+            }
+            return selected.ToJsonString();
+        }
+    }
+
+    private static bool TryGetPropertyIgnoreCase(
+        JsonElement element,
+        string propertyName,
+        out JsonElement value)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+        value = default;
+        return false;
     }
 
     // Injects the agent's memory into the run prompt.

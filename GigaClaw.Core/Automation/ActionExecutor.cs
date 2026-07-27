@@ -27,6 +27,8 @@ internal sealed class ActionExecutor
     // repo's slow/hung git (bounded by ProcessRunner's timeout) can't stall other projects.
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _gitLocks =
         new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _labelLocks =
+        new(StringComparer.OrdinalIgnoreCase);
 
     // Tracks in-flight action chains keyed by "{automationId}:{ticketId}".
     // Prevents concurrent chains for the same (automation, ticket) pair.
@@ -199,16 +201,16 @@ internal sealed class ActionExecutor
         }
 
         var state = new ActionState();
-        bool committed = false;
+        bool finalized = false;
         bool runAgentDispatched = false;
         bool detached = false;
 
-        async Task CommitAsync(DateTime? completedAt = null)
+        async Task FinalizeAsync(bool succeeded, DateTime? completedAt = null)
         {
-            if (committed || trigger is null || tctx is null) return;
-            committed = true;
-            try { await trigger.CommitFiringAsync(tctx, firing, completedAt); }
-            catch (Exception ex) { _logger.LogWarning(ex, "CommitFiring failed for {Id}", automation.Id); }
+            if (finalized || trigger is null || tctx is null) return;
+            finalized = true;
+            try { await trigger.CompleteFiringAsync(tctx, firing, succeeded, completedAt); }
+            catch (Exception ex) { _logger.LogWarning(ex, "CompleteFiring failed for {Id}", automation.Id); }
         }
 
         // The engine tick awaits ExecuteAutomationAsync, so nothing here may block for long:
@@ -252,7 +254,7 @@ internal sealed class ActionExecutor
                     case RunAgentActionSpec a:
                     {
                         var remaining = automation.Actions.Skip(i + 1).ToList();
-                        var skip = await ExecuteRunAgentActionAsync(rt, automation, firing, a, ct, CommitAsync, state, remaining, chainKey);
+                        var skip = await ExecuteRunAgentActionAsync(rt, automation, firing, a, ct, FinalizeAsync, state, remaining, chainKey);
                         runAgentDispatched = !skip;
                         // Whether skipped or dispatched, remaining actions are NOT processed here.
                         if (skip) return null;
@@ -289,7 +291,7 @@ internal sealed class ActionExecutor
                         throw new NotSupportedException($"Unhandled action type {action.GetType().Name}. Register it in ActionExecutor.ExecuteAutomationAsync.");
                 }
             }
-            await CommitAsync(DateTime.UtcNow);
+            await FinalizeAsync(true, DateTime.UtcNow);
             return state.LastRun;
         }
 
@@ -312,18 +314,18 @@ internal sealed class ActionExecutor
         TriggerFiring firing,
         RunAgentActionSpec a,
         CancellationToken ct,
-        Func<DateTime?, Task> commitAsync,
+        Func<bool, DateTime?, Task> finalizeAsync,
         ActionState state,
         List<ActionSpec> remainingActions,
         string? chainKey)
     {
-        var (skip, runTask, agentName) = await StartAgentRunAsync(rt, firing, a, ct);
+        var (skip, runTask, agentName, runId) = await StartAgentRunAsync(rt, firing, a, ct);
         if (skip || runTask is null) return true;
 
         var statusBefore = state.StatusBeforeMove;
         var statusAfter = state.StatusAfterMove;
         var assigneeBefore = state.AssigneeBeforeMove;
-        _ = HandleRunCompletionAsync(runTask, rt, firing, a, agentName, statusBefore, statusAfter, assigneeBefore, remainingActions, commitAsync, chainKey, ct);
+        _ = HandleRunCompletionAsync(runTask, rt, firing, a, agentName, runId!, statusBefore, statusAfter, assigneeBefore, remainingActions, finalizeAsync, chainKey, ct);
         state.LastRun = null;
         return false;
     }
@@ -331,7 +333,7 @@ internal sealed class ActionExecutor
     // Resolves the agent name, applies the skip gate, and starts the run (without awaiting it).
     // Returns skip=true when the run must not proceed (placeholder unresolved or gate skip);
     // otherwise runTask is the in-flight run and agentName the resolved slug.
-    private async Task<(bool skip, Task<AgentRun>? runTask, string agentName)> StartAgentRunAsync(
+    private async Task<(bool skip, Task<AgentRun>? runTask, string agentName, string? runId)> StartAgentRunAsync(
         ProjectRuntime rt,
         TriggerFiring firing,
         RunAgentActionSpec a,
@@ -343,14 +345,14 @@ internal sealed class ActionExecutor
             if (firing.TicketId is null)
             {
                 _logger.LogWarning("Placeholder {{assignee}} in Agent but no ticketId in firing — skipping");
-                return (true, null, agentName);
+                return (true, null, agentName, null);
             }
             var t = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
             var assignee = t?.AssignedTo;
             if (string.IsNullOrEmpty(assignee))
             {
                 _logger.LogWarning("Placeholder {{assignee}} in Agent but ticket #{Id} has no assignee — skipping", firing.TicketId);
-                return (true, null, agentName);
+                return (true, null, agentName, null);
             }
             agentName = agentName.Replace("{assignee}", assignee);
         }
@@ -362,7 +364,7 @@ internal sealed class ActionExecutor
                 .Replace("{assignee}", agentName)
                 .Replace("{ticketId}", firing.TicketId?.ToString() ?? "none");
 
-        if (await _runState.ShouldSkipAsync(rt, a, firing, agentName, group)) return (true, null, agentName);
+        if (await _runState.ShouldSkipAsync(rt, a, firing, agentName, group)) return (true, null, agentName, null);
 
         var project = await _projects.GetProjectAsync(rt.Slug);
         var fallbackModel = project?.FallbackModel;
@@ -398,8 +400,10 @@ internal sealed class ActionExecutor
             }
         }
 
+        var runId = Guid.NewGuid().ToString("N");
         var runCtx = new ClaudeRunContext
         {
+            PresetRunId = runId,
             ProjectSlug = rt.Slug,
             WorkspacePath = rt.Workspace!,
             AgentName = agentName,
@@ -425,7 +429,16 @@ internal sealed class ActionExecutor
             catch { /* non-blocking */ }
         }
 
-        return (false, _runner.RunAsync(runCtx, ct), agentName);
+        _runs.ReserveCompletion(runId);
+        try
+        {
+            return (false, _runner.RunAsync(runCtx, ct), agentName, runId);
+        }
+        catch
+        {
+            _runs.ReleaseCompletion(runId);
+            throw;
+        }
     }
 
     private async Task HandleRunCompletionAsync(
@@ -434,11 +447,12 @@ internal sealed class ActionExecutor
         TriggerFiring firing,
         RunAgentActionSpec spec,
         string agentName,
+        string runId,
         string? statusBeforeMove,
         string? statusAfterMove,
         string? assigneeBeforeMove,
         List<ActionSpec> remainingActions,
-        Func<DateTime?, Task> commitAsync,
+        Func<bool, DateTime?, Task> finalizeAsync,
         string? chainKey,
         CancellationToken ct)
     {
@@ -450,15 +464,15 @@ internal sealed class ActionExecutor
         catch (Exception ex)
         {
             _logger.LogError(ex, "runAgent {Agent} crashed for ticket #{Id}", agentName, firing.TicketId);
+            _runs.Complete(runId, AgentRunStatus.Failed, -1);
+            await finalizeAsync(false, DateTime.UtcNow);
             return;
         }
 
-        if (run.Status == AgentRunStatus.Completed)
-            await commitAsync(DateTime.UtcNow);
-
+        var runStatus = _runs.EffectiveStatus(run.RunId);
         if (firing.TicketId is not null)
         {
-            var statusKey = run.Status switch
+            var statusKey = runStatus switch
             {
                 AgentRunStatus.Completed => "ActAgentCompleted",
                 AgentRunStatus.Failed    => "ActAgentFailed",
@@ -470,7 +484,7 @@ internal sealed class ActionExecutor
         }
 
         if (spec.RestoreStatusOnFail
-            && run.Status is AgentRunStatus.Failed or AgentRunStatus.Stopped
+            && runStatus is AgentRunStatus.Failed or AgentRunStatus.Stopped
             && statusBeforeMove is not null && statusAfterMove is not null
             && firing.TicketId is not null)
         {
@@ -489,11 +503,19 @@ internal sealed class ActionExecutor
             catch (Exception ex) { _logger.LogWarning(ex, "Failed to restore ticket #{Id} status", firing.TicketId); }
         }
 
-        await ProcessPostRunActionsAsync(rt, firing, run, remainingActions, commitAsync, ct);
+        var postActionsSucceeded = await ProcessPostRunActionsAsync(
+            rt, firing, run, remainingActions, finalizeAsync, ct);
+        // Persist the outcome only after restoration and post-run actions. In particular,
+        // restoreStatusOnFail updates the ticket; recording before it would make that engine
+        // update look like owner feedback and reset ticketInColumn's retry counter.
+        await finalizeAsync(
+            runStatus == AgentRunStatus.Completed && postActionsSucceeded,
+            DateTime.UtcNow);
 
         } // end try
         finally
         {
+            _runs.ReleaseCompletion(runId);
             if (chainKey is not null)
                 _inFlightChains.TryRemove(chainKey, out _);
         }
@@ -503,14 +525,15 @@ internal sealed class ActionExecutor
     // (e.g. the judge that decides whether to advance the ticket) is dispatched here, awaited,
     // and its own trailing actions are processed recursively. Without this, the chained judge
     // run would never fire and tickets would stall in their column.
-    private async Task ProcessPostRunActionsAsync(
+    private async Task<bool> ProcessPostRunActionsAsync(
         ProjectRuntime rt,
         TriggerFiring firing,
         AgentRun precedingRun,
         List<ActionSpec> actions,
-        Func<DateTime?, Task> commitAsync,
+        Func<bool, DateTime?, Task> finalizeAsync,
         CancellationToken ct)
     {
+        var succeeded = true;
         for (int i = 0; i < actions.Count; i++)
         {
             var post = actions[i];
@@ -526,41 +549,53 @@ internal sealed class ActionExecutor
                     case ExecutePowerShellActionSpec ps: await ExecutePowerShellAsync(ps, rt.Workspace!, rt.Slug, firing, ct); break;
                     case RunAgentActionSpec ra:
                     {
-                        var (skip, runTask, agentName) = await StartAgentRunAsync(rt, firing, ra, ct);
-                        if (skip || runTask is null) return;
+                        var (skip, runTask, agentName, runId) = await StartAgentRunAsync(rt, firing, ra, ct);
+                        if (skip || runTask is null) return false;
 
-                        AgentRun chainedRun;
-                        try { chainedRun = await runTask; }
-                        catch (Exception ex)
+                        try
                         {
-                            _logger.LogError(ex, "chained runAgent {Agent} crashed for ticket #{Id}", agentName, firing.TicketId);
-                            return;
-                        }
-
-                        if (chainedRun.Status == AgentRunStatus.Completed)
-                            await commitAsync(DateTime.UtcNow);
-
-                        if (firing.TicketId is not null)
-                        {
-                            var statusKey = chainedRun.Status switch
+                            AgentRun chainedRun;
+                            try { chainedRun = await runTask; }
+                            catch (Exception ex)
                             {
-                                AgentRunStatus.Completed => "ActAgentCompleted",
-                                AgentRunStatus.Failed    => "ActAgentFailed",
-                                AgentRunStatus.Stopped   => "ActAgentStopped",
-                                _                        => "ActAgentCompleted",
-                            };
-                            try { await _tickets.AddActivityAsync(rt.Slug, firing.TicketId.Value, _loc.Get(statusKey, agentName), "automation"); }
-                            catch { /* non-blocking */ }
-                        }
+                                _logger.LogError(ex, "chained runAgent {Agent} crashed for ticket #{Id}", agentName, firing.TicketId);
+                                _runs.Complete(runId!, AgentRunStatus.Failed, -1);
+                                return false;
+                            }
 
-                        var rest = actions.Skip(i + 1).ToList();
-                        await ProcessPostRunActionsAsync(rt, firing, chainedRun, rest, commitAsync, ct);
-                        return;
+                            var chainedStatus = _runs.EffectiveStatus(chainedRun.RunId);
+                            if (firing.TicketId is not null)
+                            {
+                                var statusKey = chainedStatus switch
+                                {
+                                    AgentRunStatus.Completed => "ActAgentCompleted",
+                                    AgentRunStatus.Failed    => "ActAgentFailed",
+                                    AgentRunStatus.Stopped   => "ActAgentStopped",
+                                    _                        => "ActAgentCompleted",
+                                };
+                                try { await _tickets.AddActivityAsync(rt.Slug, firing.TicketId.Value, _loc.Get(statusKey, agentName), "automation"); }
+                                catch { /* non-blocking */ }
+                            }
+
+                            var rest = actions.Skip(i + 1).ToList();
+                            var restSucceeded = await ProcessPostRunActionsAsync(
+                                rt, firing, chainedRun, rest, finalizeAsync, ct);
+                            return chainedStatus == AgentRunStatus.Completed && restSucceeded;
+                        }
+                        finally
+                        {
+                            _runs.ReleaseCompletion(runId!);
+                        }
                     }
                 }
             }
-            catch (Exception ex) { _logger.LogWarning(ex, "Post-run action {Type} failed", post.GetType().Name); }
+            catch (Exception ex)
+            {
+                succeeded = false;
+                _logger.LogWarning(ex, "Post-run action {Type} failed", post.GetType().Name);
+            }
         }
+        return succeeded;
     }
 
     private async Task ExecuteMoveTicketStatusActionAsync(ProjectRuntime rt, TriggerFiring firing, MoveTicketStatusActionSpec m, ActionState state)
@@ -580,16 +615,34 @@ internal sealed class ActionExecutor
 
     private async Task ExecuteSetLabelsActionAsync(ProjectRuntime rt, TriggerFiring firing, SetLabelsActionSpec s)
     {
+        var labelLock = _labelLocks.GetOrAdd(rt.Slug, _ => new SemaphoreSlim(1, 1));
+        await labelLock.WaitAsync();
         try
         {
             var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId!.Value);
             if (ticket is null) return;
-            var currentNames = ticket.Labels.Select(l => l.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (var name in s.Add) currentNames.Add(name);
-            foreach (var name in s.Remove) currentNames.Remove(name);
+
             var allLabels = await _labels.ListLabelsAsync(rt.Slug);
-            var newIds = allLabels.Where(l => currentNames.Contains(l.Name)).Select(l => l.Id).ToList();
-            await _tickets.SetTicketLabelsAsync(rt.Slug, firing.TicketId!.Value, newIds);
+            var byName = allLabels.ToDictionary(l => l.Name, StringComparer.OrdinalIgnoreCase);
+            foreach (var name in s.Add.Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (!byName.ContainsKey(name))
+                    byName[name] = await _labels.CreateLabelAsync(rt.Slug, name, "#6366f1");
+            }
+
+            var addIds = s.Add
+                .Where(byName.ContainsKey)
+                .Select(name => byName[name].Id)
+                .Distinct()
+                .ToList();
+            var removeIds = s.Remove
+                .Where(byName.ContainsKey)
+                .Select(name => byName[name].Id)
+                .Distinct()
+                .ToList();
+            await _tickets.PatchTicketLabelsAsync(
+                rt.Slug, firing.TicketId.Value, addIds, removeIds, "automation");
+
             var parts = new List<string>();
             if (s.Add.Count > 0) parts.Add(_loc.Get("ActLabelsAdded", string.Join(", ", s.Add)));
             if (s.Remove.Count > 0) parts.Add(_loc.Get("ActLabelsRemoved", string.Join(", ", s.Remove)));
@@ -597,7 +650,10 @@ internal sealed class ActionExecutor
                 try { await _tickets.AddActivityAsync(rt.Slug, firing.TicketId!.Value, _loc.Get("ActLabelsChanged", string.Join(" / ", parts)), "automation"); }
                 catch { /* non-blocking */ }
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "setLabels failed for ticket #{Id} in project {Project}", firing.TicketId, rt.Slug); }
+        finally
+        {
+            labelLock.Release();
+        }
     }
 
     private async Task ExecuteAddCommentActionAsync(ProjectRuntime rt, TriggerFiring firing, AddCommentActionSpec ac)
@@ -671,7 +727,9 @@ internal sealed class ActionExecutor
                 agent = agent.Replace("{assignee}", t.AssignedTo);
             }
 
-            if (parentRun?.Status == AgentRunStatus.Failed && (parentRun.ExitCode ?? 0) < 0)
+            if (parentRun is not null
+                && _runs.EffectiveStatus(parentRun.RunId) == AgentRunStatus.Failed
+                && (_runs.EffectiveExitCode(parentRun.RunId) ?? 0) < 0)
             {
                 _logger.LogInformation("consolidateAgentMemory: parent run {Id} failed (exit {Exit}) — skipping", parentRun.RunId, parentRun.ExitCode);
                 return;

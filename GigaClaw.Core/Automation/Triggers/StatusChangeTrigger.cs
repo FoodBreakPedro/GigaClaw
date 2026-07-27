@@ -8,9 +8,9 @@ public sealed record StatusChangeSignal(int TicketId, string From, string To);
 /// Uses a persisted snapshot (dispatch-state.json:_ticketSnapshot) to detect changes
 /// across restarts.
 ///
-/// A ticket's snapshot is only advanced after the engine confirms dispatch via
-/// <see cref="CommitFiring"/>. Firings skipped by transient gates (concurrency,
-/// dedup, budget) leave the snapshot at its old value, so the next poll re-fires.
+/// A ticket's snapshot is only advanced after the full action chain succeeds via
+/// <see cref="CommitFiringAsync"/>. Firings skipped by transient gates or ending in
+/// failure leave the snapshot at its old value, so the next poll re-fires.
 /// Concurrent re-fires during an in-flight run are harmless — the engine's dedup
 /// gate absorbs them.
 /// </summary>
@@ -27,7 +27,7 @@ public sealed class StatusChangeTrigger : ITrigger
             return Array.Empty<TriggerFiring>();
         _lastPolled = ctx.Now;
 
-        var previous = ctx.Sessions.TicketSnapshot(ctx.WorkspacePath);
+        var previous = ctx.Sessions.TicketSnapshot(ctx.WorkspacePath, ctx.Automation.Id);
         var tickets = await ctx.Tickets.ListTicketsAsync(ctx.ProjectSlug);
         var current = tickets.ToDictionary(t => t.Id, t => t.Status);
 
@@ -53,7 +53,7 @@ public sealed class StatusChangeTrigger : ITrigger
             }
         }
 
-        ctx.Sessions.SaveTicketSnapshot(ctx.WorkspacePath, newSnapshot);
+        ctx.Sessions.SaveTicketSnapshot(ctx.WorkspacePath, ctx.Automation.Id, newSnapshot);
         return firings;
     }
 
@@ -83,9 +83,9 @@ public sealed class StatusChangeTrigger : ITrigger
     {
         if (firing.TicketId is int tid && firing.TicketStatus is { } status)
         {
-            var snapshot = ctx.Sessions.TicketSnapshot(ctx.WorkspacePath);
+            var snapshot = ctx.Sessions.TicketSnapshot(ctx.WorkspacePath, ctx.Automation.Id);
             snapshot[tid] = status;
-            ctx.Sessions.SaveTicketSnapshot(ctx.WorkspacePath, snapshot);
+            ctx.Sessions.SaveTicketSnapshot(ctx.WorkspacePath, ctx.Automation.Id, snapshot);
         }
         return Task.CompletedTask;
     }

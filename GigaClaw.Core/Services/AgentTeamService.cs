@@ -12,6 +12,7 @@ public sealed class AgentTeamService
     public const string DataIntelligenceSlug = "data-intelligence";
     public const string GovernanceOpsSlug = "governance-ops";
     public const string HealthPerformanceSlug = "health-performance";
+    public const string LocalMediaCreationSlug = "local-media-creation";
 
     private static readonly IReadOnlyList<AgentTeam> DefaultTeams = new List<AgentTeam>
     {
@@ -70,6 +71,18 @@ public sealed class AgentTeamService
             "Health & fitness content vertical: sourced wellness guides, training and ergonomics articles, and multi-part content series planning.",
             "🏋️",
             new[] { "wellness-coach", "content-series-planner", "blog-writer", "producer", "evaluator", "documentalist" }
+        ),
+        new(
+            LocalMediaCreationSlug,
+            "Local Media Creation",
+            "Governed local image candidates, generated motion assets, OpenMontage composition, and independent media review.",
+            "🎬",
+            new[]
+            {
+                "local-media-director", "local-image-artist", "local-motion-artist",
+                "local-media-compositor", "local-media-reviewer", "producer",
+                "approval-gatekeeper", "system-watchdog", "committer", "evaluator", "documentalist"
+            }
         )
     };
 

@@ -44,6 +44,31 @@ public class AgentRunRegistryTests
     }
 
     [Fact]
+    public void ReservedCompletion_KeepsRunActive_UntilPostRunOwnerReleasesIt()
+    {
+        var registry = new AgentRunRegistry();
+        var run = new AgentRun
+        {
+            RunId = "deferred", ProjectSlug = "p", TicketId = 42,
+            AgentName = "a", SkillFile = "a/SKILL.md",
+            ConcurrencyGroup = "a", StartedAt = DateTime.UtcNow,
+        };
+
+        registry.ReserveCompletion(run.RunId);
+        registry.Register(run);
+        registry.Complete(run.RunId, AgentRunStatus.Completed, 0);
+
+        Assert.Equal(AgentRunStatus.Running, run.Status);
+        Assert.Equal(AgentRunStatus.Completed, registry.EffectiveStatus(run.RunId));
+        Assert.Contains(run, registry.ActiveForProject("p"));
+
+        registry.ReleaseCompletion(run.RunId);
+
+        Assert.Equal(AgentRunStatus.Completed, run.Status);
+        Assert.DoesNotContain(run, registry.ActiveForProject("p"));
+    }
+
+    [Fact]
     public void Constructor_ReconcilesStaleLRunningSnapshots_ToStopped()
     {
         using var tmp = new TempDir();
