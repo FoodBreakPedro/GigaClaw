@@ -53,6 +53,15 @@ public interface ITrigger
     }
 
     /// <summary>
+    /// Called by the engine just before dispatching a firing that was produced by
+    /// <see cref="TryHandleExternalSignal"/>, after the automation's conditions passed.
+    /// Triggers whose poll path keeps eager "seen" state (e.g. the comment-id cursor)
+    /// must consume the underlying event here — otherwise the next poll re-fires the
+    /// same event and the action chain runs twice.
+    /// </summary>
+    Task ConsumeSignalFiringAsync(TriggerContext ctx, TriggerFiring firing) => Task.CompletedTask;
+
+    /// <summary>
     /// Returns the next UTC time this trigger is expected to fire, or null for purely
     /// event-driven triggers where the next occurrence cannot be predicted.
     /// </summary>

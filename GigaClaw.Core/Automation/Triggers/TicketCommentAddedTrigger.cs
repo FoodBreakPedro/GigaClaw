@@ -55,10 +55,16 @@ public sealed class TicketCommentAddedTrigger : ITrigger
         return firings;
     }
 
+    // One cursor per automation: two ticketCommentAdded automations polling the same
+    // workspace must not advance each other's last-seen ids, or whichever polls first
+    // swallows the comment for both. Falls back to the legacy shared key on first read
+    // so existing installs don't re-fire on historical comments.
+    private static string CursorKey(TriggerContext ctx) => "_lastCommentIds:" + ctx.Automation.Id;
+
     private static Dictionary<int, int> LoadLastCommentIds(TriggerContext ctx)
     {
         var state = ctx.Sessions.Load(ctx.WorkspacePath);
-        var node = state["_lastCommentIds"] as JsonObject;
+        var node = state[CursorKey(ctx)] as JsonObject ?? state["_lastCommentIds"] as JsonObject;
         var dict = new Dictionary<int, int>();
         if (node is null) return dict;
         foreach (var kv in node)
@@ -88,6 +94,27 @@ public sealed class TicketCommentAddedTrigger : ITrigger
         return true;
     }
 
+    /// <summary>
+    /// Signal firings bypass <see cref="EvaluateAsync"/>, so dispatching one does not advance
+    /// the poll cursor — without this, the next poll would see the same comment as new and run
+    /// the action chain a second time. Advances the cursor over the ticket's current comments,
+    /// mirroring the poll's eager consumption. Comments added after this point (e.g. during a
+    /// long agent run) still fire normally via their own signal or the next poll.
+    /// </summary>
+    public async Task ConsumeSignalFiringAsync(TriggerContext ctx, TriggerFiring firing)
+    {
+        if (firing.TicketId is not int ticketId) return;
+        var ticket = await ctx.Tickets.GetTicketAsync(ctx.ProjectSlug, ticketId);
+        if (ticket is null || ticket.Comments.Count == 0) return;
+
+        var maxId = ticket.Comments.Max(c => c.Id);
+        var lastSeen = LoadLastCommentIds(ctx);
+        lastSeen.TryGetValue(ticketId, out var prev);
+        if (maxId <= prev) return;
+        lastSeen[ticketId] = maxId;
+        SaveLastCommentIds(ctx, lastSeen);
+    }
+
     public DateTime? GetNextRunAt(DateTime now) =>
         _lastPolled == DateTime.MinValue ? now : _lastPolled.AddSeconds(_spec.PollSeconds);
 
@@ -97,7 +124,7 @@ public sealed class TicketCommentAddedTrigger : ITrigger
         {
             var obj = new JsonObject();
             foreach (var kv in ids) obj[kv.Key.ToString()] = kv.Value;
-            state["_lastCommentIds"] = obj;
+            state[CursorKey(ctx)] = obj;
         });
     }
 }
