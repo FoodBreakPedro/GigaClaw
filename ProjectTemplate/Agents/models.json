@@ -1,0 +1,18 @@
+{
+  "_comment": "AD-9 model seeding: agent-slug -> default Claude model id. Consumed once, at member-creation time, by AgentsTemplateService.DefaultModels() (see GigaClaw.Core/Services/AgentsTemplateService.cs). Editing this file after a project already has members has no effect on those members — change the member's DefaultModel directly (PATCH /api/projects/{slug}/members/{memberId}) instead. Model ids must match GigaClaw.Core/Models/ClaudeModelCatalog.cs. Agents not listed here get no explicit DefaultModel and fall back to the project's FallbackModel.",
+
+  "committer": "claude-haiku-4-5",
+  "groomer": "claude-haiku-4-5",
+  "documentalist": "claude-haiku-4-5",
+  "trend-researcher": "claude-haiku-4-5",
+
+  "blog-researcher": "claude-sonnet-4-6",
+  "growth-writer": "claude-sonnet-4-6",
+  "qa-tester": "claude-sonnet-4-6",
+  "content-writer": "claude-sonnet-4-6",
+
+  "blog-reviewer": "claude-opus-4-8",
+  "decision-engine": "claude-opus-4-8",
+  "approval-gatekeeper": "claude-opus-4-8",
+  "evaluator": "claude-opus-4-8"
+}

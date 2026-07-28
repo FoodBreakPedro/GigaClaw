@@ -87,12 +87,18 @@ public class MemberService
         await db.SaveChangesAsync();
     }
 
-    public async Task<Member> CreateMemberAsync(string projectSlug, string name)
+    /// <summary>
+    /// Creates a member. <paramref name="defaultModel"/> seeds <see cref="Member.DefaultModel"/>
+    /// at creation time (AD-9) — e.g. from <see cref="AgentsTemplateService.DefaultModels"/> when
+    /// called via <see cref="AgentsTemplateService.EnsureAgentMembersAsync"/>. Null leaves the
+    /// member without an explicit default, falling back to the project's FallbackModel.
+    /// </summary>
+    public async Task<Member> CreateMemberAsync(string projectSlug, string name, string? defaultModel = null)
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureMemberTableAsync(db);
         await BackfillSlugsAsync(db);
-        var member = new Member { Name = name, Slug = Member.ToSlug(name) };
+        var member = new Member { Name = name, Slug = Member.ToSlug(name), DefaultModel = defaultModel };
         db.Members.Add(member);
         await db.SaveChangesAsync();
         return member;

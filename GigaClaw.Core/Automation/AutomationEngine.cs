@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using GigaClaw.Core.Automation.Triggers;
@@ -24,6 +25,7 @@ public sealed class AutomationEngine : BackgroundService
         ClaudeRunner runner,
         CostTracker cost,
         LocalizationService loc,
+        IHttpClientFactory httpClientFactory,
         ILogger<AutomationEngine> logger)
     {
         _runs = runs;
@@ -31,7 +33,7 @@ public sealed class AutomationEngine : BackgroundService
 
         _runtimeManager = new ProjectRuntimeManager(store, triggerState, projects, logger);
         var runState = new RunStateManager(runs, cost, tickets, logger);
-        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, logger);
+        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, logger);
         _triggerHandler = new TriggerHandler(projects, _runtimeManager, executor, tickets, members, sessions, runs, logger);
 
         store.OnConfigChangedOnDisk += slug =>

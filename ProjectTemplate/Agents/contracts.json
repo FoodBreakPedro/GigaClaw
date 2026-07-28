@@ -69,10 +69,17 @@
       "maxReviewCycles": 2
     },
     "blog-reviewer": {
-      "dispatches": ["blog-reviewer-on-review", "assignment", "resume", "owner-feedback"],
-      "ticketExit": ["Todo", "Blocked"],
+      "dispatches": ["blog-reviewer-on-review", "content-reviewer-on-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Todo", "InProgress", "Done", "Blocked"],
       "allowedWriteGlobs": ["content/reviews/**"],
       "riskClass": "content-review",
+      "maxReviewCycles": 2
+    },
+    "content-writer": {
+      "dispatches": ["content-writer-on-inprogress", "content-writer-resume"],
+      "ticketExit": ["Review", "Blocked"],
+      "allowedWriteGlobs": [],
+      "riskClass": "content-write",
       "maxReviewCycles": 2
     },
     "blog-seo": {

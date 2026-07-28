@@ -16,6 +16,7 @@
             <option value="consolidateAgentMemory">@L["ActionConsolidateAgentMemory"]</option>
             <option value="executePowerShell">@L["ActionExecutePowerShell"]</option>
             <option value="createTicket">@L["ActionCreateTicket"]</option>
+            <option value="httpRequest">@L["ActionHttpRequest"]</option>
         </select>
     </label>
 
@@ -189,6 +190,40 @@
                 @L["PsAbortOnFailure"]
             </label>
             break;
+        case HttpRequestActionSpec s:
+            <label>@L["HrUrl"]
+                <input placeholder="@L["HrUrlPlaceholder"]" @bind="s.Url" />
+            </label>
+            <label>@L["HrMethod"]
+                <select @bind="s.Method">
+                    <option value="POST">POST</option>
+                    <option value="GET">GET</option>
+                    <option value="PUT">PUT</option>
+                    <option value="PATCH">PATCH</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </label>
+            <label>@L["HrHeaders"]
+                <textarea placeholder="@L["HrHeadersPlaceholder"]" rows="3"
+                          value="@JoinHeaders(s.Headers)"
+                          @onchange="e => s.Headers = SplitHeaders((string?)e.Value)"></textarea>
+            </label>
+            <label>@L["HrBody"]
+                <textarea placeholder="@L["HrBodyPlaceholder"]" rows="5" @bind="s.BodyTemplate"></textarea>
+            </label>
+            <label>@L["HrSecretRef"]
+                <input placeholder="@L["HrSecretRefPlaceholder"]" value="@(s.SecretRef ?? "")"
+                       @onchange="e => s.SecretRef = string.IsNullOrWhiteSpace((string?)e.Value) ? null : ((string)e.Value!).Trim()" />
+            </label>
+            <p class="field-hint">@L["HrCaptureHint"]</p>
+            <label>@L["HrTimeout"]
+                <input type="number" @bind="s.TimeoutSeconds" />
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" @bind="s.AbortOnFailure" />
+                @L["HrAbortOnFailure"]
+            </label>
+            break;
     }
 
     <div class="node-editor-actions">
@@ -235,6 +270,7 @@
         ConsolidateAgentMemoryActionSpec => "consolidateAgentMemory",
         ExecutePowerShellActionSpec => "executePowerShell",
         CreateTicketActionSpec => "createTicket",
+        HttpRequestActionSpec => "httpRequest",
         _ => throw new NotSupportedException($"No UI mapping for action type {Action.GetType().Name}. Register it in ActionEditor.razor."),
     };
 
@@ -243,6 +279,22 @@
         (value ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
+
+    // Headers are edited as one "Name: value" per line.
+    private static string JoinHeaders(Dictionary<string, string> headers) =>
+        string.Join("\n", headers.Select(h => $"{h.Key}: {h.Value}"));
+
+    private static Dictionary<string, string> SplitHeaders(string? value)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var line in (value ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var idx = line.IndexOf(':');
+            if (idx <= 0) continue;
+            result[line[..idx].Trim()] = line[(idx + 1)..].Trim();
+        }
+        return result;
+    }
 
     private async Task OnTypeChanged(ChangeEventArgs e)
     {
@@ -257,6 +309,7 @@
             "consolidateAgentMemory" => new ConsolidateAgentMemoryActionSpec { Agent = Members.FirstOrDefault() ?? "programmer" },
             "executePowerShell" => new ExecutePowerShellActionSpec(),
             "createTicket" => new CreateTicketActionSpec(),
+            "httpRequest" => new HttpRequestActionSpec(),
             _ => throw new NotSupportedException($"Unknown action type key '{e.Value}'. Register it in ActionEditor.razor."),
         };
         await OnReplace.InvokeAsync(spec);

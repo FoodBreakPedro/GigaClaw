@@ -71,7 +71,10 @@ public static class ConditionEvaluators
     {
         if (!agent.Contains("{assignee}")) return agent;
         if (string.IsNullOrEmpty(firingAssignee)) return null;
-        return agent.Replace("{assignee}", firingAssignee);
+        return ActionTemplate.Render(agent, new Dictionary<string, string?>
+        {
+            ["assignee"] = firingAssignee,
+        });
     }
 
     /// <summary>
@@ -80,8 +83,10 @@ public static class ConditionEvaluators
     /// Missing data is replaced with an empty string.
     /// </summary>
     public static string RenderCommentTemplate(string content, int? ticketId, string? ticketTitle, string? assignee)
-        => content
-            .Replace("{ticketId}", ticketId?.ToString() ?? "")
-            .Replace("{ticketTitle}", ticketTitle ?? "")
-            .Replace("{assignee}", assignee ?? "");
+        => ActionTemplate.Render(content, new Dictionary<string, string?>
+        {
+            ["ticketId"] = ticketId?.ToString() ?? "",
+            ["ticketTitle"] = ticketTitle ?? "",
+            ["assignee"] = assignee ?? "",
+        });
 }

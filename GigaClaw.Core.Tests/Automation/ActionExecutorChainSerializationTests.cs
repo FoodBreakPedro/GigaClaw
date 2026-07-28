@@ -129,6 +129,68 @@ public class ActionExecutorChainSerializationTests
             "TryAdd guard must appear before the RunAgentActionSpec case so non-runAgent chains are also serialized");
     }
 
+    // ── Case 4b: httpRequest chain also serialized ───────────────────────────
+
+    [Fact]
+    public void HttpRequest_detaches_the_rest_of_the_chain_like_the_other_blocking_actions()
+    {
+        // httpRequest blocks on network I/O, so it must join the detach condition alongside
+        // consolidateAgentMemory / executePowerShell — otherwise one slow webhook freezes
+        // trigger evaluation for every project on the engine tick.
+        var src = ActionExecutorSrc;
+
+        var detachIdx = src.IndexOf("background && action is", StringComparison.Ordinal);
+        Assert.True(detachIdx >= 0, "Chain-detach condition not found in ActionExecutor");
+        var condition = src[detachIdx..(detachIdx + 260)];
+
+        Assert.Contains("HttpRequestActionSpec", condition);
+        Assert.Contains("ConsolidateAgentMemoryActionSpec", condition);
+        Assert.Contains("ExecutePowerShellActionSpec", condition);
+    }
+
+    [Fact]
+    public void Detached_httpRequest_chain_is_guarded_by_the_inFlight_map()
+    {
+        // The detach path shares the _inFlightChains guard, so two overlapping firings for the
+        // same (automation, ticket) can't both fire the webhook.
+        var src = ActionExecutorSrc;
+        var detachIdx = src.IndexOf("background && action is", StringComparison.Ordinal);
+        Assert.True(detachIdx >= 0);
+        var detachBody = src[detachIdx..];
+
+        var guardIdx = detachBody.IndexOf("guardKey", StringComparison.Ordinal);
+        Assert.True(guardIdx >= 0, "Detached chain must take an _inFlightChains guard slot");
+        Assert.Contains("_inFlightChains", detachBody[..(guardIdx + 400)]);
+    }
+
+    // ── Post-run switch must not silently drop registered action types ────────
+
+    [Fact]
+    public void ProcessPostRunActionsAsync_handles_createTicket_and_httpRequest()
+    {
+        // createTicket had no arm here, so a createTicket following a runAgent was a silent no-op.
+        var src = ActionExecutorSrc;
+        var idx = src.IndexOf("ProcessPostRunActionsAsync", StringComparison.Ordinal);
+        Assert.True(idx >= 0, "ProcessPostRunActionsAsync not found");
+        var body = src[idx..];
+
+        Assert.Contains("case CreateTicketActionSpec", body);
+        Assert.Contains("case HttpRequestActionSpec", body);
+    }
+
+    [Fact]
+    public void ProcessPostRunActionsAsync_has_a_default_arm_so_gaps_are_not_silent()
+    {
+        var src = ActionExecutorSrc;
+        var idx = src.IndexOf("private async Task<bool> ProcessPostRunActionsAsync", StringComparison.Ordinal);
+        Assert.True(idx >= 0, "ProcessPostRunActionsAsync declaration not found");
+        var body = src[idx..];
+
+        var defaultIdx = body.IndexOf("default:", StringComparison.Ordinal);
+        Assert.True(defaultIdx >= 0, "Post-run switch must have a default arm");
+        Assert.Contains("LogWarning", body[defaultIdx..(defaultIdx + 400)]);
+    }
+
     // ── Case 5: debounce stamped at chain completion, not at emission ─────────
 
     [Fact]

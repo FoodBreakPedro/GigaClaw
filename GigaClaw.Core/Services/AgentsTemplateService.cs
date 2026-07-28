@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Text.Json;
 
 namespace GigaClaw.Core.Services;
 
@@ -48,6 +49,64 @@ public sealed class AgentsTemplateService
                 slugs.Add(parts[0]);
         }
         return slugs.OrderBy(s => s, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>
+    /// AD-9 model seeding: agent-slug → default Claude model id, sourced from the embedded
+    /// <c>ProjectTemplate/Agents/models.json</c> map (a flat JSON object of string → string).
+    /// Missing or malformed <c>models.json</c> degrades to an empty map rather than throwing —
+    /// member creation must never be blocked by a template-config problem. Slugs absent from the
+    /// map simply get no explicit <see cref="Models.Member.DefaultModel"/>, falling back to the
+    /// project's FallbackModel per AD-9's three-level resolution.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> DefaultModels()
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (!RelativePaths().Contains("models.json", StringComparer.Ordinal))
+            return map;
+
+        try
+        {
+            var bytes = ReadAsset(AgentsPrefix, "models.json");
+            using var doc = JsonDocument.Parse(bytes);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return map;
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                if (prop.Name.StartsWith('_')) continue; // e.g. "_comment" — not an agent slug
+                if (prop.Value.ValueKind == JsonValueKind.String)
+                {
+                    var value = prop.Value.GetString();
+                    if (!string.IsNullOrWhiteSpace(value)) map[prop.Name] = value;
+                }
+            }
+        }
+        catch
+        {
+            // Malformed models.json — seed nothing rather than block Initialize/member creation.
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// Shared "create any agent member that doesn't exist yet" step, seeding
+    /// <see cref="Models.Member.DefaultModel"/> from <see cref="DefaultModels"/> (AD-9). Used by
+    /// both new-project-in-place initialization (Home.razor) and the
+    /// <c>POST /api/projects/{slug}/initialize</c> endpoint so the two paths cannot drift.
+    /// </summary>
+    public async Task<List<string>> EnsureAgentMembersAsync(string projectSlug, MemberService members)
+    {
+        var created = new List<string>();
+        var defaultModels = DefaultModels();
+        foreach (var slug in AgentSlugs())
+        {
+            if (await members.MemberExistsAsync(projectSlug, slug)) continue;
+            defaultModels.TryGetValue(slug, out var model);
+            await members.CreateMemberAsync(projectSlug, slug, model);
+            created.Add(slug);
+        }
+        return created;
     }
 
     public List<string> DetectConflicts(string workspacePath)

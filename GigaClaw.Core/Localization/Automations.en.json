@@ -39,6 +39,7 @@
   "ActionAddComment": "add comment",
   "ActionAssignTicketDesc": "assign → {0}",
   "ActionExecutePowerShell": "run PowerShell",
+  "ActionHttpRequest": "HTTP request",
   "Initialize": "Initialize",
   "InitializeHint": "Copy the .agents/ template (skills, preamble, automations.json) into this project's workspace",
   "InitializeConfirmTitle": "Overwrite existing files?",

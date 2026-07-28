@@ -32,7 +32,7 @@ public class OllamaLocalModelTests
         var runState = new RunStateManager(runs, cost, tickets, NullLogger.Instance);
         var executor = new ActionExecutor(
             tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState,
-            NullLogger.Instance);
+            FakeHttpClientFactory.Unused, NullLogger.Instance);
 
         var rt = new ProjectRuntime(project.Slug);
         rt.Workspace = workspace;

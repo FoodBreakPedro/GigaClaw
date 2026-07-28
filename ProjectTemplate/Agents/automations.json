@@ -960,6 +960,268 @@
           "content": "This ticket has been Blocked for 3+ days. @owner - unblock, re-scope, or close?"
         }
       ]
+    },
+    {
+      "id": "cms-dispatch-on-done",
+      "name": "CMS dispatch: POST finished draft to CMS when ready-for-cms reaches Done (set the httpRequest action's url per instance — placeholder https://zabalazone.example/api/ai/draft)",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Done"
+      },
+      "conditions": [
+        {
+          "type": "labels",
+          "labels": [
+            "ready-for-cms"
+          ]
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "dispatched"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "approved"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "httpRequest",
+          "url": "https://zabalazone.example/api/ai/draft",
+          "method": "POST",
+          "headers": {},
+          "bodyTemplate": "{\"title\":\"{draft.title}\",\"body\":\"{draft.body}\",\"venture\":\"{projectSlug}\",\"slug\":\"{draft.slug}\",\"excerpt\":\"{draft.excerpt}\",\"contentType\":\"{draft.contentType}\",\"seo\":{\"title\":\"{draft.seo.title}\",\"description\":\"{draft.seo.description}\",\"primaryKeyword\":\"{draft.seo.primaryKeyword}\"},\"sourceTicket\":\"{projectSlug}#{ticketId}\",\"sourceSystem\":\"gigaclaw\"}",
+          "timeoutSeconds": 30,
+          "abortOnFailure": true,
+          "secretRef": "AI_DRAFT_SECRET",
+          "failureComment": "CMS dispatch failed (HTTP {http.status}): {http.error}. The `dispatched` label was not applied — fix the draft or the CMS configuration, then move the ticket back through Done to retry.",
+          "failureStatus": "Blocked"
+        },
+        {
+          "type": "setLabels",
+          "add": [
+            "dispatched"
+          ]
+        },
+        {
+          "type": "addComment",
+          "content": "Dispatched to CMS: {http.body.adminUrl} (id {http.body.id}, slug {http.body.slug})",
+          "author": "automation"
+        },
+        {
+          "type": "executePowerShell",
+          "scriptFile": ".agents/scripts/archive-draft.ps1",
+          "arguments": [
+            "{ticketId}",
+            "{slug}",
+            "{http.body.adminUrl}"
+          ],
+          "timeoutSeconds": 30,
+          "abortOnFailure": false,
+          "env": {}
+        },
+        {
+          "type": "addComment",
+          "content": "{powershell.stdout}",
+          "author": "automation"
+        },
+        {
+          "type": "setLabels",
+          "add": [
+            "image-upgrade-pending"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "content-writer-on-inprogress",
+      "name": "Content Writer: Todo -> InProgress dispatches the AD-7 draft pass",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketInColumn",
+        "seconds": 30,
+        "columns": [
+          "Todo"
+        ],
+        "assigneeSlug": "content-writer",
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 3,
+        "retryBackoffSeconds": 300,
+        "exhaustedStatus": "Blocked",
+        "exhaustedComment": "content-writer dispatch stopped after 3 unchanged attempts from Todo. Add owner feedback or revise the ticket before retrying."
+      },
+      "conditions": [],
+      "actions": [
+        {
+          "type": "moveTicketStatus",
+          "to": "InProgress"
+        },
+        {
+          "type": "runAgent",
+          "agent": "content-writer",
+          "maxTurns": 150,
+          "concurrencyGroup": "content-writer",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "restoreStatusOnFail": true
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "content-writer"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "content-writer"
+        }
+      ]
+    },
+    {
+      "id": "content-writer-resume",
+      "name": "Content Writer: resume/revise while assigned and InProgress (AD-3 revision loop)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketInColumn",
+        "seconds": 30,
+        "columns": [
+          "InProgress"
+        ],
+        "assigneeSlug": "content-writer",
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 5,
+        "retryBackoffSeconds": 120,
+        "exhaustedStatus": "Blocked",
+        "exhaustedComment": "content-writer made no progress across 5 consecutive dispatch attempts while InProgress. Parking for owner review. This guards a stuck run only — the writer/reviewer revision budget itself is enforced by blog-reviewer's CONTENT-REVIEW cycle markers, capped at 2/2."
+      },
+      "conditions": [],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "content-writer",
+          "maxTurns": 150,
+          "concurrencyGroup": "content-writer",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "content-writer"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "content-writer"
+        }
+      ]
+    },
+    {
+      "id": "content-reviewer-on-review",
+      "name": "Content Reviewer: AD-7 quality gate when a content-writer draft reaches Review",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Review"
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "blog-reviewer",
+          "maxTurns": 100,
+          "concurrencyGroup": "blog-reviewer",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "blog-reviewer"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "blog-reviewer"
+        }
+      ]
+    },
+    {
+      "id": "auto-approve-ungated",
+      "name": "Approval gate: auto-approve content-pipeline drafts carrying none of outbound/publish/external/deploy",
+      "enabled": true,
+      "trigger": {
+        "type": "statusChange",
+        "pollSeconds": 30,
+        "to": "Done"
+      },
+      "conditions": [
+        {
+          "type": "labels",
+          "labels": [
+            "ready-for-cms"
+          ]
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "approved"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "outbound"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "publish"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "external"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "deploy"
+          ],
+          "negate": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "setLabels",
+          "add": [
+            "approved"
+          ]
+        },
+        {
+          "type": "addComment",
+          "content": "Auto-approved: no outbound/publish/external/deploy label is present, so this content-pipeline draft does not require a human approval gate (AD-3/Task 10 approval-gate fix). `cms-dispatch-on-done` may now dispatch it on its next poll.",
+          "author": "automation"
+        }
+      ]
     }
   ]
 }

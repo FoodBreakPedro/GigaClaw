@@ -84,6 +84,10 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<GigaClaw.Core.Serv
 builder.Services.AddHostedService<GigaClaw.Core.Services.ScheduledPromotionService>();
 builder.Services.AddSingleton<GigaClaw.Web.Services.AgentRunsState>();
 builder.Services.AddHttpClient();
+// Dedicated client for the httpRequest automation action. Redirects are not followed: an
+// automation posting to a webhook should see the real status, not a silently followed 3xx.
+builder.Services.AddHttpClient(GigaClaw.Core.Automation.HttpRequestActionSpec.HttpClientName)
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton<GigaClaw.Web.Services.UpdateCheckService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GigaClaw.Web.Services.UpdateCheckService>());
 // Anonymous daily usage heartbeat (see README "Telemetry" and doc/telemetry.md).
