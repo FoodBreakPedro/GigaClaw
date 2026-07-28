@@ -18,7 +18,7 @@ Plan: [plan.md](plan.md) · Status: **build-out complete (2026-07-28)** — code
 - [x] **7. n8n ingress normalizer** — `GigaClawIngress01` (22 nodes); label name→id resolution; explicit project-existence guard (GigaClaw lazily creates DBs for any slug) · 🔶 import + live test
 - [x] **8. Dedup gate** — 60% token overlap vs open tickets, threshold in Config node, near-miss logging · 🔶 (same workflow)
 - [x] **9. Telegram + schedule capture** — `GigaClawCapture01/02`; webhook-based (matches production pattern), whitelist preserved; normalizer must be invoked once-per-item (documented) · 🔶
-- [ ] **13. Discord capture** — awaiting Checkpoint-B ack (async) · S · deps: 7
+- [x] **13. Discord capture** — `GigaClawCapture03`: REST polling (n8n 2.29.10 has no discordTrigger), 1-min cursor-based poll, bot credential + channel + allowlist all configured; normalizer unchanged (AD-5 proven) · imported inactive · 🔶 activate + live message test
 
 ### ▸ Checkpoint B — async review: ingress workflows authored + statically validated; live Telegram test pending server import.
 
