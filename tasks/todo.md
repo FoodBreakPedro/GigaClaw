@@ -46,7 +46,7 @@ Plan: [plan.md](plan.md) · Status: **build-out complete (2026-07-28)** — code
 ## Decided
 
 - **Draft lives in the ticket description** (AD-7) — frontmatter header + markdown body. Critique goes in comments; revisions replace the body. Archival to Obsidian is additive → Task 16 (done; target = Obsidian per default).
-- **`personal-brand` gets a CMS presence** — treated as a full venture from Task 1 onward.
+- **`pedrorzabala` gets a CMS presence** — treated as a full venture from Task 1 onward.
 - **`karalungaming` is in scope at lowest priority** — included in Task 1's schema so nothing changes later, but scaffolded last → Task 17.
 - **Images are progressive** (AD-8) — Pexels always ships; the writer emits an `imagePrompt`; OpenMontage upgrades opportunistically when the Mac answers over tailnet. Never blocks dispatch. Forces an update path onto Task 2.
 - **Migration scope (Pedro, 2026-07-28)** — 19 CMS posts + 40 file-based event posts; Events/Products/AffiliatePartners/Leads stay on the old instance (read-only). Media recovered via live Payload API.
@@ -56,7 +56,7 @@ Plan: [plan.md](plan.md) · Status: **build-out complete (2026-07-28)** — code
 **Topology** — GigaClaw + n8n run 24/7 on the Linux server; OpenMontage/ComfyUI runs on the Mac, reachable over Tailscale when it's up; PayloadCMS is cloud. The 24/7 path must never depend on the Mac.
 - **T1/T2 is retired** (AD-9) — model is a property of the agent member, seeded from `ProjectTemplate/Agents/models.json`. Haiku for mechanical work, Sonnet for writing, Opus for judgment.
 
-Rollout order: `gamelifteat` (pilot) → `gamepowergym` → `zabsconsulting` → `personal-brand` → `hyperlanetravels` (needs Task 15 cutover) → `karalungaming`.
+Rollout order: `gamelifteat` (pilot) → `gamepowergym` → `zabsconsulting` → `pedrorzabala` → `hyperlanetravels` (needs Task 15 cutover) → `karalungaming`.
 
 ## Blocked on answers
 

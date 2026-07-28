@@ -17,7 +17,7 @@ readonly VALID_SLUGS=(
     "gamelifteat"
     "gamepowergym"
     "zabsconsulting"
-    "personal-brand"
+    "pedrorzabala"
     "hyperlanetravels"
     "karalungaming"
 )

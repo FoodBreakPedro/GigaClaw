@@ -26,7 +26,7 @@ $ValidSlugs = @(
     "gamelifteat",
     "gamepowergym",
     "zabsconsulting",
-    "personal-brand",
+    "pedrorzabala",
     "hyperlanetravels",
     "karalungaming"
 )
