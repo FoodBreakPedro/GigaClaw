@@ -232,6 +232,7 @@ public sealed class TicketAgeConditionSpec : ConditionSpec
 [JsonDerivedType(typeof(ConsolidateAgentMemoryActionSpec), "consolidateAgentMemory")]
 [JsonDerivedType(typeof(ExecutePowerShellActionSpec), "executePowerShell")]
 [JsonDerivedType(typeof(CreateTicketActionSpec), "createTicket")]
+[JsonDerivedType(typeof(HttpRequestActionSpec), "httpRequest")]
 public abstract class ActionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -336,7 +337,21 @@ public sealed class CreateTicketActionSpec : ActionSpec
     public bool SkipIfExists { get; set; } = true;
 }
 
-/// <summary>Runs a PowerShell script or file with optional arguments and timeout.</summary>
+/// <summary>
+/// Runs a PowerShell script or file with optional arguments and timeout.
+/// <para>
+/// <c>Script</c>/<c>ScriptFile</c> and every entry in <c>Arguments</c> are templated with
+/// <c>{ticketId}</c>, <c>{ticketTitle}</c>, <c>{slug}</c>, plus any chain value published by an
+/// earlier action in the same chain (e.g. <c>{http.body.adminUrl}</c> from a preceding
+/// <c>httpRequest</c>). <c>{draft.*}</c> is deliberately NOT wired here — those values are
+/// JSON-escaped for splicing into an httpRequest <c>BodyTemplate</c> and are not safe to hand to a
+/// shell verbatim; a script that needs the draft should fetch and parse the ticket itself via the
+/// GigaClaw API. On completion (success, non-zero exit, or timeout) the trimmed stdout and exit
+/// code are published back into the chain as <c>{powershell.stdout}</c> (capped at 4 KB) and
+/// <c>{powershell.exitCode}</c>, so a later <c>addComment</c> can report the script's outcome —
+/// mirroring how <c>httpRequest</c> publishes <c>{http.status}</c>/<c>{http.body}</c>.
+/// </para>
+/// </summary>
 public sealed class ExecutePowerShellActionSpec : ActionSpec
 {
     public override string UiTypeKey => "executePowerShell";
@@ -346,4 +361,77 @@ public sealed class ExecutePowerShellActionSpec : ActionSpec
     public int TimeoutSeconds { get; set; } = 60;
     public bool AbortOnFailure { get; set; }
     public Dictionary<string, string> Env { get; set; } = new();
+}
+
+/// <summary>
+/// Performs an outbound HTTP request (webhook / CMS publish / n8n kick-off) and captures the
+/// response into the action chain so later actions can template it.
+/// <para>
+/// <see cref="Url"/>, <see cref="BodyTemplate"/> and every header value support the standard
+/// chain placeholders (<c>{ticketId}</c>, <c>{ticketTitle}</c>, <c>{slug}</c>/<c>{projectSlug}</c>
+/// — both name the firing project's slug) plus any chain values captured by earlier actions.
+/// After the request completes, the executor publishes <c>{http.status}</c>, <c>{http.body}</c>
+/// (raw, trimmed) and one <c>{http.body.&lt;field&gt;}</c> per first-level field of a JSON object
+/// response, so an <c>addComment</c> later in the chain can write the receipt back onto the ticket.
+/// </para>
+/// <para>
+/// <b>Draft frontmatter (AD-7).</b> When <see cref="BodyTemplate"/> references any
+/// <c>{draft.*}</c> placeholder, the executor fetches the firing ticket's description and parses
+/// it as <see cref="DraftFrontmatter"/> before sending the request:
+/// <c>{draft.title}</c>, <c>{draft.slug}</c>, <c>{draft.excerpt}</c>, <c>{draft.contentType}</c>,
+/// <c>{draft.imagePrompt}</c>, <c>{draft.seo.title}</c>, <c>{draft.seo.description}</c>,
+/// <c>{draft.seo.primaryKeyword}</c>, <c>{draft.body}</c>. Every <c>{draft.*}</c> value is
+/// JSON-string-escaped (quotes/backslashes/newlines) before substitution, since it is meant to be
+/// spliced between a literal <c>"</c> pair in a JSON body — do not use it in <see cref="Url"/> or
+/// <see cref="Headers"/>. <c>{draft.*}</c> placeholders are only recognized in
+/// <see cref="BodyTemplate"/>; they are left verbatim anywhere else.
+/// </para>
+/// <para>
+/// If the description has no valid frontmatter (missing fence or missing <c>title</c>), the
+/// request is never sent — this action fails the same way a non-2xx response would (readable
+/// error in the run log, <see cref="AbortOnFailure"/> and <see cref="FailureComment"/>/
+/// <see cref="FailureStatus"/> honored) rather than POSTing a malformed draft.
+/// </para>
+/// </summary>
+public sealed class HttpRequestActionSpec : ActionSpec
+{
+    /// <summary>Name of the <c>IHttpClientFactory</c> client this action uses. Registered by the
+    /// host (see GigaClaw.Web/Program.cs) so its handler pipeline stays independent of the app's
+    /// other outbound HTTP.</summary>
+    public const string HttpClientName = "gigaclaw-automation";
+
+    public override string UiTypeKey => "httpRequest";
+    /// <summary>Absolute request URL. Supports placeholders.</summary>
+    public string Url { get; set; } = "";
+    /// <summary>HTTP verb. Defaults to POST; anything <see cref="System.Net.Http.HttpMethod"/> accepts works.</summary>
+    public string Method { get; set; } = "POST";
+    /// <summary>Extra request headers. Values support placeholders.</summary>
+    public Dictionary<string, string> Headers { get; set; } = new();
+    /// <summary>Request body. Sent as <c>application/json</c> unless a Content-Type header is set. Supports placeholders, including <c>{draft.*}</c> (see class remarks).</summary>
+    public string BodyTemplate { get; set; } = "";
+    public int TimeoutSeconds { get; set; } = 30;
+    /// <summary>Abort the remaining actions in the chain when the request fails (non-2xx, timeout, transport error, or — when <c>{draft.*}</c> is used — a frontmatter parse failure).</summary>
+    public bool AbortOnFailure { get; set; }
+    /// <summary>
+    /// Name of an environment variable on the GigaClaw server process holding a bearer token.
+    /// Resolved at execution time and injected as <c>Authorization: Bearer &lt;value&gt;</c> unless an
+    /// Authorization header is already present. Only the variable NAME is stored in automations.json —
+    /// the secret itself is never persisted and never logged. A missing variable logs a warning and
+    /// the request proceeds unauthenticated.
+    /// </summary>
+    public string? SecretRef { get; set; }
+    /// <summary>
+    /// Optional comment posted (author <c>"automation"</c>) when the request fails — non-2xx,
+    /// timeout/transport error, or a <c>{draft.*}</c> frontmatter parse failure. Independent of
+    /// <see cref="AbortOnFailure"/> (posted either way) and only when the firing has a ticket.
+    /// Supports the standard chain placeholders plus <c>{http.status}</c>, <c>{http.body}</c> and
+    /// <c>{http.error}</c> (a short, human-readable failure reason: the parse error, the timeout
+    /// message, the transport exception message, or <c>"HTTP &lt;status&gt;"</c>).
+    /// </summary>
+    public string? FailureComment { get; set; }
+    /// <summary>
+    /// Optional ticket status to move to when the request fails, applied after
+    /// <see cref="FailureComment"/> is posted. Only when the firing has a ticket.
+    /// </summary>
+    public string? FailureStatus { get; set; }
 }

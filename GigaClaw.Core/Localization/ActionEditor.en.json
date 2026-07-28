@@ -48,5 +48,19 @@
   "CtPriority": "Priority",
   "CtLabels": "Labels (names, comma-separated)",
   "CtCreatedBy": "Created by",
-  "CtSkipIfExists": "Skip if an open ticket with the same title already exists"
+  "CtSkipIfExists": "Skip if an open ticket with the same title already exists",
+
+  "ActionHttpRequest": "HTTP request",
+  "HrUrl": "URL",
+  "HrUrlPlaceholder": "https://example.com/webhook/{slug}",
+  "HrMethod": "Method",
+  "HrHeaders": "Headers (one \"Name: value\" per line)",
+  "HrHeadersPlaceholder": "Content-Type: application/json",
+  "HrBody": "Body",
+  "HrBodyPlaceholder": "{\"ticket\": \"{ticketId}\", \"title\": \"{ticketTitle}\"}",
+  "HrSecretRef": "Bearer token from environment variable (optional)",
+  "HrSecretRefPlaceholder": "CMS_API_TOKEN",
+  "HrCaptureHint": "Only the variable name is saved — never the token itself. The response is captured for later actions in this chain as {http.status}, {http.body} and {http.body.field} for each top-level JSON field.",
+  "HrTimeout": "Timeout (seconds)",
+  "HrAbortOnFailure": "Abort remaining actions when the request fails"
 }

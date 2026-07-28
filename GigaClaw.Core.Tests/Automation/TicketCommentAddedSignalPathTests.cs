@@ -38,7 +38,7 @@ public class TicketCommentAddedSignalPathTests
                 Tickets, Members, Labels, Sessions, Runs, runner, cost,
                 new LocalizationService(new AppSettingsService(Tmp.Path)), Projects,
                 new RunStateManager(Runs, cost, Tickets, NullLogger.Instance),
-                NullLogger.Instance);
+                FakeHttpClientFactory.Unused, NullLogger.Instance);
         }
 
         public TriggerContext BuildContext(string slug, string workspace, AutomationRule automation) =>

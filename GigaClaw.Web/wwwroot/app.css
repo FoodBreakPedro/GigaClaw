@@ -2792,6 +2792,14 @@ body.flow-dnd-active * { cursor: grabbing !important; }
     border-radius: 4px; padding: 0.35rem 0.5rem;
 }
 .node-editor-actions { margin-top: 0.5rem; }
+/* Inline explanatory note inside a node editor (e.g. the httpRequest capture placeholders). */
+.node-editor .field-hint {
+    margin: 0; font-size: 0.78rem; line-height: 1.45;
+    color: var(--muted, #8a99b0);
+}
+.node-editor .field-hint code {
+    background: #11141b; padding: 0.05rem 0.3rem; border-radius: 3px;
+}
 .column-picker {
     display: flex; flex-direction: column; gap: 0.3rem;
     padding: 0.5rem; background: #11141b; border-radius: 4px;

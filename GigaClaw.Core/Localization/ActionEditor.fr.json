@@ -48,5 +48,19 @@
   "CtPriority": "Priorité",
   "CtLabels": "Labels (noms, séparés par virgule)",
   "CtCreatedBy": "Créé par",
-  "CtSkipIfExists": "Ne pas créer si un ticket ouvert avec le même titre existe déjà"
+  "CtSkipIfExists": "Ne pas créer si un ticket ouvert avec le même titre existe déjà",
+
+  "ActionHttpRequest": "Requête HTTP",
+  "HrUrl": "URL",
+  "HrUrlPlaceholder": "https://exemple.com/webhook/{slug}",
+  "HrMethod": "Méthode",
+  "HrHeaders": "En-têtes (un « Nom : valeur » par ligne)",
+  "HrHeadersPlaceholder": "Content-Type: application/json",
+  "HrBody": "Corps",
+  "HrBodyPlaceholder": "{\"ticket\": \"{ticketId}\", \"titre\": \"{ticketTitle}\"}",
+  "HrSecretRef": "Jeton Bearer depuis une variable d'environnement (optionnel)",
+  "HrSecretRefPlaceholder": "CMS_API_TOKEN",
+  "HrCaptureHint": "Seul le nom de la variable est enregistré — jamais le jeton. La réponse est capturée pour les actions suivantes de la chaîne via {http.status}, {http.body} et {http.body.champ} pour chaque champ JSON de premier niveau.",
+  "HrTimeout": "Timeout (secondes)",
+  "HrAbortOnFailure": "Abandonner les actions suivantes si la requête échoue"
 }

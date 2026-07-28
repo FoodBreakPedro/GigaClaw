@@ -405,11 +405,9 @@
 
     private async Task EnsureAgentMembersAsync(string projectSlug)
     {
-        foreach (var slug in AgentsTemplate.AgentSlugs())
-        {
-            if (!await MemberService.MemberExistsAsync(projectSlug, slug))
-                await MemberService.CreateMemberAsync(projectSlug, slug);
-        }
+        // Shared with POST /api/projects/{slug}/initialize (Endpoints.Projects.cs) so both
+        // paths seed AD-9 DefaultModel identically — see AgentsTemplateService.EnsureAgentMembersAsync.
+        await AgentsTemplate.EnsureAgentMembersAsync(projectSlug, MemberService);
     }
 
     private async Task TogglePause(Project project)

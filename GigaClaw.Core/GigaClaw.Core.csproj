@@ -37,6 +37,12 @@
       <LogicalName>GigaClaw.Core.AgentsTemplate/contracts.json</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
+    <!-- AD-9 model seeding: agent-slug -> default Claude model id, read by
+         AgentsTemplateService.DefaultModels() at member-creation time. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\models.json">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/models.json</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\ProjectTemplate\Agents\BRAND.md">
       <LogicalName>GigaClaw.Core.AgentsTemplate/BRAND.md</LogicalName>
       <WithCulture>false</WithCulture>
@@ -82,6 +88,8 @@
     <!-- Pins the transitive SQLitePCLRaw bundle above 2.1.11 (CVE-2025-6965 / GHSA-2m69-gcr7-jv3q). -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.10" />
+    <!-- IHttpClientFactory for the httpRequest automation action. -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
     <PackageReference Include="Markdig" Version="1.3.2" />
     <PackageReference Include="NCrontab" Version="3.4.0" />

@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Net.Http;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using GigaClaw.Core.Automation.Triggers;
 using GigaClaw.Core.Services;
@@ -21,6 +23,7 @@ internal sealed class ActionExecutor
     private readonly LocalizationService _loc;
     private readonly ProjectService _projects;
     private readonly RunStateManager _runState;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger _logger;
 
     // Serializes in-process git operations per repository. Keyed by the git cwd so one
@@ -45,6 +48,7 @@ internal sealed class ActionExecutor
         LocalizationService loc,
         ProjectService projects,
         RunStateManager runState,
+        IHttpClientFactory httpClientFactory,
         ILogger logger)
     {
         _tickets = tickets;
@@ -57,6 +61,7 @@ internal sealed class ActionExecutor
         _loc = loc;
         _projects = projects;
         _runState = runState;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -190,13 +195,8 @@ internal sealed class ActionExecutor
 
     // ── Action execution ────────────────────────────────────────────────────
 
-    private sealed class ActionState
-    {
-        public AgentRun? LastRun;
-        public string? StatusBeforeMove;
-        public string? StatusAfterMove;
-        public string? AssigneeBeforeMove;
-    }
+    // ActionState (including the ChainValues output→input bag) lives in ActionTemplate.cs
+    // alongside the render helper that consumes it.
 
     public async Task<AgentRun?> ExecuteAutomationAsync(
         ProjectRuntime rt,
@@ -239,7 +239,7 @@ internal sealed class ActionExecutor
             {
                 var action = automation.Actions[i];
 
-                if (!background && action is ConsolidateAgentMemoryActionSpec or ExecutePowerShellActionSpec)
+                if (!background && action is ConsolidateAgentMemoryActionSpec or ExecutePowerShellActionSpec or HttpRequestActionSpec)
                 {
                     var guardKey = chainKey ?? $"{automation.Id}:detached";
                     if (chainKey is null && !_inFlightChains.TryAdd(guardKey, 0))
@@ -282,7 +282,7 @@ internal sealed class ActionExecutor
                         await ExecuteSetLabelsActionAsync(rt, firing, s);
                         break;
                     case AddCommentActionSpec ac when firing.TicketId is not null:
-                        await ExecuteAddCommentActionAsync(rt, firing, ac);
+                        await ExecuteAddCommentActionAsync(rt, firing, ac, state);
                         break;
                     case AssignTicketActionSpec at when firing.TicketId is not null:
                         await ExecuteAssignTicketActionAsync(rt, firing, at);
@@ -295,12 +295,18 @@ internal sealed class ActionExecutor
                         break;
                     case ExecutePowerShellActionSpec ps:
                     {
-                        var abort = await ExecutePowerShellAsync(ps, rt.Workspace!, rt.Slug, firing, ct);
+                        var abort = await ExecutePowerShellAsync(ps, rt.Workspace!, rt.Slug, firing, state, ct);
+                        if (abort) return state.LastRun;
+                        break;
+                    }
+                    case HttpRequestActionSpec hr:
+                    {
+                        var abort = await ExecuteHttpRequestAsync(hr, rt.Slug, firing, state, ct);
                         if (abort) return state.LastRun;
                         break;
                     }
                     case CreateTicketActionSpec cta:
-                        await ExecuteCreateTicketActionAsync(rt, cta);
+                        await ExecuteCreateTicketActionAsync(rt, cta, state);
                         break;
                     default:
                         throw new NotSupportedException($"Unhandled action type {action.GetType().Name}. Register it in ActionExecutor.ExecuteAutomationAsync.");
@@ -340,7 +346,9 @@ internal sealed class ActionExecutor
         var statusBefore = state.StatusBeforeMove;
         var statusAfter = state.StatusAfterMove;
         var assigneeBefore = state.AssigneeBeforeMove;
-        _ = HandleRunCompletionAsync(runTask, rt, firing, a, agentName, runId!, statusBefore, statusAfter, assigneeBefore, remainingActions, finalizeAsync, chainKey, ct);
+        // `state` (not a copy) is handed on: post-run actions must see the chain values published
+        // by actions that ran before the agent, and publish their own for the ones after.
+        _ = HandleRunCompletionAsync(runTask, rt, firing, a, agentName, runId!, statusBefore, statusAfter, assigneeBefore, remainingActions, finalizeAsync, state, chainKey, ct);
         state.LastRun = null;
         return false;
     }
@@ -375,9 +383,10 @@ internal sealed class ActionExecutor
         var skillFile = $"{agentName}/SKILL.md";
         var group = string.IsNullOrEmpty(a.ConcurrencyGroup)
             ? agentName
-            : a.ConcurrencyGroup
-                .Replace("{assignee}", agentName)
-                .Replace("{ticketId}", firing.TicketId?.ToString() ?? "none");
+            : ActionTemplate.Render(a.ConcurrencyGroup, ActionTemplate.Values(
+                null,
+                ("assignee", agentName),
+                ("ticketId", firing.TicketId?.ToString() ?? "none")));
 
         if (await _runState.ShouldSkipAsync(rt, a, firing, agentName, group)) return (true, null, agentName, null);
 
@@ -468,6 +477,7 @@ internal sealed class ActionExecutor
         string? assigneeBeforeMove,
         List<ActionSpec> remainingActions,
         Func<bool, DateTime?, Task> finalizeAsync,
+        ActionState state,
         string? chainKey,
         CancellationToken ct)
     {
@@ -519,7 +529,7 @@ internal sealed class ActionExecutor
         }
 
         var postActionsSucceeded = await ProcessPostRunActionsAsync(
-            rt, firing, run, remainingActions, finalizeAsync, ct);
+            rt, firing, run, remainingActions, finalizeAsync, state, ct);
         // Persist the outcome only after restoration and post-run actions. In particular,
         // restoreStatusOnFail updates the ticket; recording before it would make that engine
         // update look like owner feedback and reset ticketInColumn's retry counter.
@@ -546,6 +556,7 @@ internal sealed class ActionExecutor
         AgentRun precedingRun,
         List<ActionSpec> actions,
         Func<bool, DateTime?, Task> finalizeAsync,
+        ActionState state,
         CancellationToken ct)
     {
         var succeeded = true;
@@ -558,10 +569,14 @@ internal sealed class ActionExecutor
                 {
                     case CommitAgentMemoryActionSpec cm: await ExecuteCommitAgentMemoryActionAsync(rt, cm, firing); break;
                     case ConsolidateAgentMemoryActionSpec csm: await ExecuteConsolidateAgentMemoryActionAsync(rt, csm, firing, precedingRun, ct); break;
-                    case AddCommentActionSpec ac when firing.TicketId is not null: await ExecuteAddCommentActionAsync(rt, firing, ac); break;
+                    case AddCommentActionSpec ac when firing.TicketId is not null: await ExecuteAddCommentActionAsync(rt, firing, ac, state); break;
                     case SetLabelsActionSpec sl when firing.TicketId is not null: await ExecuteSetLabelsActionAsync(rt, firing, sl); break;
                     case AssignTicketActionSpec at when firing.TicketId is not null: await ExecuteAssignTicketActionAsync(rt, firing, at); break;
-                    case ExecutePowerShellActionSpec ps: await ExecutePowerShellAsync(ps, rt.Workspace!, rt.Slug, firing, ct); break;
+                    case ExecutePowerShellActionSpec ps: await ExecutePowerShellAsync(ps, rt.Workspace!, rt.Slug, firing, state, ct); break;
+                    case HttpRequestActionSpec hr: await ExecuteHttpRequestAsync(hr, rt.Slug, firing, state, ct); break;
+                    // createTicket was missing here: a createTicket placed after a runAgent used to
+                    // fall through the (previously default-less) switch and silently do nothing.
+                    case CreateTicketActionSpec cta: await ExecuteCreateTicketActionAsync(rt, cta, state); break;
                     case RunAgentActionSpec ra:
                     {
                         var (skip, runTask, agentName, runId) = await StartAgentRunAsync(rt, firing, ra, ct);
@@ -594,7 +609,7 @@ internal sealed class ActionExecutor
 
                             var rest = actions.Skip(i + 1).ToList();
                             var restSucceeded = await ProcessPostRunActionsAsync(
-                                rt, firing, chainedRun, rest, finalizeAsync, ct);
+                                rt, firing, chainedRun, rest, finalizeAsync, state, ct);
                             return chainedStatus == AgentRunStatus.Completed && restSucceeded;
                         }
                         finally
@@ -602,6 +617,25 @@ internal sealed class ActionExecutor
                             _runs.ReleaseCompletion(runId!);
                         }
                     }
+                    // Ticket-scoped actions whose `when firing.TicketId is not null` guard did not
+                    // match. Nothing to do, and not a registration gap — keep them out of the
+                    // default arm so they don't produce misleading warnings.
+                    case AddCommentActionSpec:
+                    case SetLabelsActionSpec:
+                    case AssignTicketActionSpec:
+                        break;
+                    case MoveTicketStatusActionSpec:
+                        // Deliberately unsupported after a runAgent: the pre-run move is what
+                        // restoreStatusOnFail reverts, and a second move here would fight it.
+                        _logger.LogDebug("Post-run moveTicketStatus is not supported after a runAgent — skipping");
+                        break;
+                    default:
+                        // Previously this switch had no default arm, so an unregistered action type
+                        // was a silent no-op. Fail loudly in the log instead.
+                        _logger.LogWarning(
+                            "Post-run action {Type} is not handled in ProcessPostRunActionsAsync — skipping. Register it there.",
+                            post.GetType().Name);
+                        break;
                 }
             }
             catch (Exception ex)
@@ -671,17 +705,18 @@ internal sealed class ActionExecutor
         }
     }
 
-    private async Task ExecuteAddCommentActionAsync(ProjectRuntime rt, TriggerFiring firing, AddCommentActionSpec ac)
+    private async Task ExecuteAddCommentActionAsync(ProjectRuntime rt, TriggerFiring firing, AddCommentActionSpec ac, ActionState? state = null)
     {
         try
         {
-            var content = ac.Content
-                .Replace("{ticketId}", firing.TicketId?.ToString() ?? "")
-                .Replace("{ticketTitle}", firing.TicketTitle ?? "");
+            // Renders {ticketId}/{ticketTitle} plus any chain values (e.g. {http.body.adminUrl})
+            // captured by an earlier httpRequest — this is how a CMS receipt lands on the ticket.
+            var content = ActionTemplate.Render(ac.Content, state, firing);
             if (content.Contains("{assignee}"))
             {
                 var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId!.Value);
-                content = content.Replace("{assignee}", ticket?.AssignedTo ?? "");
+                content = ActionTemplate.Render(content, ActionTemplate.Values(
+                    null, ("assignee", ticket?.AssignedTo ?? "")));
             }
             await _tickets.AddCommentAsync(rt.Slug, firing.TicketId!.Value, content, ac.Author);
         }
@@ -800,17 +835,18 @@ internal sealed class ActionExecutor
         }
     }
 
-    private async Task ExecuteCreateTicketActionAsync(ProjectRuntime rt, CreateTicketActionSpec cta)
+    private async Task ExecuteCreateTicketActionAsync(ProjectRuntime rt, CreateTicketActionSpec cta, ActionState? state = null)
     {
         try
         {
             var today = DateTime.Today;
             var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
             var firstOfMonth = new DateTime(today.Year, today.Month, 1);
-            string Resolve(string s) => s
-                .Replace("{date}", today.ToString("yyyy-MM-dd"))
-                .Replace("{monday}", monday.ToString("yyyy-MM-dd"))
-                .Replace("{firstOfMonth}", firstOfMonth.ToString("yyyy-MM-dd"));
+            string Resolve(string s) => ActionTemplate.Render(s, ActionTemplate.Values(
+                state,
+                ("date", today.ToString("yyyy-MM-dd")),
+                ("monday", monday.ToString("yyyy-MM-dd")),
+                ("firstOfMonth", firstOfMonth.ToString("yyyy-MM-dd"))));
 
             var title = Resolve(cta.Title);
             if (string.IsNullOrWhiteSpace(title))
@@ -961,15 +997,29 @@ internal sealed class ActionExecutor
         }
     }
 
+    /// <summary>Upper bound on the raw stdout published as <c>{powershell.stdout}</c>, mirroring
+    /// <see cref="MaxCapturedBodyChars"/> for httpRequest — a runaway script can't paste megabytes
+    /// into a ticket comment.</summary>
+    private const int MaxCapturedStdoutChars = 4096;
+
     // Returns true when AbortOnFailure is set and the process exited with a non-zero code.
-    private async Task<bool> ExecutePowerShellAsync(ExecutePowerShellActionSpec spec, string workspacePath, string slug, TriggerFiring firing, CancellationToken ct)
+    private async Task<bool> ExecutePowerShellAsync(ExecutePowerShellActionSpec spec, string workspacePath, string slug, TriggerFiring firing, ActionState? state, CancellationToken ct)
     {
+        void Publish(string key, string value)
+        {
+            if (state is not null) state.ChainValues[key] = value;
+        }
+
+        // Set only for the inline-Script + Arguments case below; deleted in the finally so a
+        // long-lived automation config never leaks one temp file per firing.
+        string? tempScriptPath = null;
         try
         {
-            string Render(string s) => (s ?? string.Empty)
-                .Replace("{ticketId}", firing.TicketId?.ToString() ?? "")
-                .Replace("{ticketTitle}", firing.TicketTitle ?? "")
-                .Replace("{slug}", slug ?? "");
+            string Render(string s) => ActionTemplate.Render(s, ActionTemplate.Values(
+                state,
+                ("ticketId", firing.TicketId?.ToString() ?? ""),
+                ("ticketTitle", firing.TicketTitle ?? ""),
+                ("slug", slug ?? "")));
 
             string scriptArg;
             if (!string.IsNullOrWhiteSpace(spec.ScriptFile))
@@ -979,6 +1029,16 @@ internal sealed class ActionExecutor
                     ? rendered
                     : Path.Combine(workspacePath, rendered);
                 scriptArg = $"-File \"{path}\"";
+            }
+            else if (spec.Arguments.Count > 0)
+            {
+                // pwsh's -EncodedCommand does not accept trailing positional arguments — it errors
+                // out with a "-File" usage message instead of exposing them as $args, unlike
+                // -File <path> <args...>. Route inline Script + Arguments through a temp .ps1 file
+                // so both ways of invoking a script behave identically.
+                tempScriptPath = Path.Combine(Path.GetTempPath(), $"gigaclaw-ps-{Guid.NewGuid():N}.ps1");
+                await File.WriteAllTextAsync(tempScriptPath, Render(spec.Script), ct);
+                scriptArg = $"-File \"{tempScriptPath}\"";
             }
             else
             {
@@ -998,6 +1058,15 @@ internal sealed class ActionExecutor
                 TimeSpan.FromSeconds(spec.TimeoutSeconds),
                 spec.Env,
                 ct);
+
+            // Published unconditionally (success, non-zero exit, or timeout) — same "publish first,
+            // ask questions later" shape as httpRequest's http.status/http.body — so a later
+            // addComment can report what happened either way (e.g. a best-effort archive step).
+            var stdout = res.Stdout.Trim();
+            Publish("powershell.stdout", stdout.Length <= MaxCapturedStdoutChars
+                ? stdout
+                : stdout[..MaxCapturedStdoutChars] + "…");
+            Publish("powershell.exitCode", res.ExitCode?.ToString() ?? "");
 
             if (res.TimedOut)
             {
@@ -1023,9 +1092,242 @@ internal sealed class ActionExecutor
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "executePowerShell failed");
+            Publish("powershell.stdout", "");
+            Publish("powershell.exitCode", "");
             if (spec.AbortOnFailure) return true;
         }
+        finally
+        {
+            if (tempScriptPath is not null)
+            {
+                try { File.Delete(tempScriptPath); } catch { /* best-effort cleanup */ }
+            }
+        }
         return false;
+    }
+
+    // ── httpRequest ─────────────────────────────────────────────────────────
+
+    /// <summary>Upper bound on the raw body published as <c>{http.body}</c>, so a large response
+    /// can't be pasted wholesale into a ticket comment.</summary>
+    private const int MaxCapturedBodyChars = 8192;
+
+    /// <summary>
+    /// Performs the outbound request and publishes <c>http.status</c>, <c>http.body</c> and the
+    /// flattened <c>http.body.&lt;field&gt;</c> values into the chain. When <see cref="HttpRequestActionSpec.BodyTemplate"/>
+    /// references <c>{draft.*}</c>, the firing ticket's description is fetched and parsed as
+    /// <see cref="DraftFrontmatter"/> first — a parse failure fails the action the same way a
+    /// failed request does, without ever sending it. Returns true when the caller should abort
+    /// the rest of the chain (failure + AbortOnFailure).
+    /// </summary>
+    private async Task<bool> ExecuteHttpRequestAsync(
+        HttpRequestActionSpec spec,
+        string slug,
+        TriggerFiring firing,
+        ActionState? state,
+        CancellationToken ct)
+    {
+        // Substitution always targets locals — the spec objects are the shared, mutable instances
+        // held by the chain snapshot and by the on-disk config, and must never be written to.
+        string Render(string? s) => ActionTemplate.Render(s, ActionTemplate.Values(
+            state,
+            ("ticketId", firing.TicketId?.ToString() ?? ""),
+            ("ticketTitle", firing.TicketTitle ?? ""),
+            ("slug", slug ?? ""),
+            ("projectSlug", slug ?? "")));
+
+        void Publish(string key, string value)
+        {
+            if (state is not null) state.ChainValues[key] = value;
+        }
+
+        // Deterministic values so a template referencing {http.status} never renders the raw
+        // placeholder when the request never produced a response.
+        Publish("http.status", "0");
+        Publish("http.body", "");
+
+        // Posts the failure receipt (comment + status move) this spec was configured with, then
+        // returns whether the caller should abort the rest of the chain. Shared by every failure
+        // exit below — non-2xx, transport/timeout, bad URL, and frontmatter parse failure — so
+        // FailureComment/FailureStatus behave identically regardless of which one fired.
+        async Task<bool> FailAsync(string httpError)
+        {
+            Publish("http.error", httpError);
+            if (firing.TicketId is int failedTicketId)
+            {
+                if (!string.IsNullOrWhiteSpace(spec.FailureComment))
+                {
+                    var content = ActionTemplate.Render(spec.FailureComment, state, firing);
+                    try { await _tickets.AddCommentAsync(slug!, failedTicketId, content, "automation"); }
+                    catch (Exception ex) { _logger.LogWarning(ex, "httpRequest: failed to post FailureComment for ticket #{Id}", failedTicketId); }
+                }
+                if (!string.IsNullOrWhiteSpace(spec.FailureStatus))
+                {
+                    try { await _tickets.MoveTicketAsync(slug!, failedTicketId, spec.FailureStatus, "automation"); }
+                    catch (Exception ex) { _logger.LogWarning(ex, "httpRequest: failed to apply FailureStatus for ticket #{Id}", failedTicketId); }
+                }
+            }
+            return spec.AbortOnFailure;
+        }
+
+        var url = Render(spec.Url).Trim();
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            _logger.LogWarning("httpRequest: '{Url}' is not an absolute http(s) URL — skipping", url);
+            return await FailAsync($"invalid URL '{url}'");
+        }
+
+        var timeout = TimeSpan.FromSeconds(spec.TimeoutSeconds > 0 ? spec.TimeoutSeconds : 30);
+
+        try
+        {
+            // {draft.*} is only recognized in BodyTemplate — a frontmatter parse failure must
+            // block dispatch (never POST a malformed draft) rather than silently leaving the
+            // placeholders un-rendered.
+            var bodyTemplate = spec.BodyTemplate ?? "";
+            string body;
+            if (bodyTemplate.Contains("{draft.", StringComparison.Ordinal))
+            {
+                var ticket = firing.TicketId is int draftTicketId
+                    ? await _tickets.GetTicketAsync(slug, draftTicketId)
+                    : null;
+                if (!DraftFrontmatter.TryParse(ticket?.Description, out var draft, out var parseError))
+                {
+                    _logger.LogWarning(
+                        "httpRequest: draft frontmatter parse failed for ticket #{Id}: {Error} — request not sent",
+                        firing.TicketId, parseError);
+                    return await FailAsync($"frontmatter: {parseError}");
+                }
+
+                var values = ActionTemplate.Values(state,
+                    ("ticketId", firing.TicketId?.ToString() ?? ""),
+                    ("ticketTitle", firing.TicketTitle ?? ""),
+                    ("slug", slug ?? ""),
+                    ("projectSlug", slug ?? ""));
+                foreach (var (key, value) in draft!.ToJsonEscapedValues())
+                    values[key] = value;
+                body = ActionTemplate.Render(bodyTemplate, values);
+            }
+            else
+            {
+                body = Render(bodyTemplate);
+            }
+
+            using var request = new HttpRequestMessage(
+                new HttpMethod(string.IsNullOrWhiteSpace(spec.Method) ? "POST" : spec.Method.Trim().ToUpperInvariant()),
+                uri);
+
+            string? contentType = null;
+            var hasAuthorization = false;
+            foreach (var (name, rawValue) in spec.Headers)
+            {
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                var value = Render(rawValue);
+                if (string.Equals(name, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    contentType = value;
+                    continue;
+                }
+                if (string.Equals(name, "Authorization", StringComparison.OrdinalIgnoreCase))
+                    hasAuthorization = true;
+                if (!request.Headers.TryAddWithoutValidation(name, value))
+                    _logger.LogWarning("httpRequest: header '{Header}' was rejected — skipping it", name);
+            }
+
+            if (!string.IsNullOrWhiteSpace(spec.SecretRef))
+            {
+                // Only the variable NAME is ever logged; the token itself is never written anywhere.
+                var token = Environment.GetEnvironmentVariable(spec.SecretRef);
+                if (string.IsNullOrEmpty(token))
+                    _logger.LogWarning(
+                        "httpRequest: secretRef '{Name}' is not set on the server — sending the request without an Authorization header",
+                        spec.SecretRef);
+                else if (hasAuthorization)
+                    _logger.LogDebug("httpRequest: explicit Authorization header present — ignoring secretRef '{Name}'", spec.SecretRef);
+                else
+                    request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            }
+
+            if (!string.IsNullOrEmpty(body))
+            {
+                request.Content = new StringContent(
+                    body, System.Text.Encoding.UTF8, contentType ?? "application/json");
+            }
+
+            var client = _httpClientFactory.CreateClient(HttpRequestActionSpec.HttpClientName);
+            client.Timeout = timeout;
+
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(timeout);
+
+            using var response = await client.SendAsync(request, timeoutCts.Token);
+            var status = (int)response.StatusCode;
+            Publish("http.status", status.ToString());
+
+            var raw = (await response.Content.ReadAsStringAsync(timeoutCts.Token)).Trim();
+            CaptureResponseBody(raw, Publish);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "httpRequest {Method} {Url} returned {Status}; abortOnFailure={Abort}",
+                    request.Method, uri, status, spec.AbortOnFailure);
+                return await FailAsync($"HTTP {status}");
+            }
+
+            _logger.LogInformation("httpRequest {Method} {Url} returned {Status}", request.Method, uri, status);
+            return false;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Engine shutdown, not a dispatch failure — leave the ticket alone.
+            _logger.LogWarning("httpRequest to {Url} cancelled (engine shutdown)", uri);
+            return spec.AbortOnFailure;
+        }
+        catch (OperationCanceledException)
+        {
+            // Both HttpClient.Timeout and the linked CTS surface here.
+            _logger.LogWarning("httpRequest to {Url} timed out after {Timeout}s; abortOnFailure={Abort}",
+                uri, timeout.TotalSeconds, spec.AbortOnFailure);
+            return await FailAsync($"timed out after {timeout.TotalSeconds:0}s");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "httpRequest to {Url} failed; abortOnFailure={Abort}", uri, spec.AbortOnFailure);
+            return await FailAsync(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Publishes the response body into the chain: always the raw trimmed text as
+    /// <c>http.body</c>, plus one <c>http.body.&lt;field&gt;</c> per first-level field when the
+    /// response is a JSON object. Malformed JSON is not an error — only the raw value is stored.
+    /// </summary>
+    private static void CaptureResponseBody(string raw, Action<string, string> publish)
+    {
+        publish("http.body", raw.Length <= MaxCapturedBodyChars ? raw : raw[..MaxCapturedBodyChars] + "…");
+        if (raw.Length == 0 || raw[0] != '{') return;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(raw);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return;
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                publish($"http.body.{prop.Name}", prop.Value.ValueKind switch
+                {
+                    JsonValueKind.String => prop.Value.GetString() ?? "",
+                    JsonValueKind.Null   => "",
+                    // Objects and arrays keep their JSON text so nothing is silently lost.
+                    _                    => prop.Value.GetRawText(),
+                });
+            }
+        }
+        catch (JsonException)
+        {
+            // Body claimed to be JSON but isn't — the raw capture above is all we can offer.
+        }
     }
 
     // ── Git helpers ─────────────────────────────────────────────────────────
