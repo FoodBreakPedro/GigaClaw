@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using GigaClaw.Core.Automation;
 using GigaClaw.Core.Services;
+using GigaClaw.Web.Services;
 
 namespace GigaClaw.Web.Api;
 
@@ -15,7 +16,7 @@ public static partial class Endpoints
             Results.Ok(reg.ActiveForProject(slug).Select(r => new
             {
                 r.RunId, r.AgentName, r.SkillFile, r.TicketId, r.ConcurrencyGroup,
-                r.StartedAt, r.SessionId, status = r.Status.ToString(),
+                r.StartedAt, r.SessionId, r.Backend, status = r.Status.ToString(),
                 r.TotalTokens, r.TotalCostUsd,
             })))
             .WithTags("Runs");
@@ -52,7 +53,7 @@ public static partial class Endpoints
             return Results.Ok(new
             {
                 run.RunId, run.AgentName, run.SkillFile, run.TicketId, run.ConcurrencyGroup,
-                run.StartedAt, run.EndedAt, run.SessionId, run.ExitCode,
+                run.StartedAt, run.EndedAt, run.SessionId, run.ExitCode, run.Backend,
                 status = run.Status.ToString(),
                 run.InputTokens, run.OutputTokens, run.CacheReadTokens, run.CacheWriteTokens,
                 run.TotalTokens, run.TotalCostUsd,
@@ -109,6 +110,8 @@ public static partial class Endpoints
             var run = reg.Get(runId);
             if (run is null || run.ProjectSlug != slug) return Results.NotFound();
             if (run.Status != AgentRunStatus.Running) return Results.BadRequest(new { error = "Run is not active." });
+            if (string.Equals(run.Backend, HermesAgentService.BackendName, StringComparison.OrdinalIgnoreCase))
+                return Results.Conflict(new { error = "Hermes Runs API does not support mid-run steering. Stop the run or wait for it to finish." });
             await run.SteeringQueue.Writer.WriteAsync(req.Text);
             var targetModel = model ?? run.Model; // Use provided model or the run's current model
             if (!string.IsNullOrEmpty(run.ChatTarget))
@@ -116,12 +119,47 @@ public static partial class Endpoints
             return Results.NoContent();
         }).WithTags("Runs");
 
-        api.MapPost("/projects/{slug}/runs/{runId}/stop", (string slug, string runId, AgentRunRegistry reg) =>
+        api.MapPost("/projects/{slug}/runs/{runId}/stop", async (
+            string slug,
+            string runId,
+            AgentRunRegistry reg,
+            HermesAgentService hermes,
+            CancellationToken ct) =>
         {
             var run = reg.Get(runId);
             if (run is null || run.ProjectSlug != slug) return Results.NotFound();
-            run.Cancellation.Cancel();
+            if (string.Equals(run.Backend, HermesAgentService.BackendName, StringComparison.OrdinalIgnoreCase))
+                await hermes.StopAsync(run, ct);
+            else
+                run.Cancellation.Cancel();
             return Results.NoContent();
+        }).WithTags("Runs");
+
+        api.MapPost("/projects/{slug}/runs/{runId}/approval", async (
+            string slug,
+            string runId,
+            HermesApprovalRequest req,
+            AgentRunRegistry reg,
+            HermesAgentService hermes,
+            CancellationToken ct) =>
+        {
+            var run = reg.Get(runId);
+            if (run is null || run.ProjectSlug != slug) return Results.NotFound();
+            if (run.Status != AgentRunStatus.Running)
+                return Results.BadRequest(new { error = "Run is not active." });
+            try
+            {
+                await hermes.ApproveAsync(run, req.Choice, req.ResolveAll, ct);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
         }).WithTags("Runs");
 
         api.MapPost("/projects/{slug}/runs/{runId}/retry", async (string slug, string runId,

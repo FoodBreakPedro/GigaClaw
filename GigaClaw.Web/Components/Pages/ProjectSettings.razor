@@ -9,6 +9,7 @@
 @inject IHttpClientFactory HttpFactory
 @inject LocalizationService L
 @inject AppSettingsService AppSettings
+@inject HermesAgentService Hermes
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -94,6 +95,36 @@ else
             @if (_localModelsError is not null)
             {
                 <div class="settings-status settings-status-err">@_localModelsError</div>
+            }
+        </section>
+
+        <section class="settings-section">
+            <h2>@L["HermesAgent"]</h2>
+            <p class="settings-hint">@L["HermesAgentHint"]</p>
+            <div class="settings-row">
+                <label class="settings-checkbox-label">
+                    <input type="checkbox" @bind="_hermesEnabled" />
+                    @L["Enabled"]
+                </label>
+                <input class="settings-input"
+                       placeholder="http://127.0.0.1:8642"
+                       @bind="_hermesBaseUrl"
+                       @bind:event="oninput"
+                       style="max-width:280px" />
+                <input class="settings-input"
+                       type="password"
+                       autocomplete="new-password"
+                       placeholder="@(_hermesKeyConfigured ? L["HermesKeyUnchanged"] : L["HermesApiKey"])"
+                       @bind="_hermesApiKey"
+                       @bind:event="oninput"
+                       style="max-width:240px" />
+                <button class="settings-primary" @onclick="SaveAndTestHermes" disabled="@_testingHermes">
+                    @(_testingHermes ? "…" : L["SaveAndTest"])
+                </button>
+            </div>
+            @if (_hermesStatus is not null)
+            {
+                <div class="settings-status @_hermesStatus.Value.css">@_hermesStatus.Value.text</div>
             }
         </section>
 
@@ -354,6 +385,13 @@ else
     private static readonly IReadOnlyList<string> ClaudeModels = ClaudeModelCatalog.Models;
     private List<string> AllModels => ClaudeModels.Concat(_discoveredModels).ToList();
 
+    private bool _hermesEnabled;
+    private string _hermesBaseUrl = "";
+    private string _hermesApiKey = "";
+    private bool _hermesKeyConfigured;
+    private bool _testingHermes;
+    private (string text, string css)? _hermesStatus;
+
     private List<Member> _members = new();
     private int? _editingMemberId;
     private string _editingMemberName = "";
@@ -387,6 +425,9 @@ else
         _workspacePath = _project.WorkspacePath ?? "";
         _fallbackModel = _project.FallbackModel ?? "";
         _localModelBaseUrl = _project.LocalModelBaseUrl ?? "";
+        _hermesEnabled = AppSettings.HermesEnabled;
+        _hermesBaseUrl = AppSettings.HermesApiBaseUrl;
+        _hermesKeyConfigured = AppSettings.HermesApiKeyConfigured;
         await ReloadAllAsync();
         await ProbeBrowseAsync();
         if (!string.IsNullOrWhiteSpace(_localModelBaseUrl)) await DiscoverLocalModels();
@@ -493,6 +534,29 @@ else
             _localModelsError = $"{L["Error"]}: {ex.Message}";
         }
         finally { _discoveringLocal = false; }
+    }
+
+    private async Task SaveAndTestHermes()
+    {
+        _testingHermes = true;
+        _hermesStatus = null;
+        try
+        {
+            AppSettings.ConfigureHermes(_hermesEnabled, _hermesBaseUrl, _hermesApiKey);
+            _hermesApiKey = "";
+            _hermesKeyConfigured = AppSettings.HermesApiKeyConfigured;
+            if (!_hermesEnabled)
+            {
+                _hermesStatus = (L["HermesDisabled"], "settings-status-ok");
+                return;
+            }
+
+            var result = await Hermes.ProbeAsync();
+            _hermesStatus = result.Success
+                ? (L["HermesConnected"], "settings-status-ok")
+                : (result.Message, "settings-status-err");
+        }
+        finally { _testingHermes = false; }
     }
 
     private async Task OnMemberKey(KeyboardEventArgs e) { if (e.Key == "Enter") await CreateMember(); }

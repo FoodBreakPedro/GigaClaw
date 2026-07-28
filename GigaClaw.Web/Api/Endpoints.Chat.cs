@@ -1,6 +1,7 @@
 using System.Text;
 using GigaClaw.Core.Automation;
 using GigaClaw.Core.Services;
+using GigaClaw.Web.Services;
 
 namespace GigaClaw.Web.Api;
 
@@ -9,7 +10,12 @@ public static partial class Endpoints
     private static void MapChat(RouteGroupBuilder api)
     {
         // Owner chat (ad-hoc Claude session)
-        api.MapGet("/projects/{slug}/chat/targets", async (string slug, ProjectService ps, MemberService ms, ChatService cs) =>
+        api.MapGet("/projects/{slug}/chat/targets", async (
+            string slug,
+            ProjectService ps,
+            MemberService ms,
+            ChatService cs,
+            HermesAgentService hermes) =>
         {
             var project = await ps.GetProjectAsync(slug);
             if (project is null) return Results.NotFound();
@@ -18,6 +24,8 @@ public static partial class Endpoints
             {
                 new("owner-chat", "Claude", "claude"),
             };
+            if (hermes.IsConfigured)
+                targets.Add(new ChatTargetDto(HermesAgentService.TargetSlug, "Hermes", "hermes"));
             var members = await ms.ListMembersAsync(slug);
             foreach (var m in members)
                 targets.Add(new ChatTargetDto(m.Slug, m.Name, "member"));
@@ -51,11 +59,23 @@ public static partial class Endpoints
             if (project is null) return Results.NotFound();
             var workspacePath = ps.ResolveWorkspacePath(project);
             await cs.ClearAsync(slug, target);
-            sessions.Clear(workspacePath, $"chat:{target}", null);
+            var (baseAgent, ticketId) = ParseChatTarget(target);
+            sessions.Clear(workspacePath, $"chat:{baseAgent}", ticketId);
             return Results.NoContent();
         }).WithTags("Chat");
 
-        api.MapPost("/projects/{slug}/chat/start", async (string slug, ChatStartRequest req, ProjectService ps, MemberService ms, ChatService cs, TicketService ts, ClaudeRunner runner, SessionRegistry sessions, AgentRunRegistry runReg, HttpContext http) =>
+        api.MapPost("/projects/{slug}/chat/start", async (
+            string slug,
+            ChatStartRequest req,
+            ProjectService ps,
+            MemberService ms,
+            ChatService cs,
+            TicketService ts,
+            ClaudeRunner runner,
+            HermesAgentService hermes,
+            SessionRegistry sessions,
+            AgentRunRegistry runReg,
+            HttpContext http) =>
         {
             var project = await ps.GetProjectAsync(slug);
             if (project is null) return Results.NotFound();
@@ -112,6 +132,10 @@ public static partial class Endpoints
                 sessions.Clear(workspacePath, $"chat:{baseAgent}", effectiveTicketId);
             }
 
+            var priorChatMessages = baseAgent == HermesAgentService.TargetSlug
+                ? await cs.ListAsync(slug, target)
+                : null;
+
             // Image paste validation (#115). Enforce MIME allow-list, per-image size cap,
             // and per-turn count cap server-side regardless of what the JS sent.
             var (imagePaths, imageError) = await PersistChatImagesAsync(req.Images, workspacePath, runId);
@@ -157,6 +181,44 @@ public static partial class Endpoints
                     }
                     ticketContext = tb.ToString();
                 }
+            }
+
+            if (baseAgent == HermesAgentService.TargetSlug)
+            {
+                if (!hermes.IsConfigured)
+                    return Results.BadRequest(new
+                    {
+                        error = "hermes_not_configured",
+                        reason = "Configure and enable the Hermes API Server connection in Project Settings.",
+                    });
+
+                var sessionAgent = $"chat:{HermesAgentService.TargetSlug}";
+                var sessionId = sessions.GetSessionId(workspacePath, sessionAgent, effectiveTicketId)
+                    ?? Guid.NewGuid().ToString();
+                sessions.SetSessionId(workspacePath, sessionAgent, effectiveTicketId, sessionId);
+
+                var instructions = BuildHermesInstructions(
+                    project.Name,
+                    slug,
+                    workspacePath,
+                    ticketContext,
+                    http);
+                var history = (priorChatMessages ?? [])
+                    .Where(m => m.Role is "user" or "assistant")
+                    .Select(m => new HermesConversationMessage(m.Role, m.Text))
+                    .ToList();
+                var hermesRun = hermes.StartChat(new HermesChatRunContext(
+                    ProjectSlug: slug,
+                    WorkspacePath: workspacePath,
+                    ChatTarget: target,
+                    Message: req.Message,
+                    Instructions: instructions,
+                    SessionId: sessionId,
+                    TicketId: effectiveTicketId,
+                    ConversationHistory: history,
+                    ImagePaths: imagePaths,
+                    OnEventHook: ev => PersistChatEvent(cs, slug, target, ev)));
+                return Results.Ok(new { runId = hermesRun.RunId });
             }
 
             ClaudeRunContext ctx;
@@ -287,6 +349,42 @@ public static partial class Endpoints
         }).WithTags("Chat");
     }
 
+    private static string BuildHermesInstructions(
+        string projectName,
+        string projectSlug,
+        string workspacePath,
+        string? ticketContext,
+        HttpContext http)
+    {
+        var baseUrl = $"{http.Request.Scheme}://{http.Request.Host}";
+        var sb = new StringBuilder();
+        sb.AppendLine("# GigaClaw interactive chat");
+        sb.AppendLine();
+        sb.AppendLine("You are Hermes Agent embedded in GigaClaw's chat drawer.");
+        sb.AppendLine($"The owner is viewing **{projectName}** (slug: `{projectSlug}`).");
+        sb.AppendLine($"The project workspace is `{workspacePath}`.");
+        sb.AppendLine("Use that absolute workspace path for repository and code questions. Read the relevant files before answering.");
+        sb.AppendLine("Answer conversationally and concisely. You may use your terminal, file, search, memory, and skill tools.");
+        sb.AppendLine("Do not modify files, run destructive commands, or mutate the board unless the owner explicitly asks.");
+        sb.AppendLine();
+        sb.AppendLine("## GigaClaw REST API");
+        sb.AppendLine();
+        sb.AppendLine($"Base URL: `{baseUrl}`");
+        sb.AppendLine($"Current project slug: `{projectSlug}`");
+        sb.AppendLine($"- GET {baseUrl}/api/projects/{projectSlug}/tickets");
+        sb.AppendLine($"- GET {baseUrl}/api/projects/{projectSlug}/tickets/{{id}}");
+        sb.AppendLine($"- GET {baseUrl}/api/projects/{projectSlug}/columns");
+        sb.AppendLine($"- GET {baseUrl}/api/projects/{projectSlug}/members");
+        sb.AppendLine($"- Full documentation: {baseUrl}/api/docs");
+        sb.AppendLine("Mutating API calls require `author: \"owner\"` unless the owner asks you to identify as Hermes.");
+        if (!string.IsNullOrWhiteSpace(ticketContext))
+        {
+            sb.AppendLine();
+            sb.AppendLine(ticketContext);
+        }
+        return sb.ToString();
+    }
+
     /// <summary>
     /// Parses a chat target slug. A bare slug like "programmer" or "owner-chat" is returned
     /// as (slug, null). A ticket-scoped target like "programmer#ticket-42" returns
@@ -380,6 +478,14 @@ public static partial class Endpoints
         else if (ev.Kind == "ask_user_question")
         {
             _ = cs.AppendAsync(slug, target, "ask_user_question", ev.Text ?? "", toolName: ev.Text, detail: ev.Detail);
+        }
+        else if (ev.Kind == "approval_request")
+        {
+            _ = cs.AppendAsync(slug, target, "approval_request", ev.Text, detail: ev.Detail);
+        }
+        else if (ev.Kind == "approval_response")
+        {
+            _ = cs.AppendAsync(slug, target, "approval_response", ev.Text, detail: ev.Detail);
         }
         else if (ev.Kind == "reset")
         {
