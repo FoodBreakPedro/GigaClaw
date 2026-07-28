@@ -76,7 +76,7 @@ internal sealed class ActionExecutor
     private Task<bool> EvaluateSingleConditionAsync(ProjectRuntime rt, ConditionSpec cond, TriggerFiring firing) =>
         cond switch
         {
-            TicketInColumnConditionSpec c         => Task.FromResult(ConditionEvaluators.TicketInColumn(c, firing.TicketStatus)),
+            TicketInColumnConditionSpec c         => EvaluateTicketInColumnAsync(rt, c, firing),
             MinDescriptionLengthConditionSpec c    => EvaluateMinDescriptionLengthAsync(rt, c, firing),
             FieldLengthConditionSpec c             => EvaluateFieldLengthAsync(rt, c, firing),
             PriorityConditionSpec c                => EvaluatePriorityAsync(rt, c, firing),
@@ -88,6 +88,21 @@ internal sealed class ActionExecutor
             TicketAgeConditionSpec c               => EvaluateTicketAgeAsync(rt, c, firing),
             _                                      => Task.FromResult(true),
         };
+
+    // Signal-path firings (e.g. ticketCommentAdded) carry only the ticket id, so the status
+    // is resolved live here; otherwise ticketInColumn could never pass on the signal path and
+    // event-driven automations would only ever fire via the slow poll.
+    private async Task<bool> EvaluateTicketInColumnAsync(ProjectRuntime rt, TicketInColumnConditionSpec c, TriggerFiring firing)
+    {
+        var status = firing.TicketStatus;
+        if (status is null && firing.TicketId is not null)
+        {
+            var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
+            if (ticket is null) return false;
+            status = ticket.Status;
+        }
+        return ConditionEvaluators.TicketInColumn(c, status);
+    }
 
     private async Task<bool> EvaluateMinDescriptionLengthAsync(ProjectRuntime rt, MinDescriptionLengthConditionSpec c, TriggerFiring firing)
     {

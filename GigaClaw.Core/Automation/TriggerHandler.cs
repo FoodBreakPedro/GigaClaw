@@ -51,6 +51,10 @@ internal sealed class TriggerHandler
             if (!_runtimeManager.TryGetRuntime(entry.Slug, out var urt) || urt?.Config is null) continue;
             if (!await _executor.ConditionsMatchAsync(urt, entry.Automation, entry.Firing)) continue;
             var utctx = BuildTriggerContext(entry.Slug, urt.Workspace!, entry.Automation);
+            // Mark the event consumed before dispatch so the poll path doesn't re-fire it.
+            // On failure, dispatch anyway: a ~PollSeconds-late duplicate beats a lost firing.
+            try { await entry.Trigger.ConsumeSignalFiringAsync(utctx, entry.Firing); }
+            catch (Exception ex) { _logger.LogWarning(ex, "ConsumeSignalFiring failed for {Id} — poll may re-fire this event", entry.Automation.Id); }
             await _executor.ExecuteAutomationAsync(urt, entry.Automation, entry.Firing, ct, entry.Trigger, utctx);
         }
 
