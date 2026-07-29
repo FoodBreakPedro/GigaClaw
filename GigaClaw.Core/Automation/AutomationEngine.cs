@@ -29,6 +29,7 @@ public sealed class AutomationEngine : BackgroundService
         TeamRunService teamRuns,
         IHttpClientFactory httpClientFactory,
         AppSettingsService appSettings,
+        FileLeaseStore leases,
         ILogger<AutomationEngine> logger)
     {
         _runs = runs;
@@ -40,7 +41,10 @@ public sealed class AutomationEngine : BackgroundService
         // execution (never cached at engine start) so an owner approval takes effect without a
         // restart. Agents can set labels; they cannot reach this file.
         var outboundGate = new OutboundApprovalGate(appSettings.GetApprovedOutboundHosts);
-        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger, outboundGate);
+        // R4: leases are per-ticket file-ownership locks, durable across restarts (see
+        // FileLeaseStore/FileLeaseReaper) — passed through so ActionExecutor actually leases a
+        // dispatch's declared scope instead of running unleased.
+        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger, outboundGate, leases);
         _triggerHandler = new TriggerHandler(projects, _runtimeManager, executor, tickets, members, sessions, runs, teamRuns, logger);
 
         store.OnConfigChangedOnDisk += slug =>

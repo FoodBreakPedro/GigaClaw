@@ -73,6 +73,9 @@ var maxConcurrent = int.TryParse(Environment.GetEnvironmentVariable("GIGACLAW_MA
 builder.Services.AddSingleton(new RunConcurrencyGate(maxConcurrent));
 builder.Services.AddSingleton<ClaudeRunner>();
 builder.Services.AddSingleton<CostTracker>();
+// R4: durable per-project file-ownership leases (doc/roadmap/lane-codex-runtime.md).
+builder.Services.AddSingleton<GigaClaw.Core.Automation.Policy.FileLeaseStore>();
+builder.Services.AddHostedService<GigaClaw.Core.Services.FileLeaseReaper>();
 // Durable cost records: cost-log.jsonl (daily budget) + per-ticket token/USD totals.
 builder.Services.AddHostedService<RunCostRecorder>();
 builder.Services.AddSingleton<AutomationEngine>();

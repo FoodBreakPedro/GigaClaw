@@ -30,6 +30,10 @@ internal sealed class ActionExecutor
     private readonly TeamRunService _teamRuns;
     private readonly ILogger _logger;
     private readonly OutboundApprovalGate _outboundGate;
+    // R4: null means dispatch is unleased, exactly pre-R4 behavior — every existing test harness
+    // that never passes this parameter keeps working unchanged. Production (AutomationEngine)
+    // wires a real store backed by the per-project SQLite db.
+    private readonly FileLeaseStore? _leases;
 
     // Serializes in-process git operations per repository. Keyed by the git cwd so one
     // repo's slow/hung git (bounded by ProcessRunner's timeout) can't stall other projects.
@@ -56,7 +60,8 @@ internal sealed class ActionExecutor
         IHttpClientFactory httpClientFactory,
         TeamRunService teamRuns,
         ILogger logger,
-        OutboundApprovalGate? outboundGate = null)
+        OutboundApprovalGate? outboundGate = null,
+        FileLeaseStore? leases = null)
     {
         _tickets = tickets;
         _members = members;
@@ -74,6 +79,7 @@ internal sealed class ActionExecutor
         // Fail closed: a caller that never wired a gate gets deny-all, not allow-all. Production
         // (AutomationEngine) passes a gate anchored on the owner's app settings.json.
         _outboundGate = outboundGate ?? new OutboundApprovalGate(static () => []);
+        _leases = leases;
     }
 
     // ── Condition evaluation ────────────────────────────────────────────────
@@ -632,6 +638,14 @@ internal sealed class ActionExecutor
         }
 
         var runId = Guid.NewGuid().ToString("N");
+
+        // R4: lease the ticket's declared file scope before anything else about this dispatch is
+        // recorded. A conflicting active lease means this dispatch does not proceed concurrently
+        // with the one that holds it — see TryAcquireDispatchLeaseAsync for the block/warn split.
+        var leaseGate = await TryAcquireDispatchLeaseAsync(rt, firing.TicketId, agentName, runId, ct);
+        if (leaseGate.ShouldSkip)
+            return (true, null, agentName, null);
+
         var runCtx = new ClaudeRunContext
         {
             PresetRunId = runId,
@@ -668,6 +682,7 @@ internal sealed class ActionExecutor
         catch
         {
             _runs.ReleaseCompletion(runId);
+            await ReleaseDispatchLeaseAsync(rt.Slug, runId);
             throw;
         }
     }
@@ -750,6 +765,7 @@ internal sealed class ActionExecutor
             _runs.ReleaseCompletion(runId);
             if (chainKey is not null)
                 _inFlightChains.TryRemove(chainKey, out _);
+            await ReleaseDispatchLeaseAsync(rt.Slug, runId);
         }
     }
 
@@ -825,6 +841,7 @@ internal sealed class ActionExecutor
                         finally
                         {
                             _runs.ReleaseCompletion(runId!);
+                            await ReleaseDispatchLeaseAsync(rt.Slug, runId!);
                         }
                     }
                     // Ticket-scoped actions whose `when firing.TicketId is not null` guard did not
@@ -1611,6 +1628,132 @@ internal sealed class ActionExecutor
         }
     }
 
+    // ── R4: file-ownership leases ───────────────────────────────────────────
+
+    /// <summary>
+    /// The dispatch-time lease gate: resolves the ticket's declared file scope (handoff
+    /// <c>ownedFiles</c>, falling back to the agent's own <c>allowedWriteGlobs</c> — see
+    /// <see cref="FileLeaseScopeResolver"/>) and attempts to lease it for <paramref name="runId"/>.
+    /// <see cref="FileLeaseGateOutcome.NotApplicable"/> covers every reason leasing does not apply
+    /// to this dispatch: no store wired (pre-R4 behavior), no ticket, no declared scope, or a
+    /// lease-store fault. That last case is a deliberate fail-<b>open</b> choice, unlike
+    /// <see cref="ContractPolicy"/>'s fail-closed default for an unreadable manifest: a missing or
+    /// malformed contracts.json is an authorization gap that must block every tool call, but a
+    /// transient fault in this store (a locked file, a full disk) is an availability problem for a
+    /// serialization aid — halting every dispatch in the project because the lease table hiccuped
+    /// would be worse than the race it exists to prevent.
+    /// <para>
+    /// On a real conflict, block and warn mode diverge exactly the way R2/R3 diverge for every
+    /// other policy violation: <see cref="FileLeaseGateOutcome.Blocked"/> (the agent's contract is
+    /// in block mode) is real enforcement — the dispatch fails closed, the same as R3 denying an
+    /// out-of-glob write. <see cref="FileLeaseGateOutcome.WarnedAndProceeded"/> (warn mode) mirrors
+    /// R2's shadow mode: the conflict is recorded as a receipt, but the tool call — here, the
+    /// dispatch itself — is not stopped. A warn-mode dispatch that proceeds through a conflict does
+    /// not register a lease of its own (the scope it would have claimed is already held), so it is
+    /// not tracked for serialization against a third run either; that is the acknowledged cost of
+    /// shadow mode, and the same cost R2 accepts for an out-of-glob write. It is also the point of
+    /// running R4 in warn mode at all: like R2's SP-1 inventory, it lets real conflicts happen and
+    /// be recorded so an owner has evidence before flipping a given agent to block.
+    /// </para>
+    /// </summary>
+    internal async Task<FileLeaseGateDecision> TryAcquireDispatchLeaseAsync(
+        ProjectRuntime rt, int? ticketId, string agentName, string runId, CancellationToken ct)
+    {
+        if (_leases is null || ticketId is null || string.IsNullOrWhiteSpace(rt.Workspace))
+            return FileLeaseGateDecision.NotApplicable;
+
+        IReadOnlyList<string> scope;
+        try
+        {
+            Models.Ticket? ticket = null;
+            try { ticket = await _tickets.GetTicketAsync(rt.Slug, ticketId.Value); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "fileLease: could not read ticket #{Id} for scope resolution", ticketId);
+            }
+
+            var comments = ticket?.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList()
+                ?? new List<string>();
+            scope = await FileLeaseScopeResolver.ResolveAsync(rt.Workspace!, comments, agentName, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "fileLease: scope resolution failed for agent {Agent} ticket #{Id} — dispatching unleased", agentName, ticketId);
+            return FileLeaseGateDecision.NotApplicable;
+        }
+
+        if (scope.Count == 0)
+            return FileLeaseGateDecision.NotApplicable;
+
+        PolicyEnforcementMode enforcement;
+        FileLeaseAcquireResult result;
+        try
+        {
+            var policy = await ContractPolicyLoader.LoadAsync(rt.Workspace!, agentName, ct);
+            enforcement = policy.Enforcement;
+            result = await _leases.AcquireAsync(
+                rt.Slug, ticketId.Value, runId, agentName, scope, DateTime.UtcNow, FileLeaseStore.DefaultTtl, ct: ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "fileLease: acquire failed for agent {Agent} ticket #{Id} — dispatching unleased", agentName, ticketId);
+            return FileLeaseGateDecision.NotApplicable;
+        }
+
+        if (result.IsAcquired)
+            return FileLeaseGateDecision.Granted;
+
+        var outcome = enforcement == PolicyEnforcementMode.Block
+            ? FileLeaseGateOutcome.Blocked
+            : FileLeaseGateOutcome.WarnedAndProceeded;
+        await WriteFileLeaseReceiptAsync(rt.Slug, ticketId.Value, agentName, scope, result.ConflictingLease!, enforcement);
+        _logger.LogWarning(
+            "fileLease: {Outcome} agent={Agent} ticket=#{Ticket} run={Run} conflictsWith run={ConflictRun} agent={ConflictAgent}",
+            outcome, agentName, ticketId, runId, result.ConflictingLease!.RunId, result.ConflictingLease.Agent);
+        return new FileLeaseGateDecision(outcome);
+    }
+
+    /// <summary>Releases any active lease held by <paramref name="runId"/>. A no-op when no store is
+    /// wired or the run never held one (e.g. its declared scope was empty).</summary>
+    internal Task ReleaseDispatchLeaseAsync(string slug, string runId) =>
+        _leases?.ReleaseAsync(slug, runId, DateTime.UtcNow) ?? Task.CompletedTask;
+
+    /// <summary>
+    /// Writes the queryable receipt for a file-lease conflict: a structured
+    /// <c>file-lease-denial/v1</c> ticket comment naming the agent, its scope, and the conflicting
+    /// lease — the same "denials/serializations produce receipts" idiom as R2's
+    /// <c>policy-violation/v1</c> and R3's <c>outbound-denial/v1</c>
+    /// (<see cref="WriteOutboundDenialReceiptAsync"/>).
+    /// </summary>
+    private async Task WriteFileLeaseReceiptAsync(
+        string slug,
+        int ticketId,
+        string agent,
+        IReadOnlyList<string> scope,
+        FileLease conflict,
+        PolicyEnforcementMode enforcement)
+    {
+        var receipt = JsonSerializer.Serialize(new
+        {
+            schema = "file-lease-denial/v1",
+            agent,
+            action = "runAgent",
+            scope,
+            rule = "file-ownership-lease",
+            conflictingRunId = conflict.RunId,
+            conflictingAgent = conflict.Agent,
+            conflictingTicketId = conflict.TicketId,
+            reason = $"Scope overlaps an active lease held by '{conflict.Agent}' (run {conflict.RunId}) on ticket #{conflict.TicketId}.",
+            enforcementMode = enforcement == PolicyEnforcementMode.Block ? "block" : "warn",
+        });
+
+        try { await _tickets.AddCommentAsync(slug, ticketId, receipt, "automation"); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "fileLease: failed to write file-lease-denial receipt for ticket #{Id}", ticketId);
+        }
+    }
+
     /// <summary>
     /// Publishes the response body into the chain: always the raw trimmed text as
     /// <c>http.body</c>, plus one <c>http.body.&lt;field&gt;</c> per first-level field when the
@@ -1682,4 +1825,34 @@ internal sealed class ActionExecutor
         if (string.IsNullOrEmpty(s)) return "{}";
         return s.Length <= max ? s : s[..max] + "…";
     }
+}
+
+/// <summary>Outcome of <see cref="ActionExecutor.TryAcquireDispatchLeaseAsync"/> (R4).</summary>
+internal enum FileLeaseGateOutcome
+{
+    /// <summary>Leasing does not apply to this dispatch (no store wired, no ticket, no declared
+    /// scope, or a lease-store fault) — dispatch proceeds exactly as it did pre-R4.</summary>
+    NotApplicable,
+    /// <summary>The lease was acquired; dispatch proceeds.</summary>
+    Granted,
+    /// <summary>A conflicting lease is active and the agent's contract is in warn mode: a
+    /// <c>file-lease-denial/v1</c> receipt is written, but — mirroring R2's shadow mode, which
+    /// records an out-of-glob write without stopping it — the dispatch is not skipped. It proceeds
+    /// without holding a lease of its own.</summary>
+    WarnedAndProceeded,
+    /// <summary>A conflicting lease is active and the agent's contract is in block mode: this
+    /// dispatch fails closed, the same way R3 denies an out-of-glob write.</summary>
+    Blocked,
+}
+
+internal readonly record struct FileLeaseGateDecision(FileLeaseGateOutcome Outcome)
+{
+    public static readonly FileLeaseGateDecision NotApplicable = new(FileLeaseGateOutcome.NotApplicable);
+    public static readonly FileLeaseGateDecision Granted = new(FileLeaseGateOutcome.Granted);
+    public static readonly FileLeaseGateDecision WarnedAndProceeded = new(FileLeaseGateOutcome.WarnedAndProceeded);
+
+    /// <summary>True only for <see cref="FileLeaseGateOutcome.Blocked"/> — block mode is real
+    /// enforcement and fails closed; warn mode logs a receipt but does not stop the dispatch, the
+    /// same warn/block split R2/R3 apply to every other policy violation.</summary>
+    public bool ShouldSkip => Outcome == FileLeaseGateOutcome.Blocked;
 }
