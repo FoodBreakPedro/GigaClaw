@@ -76,7 +76,10 @@ internal static class ProcessLifecycleManager
         var psi = new ProcessStartInfo
         {
             FileName = _claudeBinary.Value,
-            WorkingDirectory = ctx.WorkspacePath,
+            // R5: a worktree-isolated dispatch executes with the ticket's worktree as cwd; every
+            // other workspace-relative read (skill, preamble, memory, …) still resolves against
+            // ctx.WorkspacePath — see ClaudeRunContext.ExecutionPath.
+            WorkingDirectory = ctx.ExecutionPath ?? ctx.WorkspacePath,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,

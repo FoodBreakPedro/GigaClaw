@@ -34,6 +34,27 @@ public class Ticket
     /// <summary>Cumulative USD cost of agent runs on this ticket, as priced by the claude CLI.</summary>
     public double AgentCostUsd { get; set; }
 
+    /// <summary>
+    /// R5 (doc/roadmap/lane-codex-runtime.md): the <c>ticket/&lt;id&gt;</c> branch backing this
+    /// ticket's git worktree, once a <c>runAgent</c> action with <c>isolation: "worktree"</c> has
+    /// dispatched against it. Null until then.
+    /// </summary>
+    public string? WorktreeBranch { get; set; }
+
+    /// <summary>Absolute path to the ticket's git worktree checkout. See <see cref="WorktreeBranch"/>.</summary>
+    public string? WorktreePath { get; set; }
+
+    /// <summary>
+    /// <c>"active"</c> (in use or awaiting cleanup), <c>"cleaned"</c> (removed after the ticket
+    /// reached Done with a merged branch), or <c>"dirty"</c> (reached Done but the worktree had
+    /// uncommitted changes or an unmerged branch — flagged to the owner, never silently deleted).
+    /// Null until a worktree is first created.
+    /// </summary>
+    public string? WorktreeStatus { get; set; }
+
+    /// <summary>UTC instant <see cref="WorktreeStatus"/> was last set.</summary>
+    public DateTime? WorktreeUpdatedAt { get; set; }
+
     public List<Comment> Comments { get; set; } = [];
     public List<ActivityEntry> Activities { get; set; } = [];
     public List<Label> Labels { get; set; } = [];

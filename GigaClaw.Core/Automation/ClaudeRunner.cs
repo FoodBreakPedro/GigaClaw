@@ -9,6 +9,19 @@ public sealed class ClaudeRunContext
 {
     public required string ProjectSlug { get; init; }
     public required string WorkspacePath { get; init; }
+
+    /// <summary>
+    /// R5: when set, the claude subprocess's working directory (see
+    /// <see cref="ProcessLifecycleManager.BuildProcessStartInfo"/>) — typically a per-ticket git
+    /// worktree path from <see cref="WorktreeManager"/>. Every other workspace-relative read
+    /// (skill file, preamble, contracts.json, agent memory, session key, debug log) still resolves
+    /// against <see cref="WorkspacePath"/>, exactly as doc/worktree-workflow.md's opt-in recipe
+    /// describes: "`.agents/` is not copied into worktrees" — only where the agent's process
+    /// actually runs moves. Null (the default) means the agent executes in-place, the pre-R5 and
+    /// still-default behavior.
+    /// </summary>
+    public string? ExecutionPath { get; init; }
+
     public required string AgentName { get; init; }
     public required string SkillFile { get; init; }
     public int? TicketId { get; init; }
@@ -32,6 +45,7 @@ public sealed class ClaudeRunContext
     {
         ProjectSlug = ProjectSlug,
         WorkspacePath = WorkspacePath,
+        ExecutionPath = ExecutionPath,
         AgentName = AgentName,
         SkillFile = SkillFile,
         TicketId = TicketId,
@@ -339,6 +353,7 @@ public sealed class ClaudeRunner
                 {
                     ProjectSlug = ctx.ProjectSlug,
                     WorkspacePath = ctx.WorkspacePath,
+                    ExecutionPath = ctx.ExecutionPath,
                     AgentName = ctx.AgentName,
                     SkillFile = ctx.SkillFile,
                     InlineSkillContent = ctx.InlineSkillContent,
@@ -558,7 +573,7 @@ public sealed class ClaudeRunner
         }
 
         run.Push(new StreamEvent(DateTime.UtcNow, "launch",
-            $"{ctx.AgentName} {(isResume ? "(resume)" : "(new)")} session={sessionId[..8]} cwd={ctx.WorkspacePath} skill={ctx.SkillFile}"));
+            $"{ctx.AgentName} {(isResume ? "(resume)" : "(new)")} session={sessionId[..8]} cwd={ctx.ExecutionPath ?? ctx.WorkspacePath} skill={ctx.SkillFile}"));
 
         // Confine claude and every process it spawns to a job that is killed when we close it.
         // This is the root-cause guard against stuck runs: a process the agent backgrounds would

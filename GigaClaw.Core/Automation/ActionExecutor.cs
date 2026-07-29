@@ -469,7 +469,7 @@ internal sealed class ActionExecutor
                         return state.LastRun;
                     }
                     case MoveTicketStatusActionSpec m when firing.TicketId is not null:
-                        await ExecuteMoveTicketStatusActionAsync(rt, firing, m, state);
+                        await ExecuteMoveTicketStatusActionAsync(rt, firing, m, state, ct);
                         break;
                     case SetLabelsActionSpec s when firing.TicketId is not null:
                         await ExecuteSetLabelsActionAsync(rt, firing, s);
@@ -646,11 +646,24 @@ internal sealed class ActionExecutor
         if (leaseGate.ShouldSkip)
             return (true, null, agentName, null);
 
+        // R5: worktree isolation runs strictly AFTER the lease gate above — never around it. The
+        // file lease (keyed on logical scope, not checkout path) is what actually protects the
+        // eventual merge; checkout separation is a convenience for the running agent, not a
+        // substitute — see FileLeaseStore's remarks and WorktreeManager's file header.
+        string? executionPath = null;
+        if (string.Equals(a.Isolation, "worktree", StringComparison.OrdinalIgnoreCase))
+        {
+            executionPath = await EnsureWorktreeIsolationAsync(rt, firing.TicketId, agentName, runId, ct);
+            if (executionPath is null)
+                return (true, null, agentName, null);
+        }
+
         var runCtx = new ClaudeRunContext
         {
             PresetRunId = runId,
             ProjectSlug = rt.Slug,
             WorkspacePath = rt.Workspace!,
+            ExecutionPath = executionPath,
             AgentName = agentName,
             SkillFile = skillFile,
             TicketId = firing.TicketId,
@@ -874,7 +887,7 @@ internal sealed class ActionExecutor
         return succeeded;
     }
 
-    private async Task ExecuteMoveTicketStatusActionAsync(ProjectRuntime rt, TriggerFiring firing, MoveTicketStatusActionSpec m, ActionState state)
+    private async Task ExecuteMoveTicketStatusActionAsync(ProjectRuntime rt, TriggerFiring firing, MoveTicketStatusActionSpec m, ActionState state, CancellationToken ct)
     {
         if (string.Equals(firing.TicketStatus, m.To, StringComparison.OrdinalIgnoreCase))
             return;
@@ -885,6 +898,19 @@ internal sealed class ActionExecutor
             state.AssigneeBeforeMove = ticketBefore?.AssignedTo;
             await _tickets.MoveTicketAsync(rt.Slug, firing.TicketId!.Value, m.To, "automation");
             state.StatusAfterMove = m.To;
+
+            // R5: a ticket landing in Done with an active worktree is the cleanup trigger.
+            // TryCleanupWorktreeAsync only ever removes a clean, merged worktree — anything else
+            // (dirty checkout, unmerged branch, a git failure) is flagged to the owner instead of
+            // silently deleted. Guarded by WorktreeStatus so a re-entry into Done (or a second
+            // moveTicketStatus in the same chain) is not re-attempted once already cleaned.
+            if (string.Equals(m.To, "Done", StringComparison.OrdinalIgnoreCase)
+                && ticketBefore is not null
+                && !string.IsNullOrWhiteSpace(ticketBefore.WorktreeBranch)
+                && !string.Equals(ticketBefore.WorktreeStatus, "cleaned", StringComparison.OrdinalIgnoreCase))
+            {
+                await TryCleanupWorktreeAsync(rt, ticketBefore, ct);
+            }
         }
         catch (Exception ex) { _logger.LogWarning(ex, "moveTicketStatus failed for ticket #{Id} in project {Project}", firing.TicketId, rt.Slug); }
     }
@@ -1752,6 +1778,129 @@ internal sealed class ActionExecutor
         {
             _logger.LogWarning(ex, "fileLease: failed to write file-lease-denial receipt for ticket #{Id}", ticketId);
         }
+    }
+
+    // ── R5: worktree-per-ticket execution ───────────────────────────────────
+
+    /// <summary>
+    /// Creates or reuses the ticket's git worktree (<see cref="WorktreeManager.EnsureAsync"/>) and
+    /// returns the path the agent should execute in, or null when isolation could not be honored.
+    /// Called strictly after <see cref="TryAcquireDispatchLeaseAsync"/> has already granted (or
+    /// deemed not-applicable) the file lease for <paramref name="runId"/> — on any failure here
+    /// (no ticket in the firing, workspace is not a git repo, a git failure) that lease is released
+    /// and a <c>worktree-isolation-failure/v1</c> receipt is written, so the dispatch fails closed
+    /// exactly like a block-mode lease conflict rather than silently falling back to in-place
+    /// execution (the one behavior the R5 constraints explicitly rule out).
+    /// </summary>
+    private async Task<string?> EnsureWorktreeIsolationAsync(
+        ProjectRuntime rt, int? ticketId, string agentName, string runId, CancellationToken ct)
+    {
+        if (ticketId is null)
+        {
+            _logger.LogWarning(
+                "worktree isolation requested for agent {Agent} but the firing has no ticket — failing the dispatch closed",
+                agentName);
+            await ReleaseDispatchLeaseAsync(rt.Slug, runId);
+            return null;
+        }
+
+        var result = await WorktreeManager.EnsureAsync(rt.Workspace!, ticketId.Value, ct);
+        if (!result.IsReady)
+        {
+            _logger.LogWarning(
+                "worktree isolation failed for agent {Agent} ticket #{Id}: {Error}",
+                agentName, ticketId, result.Error);
+            await ReleaseDispatchLeaseAsync(rt.Slug, runId);
+            await WriteWorktreeIsolationFailureReceiptAsync(rt.Slug, ticketId.Value, agentName, result);
+            return null;
+        }
+
+        try
+        {
+            await _tickets.SetWorktreeStateAsync(rt.Slug, ticketId.Value, result.Branch!, result.Path!, "active");
+        }
+        catch (Exception ex)
+        {
+            // The worktree itself is ready — a persistence hiccup here must not fail a dispatch
+            // that is otherwise good to go; the ticket simply won't show the branch/path until the
+            // next successful write (e.g. cleanup at Done).
+            _logger.LogWarning(ex, "worktree isolation: failed to persist worktree state on ticket #{Id}", ticketId);
+        }
+
+        return result.Path;
+    }
+
+    private async Task WriteWorktreeIsolationFailureReceiptAsync(
+        string slug, int ticketId, string agent, WorktreeResult result)
+    {
+        var receipt = JsonSerializer.Serialize(new
+        {
+            schema = "worktree-isolation-failure/v1",
+            agent,
+            action = "runAgent",
+            rule = "worktree-isolation",
+            outcome = result.Outcome.ToString(),
+            reason = result.Error ?? "worktree isolation failed",
+        });
+        try { await _tickets.AddCommentAsync(slug, ticketId, receipt, "automation"); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "worktree isolation: failed to write failure receipt for ticket #{Id}", ticketId);
+        }
+    }
+
+    /// <summary>
+    /// Attempts worktree cleanup for a ticket that just reached Done (see
+    /// <see cref="ExecuteMoveTicketStatusActionAsync"/>). Only <see cref="WorktreeCleanupOutcome.Cleaned"/>
+    /// updates <see cref="Models.Ticket.WorktreeStatus"/> to <c>"cleaned"</c>; every other outcome —
+    /// dirty checkout, unmerged branch, a git failure — is recorded as <c>"dirty"</c> and receipted
+    /// as <c>worktree-cleanup-blocked/v1</c>, the same "denials/serializations produce receipts"
+    /// idiom as R2's <c>policy-violation/v1</c>, R3's <c>outbound-denial/v1</c>, and R4's
+    /// <c>file-lease-denial/v1</c>. The worktree itself is never deleted in these cases.
+    /// </summary>
+    private async Task TryCleanupWorktreeAsync(ProjectRuntime rt, Models.Ticket ticket, CancellationToken ct)
+    {
+        var branch = ticket.WorktreeBranch!;
+        var path = ticket.WorktreePath!;
+
+        WorktreeCleanupResult result;
+        try
+        {
+            result = await WorktreeManager.TryCleanupAsync(rt.Workspace!, branch, path, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "worktree cleanup: failed for ticket #{Id}", ticket.Id);
+            return;
+        }
+
+        if (result.Outcome is WorktreeCleanupOutcome.Cleaned or WorktreeCleanupOutcome.AlreadyGone)
+        {
+            try { await _tickets.SetWorktreeStateAsync(rt.Slug, ticket.Id, branch, path, "cleaned"); }
+            catch (Exception ex) { _logger.LogWarning(ex, "worktree cleanup: failed to persist cleaned state for ticket #{Id}", ticket.Id); }
+            _logger.LogInformation(
+                "worktree cleanup: ticket #{Id} branch {Branch} — {Outcome}", ticket.Id, branch, result.Outcome);
+            return;
+        }
+
+        try { await _tickets.SetWorktreeStateAsync(rt.Slug, ticket.Id, branch, path, "dirty"); }
+        catch (Exception ex) { _logger.LogWarning(ex, "worktree cleanup: failed to persist dirty state for ticket #{Id}", ticket.Id); }
+
+        var receipt = JsonSerializer.Serialize(new
+        {
+            schema = "worktree-cleanup-blocked/v1",
+            ticketId = ticket.Id,
+            branch,
+            path,
+            rule = "worktree-cleanup",
+            outcome = result.Outcome.ToString(),
+            reason = result.Reason ?? "worktree cleanup was blocked",
+        });
+        try { await _tickets.AddCommentAsync(rt.Slug, ticket.Id, receipt, "automation"); }
+        catch (Exception ex) { _logger.LogWarning(ex, "worktree cleanup: failed to write blocked receipt for ticket #{Id}", ticket.Id); }
+        _logger.LogWarning(
+            "worktree cleanup: ticket #{Id} reached Done but the worktree was not cleaned ({Outcome}): {Reason}",
+            ticket.Id, result.Outcome, result.Reason);
     }
 
     /// <summary>

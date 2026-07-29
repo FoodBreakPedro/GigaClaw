@@ -133,6 +133,17 @@ public class TicketService : ITicketDependencyQuery
                 "CREATE INDEX IF NOT EXISTS IX_TicketDependencies_BlockingTicketId ON TicketDependencies(BlockingTicketId)");
         });
 
+    // R5 (doc/roadmap/lane-codex-runtime.md): worktree/branch state for databases created
+    // before per-ticket worktree isolation shipped.
+    private static Task EnsureWorktreeColumnsAsync(TodoDbContext db) =>
+        MigrationGate.RunOnceAsync(db, "tickets-worktree", static async d =>
+        {
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN WorktreeBranch TEXT NULL");
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN WorktreePath TEXT NULL");
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN WorktreeStatus TEXT NULL");
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN WorktreeUpdatedAt TEXT NULL");
+        });
+
     // Hot-path indexes: status/parent filters run on every board render, and the activity
     // subquery in ListTicketsAsync scans per ticket. Must run after the column migrations.
     private static Task EnsureTicketIndexesAsync(TodoDbContext db) =>
@@ -243,6 +254,7 @@ public class TicketService : ITicketDependencyQuery
         await EnsureAssignedToColumnAsync(db);
         await EnsureScheduleColumnsAsync(db);
         await EnsureAgentUsageColumnsAsync(db);
+        await EnsureWorktreeColumnsAsync(db);
         await EnsureTicketDependenciesTableAsync(db);
         var ticket = await db.Tickets
             .Include(t => t.Comments.OrderBy(c => c.CreatedAt))
@@ -592,6 +604,29 @@ public class TicketService : ITicketDependencyQuery
         });
         await db.SaveChangesAsync();
         TicketStatusChanged?.Invoke(projectSlug, ticketId, oldStatus, newStatus);
+        return ticket;
+    }
+
+    /// <summary>
+    /// R5: durably records the ticket's git worktree state (branch, checkout path, status). Called
+    /// by <c>ActionExecutor</c> right after a worktree is created/reused for a dispatch, and again
+    /// when the ticket reaches Done and the worktree is cleaned up (or flagged instead — see
+    /// <c>WorktreeManager.TryCleanupAsync</c>). Does not touch <see cref="Ticket.Status"/> or raise
+    /// <see cref="TicketStatusChanged"/> — this is orchestration metadata, not a board transition.
+    /// No-op (returns null) if the ticket does not exist.
+    /// </summary>
+    public async Task<Ticket?> SetWorktreeStateAsync(
+        string projectSlug, int ticketId, string branch, string path, string status)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureWorktreeColumnsAsync(db);
+        var ticket = await db.Tickets.FindAsync(ticketId);
+        if (ticket is null) return null;
+        ticket.WorktreeBranch = branch;
+        ticket.WorktreePath = path;
+        ticket.WorktreeStatus = status;
+        ticket.WorktreeUpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
         return ticket;
     }
 

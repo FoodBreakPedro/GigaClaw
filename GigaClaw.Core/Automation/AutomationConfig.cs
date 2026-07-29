@@ -337,6 +337,15 @@ public sealed class RunAgentActionSpec : ActionSpec
     public Dictionary<string, string> Env { get; set; } = new();
     public string? Model { get; set; }
     public bool RestoreStatusOnFail { get; set; } = true;
+    /// <summary>
+    /// R5 (doc/roadmap/lane-codex-runtime.md): when set to <c>"worktree"</c>, the dispatch runs in
+    /// a per-ticket git worktree (branch <c>ticket/&lt;id&gt;</c>) instead of the shared workspace —
+    /// see <c>WorktreeManager</c>. Absent, null, or any other value means no isolation — the current,
+    /// pre-R5 behavior of executing directly in the workspace. A firing with no ticket cannot be
+    /// isolated (there is no `&lt;id&gt;` to key the worktree on) and fails the dispatch closed rather
+    /// than silently running in place.
+    /// </summary>
+    public string? Isolation { get; set; }
 }
 
 public sealed class MoveTicketStatusActionSpec : ActionSpec
