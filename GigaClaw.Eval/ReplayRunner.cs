@@ -351,18 +351,33 @@ public sealed partial class ReplayRunner
 
     /// <summary>Strips everything that varies between two runs of the same fixture — the throwaway
     /// workspace path, the generated session id, and line-ending noise — so byte-identical inputs
-    /// yield byte-identical reports. Timings and costs are never recorded, matching the static layer.</summary>
-    private static IReadOnlyList<ReplayEvent> Normalize(
+    /// yield byte-identical reports. Timings and costs are never recorded, matching the static layer.
+    ///
+    /// <para>The only event that ever carries the workspace path is the "launch" event ClaudeRunner
+    /// synthesizes (<c>cwd={ctx.WorkspacePath}</c>) — nothing rubric-scored reads it, which is why a
+    /// leak here moves <c>inputDigest</c>/<c>evidence[].ref</c> (the digest hashes every event) but
+    /// never a category score or note. The exact-substring replaces below catch the ordinary
+    /// backslash and forward-slash forms. The regex pass after them is a structural fallback for any
+    /// OTHER representation of the same path — an 8.3 short ancestor segment
+    /// (<c>C:\Users\RUNNER~1\...</c>), a JSON-escaped doubled backslash, or a differently-cased
+    /// segment — all of which still end in the <c>gigaclaw-replay-&lt;32 hex&gt;</c> leaf this run
+    /// generated. Matching on that unique leaf and discarding whatever precedes it — however it is
+    /// spelled — kills the leak without enumerating every path form Windows can produce it in.</para>
+    /// </summary>
+    internal static IReadOnlyList<ReplayEvent> Normalize(
         IReadOnlyList<StreamEvent> events,
         string workspace)
     {
         var workspacePosix = workspace.Replace('\\', '/');
+        var workspaceGuard = WorkspaceGuardRegex(workspace);
         return events
             .Select((captured, index) =>
             {
                 var text = (captured.Text ?? "").Replace("\r\n", "\n");
                 text = text.Replace(workspace, "{{workspace}}", StringComparison.Ordinal);
                 text = text.Replace(workspacePosix, "{{workspace}}", StringComparison.Ordinal);
+                if (workspaceGuard is not null)
+                    text = workspaceGuard.Replace(text, "{{workspace}}");
                 // The launch event carries an 8-char session prefix; the CLI's own events carry
                 // the full guid. Scrub the prefix form first so it is not left half-replaced.
                 text = ShortSessionIdRegex().Replace(text, "session={{session_id}}");
@@ -372,7 +387,33 @@ public sealed partial class ReplayRunner
             .ToArray();
     }
 
-    private static string Digest(IReadOnlyList<ReplayEvent> events)
+    /// <summary>Builds the structural fallback matcher described on <see cref="Normalize"/>: the
+    /// workspace's own leaf directory name (<c>gigaclaw-replay-&lt;32 hex&gt;</c>, unique to this
+    /// run) preceded by a run of non-whitespace, non-quote characters, matched case-insensitively so
+    /// a differently-cased drive letter or ancestor segment does not defeat it. The leaf is split out
+    /// by hand rather than through <see cref="Path.GetFileName(string)"/> because that call only
+    /// recognizes the current OS's separator, and a leaked path can carry the OTHER platform's
+    /// separator (this is also what lets a test construct a Windows-shaped leak and run it on any
+    /// platform). Null when the workspace has no leaf to key on (defensive, not expected in
+    /// practice).</summary>
+    internal static Regex? WorkspaceGuardRegex(string workspace)
+    {
+        var leaf = workspace
+            .Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)
+            .LastOrDefault();
+        return string.IsNullOrEmpty(leaf)
+            ? null
+            : new Regex(
+                // '=' is excluded from the prefix run (on top of whitespace/quotes) so the match
+                // cannot cross a "key=value" delimiter like the launch event's own "cwd=" or
+                // "session=" — none of GigaClaw's generated temp paths ever contain '=' — and so
+                // the replacement leaves "cwd=" itself in place exactly as the exact-substring
+                // replaces above do.
+                $"""[^\s"'=]*?{Regex.Escape(leaf)}""",
+                RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    }
+
+    internal static string Digest(IReadOnlyList<ReplayEvent> events)
     {
         var canonical = string.Join(
             "\n",
