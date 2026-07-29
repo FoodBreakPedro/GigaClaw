@@ -48,10 +48,16 @@ project's workspace, and the canonical source lives in the GigaClaw repo's
   template-owned file. A per-project ticket would be duplicated on every other
   board by the other janitors, and a per-workspace fix would drift from the
   template.
-- Instead, mention the finding in your run summary output, prefixed
-  `[template]`, so it surfaces in the run log exactly once per scan without
-  creating board noise. Template fixes are made in the GigaClaw repo and
-  re-synced to workspaces by the operator.
+- Instead, file it ONCE on the cross-venture system board: create a ticket on
+  the `gigaclaw-system` project (`POST {base}/api/projects/gigaclaw-system/tickets`,
+  same API you use for local tickets), title prefixed `[template]`, body noting
+  which workspace you observed it in. **Dedup first**: `GET` the system
+  project's tickets and skip creation if an open ticket already covers the same
+  file/finding (match on the file path + the gist of the title — other
+  janitors scan the same template nightly). If the `gigaclaw-system` project
+  does not exist or the API call fails, fall back to mentioning the finding in
+  your run summary prefixed `[template]`. Template fixes are made in the
+  GigaClaw repo's `ProjectTemplate/` and re-synced to workspaces.
 - Files created locally in this workspace that do NOT ship from the template
   (venture content, project-specific scripts, code in the project's own
   repositories) are in scope as normal — file tickets for those as usual.
