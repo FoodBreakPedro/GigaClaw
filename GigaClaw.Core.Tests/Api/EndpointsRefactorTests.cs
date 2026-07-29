@@ -93,6 +93,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         "GET /api/projects/{slug}/runs/{runId}/stream",
         "POST /api/projects/{slug}/runs/{runId}/steer",
         "POST /api/projects/{slug}/runs/{runId}/stop",
+        "POST /api/projects/{slug}/runs/{runId}/approval",
         "POST /api/projects/{slug}/runs/{runId}/retry",
         "GET /api/projects/{slug}/concurrency-groups",
         // Chat
@@ -189,6 +190,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         ["GET /api/projects/{slug}/runs/{runId}/stream"] = "Runs",
         ["POST /api/projects/{slug}/runs/{runId}/steer"] = "Runs",
         ["POST /api/projects/{slug}/runs/{runId}/stop"] = "Runs",
+        ["POST /api/projects/{slug}/runs/{runId}/approval"] = "Runs",
         ["POST /api/projects/{slug}/runs/{runId}/retry"] = "Runs",
         ["GET /api/projects/{slug}/concurrency-groups"] = "Runs",
         ["GET /api/projects/{slug}/chat/targets"] = "Chat",

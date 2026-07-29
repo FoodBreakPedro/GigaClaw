@@ -19,10 +19,15 @@
             <h3>@L["ChatPickTarget"]</h3>
             @foreach (var t in _targets)
             {
-                <button class="chat-target-item @(t.Kind == "claude" ? "claude-direct" : "")"
+                <button class="chat-target-item @(t.Kind == "claude" ? "claude-direct" : t.Kind == "hermes" ? "hermes-direct" : "")"
                         @onclick="() => SelectTarget(t)">
                     <span class="chat-target-name">@t.Name</span>
-                    <span class="chat-target-kind">@(t.Kind == "claude" ? L["ChatTalkToClaude"] : L["ChatMember"])</span>
+                    <span class="chat-target-kind">@(t.Kind switch
+                    {
+                        "claude" => L["ChatTalkToClaude"],
+                        "hermes" => L["ChatTalkToHermes"],
+                        _ => L["ChatMember"],
+                    })</span>
                 </button>
             }
             @if (_targets.Count == 0 && _ready)
@@ -45,23 +50,30 @@
                     <span class="chat-drawer-ticket-ref" title="@TicketTitle">· #@tid @(string.IsNullOrEmpty(TicketTitle) ? "" : "— " + SharedRenderHelpers.Truncate(TicketTitle!, 40))</span>
                 }
             </span>
-            <select class="chat-drawer-model-select" @bind="_selectedModel">
-                <optgroup label="Claude">
-                    @foreach (var m in ClaudeModels)
-                    {
-                        <option value="@m">@m</option>
-                    }
-                </optgroup>
-                @if (_ollamaModels.Count > 0)
-                {
-                    <optgroup label="Local (Ollama)">
-                        @foreach (var m in _ollamaModels)
+            @if (_activeTarget?.Kind != "hermes")
+            {
+                <select class="chat-drawer-model-select" @bind="_selectedModel">
+                    <optgroup label="Claude">
+                        @foreach (var m in ClaudeModels)
                         {
                             <option value="@m">@m</option>
                         }
                     </optgroup>
-                }
-            </select>
+                    @if (_ollamaModels.Count > 0)
+                    {
+                        <optgroup label="Local (Ollama)">
+                            @foreach (var m in _ollamaModels)
+                            {
+                                <option value="@m">@m</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+            }
+            else
+            {
+                <span class="chat-drawer-backend-badge">Hermes API Server</span>
+            }
             <button class="chat-newsession-btn" @onclick="StartNewSession" title="@L["NewSession"]">＋</button>
             <button class="agent-close-btn" @onclick="Close" title="@L["Close"]">×</button>
         </div>
@@ -117,6 +129,32 @@
                         </div>
                     </div>
                 }
+                else if (msg.Role == "approval_request")
+                {
+                    var approval = (HermesApprovalMessage)msg;
+                    <div class="chat-message chat-ask-user @(approval.IsAnswered ? "chat-ask-user-answered" : "")">
+                        <div class="chat-bubble chat-hermes-approval">
+                            <p class="chat-ask-prompt">@L["HermesApprovalRequired"]</p>
+                            @if (!string.IsNullOrWhiteSpace(approval.Description))
+                            {
+                                <div>@approval.Description</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(approval.Command))
+                            {
+                                <pre class="chat-approval-command">@approval.Command</pre>
+                            }
+                            @foreach (var choice in approval.Choices)
+                            {
+                                var choiceCopy = choice;
+                                <button class="chat-ask-option"
+                                        disabled="@approval.IsAnswered"
+                                        @onclick="() => SubmitHermesApproval(approval, choiceCopy)">
+                                    @ApprovalChoiceLabel(choice)
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
                 else if (msg.Role == "reset")
                 {
                     <div class="chat-message chat-message-reset">@L["ChatSessionReset"]</div>
@@ -154,7 +192,9 @@
                 <div class="chat-empty">
                     @(_activeTarget!.Kind == "member"
                         ? L.Get("ChatEmptyMember", _activeTarget.Name)
-                        : L["ChatEmpty"])
+                        : _activeTarget.Kind == "hermes"
+                            ? L["ChatEmptyHermes"]
+                            : L["ChatEmpty"])
                 </div>
             }
         </div>
@@ -189,12 +229,16 @@
             <textarea @ref="_inputRef"
                       value="@_inputText"
                       @oninput="OnInput"
+                      disabled="@(_loading && _activeRun?.Backend == HermesAgentService.BackendName)"
                       placeholder="@(_loading ? L["ChatInjectPlaceholder"] : L["ChatPlaceholder"])"
                       @onkeydown="OnKeyDown"></textarea>
             @if (_loading && !string.IsNullOrEmpty(_activeStreamId))
             {
                 <div class="chat-input-actions">
-                    <button class="chat-inject-btn" @onclick="Inject" disabled="@string.IsNullOrWhiteSpace(_inputText)" title="@L["ChatInject"]">↩ @L["ChatInject"]</button>
+                    @if (_activeRun?.Backend != HermesAgentService.BackendName)
+                    {
+                        <button class="chat-inject-btn" @onclick="Inject" disabled="@string.IsNullOrWhiteSpace(_inputText)" title="@L["ChatInject"]">↩ @L["ChatInject"]</button>
+                    }
                     <button class="chat-stop-btn" @onclick="StopActiveRun" title="@L["Stop"]">⏹ @L["Stop"]</button>
                 </div>
             }
@@ -258,6 +302,15 @@
     {
         public bool IsAnswered { get; set; }
         public string InputText { get; set; } = "";
+    }
+    private sealed record HermesApprovalMessage(
+        string Description,
+        string Command,
+        string[] Choices,
+        string? RunId = null)
+        : ChatMessage("approval_request", Description)
+    {
+        public bool IsAnswered { get; set; }
     }
     private sealed record ChatTarget(string Slug, string Name, string Kind);
 
@@ -335,6 +388,16 @@
                     {
                         var (prompt, options) = ParseAskUserQuestionDetail(m.Detail);
                         _messages.Add(new AskUserQuestionMessage(prompt, options) { IsAnswered = true });
+                    }
+                    else if (m.Role == "approval_request")
+                    {
+                        var (description, command, choices) = ParseHermesApprovalDetail(m.Detail);
+                        _messages.Add(new HermesApprovalMessage(description, command, choices));
+                    }
+                    else if (m.Role == "approval_response")
+                    {
+                        var pending = _messages.OfType<HermesApprovalMessage>().LastOrDefault(x => !x.IsAnswered);
+                        if (pending is not null) pending.IsAnswered = true;
                     }
                     else
                     {
@@ -447,7 +510,10 @@
         if (e.Key == "Enter" && !e.ShiftKey)
         {
             if (_loading && !string.IsNullOrEmpty(_activeStreamId))
-                await Inject();
+            {
+                if (_activeRun?.Backend != HermesAgentService.BackendName)
+                    await Inject();
+            }
             else
                 await Send();
         }
@@ -531,9 +597,18 @@
         using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
         try
         {
-            var forceNew = _selectedModel != _sessionModel && _sessionModel is not null;
+            var isHermes = _activeTarget.Kind == "hermes";
+            var forceNew = !isHermes && _selectedModel != _sessionModel && _sessionModel is not null;
             var resp = await http.PostAsJsonAsync($"/api/projects/{ProjectSlug}/chat/start",
-                new { message = text, target = _activeTarget.Slug, ticketId = TicketId, images = imagesPayload, model = _selectedModel, forceNew });
+                new
+                {
+                    message = text,
+                    target = _activeTarget.Slug,
+                    ticketId = TicketId,
+                    images = imagesPayload,
+                    model = isHermes ? null : _selectedModel,
+                    forceNew,
+                });
             if (!resp.IsSuccessStatusCode)
             {
                 _messages.Add(new ChatMessage("error", $"Error {resp.StatusCode}"));
@@ -544,7 +619,7 @@
             var body = await resp.Content.ReadFromJsonAsync<ChatStartResponse>();
             if (body is null) { _loading = false; StateHasChanged(); return; }
 
-            _sessionModel = _selectedModel;
+            _sessionModel = isHermes ? null : _selectedModel;
             _activeRun = RunsState.Get(body.RunId);
             if (_activeRun is not null)
             {
@@ -585,6 +660,16 @@
         {
             var (prompt, options) = ParseAskUserQuestionDetail(detail);
             _messages.Add(new AskUserQuestionMessage(prompt, options, _activeStreamId));
+        }
+        else if (kind == "approval_request")
+        {
+            var (description, command, choices) = ParseHermesApprovalDetail(detail);
+            _messages.Add(new HermesApprovalMessage(description, command, choices, _activeStreamId));
+        }
+        else if (kind == "approval_response")
+        {
+            var pending = _messages.OfType<HermesApprovalMessage>().LastOrDefault(x => !x.IsAnswered);
+            if (pending is not null) pending.IsAnswered = true;
         }
         else if (kind == "tool_use" && !string.IsNullOrWhiteSpace(text))
         {
@@ -679,6 +764,70 @@
             return (fallbackPrompt, fallbackOptions);
         }
         catch { return ("", []); }
+    }
+
+    private static (string Description, string Command, string[] Choices) ParseHermesApprovalDetail(string? detail)
+    {
+        if (string.IsNullOrWhiteSpace(detail))
+            return ("Hermes needs permission to continue.", "", ["once", "deny"]);
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(detail);
+            var root = doc.RootElement;
+            var description = root.TryGetProperty("description", out var d)
+                ? d.GetString() ?? ""
+                : "Hermes needs permission to continue.";
+            var command = root.TryGetProperty("command", out var c) ? c.GetString() ?? "" : "";
+            var choices = root.TryGetProperty("choices", out var values)
+                          && values.ValueKind == System.Text.Json.JsonValueKind.Array
+                ? values.EnumerateArray()
+                    .Select(x => x.GetString() ?? "")
+                    .Where(x => x is "once" or "session" or "always" or "deny")
+                    .ToArray()
+                : ["once", "session", "always", "deny"];
+            return (description, command, choices.Length > 0 ? choices : ["once", "deny"]);
+        }
+        catch
+        {
+            return ("Hermes needs permission to continue.", "", ["once", "deny"]);
+        }
+    }
+
+    private string ApprovalChoiceLabel(string choice) => choice switch
+    {
+        "once" => L["HermesApproveOnce"],
+        "session" => L["HermesApproveSession"],
+        "always" => L["HermesApproveAlways"],
+        "deny" => L["HermesDeny"],
+        _ => choice,
+    };
+
+    private async Task SubmitHermesApproval(HermesApprovalMessage msg, string choice)
+    {
+        var runId = msg.RunId ?? _activeRunId;
+        if (runId is null) return;
+        using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
+        try
+        {
+            var response = await http.PostAsJsonAsync(
+                $"/api/projects/{ProjectSlug}/runs/{runId}/approval",
+                new { choice });
+            if (!response.IsSuccessStatusCode)
+            {
+                _messages.Add(new ChatMessage(
+                    "error",
+                    $"Hermes approval failed: HTTP {(int)response.StatusCode}"));
+                StateHasChanged();
+                return;
+            }
+            msg.IsAnswered = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _messages.Add(new ChatMessage("error", ex.Message));
+            StateHasChanged();
+        }
     }
 
     private async Task SubmitAskUserQuestion(AskUserQuestionMessage msg, string answer)

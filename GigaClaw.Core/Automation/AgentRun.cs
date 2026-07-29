@@ -19,6 +19,10 @@ public sealed class AgentRun
     public string? SessionId { get; set; }
     public string? Model { get; set; }
     public string? ChatTarget { get; set; }
+    /// <summary>Execution backend. Existing runs and Claude CLI runs use "claude".</summary>
+    public string Backend { get; set; } = "claude";
+    /// <summary>Provider-owned run id, when the work executes outside GigaClaw.</summary>
+    public string? ExternalRunId { get; set; }
     public AgentRunStatus Status { get; set; } = AgentRunStatus.Running;
     public DateTime? EndedAt { get; set; }
     public int? ExitCode { get; set; }
@@ -115,6 +119,9 @@ public sealed class AgentRunSnapshot
     public DateTime? EndedAt { get; set; }
     public string? SessionId { get; set; }
     public string? Model { get; set; }
+    public string? ChatTarget { get; set; }
+    public string Backend { get; set; } = "claude";
+    public string? ExternalRunId { get; set; }
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public AgentRunStatus Status { get; set; }
     public int? ExitCode { get; set; }
@@ -157,6 +164,9 @@ public sealed class RunLogStore
             EndedAt = run.EndedAt,
             SessionId = run.SessionId,
             Model = run.Model,
+            ChatTarget = run.ChatTarget,
+            Backend = run.Backend,
+            ExternalRunId = run.ExternalRunId,
             Status = run.Status,
             ExitCode = run.ExitCode,
             InputTokens = run.InputTokens,
@@ -203,6 +213,9 @@ public sealed class RunLogStore
             };
             run.SessionId = snapshot.SessionId;
             run.Model = snapshot.Model;
+            run.ChatTarget = snapshot.ChatTarget;
+            run.Backend = string.IsNullOrWhiteSpace(snapshot.Backend) ? "claude" : snapshot.Backend;
+            run.ExternalRunId = snapshot.ExternalRunId;
             run.Status = snapshot.Status;
             run.EndedAt = snapshot.EndedAt;
             run.ExitCode = snapshot.ExitCode;

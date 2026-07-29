@@ -84,6 +84,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<GigaClaw.Core.Serv
 builder.Services.AddHostedService<GigaClaw.Core.Services.ScheduledPromotionService>();
 builder.Services.AddSingleton<GigaClaw.Web.Services.AgentRunsState>();
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<GigaClaw.Web.Services.HermesAgentService>();
 // Dedicated client for the httpRequest automation action. Redirects are not followed: an
 // automation posting to a webhook should see the real status, not a silently followed 3xx.
 builder.Services.AddHttpClient(GigaClaw.Core.Automation.HttpRequestActionSpec.HttpClientName)

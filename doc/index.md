@@ -22,4 +22,5 @@ For a high-level overview see the root [README.md](../README.md). For repo layou
 - [Telemetry](./telemetry.md) — anonymous daily heartbeat to Umami Cloud (instance id, version, OS); always on outside Development.
 - [Per-ticket worktree workflow](./worktree-workflow.md) — opt-in pattern; helper scripts and `{ticketId}` placeholder ship, but agent SKILLs in `ProjectTemplate` do not use it by default.
 - [Local models (Ollama)](./local-models.md) — dispatching agents to a local Ollama model via the Anthropic-compat endpoint.
+- [Hermes Agent chat](./hermes-agent.md) — embedding a local Hermes API Server channel as a tool-capable chat target.
 - [Local media creation](./local-media.md) — governed OpenMontage, ComfyUI, and Phosphene image/video jobs with durable execution and review gates.

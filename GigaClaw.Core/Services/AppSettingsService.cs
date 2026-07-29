@@ -86,6 +86,41 @@ public class AppSettingsService
         }
     }
 
+    /// <summary>
+    /// Whether the server-wide Hermes Agent chat target is enabled. Supplying
+    /// GIGACLAW_HERMES_API_KEY also enables it for headless deployments.
+    /// </summary>
+    public bool HermesEnabled =>
+        _data.HermesEnabled ||
+        !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GIGACLAW_HERMES_API_KEY"));
+
+    public string HermesApiBaseUrl =>
+        Environment.GetEnvironmentVariable("GIGACLAW_HERMES_API_BASE_URL")
+        ?? _data.HermesApiBaseUrl
+        ?? "http://127.0.0.1:8642";
+
+    public bool HermesApiKeyConfigured => !string.IsNullOrWhiteSpace(GetHermesApiKey());
+
+    /// <summary>Returns the Hermes bearer key for server-side callers only.</summary>
+    public string? GetHermesApiKey() =>
+        Environment.GetEnvironmentVariable("GIGACLAW_HERMES_API_KEY")
+        ?? _data.HermesApiKey;
+
+    /// <summary>
+    /// Atomically updates the local Hermes connection. A null/blank apiKey keeps the
+    /// previously stored key so the settings UI never has to round-trip a secret.
+    /// </summary>
+    public void ConfigureHermes(bool enabled, string? baseUrl, string? apiKey)
+    {
+        _data.HermesEnabled = enabled;
+        _data.HermesApiBaseUrl = string.IsNullOrWhiteSpace(baseUrl)
+            ? "http://127.0.0.1:8642"
+            : baseUrl.Trim();
+        if (!string.IsNullOrWhiteSpace(apiKey))
+            _data.HermesApiKey = apiKey.Trim();
+        Save();
+    }
+
     private void Load()
     {
         if (!File.Exists(_settingsPath)) return;
@@ -111,5 +146,8 @@ public class AppSettingsService
         public DateTime? UpdateCheckLastRun { get; set; }
         public string? TelemetryInstanceId { get; set; }
         public DateTime? TelemetryLastSent { get; set; }
+        public bool HermesEnabled { get; set; }
+        public string? HermesApiBaseUrl { get; set; }
+        public string? HermesApiKey { get; set; }
     }
 }

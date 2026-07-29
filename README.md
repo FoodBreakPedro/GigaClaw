@@ -128,6 +128,7 @@ This app is designed to be operated by AI agents through its REST API. Here's ho
 - Label and member management
 - Image upload in descriptions and comments
 - Local model support ([Ollama](doc/local-models.md)): per-project base URL with model autodiscovery, per-member default model, per-action override in the Automation Editor
+- Hermes Agent chat ([details](doc/hermes-agent.md)): connect a same-host Hermes API Server channel as a first-class, tool-capable chat target with streaming, stop, and approval controls
 - Ticket scheduling: park tickets in the **Scheduled** column with a fire time and a target column; a background service auto-promotes them when due (see [ticket scheduling](doc/ticket-scheduling.md))
 - Per-ticket token cost badges: board cards and ticket panel show cumulative token usage and USD cost for all agent runs on that ticket
 
