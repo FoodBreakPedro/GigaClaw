@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "growth-lead-magnet-checklist",
+  "Family": "growth",
+  "Agent": "lead-magnet-creator",
+  "Scenario": "growth-lead-magnet-checklist",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5026,
+    "Title": "Lead magnet: The Local-First Migration Checklist",
+    "Status": "Todo",
+    "Assignee": "lead-magnet-creator",
+    "Description": "Build a 6-section actionable checklist for teams migrating to offline-first tooling, plus the three LinkedIn promo variations.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "LEAD-MAGNET v1 artifact-sha256:"
+  }
+}

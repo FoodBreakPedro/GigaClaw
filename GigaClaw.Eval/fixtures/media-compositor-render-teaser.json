@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "media-compositor-render-teaser",
+  "Family": "media",
+  "Agent": "local-media-compositor",
+  "Scenario": "media-compositor-render-teaser",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5042,
+    "Title": "Compose the 15-second teaser from the approved storyboard",
+    "Status": "Todo",
+    "Assignee": "local-media-compositor",
+    "Description": "OpenMontage project teaser-5042. Assets checkpoint is approved. Edit and compose the final render at the locked render_runtime.",
+    "Comments": [
+      {
+        "Author": "local-media-director",
+        "Body": "Storyboard approved; five shots, 15s total, 1080x1920 vertical."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "render_report"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "media-producer-decompose-epic",
+  "Family": "media",
+  "Agent": "producer",
+  "Scenario": "media-producer-decompose-epic",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5045,
+    "Title": "Ship the local-first launch teaser end to end",
+    "Status": "InProgress",
+    "Assignee": "producer",
+    "Description": "Storyboard, generate the still and the clips, compose the final render, and get it reviewed — for the local-first launch teaser. Decompose into the right sub-tickets.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "producer-plan:v1 parent=5045"
+  }
+}

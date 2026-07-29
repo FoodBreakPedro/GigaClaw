@@ -90,10 +90,14 @@ public sealed class CatalogGenerator
     /// Reasons the <c>core</c> pack is reported on but never gated (§7.4, owner Q2).
     ///
     /// <para>
-    /// Core predates the rule. It ships 33 agents against 6 replay fixtures, so gating core on
-    /// <see cref="EvalFixtureReason"/> would fail every build for a binding that was never applied
-    /// retroactively — and would block the Security pack on core's backlog, which Q2 explicitly
-    /// rules out. Packs carry no exemption: all five bindings are gated from their first commit.
+    /// Core predates the rule. At the rule's introduction it shipped 33 agents against 6 replay
+    /// fixtures, so gating core on <see cref="EvalFixtureReason"/> would have failed every build for
+    /// a binding that was never applied retroactively — and would have blocked the Security pack on
+    /// core's backlog, which Q2 explicitly ruled out. That backlog is now closed (all 33 core agents
+    /// carry a fixture as of the eval-fixture authoring pass), but the exemption itself stays: it is
+    /// what let the backlog close incrementally instead of in one drop, and it is what protects the
+    /// next core agent that lands without one from failing every build the moment it exists. Packs
+    /// carry no exemption: all five bindings are gated from their first commit.
     /// </para>
     /// </summary>
     public static readonly IReadOnlySet<string> CoreExemptReasons =

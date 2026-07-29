@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "growth-competitive-pricing-audit",
+  "Family": "growth",
+  "Agent": "competitive-analyst",
+  "Scenario": "growth-competitive-pricing-audit",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5021,
+    "Title": "Competitive audit: self-hosted kanban tools with offline support",
+    "Status": "Todo",
+    "Assignee": "competitive-analyst",
+    "Description": "Build a feature matrix and pricing/positioning audit against the three closest self-hosted kanban competitors that advertise offline or local-first support. Freeze the comparison to monthly, single-currency USD pricing.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "competitive-analyst:v1 ticket=5021"
+  }
+}

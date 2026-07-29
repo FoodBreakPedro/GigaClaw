@@ -79,8 +79,9 @@ public sealed class CatalogGeneratorTests
     /// <summary>
     /// A <em>fixture</em> is a replay input; a <em>baseline</em> is the reviewed static snapshot.
     /// The catalog reported the baseline and never the fixture, so binding 5 was enforced by
-    /// nothing. This pins the distinction: every agent has a baseline, only the six replayed ones
-    /// have a fixture.
+    /// nothing. This pins the distinction: every agent has a baseline, and — since the eval-fixture
+    /// authoring pass closed owner Q2's backlog item — every core agent now has a fixture too,
+    /// same as the pack's four.
     /// </summary>
     [Fact]
     public void Eval_fixture_presence_tracks_fixtures_not_baselines()
@@ -93,11 +94,18 @@ public sealed class CatalogGeneratorTests
             .OrderBy(slug => slug, StringComparer.Ordinal)
             .ToArray();
 
-        // Core's six replayed agents, plus all four of the pack's — a pack ships a fixture per
-        // agent from its first commit, which is the binding rule core is grandfathered out of.
+        // All 33 core agents, plus all four of the pack's — a pack ships a fixture per agent from
+        // its first commit (the binding rule), and core's historic backlog against that same rule
+        // is now closed.
         Assert.Equal(
-            ["approval-gatekeeper", "blog-writer", "growth-writer", "local-media-director", "programmer",
-             "qa-tester", "secrets-reviewer", "security-auditor", "supply-chain-reviewer", "threat-modeler"],
+            ["approval-gatekeeper", "blog-researcher", "blog-reviewer", "blog-seo", "blog-translator",
+             "blog-writer", "code-janitor", "committer", "competitive-analyst", "content-series-planner",
+             "content-writer", "data-analyst", "decision-engine", "design-researcher", "documentalist",
+             "email-copywriter", "evaluator", "groomer", "growth-writer", "lead-magnet-creator",
+             "local-image-artist", "local-media-compositor", "local-media-director", "local-media-reviewer",
+             "local-motion-artist", "producer", "programmer", "qa-tester", "secrets-reviewer",
+             "security-auditor", "supply-chain-reviewer", "system-watchdog", "threat-modeler",
+             "trend-researcher", "ui-auditor", "ui-designer", "wellness-coach"],
             withFixture);
         Assert.All(
             catalog.Agents.Where(agent => agent.Pack == "core"),
@@ -105,21 +113,21 @@ public sealed class CatalogGeneratorTests
     }
 
     /// <summary>
-    /// The gate reports core's 27 missing fixtures but never fails on them (§7.4, owner Q2): core
-    /// predates the rule, and blocking it would block the first pack on core's backlog. Every other
-    /// reason still fails core under <c>--strict</c>.
+    /// §7.4, owner Q2: core was reported on but never gated for missing eval fixtures while its
+    /// historic backlog stood, because blocking it would have blocked the first pack on core's own
+    /// debt. The eval-fixture authoring pass closed that backlog — every core agent now ships a
+    /// fixture — so the real catalog has no gaps left at all, core or pack, under either strict flag.
+    /// <see cref="CatalogGenerator.CoreExemptReasons"/> itself stays (see its doc comment): this test
+    /// no longer exercises it against production data, but it would still excuse a future core agent
+    /// that lands without a fixture, the same way it excused these 27 while they were missing.
     /// </summary>
     [Fact]
-    public void Core_is_reported_on_but_not_gated_for_missing_eval_fixtures()
+    public void Core_has_no_remaining_binding_gaps_now_that_every_agent_has_a_fixture()
     {
         var catalog = new CatalogGenerator().Generate(RepositoryRoot());
         var gaps = CatalogGenerator.FindBindingGaps(catalog);
 
-        Assert.All(gaps, gap => Assert.Equal([CatalogGenerator.EvalFixtureReason], gap.Missing));
-        Assert.Equal(27, gaps.Count);
-        Assert.All(
-            gaps,
-            gap => Assert.Empty(CatalogGenerator.GatedReasons(gap, strict: true, strictPacks: true, catalog)));
+        Assert.Empty(gaps);
     }
 
     [Fact]

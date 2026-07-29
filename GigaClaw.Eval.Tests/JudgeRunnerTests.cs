@@ -63,8 +63,9 @@ public sealed class JudgeRunnerTests
         Assert.True(drifted.Length == 0, DescribeBaselineDrift(drifted));
 
         Assert.Equal(0, result.ExitCode);
-        // 6 core fixtures plus the security-assurance pack's 5.
-        Assert.Equal(11, fixtures.Length);
+        // 33 core fixtures (the eval-fixture authoring pass closed core's historic backlog against
+        // owner Q2's item) plus the security-assurance pack's 5.
+        Assert.Equal(38, fixtures.Length);
         Assert.All(fixtures, fixture =>
         {
             Assert.Equal("pass", fixture.Status);
@@ -191,8 +192,8 @@ public sealed class JudgeRunnerTests
     {
         var directory = Path.Combine(RepositoryRoot, "GigaClaw.Eval", "baselines", "judge");
         var baselines = Directory.GetFiles(directory, "*.json").OrderBy(path => path, StringComparer.Ordinal).ToArray();
-        // 6 core fixture agents plus the security-assurance pack's 4.
-        Assert.Equal(10, baselines.Length);
+        // 33 core fixture agents plus the security-assurance pack's 4.
+        Assert.Equal(37, baselines.Length);
 
         var scratch = Path.Combine(Path.GetTempPath(), "gigaclaw-judge-verdicts-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(scratch);

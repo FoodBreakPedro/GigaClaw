@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "design-ui-designer-cobalt-theme",
+  "Family": "design",
+  "Agent": "ui-designer",
+  "Scenario": "design-ui-designer-cobalt-theme",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5053,
+    "Title": "Design the board toolbar redesign",
+    "Status": "InProgress",
+    "Assignee": "ui-designer",
+    "Description": "Build the redesigned board toolbar. Follow design/specs/board-toolbar.md from design-researcher. Audience is technical team leads managing several boards at once.",
+    "Comments": [
+      {
+        "Author": "design-researcher",
+        "Body": "DESIGN-SPEC v1 artifact-sha256:18e9e3616d4eda03c250517c4e1da619a9d99c3b6b1e6edcfdf61e5f2adecbeb"
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "UI-DESIGN v1 artifact-sha256:"
+  }
+}

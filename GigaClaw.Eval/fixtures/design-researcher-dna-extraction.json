@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "design-researcher-dna-extraction",
+  "Family": "design",
+  "Agent": "design-researcher",
+  "Scenario": "design-researcher-dna-extraction",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5051,
+    "Title": "Extract design DNA from the reference board toolbar",
+    "Status": "Todo",
+    "Assignee": "design-researcher",
+    "Description": "Inspect the attached screenshot of a competitor's board toolbar and produce a portable design spec ui-designer can build a matching-quality (not pixel-cloned) toolbar from.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "DESIGN-SPEC v1 artifact-sha256:"
+  }
+}

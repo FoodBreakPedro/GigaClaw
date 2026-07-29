@@ -1,0 +1,58 @@
+{
+  "Version": 1,
+  "Agent": "competitive-analyst",
+  "Judge": "deterministic",
+  "Fixtures": [
+    {
+      "Fixture": "growth-competitive-pricing-audit",
+      "Verdict": {
+        "schemaVersion": 1,
+        "agent": "competitive-analyst",
+        "ticketId": 5021,
+        "verdict": "SHIP",
+        "summary": "Deterministic rubric judge scored fixture 'growth-competitive-pricing-audit' at 100/100 (100%).",
+        "categories": [
+          {
+            "name": "Dispatch behaved as declared",
+            "score": 40,
+            "max": 40,
+            "notes": "All 5 fixture expectation(s) held."
+          },
+          {
+            "name": "Stream carries no error",
+            "score": 20,
+            "max": 20,
+            "notes": "The stream carries no error event."
+          },
+          {
+            "name": "Final message is a handoff",
+            "score": 20,
+            "max": 20,
+            "notes": "Final message is 512 character(s) against a floor of 80."
+          },
+          {
+            "name": "No placeholder handoff",
+            "score": 20,
+            "max": 20,
+            "notes": "None of 4 forbidden phrase(s) appear."
+          }
+        ],
+        "vetoItems": [],
+        "evidence": [
+          {
+            "kind": "hash",
+            "ref": "sha256:05471b97fd0b3ccc487358b83b6ddfb3385e0e7ab91a0c92d2d28886ca057738",
+            "note": "normalized replay stream for fixture 'growth-competitive-pricing-audit' (7 event(s), exit 0)"
+          },
+          {
+            "kind": "hash",
+            "ref": "sha256:2ab95a8ba33161c4d60a3c2fcf6625352ba10206f4ed8343f4c0c937028bee83",
+            "note": "rubric 'default' v1"
+          }
+        ],
+        "reviewedAtUtc": "1970-01-01T00:00:00Z",
+        "inputDigest": "sha256:05471b97fd0b3ccc487358b83b6ddfb3385e0e7ab91a0c92d2d28886ca057738"
+      }
+    }
+  ]
+}

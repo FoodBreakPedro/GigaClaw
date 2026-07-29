@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "blog-translator-locale-parity-es",
+  "Family": "blog",
+  "Agent": "blog-translator",
+  "Scenario": "blog-translator-locale-parity-es",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5004,
+    "Title": "Translate the sync engine launch post to Spanish",
+    "Status": "Todo",
+    "Assignee": "blog-translator",
+    "Description": "Source: content/posts/offline-first-sync-launch.md. Target locale: es. blog-seo already validated this version.",
+    "Comments": [
+      {
+        "Author": "blog-seo",
+        "Body": "BLOG-SEO VALIDATED v1 source-review-sha256:12cbca9a4feee4495db1e6cd6e0490af3a1ad7e2461502e77f4dfd0e9a005925 artifact-sha256:9a1d4b6c2f8e037a5c1d9b4e6f2a80c3d5e7f19b2c4a6d8e0f1a3b5c7d9e1f30"
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "BLOG-TRANSLATION v1 artifact-sha256:"
+  }
+}

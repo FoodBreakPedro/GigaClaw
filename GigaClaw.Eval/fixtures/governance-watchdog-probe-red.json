@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "governance-watchdog-probe-red",
+  "Family": "governance",
+  "Agent": "system-watchdog",
+  "Scenario": "governance-watchdog-probe-red",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5033,
+    "Title": "Probe the staging CMS webhook endpoint",
+    "Status": "Todo",
+    "Assignee": "system-watchdog",
+    "Description": "The cms-dispatch-on-done automation has failed twice today. Probe the declared staging webhook endpoint and report what you find.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "target=http:"
+  }
+}

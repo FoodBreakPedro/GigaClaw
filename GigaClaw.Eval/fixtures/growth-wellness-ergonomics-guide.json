@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "growth-wellness-ergonomics-guide",
+  "Family": "growth",
+  "Agent": "wellness-coach",
+  "Scenario": "growth-wellness-ergonomics-guide",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5028,
+    "Title": "Desk ergonomics guide for remote engineers",
+    "Status": "Todo",
+    "Assignee": "wellness-coach",
+    "Description": "Write a routine desk-ergonomics guide for the Tech & Desk Workers persona: posture, eye strain, and a short mobility break routine. Draft only, not destined for publication yet.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "wellness-coach:v1 ticket=5028"
+  }
+}

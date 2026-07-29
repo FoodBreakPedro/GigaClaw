@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "dev-docs-sync-after-commit",
+  "Family": "dev",
+  "Agent": "documentalist",
+  "Scenario": "dev-docs-sync-after-commit",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5014,
+    "Title": "Documentalist pass after the sync engine commit",
+    "Status": "InProgress",
+    "Assignee": "documentalist",
+    "Description": "Automation documentalist-on-commit: a new commit landed introducing the offline queue retry policy. Ticketless in production; this run carries a ticket only so replay has a dispatch context.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "Docs updated:"
+  }
+}

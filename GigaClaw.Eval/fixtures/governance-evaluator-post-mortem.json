@@ -1,0 +1,38 @@
+{
+  "Version": 1,
+  "Id": "governance-evaluator-post-mortem",
+  "Family": "governance",
+  "Agent": "evaluator",
+  "Scenario": "governance-evaluator-post-mortem",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5032,
+    "Title": "Fix the offline queue retry backoff",
+    "Status": "Done",
+    "Assignee": "programmer",
+    "Description": "The offline sync queue retries too aggressively on a dropped connection. Add jittered exponential backoff.",
+    "Comments": [
+      {
+        "Author": "programmer",
+        "Body": "Delivered. Changed files: src/Sync/RetryPolicy.cs, src/Sync/QueueWorker.cs."
+      },
+      {
+        "Author": "committer",
+        "Body": "Committed 4f9a21e: jittered exponential backoff on the queue retry."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "verdict SHIP"
+  }
+}

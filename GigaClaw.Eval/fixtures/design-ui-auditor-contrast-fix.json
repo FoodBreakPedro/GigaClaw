@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "design-ui-auditor-contrast-fix",
+  "Family": "design",
+  "Agent": "ui-auditor",
+  "Scenario": "design-ui-auditor-contrast-fix",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5052,
+    "Title": "Audit the board toolbar redesign",
+    "Status": "Review",
+    "Assignee": "ui-designer",
+    "Description": "Target file: design/board-toolbar.html. Cobalt theme, cycle 1/2. Audit against the four anti-slop dimensions before it reaches the app source tree.",
+    "Comments": [
+      {
+        "Author": "ui-designer",
+        "Body": "UI-DESIGN v1 artifact-sha256:dc98b3cab0844f9752180816e05bf1a782964ea4ffa80d75dbe7b44f7e2f7300 — Cobalt theme, macrostructure dense-technical-console-v1."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "GIGACLAW-VERDICT v1 ui-auditor FIX"
+  }
+}

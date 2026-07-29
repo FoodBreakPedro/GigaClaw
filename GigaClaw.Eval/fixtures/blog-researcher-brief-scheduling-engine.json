@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "blog-researcher-brief-scheduling-engine",
+  "Family": "blog",
+  "Agent": "blog-researcher",
+  "Scenario": "blog-researcher-brief-scheduling-engine",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5001,
+    "Title": "Write the content brief for the offline-first sync engine",
+    "Status": "InProgress",
+    "Assignee": "blog-researcher",
+    "Description": "Produce a content brief for a launch post about the new offline-first sync engine. Target readers: technical team leads evaluating self-hosted kanban tools. Cover why the old always-online model was limiting and how the new engine changes that.",
+    "Comments": [
+      {
+        "Author": "producer",
+        "Body": "BRAND.md defines the audience as technical team leads — anchor the brief there, not individual developers."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "BLOG-BRIEF v1 artifact-sha256:"
+  }
+}

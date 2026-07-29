@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "media-image-artist-hero-still",
+  "Family": "media",
+  "Agent": "local-image-artist",
+  "Scenario": "media-image-artist-hero-still",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5041,
+    "Title": "Generate the hero still for the offline-first launch post",
+    "Status": "Todo",
+    "Assignee": "local-image-artist",
+    "Description": "Approved spec at media/specs/5041.json: kind image, provider comfyui, output media/output/5041-hero.png, approved by owner, license notes: internal use.",
+    "Comments": [
+      {
+        "Author": "approval-gatekeeper",
+        "Body": "Spec approved. Output path and license notes confirmed."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "media-image-v1:5041"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "Version": 1,
+  "Id": "governance-decision-adr-proposal",
+  "Family": "governance",
+  "Agent": "decision-engine",
+  "Scenario": "governance-decision-adr-proposal",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5031,
+    "Title": "Decide: drop the v1 export path now that the queue is durable",
+    "Status": "Todo",
+    "Assignee": "decision-engine",
+    "Description": "code-janitor flagged a stale TODO guarding removal of the v1 export path until the durable queue landed. It has landed. Decide whether to remove it now and log the decision.",
+    "Comments": [
+      {
+        "Author": "owner",
+        "Body": "Agreed the durable queue supersedes it. Log the decision so we have a record before anyone deletes it."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "DECISION-PROPOSAL v1 decision-sha256:"
+  }
+}

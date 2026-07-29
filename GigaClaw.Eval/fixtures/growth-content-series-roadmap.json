@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "growth-content-series-roadmap",
+  "Family": "growth",
+  "Agent": "content-series-planner",
+  "Scenario": "growth-content-series-roadmap",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5022,
+    "Title": "Plan the offline-first series: The Local-First Playbook",
+    "Status": "Todo",
+    "Assignee": "content-series-planner",
+    "Description": "Plan a 4-part series on going local-first, one article per week, publishing Mondays starting 2026-08-17.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "content-series-planner:v1 series-key="
+  }
+}

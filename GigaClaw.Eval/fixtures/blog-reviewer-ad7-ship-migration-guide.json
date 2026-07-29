@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "blog-reviewer-ad7-ship-migration-guide",
+  "Family": "blog",
+  "Agent": "blog-reviewer",
+  "Scenario": "blog-reviewer-ad7-ship-migration-guide",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5002,
+    "Title": "Review the AD-7 draft: offline-first sync migration guide",
+    "Status": "Review",
+    "Assignee": "blog-reviewer",
+    "Description": "---\ntitle: How the offline-first sync engine changes your workflow\nslug: offline-first-sync-migration\nexcerpt: The new sync engine keeps your board working when the network does not.\ncontentType: guide\nseo:\n  title: Offline-First Sync Migration Guide\n  description: How existing schedules and boards migrate to the offline-first sync engine, step by step.\n  primaryKeyword: offline kanban sync\nimagePrompt: A kanban board rendered on a laptop screen with a subtle offline indicator, clean editorial illustration style.\n---\n## Key takeaways\n\nThe sync engine now queues writes locally and replays them on reconnect.\n\n## Migrating your boards\n\nNo action is required: existing boards adopt the new queue on next open.\n",
+    "Comments": [
+      {
+        "Author": "content-writer",
+        "Body": "CONTENT-DRAFT v1 artifact-sha256:7cc8482dff8bfcce1ebc4424132b55e77ec42b2cee087872d05f7132070c832d — 640 words, migration section leads per the brief."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "GIGACLAW-VERDICT v1 blog-reviewer SHIP"
+  }
+}

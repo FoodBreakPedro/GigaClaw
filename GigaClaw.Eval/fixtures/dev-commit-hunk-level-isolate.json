@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "dev-commit-hunk-level-isolate",
+  "Family": "dev",
+  "Agent": "committer",
+  "Scenario": "dev-commit-hunk-level-isolate",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5012,
+    "Title": "Fix the offline queue retry backoff",
+    "Status": "Done",
+    "Assignee": "committer",
+    "Description": "The offline sync queue retries too aggressively on a dropped connection. Add jittered exponential backoff.",
+    "Comments": [
+      {
+        "Author": "programmer",
+        "Body": "Delivered. Changed files: src/Sync/RetryPolicy.cs, src/Sync/QueueWorker.cs."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "Committed 4f9a21e"
+  }
+}

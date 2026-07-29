@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "dev-janitor-nightly-dead-code-sweep",
+  "Family": "dev",
+  "Agent": "code-janitor",
+  "Scenario": "dev-janitor-nightly-dead-code-sweep",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5011,
+    "Title": "Nightly codebase hygiene scan",
+    "Status": "InProgress",
+    "Assignee": "code-janitor",
+    "Description": "Automation code-janitor-nightly: scan the next 20-30 files in the health cursor range for dead code, forgotten TODOs and convention drift. Ticketless in production; this run carries a ticket only so replay has a dispatch context.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "no behavioral change"
+  }
+}

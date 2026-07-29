@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "growth-cold-email-outreach",
+  "Family": "growth",
+  "Agent": "email-copywriter",
+  "Scenario": "growth-cold-email-outreach",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5025,
+    "Title": "Cold email: local-first playbook launch to newsletter leads",
+    "Status": "Todo",
+    "Assignee": "email-copywriter",
+    "Description": "Artifact type: cold email. Audience: prospects who downloaded a prior lead magnet (documented opt-in). Announce the Local-First Playbook series and drive a reply.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "EMAIL-COPY v1 artifact-sha256:"
+  }
+}

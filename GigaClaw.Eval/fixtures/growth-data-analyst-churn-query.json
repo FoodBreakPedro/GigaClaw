@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "growth-data-analyst-churn-query",
+  "Family": "growth",
+  "Agent": "data-analyst",
+  "Scenario": "growth-data-analyst-churn-query",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5024,
+    "Title": "Summarize trial-to-paid conversion by signup week",
+    "Status": "Todo",
+    "Assignee": "data-analyst",
+    "Description": "Query the analytics warehouse (read-only credential) for trial-to-paid conversion rate grouped by signup week over the last quarter, and chart it.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "data-analyst:v1 ticket=5024"
+  }
+}

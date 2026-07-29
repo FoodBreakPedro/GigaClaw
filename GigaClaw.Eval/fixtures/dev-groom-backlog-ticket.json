@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "dev-groom-backlog-ticket",
+  "Family": "dev",
+  "Agent": "groomer",
+  "Scenario": "dev-groom-backlog-ticket",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5013,
+    "Title": "Bug on drawer",
+    "Status": "Backlog",
+    "Assignee": "groomer",
+    "Description": "sometimes the chat drawer doesnt scroll right",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "result=complete"
+  }
+}

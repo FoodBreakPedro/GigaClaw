@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "Id": "growth-trend-reddit-brief-blocked",
+  "Family": "growth",
+  "Agent": "trend-researcher",
+  "Scenario": "growth-trend-reddit-brief-blocked",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5027,
+    "Title": "Weekly trend brief",
+    "Status": "InProgress",
+    "Assignee": "trend-researcher",
+    "Description": "Weekly scheduled trend brief. No niche named in the ticket — use the Default niche field in BRAND.md.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "community data was unavailable"
+  }
+}

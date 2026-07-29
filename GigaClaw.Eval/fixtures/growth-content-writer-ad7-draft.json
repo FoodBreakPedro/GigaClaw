@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "growth-content-writer-ad7-draft",
+  "Family": "growth",
+  "Agent": "content-writer",
+  "Scenario": "growth-content-writer-ad7-draft",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5023,
+    "Title": "Local-First Playbook, Part 1: Why offline-first",
+    "Status": "InProgress",
+    "Assignee": "content-writer",
+    "Description": "series-item:v1:series:v1:c4a7e0f3b6d9c2a5f8e1b4d7c0a3f6e9:01\n\nWrite Part 1 of the Local-First Playbook: why offline-first matters for small teams. Use the brief at content/briefs/local-first-playbook-p1-brief.md.",
+    "Comments": [
+      {
+        "Author": "content-series-planner",
+        "Body": "Part 1 anchors the whole series — keep it concrete: name the failure mode, not just the trend."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "CONTENT-DRAFT v1 artifact-sha256:"
+  }
+}

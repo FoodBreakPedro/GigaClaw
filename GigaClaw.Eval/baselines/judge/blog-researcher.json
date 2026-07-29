@@ -1,0 +1,58 @@
+{
+  "Version": 1,
+  "Agent": "blog-researcher",
+  "Judge": "deterministic",
+  "Fixtures": [
+    {
+      "Fixture": "blog-researcher-brief-scheduling-engine",
+      "Verdict": {
+        "schemaVersion": 1,
+        "agent": "blog-researcher",
+        "ticketId": 5001,
+        "verdict": "SHIP",
+        "summary": "Deterministic rubric judge scored fixture 'blog-researcher-brief-scheduling-engine' at 100/100 (100%).",
+        "categories": [
+          {
+            "name": "Dispatch behaved as declared",
+            "score": 40,
+            "max": 40,
+            "notes": "All 5 fixture expectation(s) held."
+          },
+          {
+            "name": "Stream carries no error",
+            "score": 20,
+            "max": 20,
+            "notes": "The stream carries no error event."
+          },
+          {
+            "name": "Final message is a handoff",
+            "score": 20,
+            "max": 20,
+            "notes": "Final message is 512 character(s) against a floor of 80."
+          },
+          {
+            "name": "No placeholder handoff",
+            "score": 20,
+            "max": 20,
+            "notes": "None of 4 forbidden phrase(s) appear."
+          }
+        ],
+        "vetoItems": [],
+        "evidence": [
+          {
+            "kind": "hash",
+            "ref": "sha256:474d85c9f27aef56f28f2b0a62062ff87345bee5d95a5370d70c52230f3c45df",
+            "note": "normalized replay stream for fixture 'blog-researcher-brief-scheduling-engine' (7 event(s), exit 0)"
+          },
+          {
+            "kind": "hash",
+            "ref": "sha256:2ab95a8ba33161c4d60a3c2fcf6625352ba10206f4ed8343f4c0c937028bee83",
+            "note": "rubric 'default' v1"
+          }
+        ],
+        "reviewedAtUtc": "1970-01-01T00:00:00Z",
+        "inputDigest": "sha256:474d85c9f27aef56f28f2b0a62062ff87345bee5d95a5370d70c52230f3c45df"
+      }
+    }
+  ]
+}

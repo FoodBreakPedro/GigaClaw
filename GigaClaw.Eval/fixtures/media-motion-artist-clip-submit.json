@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "media-motion-artist-clip-submit",
+  "Family": "media",
+  "Agent": "local-motion-artist",
+  "Scenario": "media-motion-artist-clip-submit",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 5044,
+    "Title": "Generate the drag-onto-calendar clip for the teaser",
+    "Status": "Todo",
+    "Assignee": "local-motion-artist",
+    "Description": "OpenMontage project teaser-5042, assets stage. Approved spec locks kind clip, provider phosphene, Apple Silicon, frames 41 (41 % 8 == 1), enhancement off with LoRA trigger words.",
+    "Comments": [
+      {
+        "Author": "local-media-director",
+        "Body": "Prior checkpoint (script lock) is approved."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "media-clip-v1:5044"
+  }
+}

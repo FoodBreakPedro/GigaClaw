@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "media-reviewer-ship-render",
+  "Family": "media",
+  "Agent": "local-media-reviewer",
+  "Scenario": "media-reviewer-ship-render",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 5043,
+    "Title": "Review the composed 15-second teaser render",
+    "Status": "Review",
+    "Assignee": "local-media-compositor",
+    "Description": "Candidate render at media/output/teaser-5042.mp4, receipt at media/receipts/job-5042.json. Independent QA gate before owner approval.",
+    "Comments": [
+      {
+        "Author": "local-media-compositor",
+        "Body": "Render complete: 1080x1920, h264, 24fps, 15.0s. render_report and final_review artifacts written."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "GIGACLAW-VERDICT v1 local-media-reviewer SHIP"
+  }
+}

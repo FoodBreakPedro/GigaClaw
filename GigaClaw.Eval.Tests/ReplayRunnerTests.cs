@@ -52,7 +52,7 @@ public sealed class ReplayRunnerTests
             .ToArray();
 
         Assert.Equal(
-            new[] { "blog", "dev", "governance", "growth", "media", "security" },
+            new[] { "blog", "design", "dev", "governance", "growth", "media", "security" },
             families.OrderBy(family => family, StringComparer.Ordinal));
 
         var result = runner.Run("all", writeReport: false);
@@ -165,6 +165,46 @@ public sealed class ReplayRunnerTests
             foreach (var path in Directory.EnumerateFiles(source.FixtureDirectory, "*.json"))
                 Assert.Contains(Path.GetFileNameWithoutExtension(path), configured);
         }
+    }
+
+    /// <summary>
+    /// Owner Q2's carried item: core shipped 33 agents against 6 replay fixtures for a long time,
+    /// which is exactly the gap <see cref="GigaClaw.Catalog.CatalogGenerator.CoreExemptReasons"/>
+    /// existed to excuse without gating the build on it (see
+    /// <c>CatalogGeneratorTests.Core_has_no_remaining_binding_gaps_now_that_every_agent_has_a_fixture</c>).
+    /// The eval-fixture authoring pass closed it by landing one fixture per missing agent — this
+    /// pins that fact at the layer that actually dispatches them, not just at the catalog's static
+    /// read of "a fixture file exists", so a future core agent added without a fixture fails a test
+    /// that enumerates and runs it, not one that only counts files.
+    /// </summary>
+    [Fact]
+    public void CoreEvalFixtureBacklog_IsClosed_EveryCoreCatalogAgentHasAReplayedFixture()
+    {
+        var catalog = GigaClaw.Eval.EvalJson.Read<GigaClaw.Catalog.SystemCatalog>(
+            Path.Combine(RepositoryRoot, "catalog.json"));
+        var coreAgents = catalog.Agents
+            .Where(agent => agent.Pack == "core")
+            .Select(agent => agent.Slug)
+            .OrderBy(slug => slug, StringComparer.Ordinal)
+            .ToArray();
+
+        var runner = new ReplayRunner(RepositoryRoot);
+
+        // Every core agent the catalog reports has at least one fixture naming it; the 33-agent
+        // list here is the same one CatalogGeneratorTests pins for EvalFixturePresent, so the two
+        // cannot silently drift apart.
+        Assert.Equal(33, coreAgents.Length);
+        var replayedCoreSlugs = catalog.Agents
+            .Where(agent => agent.Pack == "core" && agent.EvalFixturePresent)
+            .Select(agent => agent.Slug)
+            .OrderBy(slug => slug, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(coreAgents, replayedCoreSlugs);
+
+        var result = runner.Run("all", writeReport: false);
+        Assert.Equal(0, result.ExitCode);
+        var replayedAgents = result.Reports.Select(report => report.Agent).ToHashSet(StringComparer.Ordinal);
+        Assert.All(coreAgents, slug => Assert.Contains(slug, replayedAgents));
     }
 
     [Fact]
