@@ -141,9 +141,9 @@ public class UnifiedBoardTests
     {
         var src = LoadUnifiedBoard();
         Assert.Contains("UnifiedBoardSearchPlaceholder", src);
-        Assert.Contains("/board/@slug/dashboard", src);
-        Assert.Contains("/board/@slug/automations", src);
-        Assert.Contains("/board/@slug/settings", src);
+        Assert.Contains("FromAllBoards($\"/board/{slug}/dashboard\")", src);
+        Assert.Contains("FromAllBoards($\"/board/{slug}/automations\")", src);
+        Assert.Contains("FromAllBoards($\"/board/{slug}/settings\")", src);
         Assert.Contains("TogglePause(lane)", src);
         Assert.Contains("OpenChatDrawer(slug)", src);
         Assert.Contains("@onclick:stopPropagation", src);
