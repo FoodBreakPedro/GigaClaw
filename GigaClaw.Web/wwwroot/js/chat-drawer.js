@@ -2,15 +2,52 @@ window.chatDrawerScrollToBottom = function (el) {
     if (el) el.scrollTop = el.scrollHeight;
 };
 
-// Block the default newline insertion when pressing Enter (without Shift) so the
-// browser doesn't append "\n" after our Send() handler clears the textarea — that
-// would re-fire oninput and restore the just-cleared text.
-window.chatDrawerInstallEnterGuard = function (el) {
-    if (!el || el.__enterGuardInstalled) return;
-    el.__enterGuardInstalled = true;
-    el.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
-    });
+// Keep ordinary typing entirely in the browser. Blazor Server only receives the
+// completed value on Send / Inject / Enter, avoiding a SignalR event and rerender
+// for every character.
+window.chatDrawerComposer = {
+    install: function (el, dotnetRef) {
+        if (!el) return;
+        el.__chatComposerDotnetRef = dotnetRef;
+        if (!el.__chatComposerInstalled) {
+            el.__chatComposerInstalled = true;
+            el.addEventListener('input', function () {
+                window.chatDrawerComposer.sync(el);
+            });
+            el.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+                e.preventDefault();
+
+                const hasImages = el.dataset.hasImages === 'true';
+                const value = el.value || '';
+                if (!value.trim() && !hasImages) return;
+
+                el.value = '';
+                window.chatDrawerComposer.sync(el);
+                const target = el.__chatComposerDotnetRef;
+                if (target) target.invokeMethodAsync('SubmitComposerFromJs', value);
+            });
+        }
+        window.chatDrawerComposer.sync(el);
+    },
+
+    sync: function (el) {
+        if (!el) return;
+        const area = el.closest('.chat-input-area');
+        const button = area ? area.querySelector('[data-chat-submit="true"]') : null;
+        if (!button) return;
+
+        const hasImages = el.dataset.hasImages === 'true';
+        button.disabled = el.disabled || (!el.value.trim() && !hasImages);
+    },
+
+    takeValue: function (el) {
+        if (!el) return '';
+        const value = el.value || '';
+        el.value = '';
+        window.chatDrawerComposer.sync(el);
+        return value;
+    }
 };
 
 // Image paste support (#115). Watches the chat textarea for `paste` events carrying
