@@ -10,7 +10,8 @@ import sys
 import re
 
 SECRET_PATTERNS = [
-    (r'sk-[a-zA-Z0-9]{32,}', "OpenAI/Anthropic API Key"),
+    (r'sk-ant-[a-zA-Z0-9_-]{24,}', "Anthropic API Key"),
+    (r'sk-[a-zA-Z0-9]{32,}', "OpenAI API Key"),
     (r'ghp_[a-zA-Z0-9]{36}', "GitHub Personal Access Token"),
     (r'gho_[a-zA-Z0-9]{36}', "GitHub OAuth Token"),
     (r'AIzaSy[a-zA-Z0-9_-]{33}', "Google AI Studio / GCP Key"),
