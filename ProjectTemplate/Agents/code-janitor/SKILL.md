@@ -36,6 +36,26 @@ Missed schedules are recovered through `.agents/code-janitor/memory/state.json`:
 This is agent state persisted by the orchestrator's memory commit. Never include it in the janitor's
 own hygiene commit and never advance it after a partial or failed run.
 
+## Template-owned files: do not file per-project tickets
+
+Everything under `.agents/` that ships from the GigaClaw ProjectTemplate — in
+particular `.agents/scripts/*`, the per-agent `SKILL.md` files, `preamble.md`,
+and `automations.json` — is **template-owned**: identical copies exist in every
+project's workspace, and the canonical source lives in the GigaClaw repo's
+`ProjectTemplate/Agents/`. Findings in these files are never project-specific.
+
+- **Do NOT file a ticket in this project** for a finding whose subject is a
+  template-owned file. A per-project ticket would be duplicated on every other
+  board by the other janitors, and a per-workspace fix would drift from the
+  template.
+- Instead, mention the finding in your run summary output, prefixed
+  `[template]`, so it surfaces in the run log exactly once per scan without
+  creating board noise. Template fixes are made in the GigaClaw repo and
+  re-synced to workspaces by the operator.
+- Files created locally in this workspace that do NOT ship from the template
+  (venture content, project-specific scripts, code in the project's own
+  repositories) are in scope as normal — file tickets for those as usual.
+
 ## What you do (by priority)
 
 ### 1. Health report (always first)
