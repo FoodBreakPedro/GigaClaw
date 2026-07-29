@@ -1,0 +1,301 @@
+@page "/board"
+@using GigaClaw.Core.Models
+@using GigaClaw.Core.Services
+@inject ProjectService ProjectService
+@inject TicketService TicketService
+@inject ColumnService ColumnService
+@inject MemberService MemberService
+@inject GigaClaw.Web.Services.BoardUpdateNotifier BoardUpdateNotifier
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject LocalizationService L
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>@L["UnifiedBoardTitle"]</PageTitle>
+
+<div class="page-header">
+    <a href="/" class="back-link">&larr; @L["BackToProjects"]</a>
+    <h1>@L["UnifiedBoardTitle"]</h1>
+</div>
+
+@if (_lanes is null)
+{
+    <p class="empty-hint">@L["UnifiedBoardLoading"]</p>
+}
+else if (_lanes.Count == 0)
+{
+    <p class="empty-hint">@L["UnifiedBoardNoProjects"]</p>
+}
+else
+{
+    <div class="unified-board">
+        @foreach (var lane in _lanes)
+        {
+            var slug = lane.Project.Slug;
+            var collapsed = _collapsed.TryGetValue(slug, out var c) && c;
+            <div @key="slug" class="board-lane @(collapsed ? "board-lane-collapsed" : "")">
+                <div class="board-lane-header" @onclick="() => ToggleLane(slug)"
+                     title="@(collapsed ? L["UnifiedBoardExpandLane"] : L["UnifiedBoardCollapseLane"])">
+                    <span class="board-lane-caret">@(collapsed ? "▶" : "▼")</span>
+                    <h2 class="board-lane-title">@lane.Project.Name</h2>
+                    @if (lane.Project.IsPaused)
+                    {
+                        <span class="project-paused-badge">⏸ @L["Paused"]</span>
+                    }
+                    <span class="board-lane-slug">@slug</span>
+                    <span class="board-lane-ticket-total">@lane.Tickets.Count</span>
+                </div>
+
+                @if (collapsed)
+                {
+                    <div class="board-lane-summary">
+                        @foreach (var col in lane.Columns)
+                        {
+                            <span class="board-lane-summary-chip" style="--sc: @col.Color" title="@col.Name">
+                                @col.Name <b>@GetTickets(lane, col.Name).Count</b>
+                            </span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="board board-lane-columns">
+                        @foreach (var col in lane.Columns)
+                        {
+                            var colTickets = GetTickets(lane, col.Name);
+                            var isSourceLane = _draggedFromSlug == slug;
+                            var isDropHover = isSourceLane && _dragOverStatus == col.Name;
+                            <div @key="col.Id" class="column @(isDropHover ? "column-drop-hover" : "")"
+                                 style="--col-color: @col.Color"
+                                 @ondragover="() => OnDragOverColumn(slug, col.Name)"
+                                 @ondragover:preventDefault="@isSourceLane"
+                                 @ondrop="() => OnDrop(slug, col.Name)"
+                                 @ondrop:preventDefault="@isSourceLane">
+                                <div class="column-header">
+                                    <span class="status-pill" style="color: @col.Color; background: color-mix(in srgb, @col.Color 12%, transparent)">@col.Name</span>
+                                    <span class="count">@colTickets.Count</span>
+                                </div>
+                                <div class="column-body">
+                                    @foreach (var ticket in colTickets)
+                                    {
+                                        <div @key="ticket.Id"
+                                             class="ticket-card @(_draggedTicket?.Id == ticket.Id ? "dragging" : "")"
+                                             draggable="true"
+                                             @ondragstart="() => OnDragStart(slug, ticket)"
+                                             @ondragend="OnDragEnd"
+                                             @onclick="() => OpenTicket(slug, ticket.Id)">
+                                        <div class="ticket-card-top">
+                                            <span class="priority-dot priority-@GetPriorityClass(ticket.Priority)" title="@GetPriorityLabel(ticket.Priority)"></span>
+                                            <span class="ticket-id">#@ticket.Id</span>
+                                        </div>
+                                        <span class="ticket-title">@ticket.Title</span>
+                                        @if (ticket.Labels.Count > 0)
+                                        {
+                                            <div class="label-list">
+                                                @foreach (var label in ticket.Labels)
+                                                {
+                                                    <span class="label-pill" style="--lc: @label.Color">@label.Name</span>
+                                                }
+                                            </div>
+                                        }
+                                        <div class="ticket-card-bottom">
+                                            @if (!string.IsNullOrEmpty(ticket.AssignedTo))
+                                            {
+                                                <span class="assignee-badge" title="@ticket.AssignedTo">@MemberDisplayName(lane, ticket.AssignedTo)</span>
+                                            }
+                                        </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private sealed record LaneData(Project Project, List<BoardColumn> Columns, List<TicketSummary> Tickets, List<Member> Members);
+
+    private List<LaneData>? _lanes;
+    private readonly Dictionary<string, bool> _collapsed = new(StringComparer.OrdinalIgnoreCase);
+    private bool _collapsedLoaded;
+
+    // Cross-lane drag guard: a ticket can only be dropped inside the lane it came from.
+    // _draggedFromSlug + _draggedTicket identify the in-flight drag; columns compare their
+    // own lane slug against _draggedFromSlug and only set @ondragover:preventDefault / attach
+    // a working @ondrop when they match, so the browser shows its native "not allowed" cursor
+    // over every other lane and never raises a drop event there. OnDrop() also re-checks the
+    // slug server-side as a defense-in-depth guard against any client desync.
+    private string? _draggedFromSlug;
+    private TicketSummary? _draggedTicket;
+    private string? _dragOverStatus;
+
+    protected override async Task OnInitializedAsync()
+    {
+        BoardUpdateNotifier.OnProjectUpdated += OnProjectUpdatedExternal;
+        await LoadAllLanesAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_collapsedLoaded && _lanes is not null)
+        {
+            _collapsedLoaded = true;
+            try
+            {
+                var slugs = _lanes.Select(l => l.Project.Slug).ToArray();
+                var stored = await JS.InvokeAsync<Dictionary<string, bool>>("unifiedBoardStorage.getCollapsed", (object)slugs);
+                foreach (var (slug, value) in stored)
+                    _collapsed[slug] = value;
+                StateHasChanged();
+            }
+            catch { /* localStorage unavailable — lanes just default to expanded */ }
+        }
+    }
+
+    private async Task LoadAllLanesAsync()
+    {
+        var projects = await ProjectService.ListProjectsAsync();
+        // Load every lane concurrently — with 7-10 projects and a few hundred tickets each,
+        // sequential per-project round trips would make the page noticeably slow to first paint.
+        var laneTasks = projects.Select(LoadLaneAsync);
+        var lanes = await Task.WhenAll(laneTasks);
+        _lanes = lanes.OrderBy(l => l.Project.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private async Task<LaneData> LoadLaneAsync(Project project)
+    {
+        var columnsTask = ColumnService.ListColumnsAsync(project.Slug);
+        var ticketsTask = TicketService.ListTicketsAsync(project.Slug);
+        var membersTask = MemberService.ListMembersAsync(project.Slug);
+        await Task.WhenAll(columnsTask, ticketsTask, membersTask);
+        return new LaneData(project, columnsTask.Result, ticketsTask.Result, membersTask.Result);
+    }
+
+    private static List<TicketSummary> GetTickets(LaneData lane, string status) =>
+        lane.Tickets.Where(t => t.Status == status).OrderBy(t => t.SortOrder).ToList();
+
+    private void ToggleLane(string slug)
+    {
+        var newValue = !(_collapsed.TryGetValue(slug, out var current) && current);
+        _collapsed[slug] = newValue;
+        _ = JS.InvokeVoidAsync("unifiedBoardStorage.setCollapsed", slug, newValue);
+    }
+
+    private string MemberDisplayName(LaneData lane, string? slug)
+    {
+        if (string.IsNullOrEmpty(slug)) return "";
+        var member = lane.Members.FirstOrDefault(m => m.Slug == slug);
+        return member?.Name ?? slug;
+    }
+
+    private string GetPriorityLabel(TicketPriority p) => p switch
+    {
+        TicketPriority.Idea => L["PriorityIdea"],
+        TicketPriority.NiceToHave => L["PriorityNiceToHave"],
+        TicketPriority.Required => L["PriorityRequired"],
+        TicketPriority.Critical => L["PriorityCritical"],
+        _ => p.ToString()
+    };
+
+    private static string GetPriorityClass(TicketPriority p) => p switch
+    {
+        TicketPriority.Idea => "idea",
+        TicketPriority.NiceToHave => "nice",
+        TicketPriority.Required => "required",
+        TicketPriority.Critical => "critical",
+        _ => "nice"
+    };
+
+    private void OpenTicket(string slug, int ticketId) => Navigation.NavigateTo($"/board/{slug}/ticket/{ticketId}");
+
+    private void OnDragStart(string slug, TicketSummary ticket)
+    {
+        _draggedFromSlug = slug;
+        _draggedTicket = ticket;
+    }
+
+    private void OnDragEnd()
+    {
+        _draggedFromSlug = null;
+        _draggedTicket = null;
+        _dragOverStatus = null;
+    }
+
+    private void OnDragOverColumn(string slug, string status)
+    {
+        // Ignore hover updates for lanes other than the drag's source lane — this keeps the
+        // "active drop target" highlight scoped to the source lane only.
+        if (_draggedTicket is null || slug != _draggedFromSlug) return;
+        _dragOverStatus = status;
+    }
+
+    private async Task OnDrop(string slug, string newStatus)
+    {
+        if (_draggedTicket is null || slug != _draggedFromSlug)
+        {
+            // Cross-lane drop reached the server despite the client-side guard (e.g. a stale
+            // drag state) — reject it as a no-op rather than moving the ticket.
+            OnDragEnd();
+            return;
+        }
+
+        var ticketId = _draggedTicket.Id;
+        var oldStatus = _draggedTicket.Status;
+        if (oldStatus == newStatus) { OnDragEnd(); return; }
+
+        var lanes = _lanes!;
+        var targetIndex = GetTickets(lanes.First(l => l.Project.Slug == slug), newStatus).Count;
+        await TicketService.ReorderTicketAsync(slug, ticketId, newStatus, targetIndex);
+        OnDragEnd();
+
+        var idx = lanes.FindIndex(l => l.Project.Slug == slug);
+        if (idx >= 0)
+        {
+            lanes[idx] = await LoadLaneAsync(lanes[idx].Project);
+            StateHasChanged();
+        }
+    }
+
+    private void OnProjectUpdatedExternal(string slug)
+    {
+        InvokeAsync(async () =>
+        {
+            if (_lanes is null) return;
+            var idx = _lanes.FindIndex(l => l.Project.Slug == slug);
+            if (idx < 0)
+            {
+                // Unknown slug: could be a project created after this page loaded. Try to pick
+                // it up as a brand-new lane instead of silently ignoring the notification.
+                var project = await ProjectService.GetProjectAsync(slug);
+                if (project is null) return;
+                var newLane = await LoadLaneAsync(project);
+                _lanes.Add(newLane);
+                _lanes = _lanes.OrderBy(l => l.Project.Name, StringComparer.OrdinalIgnoreCase).ToList();
+                StateHasChanged();
+                return;
+            }
+
+            var refreshedProject = await ProjectService.GetProjectAsync(slug);
+            if (refreshedProject is null)
+            {
+                // Project was deleted.
+                _lanes.RemoveAt(idx);
+                StateHasChanged();
+                return;
+            }
+
+            _lanes[idx] = await LoadLaneAsync(refreshedProject);
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        BoardUpdateNotifier.OnProjectUpdated -= OnProjectUpdatedExternal;
+    }
+}
