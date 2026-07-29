@@ -1,0 +1,9 @@
+{
+  "UnifiedBoardTitle": "Tous les tableaux",
+  "AllBoardsNavLabel": "Tous les tableaux",
+  "UnifiedBoardLoading": "Chargement des tableaux…",
+  "UnifiedBoardNoProjects": "Aucun projet pour l'instant.",
+  "UnifiedBoardCollapseLane": "Replier la ligne",
+  "UnifiedBoardExpandLane": "Déplier la ligne",
+  "UnifiedBoardCrossLaneBlocked": "Les tickets ne peuvent pas se déplacer entre projets."
+}

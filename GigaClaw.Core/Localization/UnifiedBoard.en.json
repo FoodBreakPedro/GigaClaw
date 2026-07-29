@@ -1,0 +1,9 @@
+{
+  "UnifiedBoardTitle": "All Boards",
+  "AllBoardsNavLabel": "All Boards",
+  "UnifiedBoardLoading": "Loading boards…",
+  "UnifiedBoardNoProjects": "No projects yet.",
+  "UnifiedBoardCollapseLane": "Collapse lane",
+  "UnifiedBoardExpandLane": "Expand lane",
+  "UnifiedBoardCrossLaneBlocked": "Tickets can't move between projects."
+}
