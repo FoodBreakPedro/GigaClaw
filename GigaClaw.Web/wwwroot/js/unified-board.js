@@ -23,3 +23,43 @@ window.unifiedBoardStorage = {
         }
     }
 };
+
+// Native drag gestures can emit a click after dragend. The ticket card also owns
+// the click that opens its project board, so intercept that one synthetic click
+// before Blazor sees it. A genuine click always starts with a fresh pointerdown,
+// which clears the suppression candidate.
+(function installUnifiedBoardDragClickGuard() {
+    let draggedTicketKey = null;
+    let suppressTicketKey = null;
+
+    function ticketKey(card) {
+        if (!card) return null;
+        return `${card.dataset.projectSlug || ''}:${card.dataset.ticketId || ''}`;
+    }
+
+    document.addEventListener('pointerdown', function () {
+        suppressTicketKey = null;
+    }, true);
+
+    document.addEventListener('dragstart', function (event) {
+        const card = event.target instanceof Element
+            ? event.target.closest('[data-unified-ticket="true"]')
+            : null;
+        draggedTicketKey = ticketKey(card);
+    }, true);
+
+    document.addEventListener('dragend', function () {
+        suppressTicketKey = draggedTicketKey;
+        draggedTicketKey = null;
+    }, true);
+
+    document.addEventListener('click', function (event) {
+        if (!suppressTicketKey || !(event.target instanceof Element)) return;
+        const clickedCard = event.target.closest('[data-unified-ticket="true"]');
+        if (ticketKey(clickedCard) !== suppressTicketKey) return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        suppressTicketKey = null;
+    }, true);
+})();

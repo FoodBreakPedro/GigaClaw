@@ -3357,6 +3357,8 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     height: 56px;
     width: auto;
     object-fit: contain;
+    filter: brightness(1.55) saturate(1.45) contrast(1.08)
+        drop-shadow(0 3px 8px rgba(94, 73, 255, 0.28));
 }
 
 .all-boards-link { margin-left: auto; }
@@ -4683,7 +4685,52 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     padding: 0.1rem 0.55rem;
     font-size: 0.73rem;
     font-weight: 500;
+    flex-shrink: 0;
+}
+.board-lane-actions {
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+.lane-action {
+    min-height: 28px;
+    padding: 0.25rem 0.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+}
+.lane-action:hover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    color: var(--accent-hover);
+}
+.lane-action-paused {
+    color: var(--accent-hover);
+}
+.unified-page-header {
+    flex-wrap: wrap;
+}
+.unified-filter-bar {
+    min-width: min(320px, 100%);
+}
+.unified-create-project {
+    margin-left: 0;
+    padding: 0;
+}
+.unified-create-project input {
+    min-width: 220px;
 }
 .board-lane-columns {
     height: auto;
@@ -4708,6 +4755,25 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     padding: 0.2rem 0.65rem;
 }
 .board-lane-summary-chip b { color: var(--text); font-weight: 700; }
+
+@media (max-width: 900px) {
+    .board-lane-header {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .board-lane-actions {
+        width: 100%;
+        margin-left: 1.6rem;
+        justify-content: flex-start;
+    }
+
+    .unified-page-header .filter-bar,
+    .unified-page-header .create-project {
+        flex: 1 1 280px;
+        max-width: none;
+    }
+}
 
 /* Cross-lane drag rejection: only the source lane's columns ever get the
    preventDefault + drop handler wired up (see UnifiedBoard.razor), so every other

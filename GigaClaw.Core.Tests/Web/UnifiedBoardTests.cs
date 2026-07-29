@@ -34,6 +34,18 @@ public class UnifiedBoardTests
     private static string AppRazorPath() =>
         Path.Combine(RepoRoot(), "GigaClaw.Web", "Components", "App.razor");
 
+    private static string MainLayoutRazorPath() =>
+        Path.Combine(RepoRoot(), "GigaClaw.Web", "Components", "Layout", "MainLayout.razor");
+
+    private static string ProjectCreationRazorPath() =>
+        Path.Combine(RepoRoot(), "GigaClaw.Web", "Components", "ProjectCreation.razor");
+
+    private static string AppSettingsRazorPath() =>
+        Path.Combine(RepoRoot(), "GigaClaw.Web", "Components", "Pages", "AppSettings.razor");
+
+    private static string ProjectSettingsRazorPath() =>
+        Path.Combine(RepoRoot(), "GigaClaw.Web", "Components", "Pages", "ProjectSettings.razor");
+
     private static string UnifiedBoardEnJsonPath() =>
         Path.Combine(RepoRoot(), "GigaClaw.Core", "Localization", "UnifiedBoard.en.json");
 
@@ -42,11 +54,12 @@ public class UnifiedBoardTests
 
     private static string LoadUnifiedBoard() => File.ReadAllText(UnifiedBoardRazorPath());
 
-    // Case 1: the page must be routed at /board (a distinct route from /board/{Slug}).
+    // The unified board is the application default and keeps /board as a stable alias.
     [Fact]
-    public void UnifiedBoard_HasBoardRoute()
+    public void UnifiedBoard_HasRootAndBoardRoutes()
     {
         var src = LoadUnifiedBoard();
+        Assert.Contains("@page \"/\"", src);
         Assert.Contains("@page \"/board\"", src);
     }
 
@@ -65,7 +78,7 @@ public class UnifiedBoardTests
     public void UnifiedBoard_LoadsLanesConcurrently()
     {
         var src = LoadUnifiedBoard();
-        Assert.Contains("Task.WhenAll(laneTasks)", src);
+        Assert.Contains("Task.WhenAll(", src);
     }
 
     // Case 5: the page must subscribe to BoardUpdateNotifier and dispose the subscription.
@@ -114,6 +127,37 @@ public class UnifiedBoardTests
         Assert.Contains("slug != _draggedFromSlug", src);
     }
 
+    [Fact]
+    public void UnifiedBoardJs_SuppressesPostDragTicketClick()
+    {
+        var js = File.ReadAllText(UnifiedBoardJsPath());
+        Assert.Contains("data-unified-ticket", js);
+        Assert.Contains("dragend", js);
+        Assert.Contains("stopImmediatePropagation", js);
+    }
+
+    [Fact]
+    public void UnifiedBoard_ExposesProjectActionsAndGlobalSearch()
+    {
+        var src = LoadUnifiedBoard();
+        Assert.Contains("UnifiedBoardSearchPlaceholder", src);
+        Assert.Contains("/board/@slug/dashboard", src);
+        Assert.Contains("/board/@slug/automations", src);
+        Assert.Contains("/board/@slug/settings", src);
+        Assert.Contains("TogglePause(lane)", src);
+        Assert.Contains("OpenChatDrawer(slug)", src);
+        Assert.Contains("@onclick:stopPropagation", src);
+    }
+
+    [Fact]
+    public void UnifiedBoard_ContainsVisibleProjectCreationControl()
+    {
+        Assert.Contains("<ProjectCreation", LoadUnifiedBoard());
+        var creation = File.ReadAllText(ProjectCreationRazorPath());
+        Assert.Contains("NewProjectPlaceholder", creation);
+        Assert.Contains("CreateAndInitialize", creation);
+    }
+
     // Case 2: collapse state must be persisted per project slug via a JS interop helper
     // living under wwwroot/js/, not inline JS in the component.
     [Fact]
@@ -142,12 +186,39 @@ public class UnifiedBoardTests
         Assert.Contains("/js/unified-board.js", src);
     }
 
-    // Case 7: Home.razor must link to the unified board.
+    // The legacy project-card view remains available without owning the root route.
     [Fact]
-    public void HomeRazor_LinksToUnifiedBoard()
+    public void HomeRazor_UsesProjectsRouteAndLinksToUnifiedBoard()
     {
         var src = File.ReadAllText(HomeRazorPath());
-        Assert.Contains("href=\"/board\"", src);
+        Assert.Contains("@page \"/projects\"", src);
+        Assert.DoesNotContain("@page \"/\"", src);
+        Assert.Contains("href=\"/\"", src);
+    }
+
+    [Fact]
+    public void MainLayout_RendersPersistentLogoAndGlobalNavigation()
+    {
+        var src = File.ReadAllText(MainLayoutRazorPath());
+        Assert.Contains("GigaClaw-Logo-Horizontal.webp", src);
+        Assert.Contains("href=\"/\"", src);
+        Assert.Contains("href=\"/projects\"", src);
+        Assert.Contains("href=\"/settings\"", src);
+    }
+
+    [Fact]
+    public void Settings_AreSeparatedByScope()
+    {
+        var app = File.ReadAllText(AppSettingsRazorPath());
+        var project = File.ReadAllText(ProjectSettingsRazorPath());
+
+        Assert.Contains("@page \"/settings\"", app);
+        Assert.Contains("ConfigureHermes", app);
+        Assert.Contains("Settings.Language", app);
+        Assert.DoesNotContain("ConfigureHermes", project);
+        Assert.DoesNotContain("AppSettingsService", project);
+        Assert.Contains("WorkspacePath", project);
+        Assert.Contains("Members", project);
     }
 
     // Case 7: nav label localization keys must exist in both en and fr.

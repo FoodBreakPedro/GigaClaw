@@ -4,6 +4,9 @@ let _autoScroll = true;
 let _scrollEl = null;
 let _observer = null;
 let _scrollListening = false;
+let _pendingDelta = "";
+let _deltaTimer = null;
+let _dispatchQueue = Promise.resolve();
 
 function _scrollToBottom() {
     if (_scrollEl) _scrollEl.scrollTop = _scrollEl.scrollHeight;
@@ -68,22 +71,61 @@ export function start(dotnetRef, url) {
         if (!_ref) return;
         try {
             const data = JSON.parse(ev.data);
-            _ref.invokeMethodAsync("ReceiveSse", data.kind ?? "event", data.text ?? "", data.detail ?? null);
+            const kind = data.kind ?? "event";
+            const text = data.text ?? "";
+            if (kind === "content_block_delta") {
+                const prefix = "[content_block_delta] ";
+                _pendingDelta += text.startsWith(prefix) ? text.slice(prefix.length) : text;
+                if (!_deltaTimer) {
+                    _deltaTimer = setTimeout(() => {
+                        _deltaTimer = null;
+                        _flushPendingDelta();
+                    }, 60);
+                }
+                return;
+            }
+
+            _flushPendingDelta();
+            _enqueueSse(kind, text, data.detail ?? null);
         } catch {
-            _ref.invokeMethodAsync("ReceiveSse", "raw", ev.data, null);
+            _flushPendingDelta();
+            _enqueueSse("raw", ev.data, null);
         }
     };
     _es.addEventListener("end", () => {
-        if (_ref) _ref.invokeMethodAsync("StreamEnded");
-        stop();
+        const target = _ref;
+        _flushPendingDelta();
+        _dispatchQueue = _dispatchQueue
+            .then(() => target ? target.invokeMethodAsync("StreamEnded") : undefined)
+            .finally(stop);
     });
     _es.onerror = () => {
-        if (_ref) _ref.invokeMethodAsync("StreamEnded");
-        stop();
+        const target = _ref;
+        _flushPendingDelta();
+        _dispatchQueue = _dispatchQueue
+            .then(() => target ? target.invokeMethodAsync("StreamEnded") : undefined)
+            .finally(stop);
     };
 }
 
 export function stop() {
     if (_es) { try { _es.close(); } catch {} _es = null; }
+    if (_deltaTimer) { clearTimeout(_deltaTimer); _deltaTimer = null; }
+    _pendingDelta = "";
     _ref = null;
+}
+
+function _enqueueSse(kind, text, detail) {
+    const target = _ref;
+    _dispatchQueue = _dispatchQueue
+        .then(() => target ? target.invokeMethodAsync("ReceiveSse", kind, text, detail) : undefined)
+        .catch(() => undefined);
+}
+
+function _flushPendingDelta() {
+    if (!_pendingDelta) return;
+    if (_deltaTimer) { clearTimeout(_deltaTimer); _deltaTimer = null; }
+    const text = _pendingDelta;
+    _pendingDelta = "";
+    _enqueueSse("content_block_delta", text, null);
 }

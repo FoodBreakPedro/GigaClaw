@@ -1,5 +1,6 @@
 {
   "SettingsTitle": "Settings",
+  "AppLanguageHint": "Controls the language used throughout this GigaClaw server.",
   "Board": "Board",
   "WorkspacePath": "Workspace path",
   "WorkspaceHint": "Absolute path to the project repo/folder. This is where .claude/ is loaded and .agents/automations.json is read.",

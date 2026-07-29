@@ -3,6 +3,9 @@
   "AllBoardsNavLabel": "Tous les tableaux",
   "UnifiedBoardLoading": "Chargement des tableaux…",
   "UnifiedBoardNoProjects": "Aucun projet pour l'instant.",
+  "UnifiedBoardNoMatches": "Aucun ticket ne correspond à cette recherche.",
+  "UnifiedBoardSearchPlaceholder": "Rechercher dans tous les projets…",
+  "ClearSearch": "Effacer la recherche",
   "UnifiedBoardCollapseLane": "Replier la ligne",
   "UnifiedBoardExpandLane": "Déplier la ligne",
   "UnifiedBoardCrossLaneBlocked": "Les tickets ne peuvent pas se déplacer entre projets."
