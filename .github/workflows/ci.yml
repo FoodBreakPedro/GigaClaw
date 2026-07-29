@@ -88,3 +88,16 @@ jobs:
       - name: Static agent eval
         shell: bash
         run: dotnet run --project GigaClaw.Eval -c Release --no-build -- all --strict
+
+      # The one remaining KnownWindowsFailureFact (JudgeRunnerTests baseline match) is exempted,
+      # not fixed. A skipped test emits no diagnostics, which is exactly how it survived this
+      # long — so every Windows run also executes it here, non-blocking, with the field-by-field
+      # drift output the test now prints. When this step goes green consistently, remove the
+      # exemption; until the output is read, no speculative fix (that mistake was paid for once).
+      - name: Interrogate known Windows failures (non-blocking)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        shell: bash
+        env:
+          GIGACLAW_RUN_KNOWN_WINDOWS_FAILURES: "1"
+        run: dotnet test GigaClaw.Eval.Tests -c Release --no-build --nologo --filter "FullyQualifiedName~JudgeRunnerTests" --logger "console;verbosity=detailed"
