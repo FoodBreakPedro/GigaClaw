@@ -1,0 +1,535 @@
+{
+  "Version": 1,
+  "Summary": {
+    "Agents": 33,
+    "Automations": 29,
+    "EnabledAutomations": 28,
+    "ModelDefaults": 12
+  },
+  "Agents": [
+    {
+      "Slug": "approval-gatekeeper",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "governance-ops",
+        "local-media-creation"
+      ],
+      "DispatchingAutomations": [
+        "approval-gate-on-review",
+        "assignee-dispatch",
+        "assignee-resume",
+        "growth-approval-on-review",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "blog-researcher",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "content-engine"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "blog-reviewer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "content-engine"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "blog-reviewer-on-review",
+        "content-reviewer-on-review",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "blog-seo",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "content-engine"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "blog-translator",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "content-engine"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "blog-writer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "content-engine",
+        "health-performance"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "code-janitor",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "software-engineering"
+      ],
+      "DispatchingAutomations": [
+        "code-janitor-nightly"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "committer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "content-engine",
+        "governance-ops",
+        "growth-marketing",
+        "local-media-creation",
+        "software-engineering",
+        "ux-design"
+      ],
+      "DispatchingAutomations": [
+        "committer-on-done"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "competitive-analyst",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "data-intelligence"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "content-series-planner",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "health-performance"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "content-writer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [],
+      "DispatchingAutomations": [
+        "content-writer-on-inprogress",
+        "content-writer-resume"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "data-analyst",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "data-intelligence"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "decision-engine",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "governance-ops"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "decision-receipt-on-done",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "design-researcher",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "ux-design"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "documentalist",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "content-engine",
+        "data-intelligence",
+        "governance-ops",
+        "growth-marketing",
+        "health-performance",
+        "local-media-creation",
+        "software-engineering",
+        "ux-design"
+      ],
+      "DispatchingAutomations": [
+        "documentalist-on-commit"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "email-copywriter",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "growth-marketing"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "evaluator",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "content-engine",
+        "data-intelligence",
+        "governance-ops",
+        "growth-marketing",
+        "health-performance",
+        "local-media-creation",
+        "software-engineering",
+        "ux-design"
+      ],
+      "DispatchingAutomations": [
+        "evaluator-on-done"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "groomer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "software-engineering"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "groomer",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "growth-writer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "growth-marketing"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "lead-magnet-creator",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "growth-marketing"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "local-image-artist",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "local-media-creation"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "local-media-compositor",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "local-media-creation"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "local-media-director",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "local-media-creation"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "local-media-reviewer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "local-media-creation"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "local-media-reviewer-on-review",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "local-motion-artist",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "local-media-creation"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "producer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "content-engine",
+        "data-intelligence",
+        "governance-ops",
+        "growth-marketing",
+        "health-performance",
+        "local-media-creation",
+        "software-engineering",
+        "ux-design"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "owner-feedback",
+        "producer-on-subtick"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "programmer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "software-engineering",
+        "ux-design"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "qa-tester",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "software-engineering"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback",
+        "qa-on-review"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "system-watchdog",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "governance-ops",
+        "local-media-creation"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback",
+        "system-watchdog-hourly"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "trend-researcher",
+      "ContractPresent": true,
+      "ModelDefaultPresent": true,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "growth-marketing"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "ui-auditor",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "ux-design"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback",
+        "ui-audit-on-review"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "ui-designer",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "ux-design"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    },
+    {
+      "Slug": "wellness-coach",
+      "ContractPresent": true,
+      "ModelDefaultPresent": false,
+      "ResolvedModelPresent": true,
+      "Teams": [
+        "health-performance"
+      ],
+      "DispatchingAutomations": [
+        "assignee-dispatch",
+        "assignee-resume",
+        "owner-feedback"
+      ],
+      "EvalBaselinePresent": false
+    }
+  ]
+}
