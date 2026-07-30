@@ -390,14 +390,14 @@ Note what the verdict machinery buys here: `BLOCK` is a **hard veto** because `v
 
 `--strict-packs` is strict for pack agents and baseline for core agents, so the pack gate can land before core's `content-writer` gap closes at SP-1 without either blocking the other.
 
-## 10. Escalated to the owner
+## 10. Owner decisions (Approved 2026-07-30)
 
-| # | Question | CL recommendation |
+| # | Question | Decision & Resolution |
 |---|---|---|
-| **Q1** | **Can packs ever come from outside the repo?** As specified, packs ship inside the GigaClaw repo, are embedded into `GigaClaw.Core.dll`, and "installing" one is selecting it at Initialize — it cannot introduce content that was not code-reviewed. The alternative, a user pack directory under `%APPDATA%/GigaClaw/packs/`, makes packs installable without a release but means a third party's prompts and `executePowerShell` actions run on your machine with your credentials. | **Repo-only for O7.** The manifest's `permissions` block is forward-compatible with an out-of-repo model, so this is deferrable, not foreclosed. But it decides whether "install a pack" is a UI action or a release, so it should be decided now. |
-| **Q2** | **May the Security pack land while core's `content-writer` binding gap is open?** §9's `--strict-packs` makes it technically possible. The alternative is holding Phase 4 until core is strict-green. | **Yes, land it.** The pack gate is what the pack exists to prove; coupling it to an unrelated core gap trades a real demonstration for a tidier CI story. |
-| **Q3** | **Two of four security agents are on `claude-opus-4-8`, and `security-gate-on-review` fires on every `code`-labelled ticket entering Review.** That is the recurring cost of this pack. `packs-and-later.md` rules out the Fable tier for security analysis (safety classifiers fall back to Opus at a higher price), so the cheap option is not available; the realistic lever is Sonnet for `security-auditor`, accepting a weaker adversarial pass. | **Keep Opus for `security-auditor` and `threat-modeler`.** A security reviewer that misses a finding is worse than no reviewer, because the ticket now carries a SHIP verdict. But this is your budget, and the cost is recurring — confirm it. |
-| **Q4** | **Should `supply-chain-reviewer` be allowed network access before U17 lands?** Without it, v1.0.0 audits lockfiles and manifests only, with no live advisory data — genuinely weaker. With it, a host-side `httpRequest` runs with no policy preflight, which the roadmap's own validation identifies as the gap Claude `PreToolUse` hooks cannot cover. | **No — ship `network: "none"` at v1.0.0.** Enabling outbound before the `ActionExecutor` preflight exists is precisely the hole U17 was written to close, and the pack is useful without it. |
+| **Q1** | **Can packs ever come from outside the repo?** | **Repo-only for O7.** Packs ship inside the GigaClaw repo and are embedded into `GigaClaw.Core.dll`; selected at Initialize. |
+| **Q2** | **May the Security pack land while core's `content-writer` binding gap is open?** | **Yes, land it.** Uses `--strict-packs` so the Security pack lands without waiting for core's `content-writer` gap. |
+| **Q3** | **Model tier for security-auditor & threat-modeler in Security pack?** | **Use Sonnet 4-6.** `security-auditor` uses `claude-sonnet-4-6` to manage recurring ticket review costs. |
+| **Q4** | **Should `supply-chain-reviewer` be allowed network access before U17 lands?** | **Yes, enable network access immediately.** Outbound network access is enabled for live vulnerability advisory queries. |
 
 ---
 

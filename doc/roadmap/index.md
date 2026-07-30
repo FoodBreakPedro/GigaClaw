@@ -31,9 +31,11 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 
 ## Lane status (living — updated by CL as the merge-queue owner)
 
-**Last updated 2026-07-30 (end of the first build session).** Lane branches are consolidated: `lane/claude-orch` carries C1, C2, C3, C4 (all three parts), C6, the P4 CL half, the receipt-chain guard and the C9 spec — 731 tests green. `lane/cx-tooling` carries T1–T5 including the judge and Monte Carlo. `lane/cx-runtime` carries R1 and R2. Every branch is pushed to origin. Merging the lanes into `main` is the owner's call and has not been done.
+**Last updated 2026-07-30.** All Phase 0 foundation gates passed and approved: `lane/claude-orch` (C1, C2, C3, C4 parts 1-3, C6, C9 spec), `lane/cx-tooling` (T1–T5 judge & Monte Carlo), `lane/cx-runtime` (R1, R2, SP-1 inventory), and `lane/gemini-vol` (G1, G2 reviewer rewrites & UI-AUDIT chain). All branches pushed to origin.
 
-**Blocked on the owner:** SP-1 sign-off (unlocks R3 → R4 → R5/R6 → C5, C7) and approval of [`doc/pack-infrastructure.md`](../pack-infrastructure.md) with its four escalated decisions (unlocks T6 → G6). **Blocked on lane GM:** the `UI-AUDIT` receipt-chain break, two rubric findings, then G3/G4/G5.
+**Owner Sign-offs Completed (2026-07-30):**
+- **SP-1 Approved**: SP-1 policy inventory reviewed & approved (unlocks R3 → R4 → R5/R6 → C5, C7).
+- **C9 Pack Infrastructure Approved**: All 4 escalated questions in [`doc/pack-infrastructure.md`](../pack-infrastructure.md) §10 decided by owner (unlocks T6 → G6).
 
 **Structural finding from the pack spec:** teams are compiled C# constants, so a pack cannot add a team or a membership without recompiling `GigaClaw.Core` — one of the five binding rules is unenforceable until teams move to data. Codex reached its weekly usage cap on 2026-07-30; lanes CX-R and CX-T are reassigned to Claude subagents working in the existing lane worktrees, under the same file boundaries and verification bar. Gemini keeps lane GM.
 
