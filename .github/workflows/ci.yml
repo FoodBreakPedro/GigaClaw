@@ -20,14 +20,14 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # T1/T2: committed catalog artifacts must remain deterministic. The strict
-      # binding gate is enabled after the known content-writer team gap is fixed.
+      # T1/T2: committed catalog artifacts must remain deterministic. Enforces strict
+      # five-part binding checks for every agent discovered in ProjectTemplate/Agents.
       - name: Catalog drift check
         shell: pwsh
         run: |
           dotnet run --project GigaClaw.Catalog -- generate
           git diff --exit-code -- catalog.json doc/catalog.md
-          dotnet run --project GigaClaw.Catalog -- check
+          dotnet run --project GigaClaw.Catalog -- check --strict
 
       - name: Build
         run: |

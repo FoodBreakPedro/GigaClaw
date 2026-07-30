@@ -1,5 +1,8 @@
 #!/bin/bash
 #
+# DEPRECATED (2026-07-30): Replaced by the typed catalog check ('dotnet run --project GigaClaw.Catalog -- check --strict').
+# Earliest date for removal: 2026-08-06 (following one week of parallel execution in CI).
+#
 # check-automation-drift.sh - Detect drift between project automations.json and the template.
 #
 # Usage: check-automation-drift.sh <project-agents-dir> [more dirs...]
