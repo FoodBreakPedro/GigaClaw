@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
@@ -47,11 +48,17 @@ public sealed class TeamStore
 
     private readonly ProjectService _projectService;
     private readonly TicketService _ticketService;
+    private readonly AgentTeamService _roster;
 
-    public TeamStore(ProjectService projectService, TicketService ticketService)
+    /// <param name="roster">
+    /// Source of the built-in team definitions. Optional so every existing construction site keeps
+    /// working; DI hands in the registered singleton.
+    /// </param>
+    public TeamStore(ProjectService projectService, TicketService ticketService, AgentTeamService? roster = null)
     {
         _projectService = projectService;
         _ticketService = ticketService;
+        _roster = roster ?? new AgentTeamService();
     }
 
     // Inline migration in the repo's established shape: CREATE TABLE IF NOT EXISTS is idempotent,
@@ -68,10 +75,15 @@ public sealed class TeamStore
                     Description TEXT NOT NULL,
                     Icon TEXT NOT NULL,
                     Payload TEXT NOT NULL,
+                    SeedHash TEXT NULL,
                     CreatedAt TEXT NOT NULL,
                     UpdatedAt TEXT NOT NULL
                 )
             """);
+            // Databases created between C4 and the roster-as-data change have TeamDefinitions
+            // without SeedHash. Adding a nullable column rewrites no row and loses nothing: every
+            // pre-existing definition reads back as owner-authored, which is what it is.
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE TeamDefinitions ADD COLUMN SeedHash TEXT NULL");
             await d.Database.ExecuteSqlRawAsync("""
                 CREATE TABLE IF NOT EXISTS TeamRuns (
                     Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -119,6 +131,109 @@ public sealed class TeamStore
                 "CREATE INDEX IF NOT EXISTS IX_TeamTasks_TicketId ON TeamTasks(TicketId)");
         });
 
+    // ---------------------------------------------------------------- seeding
+
+    /// <summary>
+    /// Ensures the roster's teams exist as rows of this project, once per database file per
+    /// process. Runs on the first definition call rather than only at Initialize, so a project
+    /// created before the roster became data migrates on its own.
+    /// </summary>
+    private Task EnsureDefinitionsSeededAsync(string projectSlug, TodoDbContext db) =>
+        MigrationGate.RunOnceAsync(db.DbPath, "team-definition-seed", () => SeedCoreAsync(projectSlug, db));
+
+    /// <summary>
+    /// Writes the workspace's team roster (see <see cref="AgentTeamService"/>) into this project's
+    /// <c>TeamDefinitions</c>, and reports the slugs it touched.
+    /// <para>
+    /// <b>Nothing the owner authored is ever overwritten.</b> A slug with no row is inserted; a row
+    /// that is still byte-identical to what a previous seed wrote is refreshed, so a change to a
+    /// built-in team — or a pack contributing a member to one — reaches projects that already
+    /// exist; every other row is left untouched, because a null or mismatched
+    /// <see cref="TeamDefinitionRow.SeedHash"/> means a human edited it. Seeded rows are also what
+    /// makes a data-added team resolvable per project through
+    /// <see cref="TeamRunService.ResolveDefinitionAsync"/>.
+    /// </para>
+    /// </summary>
+    public async Task<IReadOnlyList<string>> SeedDefinitionsAsync(string projectSlug)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureTeamTablesAsync(db);
+        return await SeedCoreAsync(projectSlug, db);
+    }
+
+    private async Task<IReadOnlyList<string>> SeedCoreAsync(string projectSlug, TodoDbContext db)
+    {
+        var workspace = await ResolveWorkspaceAsync(projectSlug);
+        var roster = _roster.GetDefinitions(workspace);
+        if (roster.Count == 0) return [];
+
+        var slugs = roster.Select(definition => definition.Slug).ToArray();
+        var rows = await db.TeamDefinitions.Where(row => slugs.Contains(row.Slug)).ToListAsync();
+        var bySlug = rows.ToDictionary(row => row.Slug, StringComparer.OrdinalIgnoreCase);
+
+        var touched = new List<string>();
+        var now = DateTime.UtcNow;
+        foreach (var definition in roster)
+        {
+            // A structurally broken roster entry is skipped, not thrown on: one bad team must not
+            // stop the other eight from reaching a project.
+            if (definition.Validate().Count > 0) continue;
+
+            var payload = JsonSerializer.Serialize(definition, PayloadJson);
+            var hash = Sha256(payload);
+
+            if (!bySlug.TryGetValue(definition.Slug, out var row))
+            {
+                db.TeamDefinitions.Add(new TeamDefinitionRow
+                {
+                    Slug = definition.Slug,
+                    Name = definition.Name,
+                    Description = definition.Description,
+                    Icon = definition.Icon,
+                    Payload = payload,
+                    SeedHash = hash,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+                touched.Add(definition.Slug);
+                continue;
+            }
+
+            var isUntouchedSeed = row.SeedHash is not null && row.SeedHash == Sha256(row.Payload);
+            if (!isUntouchedSeed || row.SeedHash == hash) continue;
+
+            row.Name = definition.Name;
+            row.Description = definition.Description;
+            row.Icon = definition.Icon;
+            row.Payload = payload;
+            row.SeedHash = hash;
+            row.UpdatedAt = now;
+            touched.Add(definition.Slug);
+        }
+
+        if (touched.Count > 0) await db.SaveChangesAsync();
+        return touched;
+    }
+
+    /// <summary>Workspace of a project, or null when it has none — then the roster is the built-in one.</summary>
+    private async Task<string?> ResolveWorkspaceAsync(string projectSlug)
+    {
+        try
+        {
+            var project = await _projectService.GetProjectAsync(projectSlug);
+            return project is null ? null : _projectService.ResolveWorkspacePath(project);
+        }
+        catch
+        {
+            // A project that is not in the registry (or a registry that cannot be opened) still gets
+            // the built-in roster — team seeding must never be the thing that fails a project.
+            return null;
+        }
+    }
+
+    private static string Sha256(string value) =>
+        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+
     // ---------------------------------------------------------------- definitions
 
     /// <summary>
@@ -135,6 +250,7 @@ public sealed class TeamStore
 
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureTeamTablesAsync(db);
+        await EnsureDefinitionsSeededAsync(projectSlug, db);
         var now = DateTime.UtcNow;
         var row = await db.TeamDefinitions.FirstOrDefaultAsync(d => d.Slug == definition.Slug);
         if (row is null)
@@ -147,6 +263,9 @@ public sealed class TeamStore
         row.Description = definition.Description;
         row.Icon = definition.Icon;
         row.Payload = JsonSerializer.Serialize(definition, PayloadJson);
+        // This is an owner write, so the row stops being seed data: a later seed pass leaves it
+        // alone even if the roster still ships the same slug.
+        row.SeedHash = null;
         row.UpdatedAt = now;
         await db.SaveChangesAsync();
         return definition;
@@ -156,6 +275,7 @@ public sealed class TeamStore
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureTeamTablesAsync(db);
+        await EnsureDefinitionsSeededAsync(projectSlug, db);
         var row = await db.TeamDefinitions.AsNoTracking().FirstOrDefaultAsync(d => d.Slug == teamSlug);
         return row is null ? null : ReadDefinition(row.Payload, row.Slug);
     }
@@ -164,6 +284,7 @@ public sealed class TeamStore
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureTeamTablesAsync(db);
+        await EnsureDefinitionsSeededAsync(projectSlug, db);
         var rows = await db.TeamDefinitions.AsNoTracking().OrderBy(d => d.Slug).ToListAsync();
         return rows.Select(row => ReadDefinition(row.Payload, row.Slug)).ToArray();
     }
@@ -172,6 +293,7 @@ public sealed class TeamStore
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureTeamTablesAsync(db);
+        await EnsureDefinitionsSeededAsync(projectSlug, db);
         var row = await db.TeamDefinitions.FirstOrDefaultAsync(d => d.Slug == teamSlug);
         if (row is null) return false;
         db.TeamDefinitions.Remove(row);

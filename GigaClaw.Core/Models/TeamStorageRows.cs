@@ -12,6 +12,15 @@ public sealed class TeamDefinitionRow
     public string Description { get; set; } = "";
     public string Icon { get; set; } = "";
     public string Payload { get; set; } = "{}";
+
+    /// <summary>
+    /// SHA-256 of <see cref="Payload"/> as it was written by the seed pass, or null for a row the
+    /// owner authored. It is the ownership marker: a row whose payload still hashes to this value
+    /// is untouched seed data and may be refreshed from the roster, and anything else — a null hash
+    /// or a hash that no longer matches — is owner work the seed must leave exactly as it is.
+    /// </summary>
+    public string? SeedHash { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
