@@ -29,7 +29,7 @@ else
     <div class="page-header">
         @if (_editingIndex is null)
         {
-            <a class="back-link" href="/board/@Slug">&larr; @L["Board"]</a>
+            <a class="back-link" href="@ReturnTarget">&larr; @ReturnLabel</a>
         }
         else
         {
@@ -278,6 +278,11 @@ else
 
 @code {
     [Parameter] public string Slug { get; set; } = "";
+    [SupplyParameterFromQuery(Name = "returnTo")]
+    [Parameter] public string? ReturnTo { get; set; }
+
+    private string ReturnTarget => NavigationReturn.Resolve(ReturnTo, $"/board/{Slug}");
+    private string ReturnLabel => ReturnTarget == "/" ? L["AllBoardsNavLabel"] : L["Board"];
 
     private Project? _project;
     private AutomationConfig? _config;
@@ -627,6 +632,7 @@ else
         "ticketCountInColumn" => new TicketCountInColumnConditionSpec {
             Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
         "verdictIs" => new VerdictIsConditionSpec { Verdicts = new List<string> { "SHIP" } },
+        "dependenciesResolved" => new DependenciesResolvedConditionSpec { ResolvedStatuses = new List<string> { "Done" } },
         _ => new TicketInColumnConditionSpec { Columns = new List<string> { "Todo" } },
     };
 

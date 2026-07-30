@@ -37,6 +37,27 @@ public class Ticket
     public List<Comment> Comments { get; set; } = [];
     public List<ActivityEntry> Activities { get; set; } = [];
     public List<Label> Labels { get; set; } = [];
+    [System.Text.Json.Serialization.JsonIgnore]
+    public List<TicketDependency> BlockedByEdges { get; set; } = [];
+    [System.Text.Json.Serialization.JsonIgnore]
+    public List<TicketDependency> BlocksEdges { get; set; } = [];
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public List<SubTicketInfo> SubTickets { get; set; } = [];
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public List<TicketDependencyInfo> BlockedBy { get; set; } = [];
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public List<TicketDependencyInfo> Blocks { get; set; } = [];
+}
+
+/// <summary>
+/// A directed dependency edge: <see cref="BlockingTicketId"/> must be completed before
+/// <see cref="BlockedTicketId"/> can proceed.
+/// </summary>
+public sealed class TicketDependency
+{
+    public int BlockedTicketId { get; set; }
+    public Ticket BlockedTicket { get; set; } = null!;
+    public int BlockingTicketId { get; set; }
+    public Ticket BlockingTicket { get; set; } = null!;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

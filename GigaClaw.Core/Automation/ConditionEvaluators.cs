@@ -59,6 +59,18 @@ public static class ConditionEvaluators
         return c.Verdicts.Any(v => string.Equals(v, token, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// True when nothing is blocking the ticket: every <c>blockedBy</c> edge points at a ticket
+    /// in one of the resolved statuses. No edges = nothing blocking = true.
+    /// </summary>
+    public static bool DependenciesResolved(
+        DependenciesResolvedConditionSpec c,
+        IReadOnlyCollection<TicketDependencyInfo> blockedBy)
+    {
+        var resolved = c.ResolvedStatuses.Count > 0 ? c.ResolvedStatuses : ["Done"];
+        return blockedBy.All(b => resolved.Contains(b.Status));
+    }
+
     public static bool TicketAge(TicketAgeConditionSpec c, DateTime createdAt, DateTime updatedAt, DateTime now)
     {
         var field = c.Field == "updatedAt" ? updatedAt : createdAt;

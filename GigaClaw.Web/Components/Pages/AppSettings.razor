@@ -1,0 +1,114 @@
+@page "/settings"
+@inject LocalizationService L
+@inject AppSettingsService Settings
+@inject HermesAgentService Hermes
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>GigaClaw — @L["SettingsTitle"]</PageTitle>
+
+<div class="page-header">
+    <a class="back-link" href="/">&larr; @L["AllBoardsNavLabel"]</a>
+    <h1>GigaClaw — @L["SettingsTitle"]</h1>
+</div>
+
+<div class="settings-container">
+    <section class="settings-section">
+        <h2>@L["Language"]</h2>
+        <p class="settings-hint">@L["AppLanguageHint"]</p>
+        <div class="settings-row">
+            <select class="settings-input"
+                    style="max-width:200px"
+                    value="@L.Lang"
+                    @onchange="OnLangChanged">
+                <option value="en">@L["LangEn"]</option>
+                <option value="fr">@L["LangFr"]</option>
+            </select>
+        </div>
+    </section>
+
+    <section class="settings-section">
+        <h2>@L["HermesAgent"]</h2>
+        <p class="settings-hint">@L["HermesAgentHint"]</p>
+        <div class="settings-row">
+            <label class="settings-checkbox-label">
+                <input type="checkbox" @bind="_hermesEnabled" />
+                @L["Enabled"]
+            </label>
+            <input class="settings-input"
+                   placeholder="http://127.0.0.1:8642"
+                   @bind="_hermesBaseUrl"
+                   @bind:event="oninput"
+                   style="max-width:280px" />
+            <input class="settings-input"
+                   type="password"
+                   autocomplete="new-password"
+                   placeholder="@(_hermesKeyConfigured ? L["HermesKeyUnchanged"] : L["HermesApiKey"])"
+                   @bind="_hermesApiKey"
+                   @bind:event="oninput"
+                   style="max-width:240px" />
+            <button class="settings-primary" @onclick="SaveAndTestHermes" disabled="@_testingHermes">
+                @(_testingHermes ? "…" : L["SaveAndTest"])
+            </button>
+        </div>
+        @if (_hermesStatus is not null)
+        {
+            <div class="settings-status @_hermesStatus.Value.css">@_hermesStatus.Value.text</div>
+        }
+    </section>
+</div>
+
+@code {
+    private bool _hermesEnabled;
+    private string _hermesBaseUrl = "";
+    private string _hermesApiKey = "";
+    private bool _hermesKeyConfigured;
+    private bool _testingHermes;
+    private (string text, string css)? _hermesStatus;
+
+    protected override void OnInitialized()
+    {
+        L.OnLanguageChanged += OnLanguageChanged;
+        _hermesEnabled = Settings.HermesEnabled;
+        _hermesBaseUrl = Settings.HermesApiBaseUrl;
+        _hermesKeyConfigured = Settings.HermesApiKeyConfigured;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLangChanged(ChangeEventArgs e)
+    {
+        Settings.Language = (string?)e.Value ?? "en";
+    }
+
+    private async Task SaveAndTestHermes()
+    {
+        _testingHermes = true;
+        _hermesStatus = null;
+        try
+        {
+            Settings.ConfigureHermes(_hermesEnabled, _hermesBaseUrl, _hermesApiKey);
+            _hermesApiKey = "";
+            _hermesKeyConfigured = Settings.HermesApiKeyConfigured;
+            if (!_hermesEnabled)
+            {
+                _hermesStatus = (L["HermesDisabled"], "settings-status-ok");
+                return;
+            }
+
+            var result = await Hermes.ProbeAsync();
+            _hermesStatus = result.Success
+                ? (L["HermesConnected"], "settings-status-ok")
+                : (result.Message, "settings-status-err");
+        }
+        finally
+        {
+            _testingHermes = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLanguageChanged;
+    }
+}

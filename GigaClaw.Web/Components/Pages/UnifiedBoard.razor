@@ -1,0 +1,612 @@
+@page "/"
+@page "/board"
+@inject ProjectService ProjectService
+@inject TicketService TicketService
+@inject ColumnService ColumnService
+@inject MemberService MemberService
+@inject BoardUpdateNotifier BoardUpdateNotifier
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject LocalizationService L
+@inject EscapeKeyStack EscapeStack
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>@L["UnifiedBoardTitle"]</PageTitle>
+
+<div class="page-header unified-page-header">
+    <h1>@L["UnifiedBoardTitle"]</h1>
+    <div class="filter-bar unified-filter-bar">
+        <div class="filter-input-wrapper">
+            <span class="filter-icon">&#128269;</span>
+            <input class="filter-input"
+                   placeholder="@L["UnifiedBoardSearchPlaceholder"]"
+                   aria-label="@L["UnifiedBoardSearchPlaceholder"]"
+                   @bind="_filterText"
+                   @bind:event="oninput" />
+            @if (!string.IsNullOrEmpty(_filterText))
+            {
+                <button class="filter-clear"
+                        title="@L["ClearSearch"]"
+                        @onclick="() => _filterText = string.Empty">&times;</button>
+            }
+        </div>
+    </div>
+    <ProjectCreation />
+</div>
+
+@if (_lanes is null)
+{
+    <p class="empty-hint">@L["UnifiedBoardLoading"]</p>
+}
+else if (_lanes.Count == 0)
+{
+    <p class="empty-hint">@L["UnifiedBoardNoProjects"]</p>
+}
+else if (!VisibleLanes.Any())
+{
+    <p class="empty-hint">@L["UnifiedBoardNoMatches"]</p>
+}
+else
+{
+    <div class="unified-board">
+        @foreach (var lane in VisibleLanes)
+        {
+            var slug = lane.Project.Slug;
+            var collapsed = _collapsed.TryGetValue(slug, out var isCollapsed) && isCollapsed;
+            <section @key="slug" class="board-lane @(collapsed ? "board-lane-collapsed" : "")">
+                <div class="board-lane-header"
+                     @onclick="() => ToggleLane(slug)"
+                     title="@(collapsed ? L["UnifiedBoardExpandLane"] : L["UnifiedBoardCollapseLane"])">
+                    <span class="board-lane-caret">@(collapsed ? "▶" : "▼")</span>
+                    <h2 class="board-lane-title">@lane.Project.Name</h2>
+                    @if (lane.Project.IsPaused)
+                    {
+                        <span class="project-paused-badge">⏸ @L["Paused"]</span>
+                    }
+                    <span class="board-lane-slug">@slug</span>
+                    <span class="board-lane-ticket-total">@VisibleTicketCount(lane)</span>
+                    <div class="board-lane-actions">
+                        <a class="lane-action"
+                           href="@FromAllBoards($"/board/{slug}")"
+                           title="@L["KanbanView"]"
+                           @onclick:stopPropagation>@L["KanbanView"]</a>
+                        <a class="lane-action"
+                           href="@FromAllBoards($"/board/{slug}/dashboard")"
+                           title="@L["Dashboard"]"
+                           @onclick:stopPropagation>@L["Dashboard"]</a>
+                        <button class="lane-action @(lane.Project.IsPaused ? "lane-action-paused" : "")"
+                                title="@(lane.Project.IsPaused ? L["Resume"] : L["Pause"])"
+                                @onclick="() => TogglePause(lane)"
+                                @onclick:stopPropagation>
+                            @(lane.Project.IsPaused ? "▶" : "⏸")
+                        </button>
+                        <button class="lane-action"
+                                title="@L["NewInstruction"]"
+                                @onclick="() => OpenChatDrawer(slug)"
+                                @onclick:stopPropagation>&#128172;</button>
+                        <a class="lane-action"
+                           href="@FromAllBoards($"/board/{slug}/automations")"
+                           title="@L["Automations"]"
+                           @onclick:stopPropagation>&#9881;</a>
+                        <a class="lane-action"
+                           href="@FromAllBoards($"/board/{slug}/settings")"
+                           title="@L["ProjectSettings"]"
+                           @onclick:stopPropagation>&#9881;&#65039;</a>
+                    </div>
+                </div>
+
+                @if (collapsed)
+                {
+                    <div class="board-lane-summary">
+                        @foreach (var column in lane.Columns)
+                        {
+                            <span class="board-lane-summary-chip" style="--sc: @column.Color" title="@column.Name">
+                                @column.Name <b>@GetTickets(lane, column.Name).Count</b>
+                            </span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="board board-lane-columns">
+                        @foreach (var column in lane.Columns)
+                        {
+                            var columnTickets = GetTickets(lane, column.Name);
+                            var isSourceLane = _draggedFromSlug == slug;
+                            var isDropHover = isSourceLane && _dragOverStatus == column.Name;
+                            <div @key="column.Id"
+                                 class="column @(isDropHover ? "column-drop-hover" : "")"
+                                 style="--col-color: @column.Color"
+                                 data-project-slug="@slug"
+                                 data-status="@column.Name"
+                                 @ondragover="() => OnDragOverColumn(slug, column.Name)"
+                                 @ondragover:preventDefault="@isSourceLane"
+                                 @ondrop="() => OnDrop(slug, column.Name)"
+                                 @ondrop:preventDefault="@isSourceLane">
+                                <div class="column-header">
+                                    <span class="status-pill"
+                                          style="color: @column.Color; background: color-mix(in srgb, @column.Color 12%, transparent)">@column.Name</span>
+                                    <span class="count">@columnTickets.Count</span>
+                                </div>
+                                <div class="column-body">
+                                    @foreach (var ticket in columnTickets)
+                                    {
+                                        <div @key="ticket.Id"
+                                             class="ticket-card @(_draggedTicket?.Id == ticket.Id ? "dragging" : "")"
+                                             draggable="true"
+                                             data-unified-ticket="true"
+                                             data-project-slug="@slug"
+                                             data-ticket-id="@ticket.Id"
+                                             @ondragstart="() => OnDragStart(slug, ticket)"
+                                             @ondragend="OnDragEnd"
+                                             @onclick="() => OpenTicket(slug, ticket.Id)">
+                                            <div class="ticket-card-top">
+                                                <span class="priority-dot priority-@GetPriorityClass(ticket.Priority)"
+                                                      title="@GetPriorityLabel(ticket.Priority)"></span>
+                                                <span class="ticket-id">#@ticket.Id</span>
+                                            </div>
+                                            <span class="ticket-title">@ticket.Title</span>
+                                            @if (ticket.Labels.Count > 0)
+                                            {
+                                                <div class="label-list">
+                                                    @foreach (var label in ticket.Labels)
+                                                    {
+                                                        <span class="label-pill" style="--lc: @label.Color">@label.Name</span>
+                                                    }
+                                                </div>
+                                            }
+                                            <div class="ticket-card-bottom">
+                                                @if (!string.IsNullOrEmpty(ticket.AssignedTo))
+                                                {
+                                                    <span class="assignee-badge"
+                                                          title="@ticket.AssignedTo">@MemberDisplayName(lane, ticket.AssignedTo)</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                @if (lane.Columns.Count > 0 && column.Id == lane.Columns[0].Id)
+                                {
+                                    <div class="add-ticket">
+                                        <button class="add-ticket-btn"
+                                                @onclick="() => OpenCreateTicket(lane, column.Name)"
+                                                @onclick:stopPropagation>
+                                            + @L["NewTicket"]
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </div>
+}
+
+@if (_newTicketProjectSlug is not null)
+{
+    <div class="ticket-modal-overlay" @onclick="CloseCreateTicket">
+        <div class="create-popup" @onclick:stopPropagation>
+            <div class="create-popup-header">
+                <h2>@L["NewTicket"] — @_newTicketProjectName</h2>
+                <button class="close-btn" @onclick="CloseCreateTicket">&times;</button>
+            </div>
+            <div class="create-popup-body">
+                <div>
+                    <label class="field-label">@L["Title"]</label>
+                    <input class="create-input"
+                           autofocus
+                           placeholder="@L["TicketTitlePlaceholder"]"
+                           @bind="_newTicketTitle"
+                           @bind:event="oninput" />
+                </div>
+                <div>
+                    <label class="field-label">@L["DescriptionMarkdown"]</label>
+                    <textarea class="create-textarea"
+                              placeholder="@L["DescriptionPlaceholder"]"
+                              @bind="_newTicketDescription"
+                              @bind:event="oninput"></textarea>
+                </div>
+                <div>
+                    <label class="field-label">@L["Priority"]</label>
+                    <div class="priority-picker">
+                        @foreach (var priority in Enum.GetValues<TicketPriority>())
+                        {
+                            <button class="priority-option @(_newTicketPriority == priority ? "active" : "")"
+                                    @onclick="() => _newTicketPriority = priority">
+                                <span class="priority-dot priority-@GetPriorityClass(priority)"></span>
+                                @GetPriorityLabel(priority)
+                            </button>
+                        }
+                    </div>
+                </div>
+                @if (_newTicketError is not null)
+                {
+                    <div class="settings-status settings-status-err">@_newTicketError</div>
+                }
+            </div>
+            <div class="create-popup-footer">
+                <button class="cancel-btn" @onclick="CloseCreateTicket">@L["Cancel"]</button>
+                <button @onclick="CreateTicketFromLane"
+                        disabled="@(_creatingTicket || string.IsNullOrWhiteSpace(_newTicketTitle))">
+                    @(_creatingTicket ? "…" : L["CreateTicket"])
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_chatProjectSlug is not null)
+{
+    <ErrorBoundary>
+        <ChildContent>
+            <ClaudeChatDrawer @key="_chatProjectSlug"
+                              ProjectSlug="@_chatProjectSlug"
+                              OnClose="CloseChatDrawer" />
+        </ChildContent>
+        <ErrorContent Context="ex">
+            <div class="chat-drawer-overlay" @onclick="CloseChatDrawer"></div>
+            <div class="chat-drawer" style="padding:1.5rem;color:#f06b6b">
+                <strong>@L["Error"]: </strong>@ex.Message
+                <br />
+                <button @onclick="CloseChatDrawer" style="margin-top:1rem">@L["Close"]</button>
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
+}
+
+@code {
+    private sealed record LaneData(
+        Project Project,
+        List<BoardColumn> Columns,
+        List<TicketSummary> Tickets,
+        List<Member> Members);
+
+    private List<LaneData>? _lanes;
+    private readonly Dictionary<string, bool> _collapsed = new(StringComparer.OrdinalIgnoreCase);
+    private bool _collapsedLoaded;
+    private string _filterText = "";
+    private string? _chatProjectSlug;
+    private IDisposable? _escChatDrawer;
+    private string? _newTicketProjectSlug;
+    private string _newTicketProjectName = "";
+    private string _newTicketStatus = "";
+    private string _newTicketTitle = "";
+    private string _newTicketDescription = "";
+    private TicketPriority _newTicketPriority = TicketPriority.NiceToHave;
+    private string? _newTicketError;
+    private bool _creatingTicket;
+    private IDisposable? _escCreateTicket;
+
+    // A ticket can only be dropped inside the project lane it came from.
+    private string? _draggedFromSlug;
+    private TicketSummary? _draggedTicket;
+    private string? _dragOverStatus;
+
+    private IEnumerable<LaneData> VisibleLanes =>
+        _lanes is null || string.IsNullOrWhiteSpace(_filterText)
+            ? _lanes ?? []
+            : _lanes.Where(lane => ApplyFilter(lane.Tickets, lane).Any());
+
+    protected override async Task OnInitializedAsync()
+    {
+        BoardUpdateNotifier.OnProjectUpdated += OnProjectUpdatedExternal;
+        L.OnLanguageChanged += OnLanguageChanged;
+        await LoadAllLanesAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_collapsedLoaded && _lanes is not null)
+        {
+            _collapsedLoaded = true;
+            try
+            {
+                var slugs = _lanes.Select(lane => lane.Project.Slug).ToArray();
+                var stored = await JS.InvokeAsync<Dictionary<string, bool>>(
+                    "unifiedBoardStorage.getCollapsed",
+                    (object)slugs);
+                foreach (var (slug, value) in stored)
+                    _collapsed[slug] = value;
+                StateHasChanged();
+            }
+            catch
+            {
+                // localStorage unavailable; lanes remain expanded.
+            }
+        }
+    }
+
+    private async Task LoadAllLanesAsync()
+    {
+        var projects = await ProjectService.ListProjectsAsync();
+        var lanes = await Task.WhenAll(projects.Select(LoadLaneAsync));
+        _lanes = lanes.OrderBy(lane => lane.Project.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private async Task<LaneData> LoadLaneAsync(Project project)
+    {
+        var columnsTask = ColumnService.ListColumnsAsync(project.Slug);
+        var ticketsTask = TicketService.ListTicketsAsync(project.Slug);
+        var membersTask = MemberService.ListMembersAsync(project.Slug);
+        await Task.WhenAll(columnsTask, ticketsTask, membersTask);
+        return new LaneData(project, columnsTask.Result, ticketsTask.Result, membersTask.Result);
+    }
+
+    private List<TicketSummary> GetTickets(LaneData lane, string status) =>
+        ApplyFilter(lane.Tickets.Where(ticket => ticket.Status == status), lane)
+            .OrderBy(ticket => ticket.SortOrder)
+            .ToList();
+
+    private int VisibleTicketCount(LaneData lane) => ApplyFilter(lane.Tickets, lane).Count();
+
+    private IEnumerable<TicketSummary> ApplyFilter(IEnumerable<TicketSummary> tickets, LaneData lane)
+    {
+        if (string.IsNullOrWhiteSpace(_filterText)) return tickets;
+
+        foreach (var token in _filterText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (token.StartsWith('#') && int.TryParse(token[1..], out var id))
+            {
+                tickets = tickets.Where(ticket => ticket.Id == id);
+            }
+            else if (token.StartsWith('@') && token.Length > 1)
+            {
+                var assignee = token[1..];
+                tickets = tickets.Where(ticket =>
+                    ticket.AssignedTo?.Contains(assignee, StringComparison.OrdinalIgnoreCase) == true);
+            }
+            else if (token.StartsWith("project:", StringComparison.OrdinalIgnoreCase))
+            {
+                var project = token[8..];
+                if (!lane.Project.Name.Contains(project, StringComparison.OrdinalIgnoreCase)
+                    && !lane.Project.Slug.Contains(project, StringComparison.OrdinalIgnoreCase))
+                    return [];
+            }
+            else if (token.StartsWith("priority:", StringComparison.OrdinalIgnoreCase))
+            {
+                var priority = token[9..];
+                tickets = tickets.Where(ticket =>
+                    GetPriorityLabel(ticket.Priority).Contains(priority, StringComparison.OrdinalIgnoreCase)
+                    || ticket.Priority.ToString().Contains(priority, StringComparison.OrdinalIgnoreCase));
+            }
+            else if (token.StartsWith("label:", StringComparison.OrdinalIgnoreCase))
+            {
+                var label = token[6..];
+                tickets = tickets.Where(ticket =>
+                    ticket.Labels.Any(item => item.Name.Contains(label, StringComparison.OrdinalIgnoreCase)));
+            }
+            else if (token.StartsWith("by:", StringComparison.OrdinalIgnoreCase))
+            {
+                var author = token[3..];
+                tickets = tickets.Where(ticket =>
+                    ticket.CreatedBy.Contains(author, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                tickets = tickets.Where(ticket =>
+                    ticket.Title.Contains(token, StringComparison.OrdinalIgnoreCase)
+                    || lane.Project.Name.Contains(token, StringComparison.OrdinalIgnoreCase)
+                    || lane.Project.Slug.Contains(token, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        return tickets;
+    }
+
+    private void ToggleLane(string slug)
+    {
+        var collapsed = !(_collapsed.TryGetValue(slug, out var current) && current);
+        _collapsed[slug] = collapsed;
+        _ = JS.InvokeVoidAsync("unifiedBoardStorage.setCollapsed", slug, collapsed);
+    }
+
+    private async Task TogglePause(LaneData lane)
+    {
+        var updated = await ProjectService.TogglePauseAsync(lane.Project.Slug);
+        if (updated is null || _lanes is null) return;
+        var index = _lanes.IndexOf(lane);
+        if (index >= 0)
+            _lanes[index] = lane with { Project = updated };
+    }
+
+    private void OpenChatDrawer(string slug)
+    {
+        _chatProjectSlug = slug;
+        _escChatDrawer?.Dispose();
+        _escChatDrawer = EscapeStack.PushWithFocus(JS, () => InvokeAsync(() =>
+        {
+            CloseChatDrawer();
+            StateHasChanged();
+        }));
+    }
+
+    private void CloseChatDrawer()
+    {
+        _chatProjectSlug = null;
+        _escChatDrawer?.Dispose();
+        _escChatDrawer = null;
+    }
+
+    private void OpenCreateTicket(LaneData lane, string status)
+    {
+        _newTicketProjectSlug = lane.Project.Slug;
+        _newTicketProjectName = lane.Project.Name;
+        _newTicketStatus = status;
+        _newTicketTitle = "";
+        _newTicketDescription = "";
+        _newTicketPriority = TicketPriority.NiceToHave;
+        _newTicketError = null;
+        _escCreateTicket?.Dispose();
+        _escCreateTicket = EscapeStack.PushWithFocus(JS, () => InvokeAsync(() =>
+        {
+            CloseCreateTicket();
+            StateHasChanged();
+        }));
+    }
+
+    private void CloseCreateTicket()
+    {
+        if (_creatingTicket) return;
+        _newTicketProjectSlug = null;
+        _newTicketError = null;
+        _escCreateTicket?.Dispose();
+        _escCreateTicket = null;
+    }
+
+    private async Task CreateTicketFromLane()
+    {
+        if (_newTicketProjectSlug is null || string.IsNullOrWhiteSpace(_newTicketTitle))
+            return;
+
+        _creatingTicket = true;
+        _newTicketError = null;
+        var slug = _newTicketProjectSlug;
+        try
+        {
+            await TicketService.CreateTicketAsync(
+                slug,
+                _newTicketTitle.Trim(),
+                _newTicketDescription.Trim(),
+                status: _newTicketStatus,
+                priority: _newTicketPriority);
+
+            if (_lanes is not null)
+            {
+                var index = _lanes.FindIndex(lane => lane.Project.Slug == slug);
+                if (index >= 0)
+                    _lanes[index] = await LoadLaneAsync(_lanes[index].Project);
+            }
+
+            _creatingTicket = false;
+            CloseCreateTicket();
+        }
+        catch (Exception ex)
+        {
+            _newTicketError = ex.Message;
+        }
+        finally
+        {
+            _creatingTicket = false;
+        }
+    }
+
+    private string MemberDisplayName(LaneData lane, string? slug)
+    {
+        if (string.IsNullOrEmpty(slug)) return "";
+        return lane.Members.FirstOrDefault(member => member.Slug == slug)?.Name ?? slug;
+    }
+
+    private string GetPriorityLabel(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Idea => L["PriorityIdea"],
+        TicketPriority.NiceToHave => L["PriorityNiceToHave"],
+        TicketPriority.Required => L["PriorityRequired"],
+        TicketPriority.Critical => L["PriorityCritical"],
+        _ => priority.ToString()
+    };
+
+    private static string GetPriorityClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Idea => "idea",
+        TicketPriority.NiceToHave => "nice",
+        TicketPriority.Required => "required",
+        TicketPriority.Critical => "critical",
+        _ => "nice"
+    };
+
+    private static string FromAllBoards(string target) =>
+        NavigationReturn.WithReturnTo(target, "/");
+
+    private void OpenTicket(string slug, int ticketId) =>
+        Navigation.NavigateTo(FromAllBoards($"/board/{slug}/ticket/{ticketId}"));
+
+    private void OnDragStart(string slug, TicketSummary ticket)
+    {
+        _draggedFromSlug = slug;
+        _draggedTicket = ticket;
+    }
+
+    private void OnDragEnd()
+    {
+        _draggedFromSlug = null;
+        _draggedTicket = null;
+        _dragOverStatus = null;
+    }
+
+    private void OnDragOverColumn(string slug, string status)
+    {
+        if (_draggedTicket is null || slug != _draggedFromSlug) return;
+        _dragOverStatus = status;
+    }
+
+    private async Task OnDrop(string slug, string newStatus)
+    {
+        if (_draggedTicket is null || slug != _draggedFromSlug)
+        {
+            OnDragEnd();
+            return;
+        }
+
+        var ticketId = _draggedTicket.Id;
+        var oldStatus = _draggedTicket.Status;
+        if (oldStatus == newStatus)
+        {
+            OnDragEnd();
+            return;
+        }
+
+        var lanes = _lanes!;
+        var targetIndex = GetTickets(lanes.First(lane => lane.Project.Slug == slug), newStatus).Count;
+        await TicketService.ReorderTicketAsync(slug, ticketId, newStatus, targetIndex);
+        OnDragEnd();
+
+        var index = lanes.FindIndex(lane => lane.Project.Slug == slug);
+        if (index >= 0)
+        {
+            lanes[index] = await LoadLaneAsync(lanes[index].Project);
+            StateHasChanged();
+        }
+    }
+
+    private void OnProjectUpdatedExternal(string slug)
+    {
+        InvokeAsync(async () =>
+        {
+            if (_lanes is null) return;
+            var index = _lanes.FindIndex(lane => lane.Project.Slug == slug);
+            if (index < 0)
+            {
+                var project = await ProjectService.GetProjectAsync(slug);
+                if (project is null) return;
+                _lanes.Add(await LoadLaneAsync(project));
+                _lanes = _lanes.OrderBy(lane => lane.Project.Name, StringComparer.OrdinalIgnoreCase).ToList();
+                StateHasChanged();
+                return;
+            }
+
+            var refreshedProject = await ProjectService.GetProjectAsync(slug);
+            if (refreshedProject is null)
+            {
+                _lanes.RemoveAt(index);
+                StateHasChanged();
+                return;
+            }
+
+            _lanes[index] = await LoadLaneAsync(refreshedProject);
+            StateHasChanged();
+        });
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        BoardUpdateNotifier.OnProjectUpdated -= OnProjectUpdatedExternal;
+        L.OnLanguageChanged -= OnLanguageChanged;
+        _escChatDrawer?.Dispose();
+        _escCreateTicket?.Dispose();
+    }
+}

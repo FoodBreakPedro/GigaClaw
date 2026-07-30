@@ -12,9 +12,89 @@
     z-index: 1000;
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
+.app-shell {
+    min-height: 100vh;
+}
+
+.app-shell-header {
+    min-height: 70px;
+    padding: 0.55rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(15, 15, 24, 0.96);
+    position: sticky;
+    top: 0;
+    z-index: 450;
+    backdrop-filter: blur(12px);
+}
+
+.app-shell-brand {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.app-shell-brand img {
+    display: block;
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+    filter: brightness(1.55) saturate(1.45) contrast(1.08)
+        drop-shadow(0 3px 8px rgba(94, 73, 255, 0.28));
+}
+
+.app-shell-nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.app-shell-nav a {
+    padding: 0.4rem 0.75rem;
+    border-radius: 7px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: color 0.15s, background 0.15s;
+}
+
+.app-shell-nav a:hover {
+    color: var(--text);
+    background: var(--surface2);
+}
+
+.app-shell-main {
+    min-width: 0;
+}
+
+@media (max-width: 640px) {
+    .app-shell-header {
+        align-items: flex-start;
+        padding: 0.5rem 0.75rem;
     }
+
+    .app-shell-brand img {
+        height: 40px;
+    }
+
+    .app-shell-nav {
+        gap: 0.15rem;
+    }
+
+    .app-shell-nav a {
+        padding: 0.35rem 0.5rem;
+        font-size: 0.74rem;
+    }
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
