@@ -122,4 +122,24 @@ public sealed class AgentTeamServiceTests
         Assert.Contains(filtered, m => m.Slug == "local-media-reviewer");
         Assert.DoesNotContain(filtered, m => m.Slug == "programmer");
     }
+
+    [Fact]
+    public void EveryTemplateAgent_BelongsToAtLeastOneSpecialtyTeam()
+    {
+        var templateService = new AgentsTemplateService();
+        var agentSlugs = templateService.AgentSlugs();
+        Assert.NotEmpty(agentSlugs);
+
+        var specialtyTeams = _sut.GetTeams()
+            .Where(t => !t.Slug.Equals(AgentTeamService.AllTeamsSlug, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var teamedAgents = specialtyTeams
+            .SelectMany(t => t.AgentSlugs)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var unassigned = agentSlugs.Where(slug => !teamedAgents.Contains(slug)).ToList();
+
+        Assert.Empty(unassigned);
+    }
 }

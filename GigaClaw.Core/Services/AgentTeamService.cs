@@ -39,7 +39,7 @@ public sealed class AgentTeamService
             "Content Engine",
             "Blog writing, quality review, topic research, SEO & GEO auditing, and translation.",
             "✍️",
-            new[] { "blog-writer", "blog-reviewer", "blog-researcher", "blog-seo", "blog-translator", "producer", "committer", "evaluator", "documentalist" }
+            new[] { "blog-writer", "blog-reviewer", "blog-researcher", "blog-seo", "blog-translator", "content-writer", "producer", "committer", "evaluator", "documentalist" }
         ),
         TeamDefinition.FilterOnly(
             GrowthMarketingSlug,

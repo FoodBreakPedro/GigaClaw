@@ -48,11 +48,7 @@ public sealed class ProjectInitializeModelSeedTests : IClassFixture<ProjectIniti
         Assert.Equal("claude-opus-4-8", ModelOf("blog-reviewer"));
         Assert.Equal("claude-haiku-4-5", ModelOf("committer"));
 
-        // An agent absent from models.json (e.g. producer) is seeded with no explicit default —
-        // it relies on the project's FallbackModel, never a hardcoded stand-in.
-        var producer = members.RootElement.EnumerateArray()
-            .First(m => m.GetProperty("slug").GetString() == "producer");
-        Assert.Equal(JsonValueKind.Null, producer.GetProperty("defaultModel").ValueKind);
+        Assert.Equal("claude-sonnet-4-6", ModelOf("producer"));
     }
 
     public sealed class ApiFactory : WebApplicationFactory<CreateProjectRequest>
