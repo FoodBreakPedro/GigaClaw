@@ -187,7 +187,12 @@ public sealed class CoreInitManifestTests
 
     private static string Describe(List<string> missing, List<string> added, List<string> changed)
     {
-        var sb = new StringBuilder("Initialize output drifted from the golden manifest.");
+        // Counts first: xUnit truncates long assertion messages, and a list of 115 paths pushes the
+        // other two categories off the end — which is exactly the information needed to tell
+        // "written somewhere else" from "not written at all".
+        var sb = new StringBuilder(
+            $"Initialize output drifted from the golden manifest. " +
+            $"missing={missing.Count} added={added.Count} changed={changed.Count}.");
         Append(sb, "Missing (in manifest, not written)", missing);
         Append(sb, "Added (written, not in manifest)", added);
         Append(sb, "Changed content", changed);

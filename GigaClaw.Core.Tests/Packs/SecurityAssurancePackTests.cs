@@ -280,7 +280,11 @@ public class SecurityAssurancePackTests
     [Fact]
     public void Every_worked_verdict_validates_and_cites_the_evidence_kind_its_lane_requires()
     {
-        var markerPattern = new Regex(@"^GIGACLAW-VERDICT v1 (\S+) (\S+) artifact-(\S+)$", RegexOptions.Multiline);
+        // `\r?$` rather than `$`: with RegexOptions.Multiline, .NET anchors `$` immediately before
+        // a `\n`, which on a CRLF checkout is the position *after* the `\r` — and `\S+` cannot
+        // consume the `\r` because it is whitespace. So the marker never matches on Windows, where
+        // git checks these files out with CRLF. The block pattern below already allowed for it.
+        var markerPattern = new Regex(@"^GIGACLAW-VERDICT v1 (\S+) (\S+) artifact-(\S+)\r?$", RegexOptions.Multiline);
         var blockPattern = new Regex(@"```json\r?\n(\{.*?\r?\n\})\r?\n```", RegexOptions.Singleline);
 
         foreach (var slug in ExpectedAgents)
