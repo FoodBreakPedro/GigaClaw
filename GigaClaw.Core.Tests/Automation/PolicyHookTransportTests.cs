@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Json;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using GigaClaw.Core.Automation.Policy;
@@ -212,6 +214,44 @@ public class PolicyHookTransportTests
         { "echo inspection-required", PolicyToolOperation.Bash },
     };
 
+    /// <summary>
+    /// Boundary case for the conservative Bash adapter: a command that pipes or
+    /// redirects a capability call into a write target must still be reported as
+    /// that capability call. Collapsing the command to the single write path it
+    /// ends with would silently drop the outbound network access.
+    /// </summary>
+    [Theory]
+    [InlineData("curl -sS https://example.test/payload | tee outside.txt")]
+    [InlineData("curl -sS https://example.test/payload > outside.txt")]
+    public async Task Bash_write_target_does_not_absorb_the_capability_call_feeding_it(
+        string command)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(
+            client,
+            transport.Endpoint,
+            "Bash",
+            new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observations = transport.SnapshotObservations();
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.Network &&
+                    item.Target == "https://example.test/payload");
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.FileWrite &&
+                    item.Target == "outside.txt");
+        // Both capabilities are reported exactly once: the adapter de-duplicates the
+        // segment-derived and pattern-derived calls instead of dropping either one.
+        Assert.Equal(2, observations.Count);
+    }
+
     [Fact]
     public async Task Malformed_hook_input_is_a_block_observation_not_a_transport_denial()
     {
@@ -319,6 +359,93 @@ public class PolicyHookTransportTests
             caseSensitivity: PathCaseSensitivity.Sensitive);
         Assert.True(policy.IsValid, policy.Diagnostic);
         return policy;
+    }
+}
+
+/// <summary>
+/// Drain lifecycle of the run-scoped session. <c>ClaudeRunner</c> calls
+/// <see cref="PolicyHookRunSession.StopAndDrainAsync"/> before it publishes
+/// <c>policy-violation/v1</c> events and completes the run, so anything the stop
+/// does not wait for is a violation that never reaches the persisted run log.
+/// </summary>
+public class PolicyHookRunSessionLifecycleTests
+{
+    [Fact]
+    public async Task Observation_in_flight_at_stop_is_drained_before_the_snapshot_is_read()
+    {
+        using var tmp = new TempDir();
+        var policy = await PolicyHookTransportTests.LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var session = await PolicyHookRunSession.StartAsync(policy, "run-drain");
+        var endpoint = await ClaudeHookSettings.ReadAndValidateAsync(session.SettingsPath);
+        var body = Encoding.UTF8.GetBytes(
+            """{"session_id":"session-drain","cwd":"/workspace","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"doc/late.md"},"tool_use_id":"toolu_late"}""");
+
+        // A hook exchange that the agent started but has not finished sending when the
+        // run ends: headers and all but the final body byte are on the wire.
+        using var inFlight = new TcpClient();
+        await inFlight.ConnectAsync(IPAddress.Loopback, endpoint.Port);
+        var stream = inFlight.GetStream();
+        await stream.WriteAsync(Encoding.ASCII.GetBytes(
+            $"POST {endpoint.AbsolutePath} HTTP/1.1\r\n" +
+            $"Host: 127.0.0.1:{endpoint.Port}\r\n" +
+            "Content-Type: application/json\r\n" +
+            $"Content-Length: {body.Length}\r\n" +
+            "Connection: close\r\n\r\n"));
+        await stream.WriteAsync(body.AsMemory(0, body.Length - 1));
+        await stream.FlushAsync();
+
+        // The listener accepts connections in order, so a later request that completes
+        // proves the partial one above is already accepted and parked in the transport.
+        using var client = PolicyHookTransportTests.NewClient();
+        using var acknowledgement = await PolicyHookTransportTests.PostAcknowledgementAsync(
+            client,
+            endpoint);
+        Assert.True(acknowledgement.IsSuccessStatusCode);
+        Assert.True(session.WasAcknowledged);
+        Assert.Empty(session.SnapshotObservations());
+
+        // The exchange only finishes after the stop has begun. A stop that does not
+        // drain returns first and the observation is lost.
+        var release = Task.Run(async () =>
+        {
+            await Task.Delay(300);
+            await stream.WriteAsync(body.AsMemory(body.Length - 1));
+            await stream.FlushAsync();
+        });
+
+        await session.StopAndDrainAsync().WaitAsync(TimeSpan.FromSeconds(15));
+
+        var violation = Assert.Single(session.SnapshotObservations());
+        Assert.Equal("programmer", violation.Agent);
+        Assert.Equal("Write", violation.Tool);
+        Assert.Equal("toolu_late", violation.ToolUseId);
+        Assert.Equal(PolicyToolOperation.FileWrite, violation.Operation);
+        Assert.Equal("doc/late.md", violation.Target);
+        Assert.Equal(PolicyDecisionKind.Warn, violation.Decision);
+        await release;
+
+        // Stopping again is a no-op rather than a second drain or a throw.
+        await session.StopAndDrainAsync();
+        Assert.Single(session.SnapshotObservations());
+    }
+
+    [Fact]
+    public async Task Stopping_a_session_with_no_observations_is_idempotent_and_removes_its_settings()
+    {
+        using var tmp = new TempDir();
+        var policy = await PolicyHookTransportTests.LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var session = await PolicyHookRunSession.StartAsync(policy, "run-clean");
+        Assert.True(File.Exists(session.SettingsPath));
+
+        await session.StopAndDrainAsync();
+        await session.StopAndDrainAsync();
+
+        Assert.Empty(session.SnapshotObservations());
+        Assert.False(session.WasAcknowledged);
+        Assert.Equal(0, session.AcknowledgementCount);
+
+        await session.DisposeAsync();
+        Assert.False(File.Exists(session.SettingsPath));
     }
 }
 
