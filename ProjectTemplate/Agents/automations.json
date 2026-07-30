@@ -1781,8 +1781,8 @@
     },
     {
       "id": "content-verdict-gate-ship-to-done",
-      "name": "Verdict gate (AD-7, OFF until blog-reviewer's AD-7 protocol emits GIGACLAW-VERDICT): SHIP marks the draft ready-for-cms",
-      "enabled": false,
+      "name": "Verdict gate (AD-7): SHIP marks the draft ready-for-cms",
+      "enabled": true,
       "trigger": {
         "type": "ticketCommentAdded",
         "pollSeconds": 120,
@@ -1842,8 +1842,8 @@
     },
     {
       "id": "content-verdict-gate-repair-round",
-      "name": "Verdict gate (AD-7, OFF until blog-reviewer's AD-7 protocol emits GIGACLAW-VERDICT): FIX returns the draft to content-writer",
-      "enabled": false,
+      "name": "Verdict gate (AD-7): FIX returns the draft to content-writer",
+      "enabled": true,
       "trigger": {
         "type": "ticketCommentAdded",
         "pollSeconds": 120,
@@ -1909,8 +1909,8 @@
     },
     {
       "id": "content-verdict-gate-repair-exhausted",
-      "name": "Verdict gate (AD-7, OFF until blog-reviewer's AD-7 protocol emits GIGACLAW-VERDICT): a spent repair budget escalates to the owner",
-      "enabled": false,
+      "name": "Verdict gate (AD-7): a spent repair budget escalates to the owner",
+      "enabled": true,
       "trigger": {
         "type": "ticketCommentAdded",
         "pollSeconds": 120,
@@ -1959,8 +1959,8 @@
     },
     {
       "id": "content-verdict-gate-block-escalate",
-      "name": "Verdict gate (AD-7, OFF until blog-reviewer's AD-7 protocol emits GIGACLAW-VERDICT): BLOCK, INVALID or MISSING blocks the draft with a receipt",
-      "enabled": false,
+      "name": "Verdict gate (AD-7): BLOCK, INVALID or MISSING blocks the draft with a receipt",
+      "enabled": true,
       "trigger": {
         "type": "ticketCommentAdded",
         "pollSeconds": 120,

@@ -336,12 +336,16 @@ public class TemplateAutomationContractTests
     }
 
     /// <summary>
-    /// The AD-7 arms ship switched off on purpose: blog-reviewer's AD-7 protocol still answers with
-    /// `CONTENT-REVIEW` markers and no typed verdict, so enabling them would read as MISSING and
-    /// block every content-pipeline draft. This test pins the reason to the flag.
+    /// The AD-7 arms shipped switched off while blog-reviewer's AD-7 protocol still answered with
+    /// `CONTENT-REVIEW` markers alone: enabling them then would have read as MISSING and blocked
+    /// every content-pipeline draft. The protocol now emits a typed verdict beside those markers,
+    /// so the arms are live. What this test pins is the condition that made switching them on safe:
+    /// freshness must stay off, because under AD-7 the draft is the ticket description and
+    /// content-writer deletes its scratch file before exiting, so no file can ever hash to
+    /// `inputDigest`. Turn freshness on here and every AD-7 verdict resolves STALE.
     /// </summary>
     [Fact]
-    public void The_ad7_arms_stay_off_until_the_ad7_protocol_emits_a_typed_verdict()
+    public void The_ad7_arms_are_live_and_never_require_a_fresh_workspace_artifact()
     {
         var config = LoadConfig();
         var ad7 = config.Automations.Where(a => a.Id.StartsWith("content-verdict-gate-", StringComparison.Ordinal)).ToList();
@@ -349,13 +353,53 @@ public class TemplateAutomationContractTests
 
         foreach (var automation in ad7)
         {
-            Assert.False(automation.Enabled, $"'{automation.Id}' must stay disabled.");
+            Assert.True(automation.Enabled, $"'{automation.Id}' must be enabled.");
             Assert.Contains("AD-7", automation.Name!, StringComparison.Ordinal);
-            // The freshness decision is the point of the arm, so it must survive being switched on.
             Assert.All(
                 automation.Conditions.OfType<VerdictIsConditionSpec>(),
                 c => Assert.False(c.RequireFreshArtifact));
         }
+    }
+
+    /// <summary>
+    /// The AD-7 pipeline needs the same four arms every file-based pipeline has — advance, repair,
+    /// escalate on a spent budget, and block. A gate missing its block arm passes a ticket on an
+    /// unreadable verdict, which is the failure the gate exists to prevent.
+    /// </summary>
+    [Fact]
+    public void The_ad7_pipeline_covers_ship_fix_exhaustion_and_block()
+    {
+        var config = LoadConfig();
+        var ad7 = config.Automations
+            .Where(a => a.Id.StartsWith("content-verdict-gate-", StringComparison.Ordinal))
+            .ToDictionary(a => a.Id, StringComparer.Ordinal);
+
+        foreach (var id in new[]
+                 {
+                     "content-verdict-gate-ship-to-done",
+                     "content-verdict-gate-repair-round",
+                     "content-verdict-gate-repair-exhausted",
+                     "content-verdict-gate-block-escalate",
+                 })
+        {
+            Assert.True(ad7.ContainsKey(id), $"AD-7 pipeline is missing '{id}'.");
+        }
+
+        var verdicts = ad7.Values
+            .SelectMany(a => a.Conditions.OfType<VerdictIsConditionSpec>())
+            .SelectMany(c => c.Verdicts)
+            .ToHashSet(StringComparer.Ordinal);
+
+        // MISSING is the load-bearing one: a reviewer that answers in prose must block, not pass.
+        foreach (var outcome in new[] { "SHIP", "FIX", "BLOCK", "MISSING" })
+        {
+            Assert.Contains(outcome, verdicts);
+        }
+
+        // Every AD-7 arm gates on blog-reviewer's own verdict, never on another agent's.
+        Assert.All(
+            ad7.Values.SelectMany(a => a.Conditions.OfType<VerdictIsConditionSpec>()),
+            c => Assert.Equal("blog-reviewer", c.Agent));
     }
 
     private static string FindRepositoryRoot()

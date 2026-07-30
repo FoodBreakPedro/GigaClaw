@@ -12,10 +12,11 @@ public sealed class CatalogGeneratorTests
 
         Assert.Equal(33, catalog.Summary.Agents);
         Assert.Equal(33, catalog.Summary.Contracts);
-        // 29 before C2 + the 14 verdict gate arms (10 live, 4 AD-7 arms that ship switched off
-        // until blog-reviewer's AD-7 protocol emits a typed verdict).
+        // 29 before C2 + the 14 verdict gate arms, all live now that blog-reviewer's AD-7 protocol
+        // emits a typed verdict beside its CONTENT-REVIEW markers. Enabled trails total by one:
+        // `weekly-ticket-example` is a shipped-off sample, not a gate.
         Assert.Equal(43, catalog.Summary.Automations);
-        Assert.Equal(38, catalog.Summary.EnabledAutomations);
+        Assert.Equal(42, catalog.Summary.EnabledAutomations);
         Assert.Equal(33, catalog.Summary.ExplicitModelMappings);
         Assert.Equal(9, catalog.Summary.Teams);
         // 15 at T1 + the five contract files lane CL added (schema_check, verdict_contract,

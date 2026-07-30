@@ -4,7 +4,7 @@
     "Agents": 33,
     "Contracts": 33,
     "Automations": 43,
-    "EnabledAutomations": 38,
+    "EnabledAutomations": 42,
     "ExplicitModelMappings": 33,
     "Teams": 9,
     "Scripts": 20
@@ -229,12 +229,11 @@
         "content-engine"
       ],
       "EnabledDispatchingAutomations": [
+        "content-verdict-gate-repair-round",
         "content-writer-on-inprogress",
         "content-writer-resume"
       ],
-      "DisabledDispatchingAutomations": [
-        "content-verdict-gate-repair-round"
-      ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true
     },
     {
@@ -1222,13 +1221,13 @@
     },
     {
       "Id": "content-verdict-gate-ship-to-done",
-      "Enabled": false,
+      "Enabled": true,
       "Agents": [],
       "Models": []
     },
     {
       "Id": "content-verdict-gate-repair-round",
-      "Enabled": false,
+      "Enabled": true,
       "Agents": [
         "content-writer"
       ],
@@ -1236,13 +1235,13 @@
     },
     {
       "Id": "content-verdict-gate-repair-exhausted",
-      "Enabled": false,
+      "Enabled": true,
       "Agents": [],
       "Models": []
     },
     {
       "Id": "content-verdict-gate-block-escalate",
-      "Enabled": false,
+      "Enabled": true,
       "Agents": [],
       "Models": []
     }
