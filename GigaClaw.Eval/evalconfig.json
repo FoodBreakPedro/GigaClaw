@@ -1,0 +1,30 @@
+{
+  "Version": 1,
+  "ArtifactRoot": "artifacts/eval",
+  "BaselineRoot": "GigaClaw.Eval/baselines",
+  "PromptBudget": {
+    "Source": "ProjectTemplate/Agents/{agent}/SKILL.md",
+    "Unit": "utf8Bytes",
+    "WarningThreshold": 12288,
+    "MaximumThreshold": 16384
+  },
+  "Replay": {
+    "FixtureRoot": "GigaClaw.Eval/fixtures",
+    "ArtifactSubdirectory": "replay",
+    "TimeoutSeconds": 120
+  },
+  "Judge": {
+    "RubricRoot": "GigaClaw.Eval/rubrics",
+    "ArtifactSubdirectory": "judge",
+    "BaselineSubdirectory": "judge",
+    "ShipThresholdPercent": 90,
+    "LlmTolerancePercent": 10
+  },
+  "MonteCarlo": {
+    "ArtifactSubdirectory": "montecarlo",
+    "DefaultRuns": 5,
+    "MaxRuns": 20,
+    "MaxSpendUsd": 5.0,
+    "MinimumSampleForInterval": 5
+  }
+}

@@ -4,6 +4,7 @@ obj/
 publish/
 publish-*/
 TestResults/
+/artifacts/eval/
 
 # User-specific files
 *.user

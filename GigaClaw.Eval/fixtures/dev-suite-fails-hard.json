@@ -1,0 +1,26 @@
+{
+  "Version": 1,
+  "Id": "dev-suite-fails-hard",
+  "Family": "dev",
+  "Agent": "qa-tester",
+  "Scenario": "dev-suite-fails-hard",
+  "MaxTurns": 3,
+  "Ticket": {
+    "Id": 4106,
+    "Title": "Run the regression suite against the scheduling branch",
+    "Status": "InProgress",
+    "Assignee": "qa-tester",
+    "Description": "Run the full regression suite against lane/scheduling and report the result. The suite currently cannot start because the isolated test instance fails to bind its port.",
+    "Comments": []
+  },
+  "Expect": {
+    "ExitCode": 1,
+    "RunStatus": "Failed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "could not start"
+  }
+}

@@ -34,6 +34,15 @@ jobs:
           dotnet build GigaClaw.Web -c Release --nologo
           dotnet build GigaClaw.ClaudeMock -c Release --nologo
           dotnet build GigaClaw.Core.Tests -c Release --nologo
+          dotnet build GigaClaw.Eval -c Release --nologo
+          dotnet build GigaClaw.Eval.Tests -c Release --nologo
 
       - name: Test
-        run: dotnet test GigaClaw.Core.Tests -c Release --no-build --nologo --logger "console;verbosity=minimal"
+        run: |
+          dotnet test GigaClaw.Core.Tests -c Release --no-build --nologo --logger "console;verbosity=minimal"
+          dotnet test GigaClaw.Eval.Tests -c Release --no-build --nologo --logger "console;verbosity=minimal"
+
+      # T4: committed static baselines are the reviewed policy snapshot. Baseline mode
+      # still fails malformed inputs and baseline drift while reporting known findings.
+      - name: Static agent eval
+        run: dotnet run --project GigaClaw.Eval -c Release --no-build -- all

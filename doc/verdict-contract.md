@@ -116,8 +116,8 @@ Cost is not plumbed separately: the loop dispatches through the ordinary `runAge
 ## Consumers
 
 - **Gate** — `verdictIs` gates ticket exit on a valid verdict instead of prose. Invalid or stale ⇒ Blocked with a receipt.
-- **Repair loop** — `repairBudget` bounds the `FIX` → repair → re-review cycle and escalates on exhaustion (above).
-- **Eval judge** — the eval harness scores agents with the same shape, so an eval verdict and a review verdict are comparable objects.
+- **Repair loop** — a `FIX` verdict re-dispatches the producing agent with the failed categories and veto items injected, capped by `maxReviewCycles` from [`contracts.json`](../ProjectTemplate/Agents/contracts.json).
+- **Eval judge** — the eval harness scores agents with the same shape, so an eval verdict and a review verdict are comparable objects. Its deterministic rubric judge is a pure function of the replayed stream, so it stamps `reviewedAtUtc` with the Unix epoch and cites `hash` evidence only (see the non-file case above); its opt-in real-LLM judge records the model, CLI version and settings beside the verdict and is explicitly informational. See [`GigaClaw.Eval/README.md`](../GigaClaw.Eval/README.md).
 
 Worked examples (one per gating reviewer) and the rejection corpus live in `GigaClaw.Core.Tests/Fixtures/verdicts/`; `TemplateVerdictContractTests` runs the validator against all of them, so a schema edit that breaks a reviewer fails the build. `RepairLoopTests` covers the loop end to end over a real project, including a rebuilt executor that must resume the count rather than restart it.
 

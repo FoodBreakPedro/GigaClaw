@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "media-storyboard-teaser",
+  "Family": "media",
+  "Agent": "local-media-director",
+  "Scenario": "media-storyboard-teaser",
+  "MaxTurns": 5,
+  "Ticket": {
+    "Id": 4404,
+    "Title": "Storyboard the 15-second teaser for the scheduling rework",
+    "Status": "InProgress",
+    "Assignee": "local-media-director",
+    "Description": "Break a 15-second teaser into shots: one shot per idea, each with a duration, a visual description, and the on-screen text. Local generation only, no stock footage, 1080x1920 vertical.",
+    "Comments": [
+      {
+        "Author": "approval-gatekeeper",
+        "Body": "The storyboard needs sign-off before any frame is generated."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "awaiting sign-off"
+  }
+}

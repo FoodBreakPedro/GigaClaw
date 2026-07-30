@@ -1,0 +1,70 @@
+{
+  "Version": 1,
+  "Agent": "approval-gatekeeper",
+  "Judge": "deterministic",
+  "Fixtures": [
+    {
+      "Fixture": "governance-reject-unscoped-release",
+      "Verdict": {
+        "schemaVersion": 1,
+        "agent": "approval-gatekeeper",
+        "ticketId": 4505,
+        "verdict": "SHIP",
+        "summary": "Deterministic rubric judge scored fixture 'governance-reject-unscoped-release' at 100/100 (100%).",
+        "categories": [
+          {
+            "name": "Dispatch behaved as declared",
+            "score": 20,
+            "max": 20,
+            "notes": "All 5 fixture expectation(s) held."
+          },
+          {
+            "name": "Stated a decision",
+            "score": 20,
+            "max": 20,
+            "notes": "Marker 'rejected' present."
+          },
+          {
+            "name": "Cited the blocking conditions",
+            "score": 25,
+            "max": 25,
+            "notes": "All 2 required marker(s) present."
+          },
+          {
+            "name": "Told the requester how to return",
+            "score": 15,
+            "max": 15,
+            "notes": "Marker 're-request' present."
+          },
+          {
+            "name": "Did not waive the gate",
+            "score": 10,
+            "max": 10,
+            "notes": "None of 4 forbidden phrase(s) appear."
+          },
+          {
+            "name": "Substantive decision record",
+            "score": 10,
+            "max": 10,
+            "notes": "Final message is 278 character(s) against a floor of 150."
+          }
+        ],
+        "vetoItems": [],
+        "evidence": [
+          {
+            "kind": "hash",
+            "ref": "sha256:803e4ba6e644cd714e87add34d1f588bb54ac38ae57e72abbd9ca55800cb7709",
+            "note": "normalized replay stream for fixture 'governance-reject-unscoped-release' (5 event(s), exit 0)"
+          },
+          {
+            "kind": "hash",
+            "ref": "sha256:e8787f2b0ea656138767d5759ad4a795664681511fbadd9d77e9c02e8f34fde6",
+            "note": "rubric 'approval-gatekeeper' v1"
+          }
+        ],
+        "reviewedAtUtc": "1970-01-01T00:00:00Z",
+        "inputDigest": "sha256:803e4ba6e644cd714e87add34d1f588bb54ac38ae57e72abbd9ca55800cb7709"
+      }
+    }
+  ]
+}

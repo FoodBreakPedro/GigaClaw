@@ -29,6 +29,11 @@ public sealed class CatalogGeneratorTests
         Assert.Contains("scripts/content_contract.py", catalog.Scripts);
         Assert.Equal(9, catalog.Teams.Count);
         Assert.Equal(29, catalog.Automations.Count);
+        Assert.All(
+            catalog.Agents,
+            agent => Assert.True(
+                agent.EvalBaselinePresent,
+                $"Missing committed eval baseline for {agent.Slug}."));
     }
 
     [Fact]
@@ -63,6 +68,7 @@ public sealed class CatalogGeneratorTests
 
         var agent = Assert.Single(catalog.Agents);
         Assert.Equal("direct-agent", agent.Slug);
+        Assert.False(agent.EvalBaselinePresent);
         var gaps = CatalogGenerator.FindBindingGaps(catalog);
         Assert.Contains(gaps, gap => gap.Contains("model mapping", StringComparison.Ordinal));
         Assert.Contains(gaps, gap => gap.Contains("team", StringComparison.Ordinal));

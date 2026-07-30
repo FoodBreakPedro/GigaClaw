@@ -1,0 +1,36 @@
+{
+  "Version": 1,
+  "Id": "governance-reject-unscoped-release",
+  "Family": "governance",
+  "Agent": "approval-gatekeeper",
+  "Scenario": "governance-reject-unscoped-release",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 4505,
+    "Title": "Approve the unscheduled production release of the scheduling engine",
+    "Status": "Review",
+    "Assignee": "approval-gatekeeper",
+    "Description": "A release to production is requested outside the release window. Decide whether it may proceed. The request carries no rollback plan and no owner sign-off.",
+    "Comments": [
+      {
+        "Author": "committer",
+        "Body": "The branch is green but I have not written a rollback path yet."
+      },
+      {
+        "Author": "system-watchdog",
+        "Body": "Two automation runs are still in flight against the same workspace."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "Rejected"
+  }
+}

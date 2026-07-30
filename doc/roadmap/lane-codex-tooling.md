@@ -75,9 +75,9 @@ Verification bar: existing suite green in Release plus explicit build/test comma
 **Description:** Canned-ticket replay dispatches via the mock CLI (hermetic) or real CLI (opt-in, costed) against fixture tickets. A deterministic golden/rule judge makes mock replay CI-stable. An optional LLM judge scores the same output against the agent rubric using CL's A11 verdict schema, recording model/version/settings and tolerances. Monte Carlo mode applies only to real model runs (N runs, variance/confidence interval, hard cost cap).
 
 **Acceptance criteria:**
-- [ ] ≥1 fixture ticket per pipeline family (dev, blog, growth, media, governance); fixtures live in `GigaClaw.Eval/fixtures/`
-- [ ] Both judges emit schema-valid verdicts; same fixture + mock + deterministic judge is byte-identical, while LLM-judge variance is measured rather than asserted away
-- [ ] Monte Carlo mode caps cost and prints per-run + aggregate cost
+- [x] ≥1 fixture ticket per pipeline family (dev, blog, growth, media, governance); fixtures live in `GigaClaw.Eval/fixtures/`
+- [x] Both judges emit schema-valid verdicts; same fixture + mock + deterministic judge is byte-identical, while LLM-judge variance is measured rather than asserted away
+- [x] Monte Carlo mode caps cost and prints per-run + aggregate cost
 
 **Dependencies:** T4, A11 schema frozen (CL, SP-1→SP-2 window). **Size:** L → split: replay runner, then judge, then Monte Carlo.
 

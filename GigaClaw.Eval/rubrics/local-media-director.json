@@ -1,0 +1,49 @@
+{
+  "Version": 1,
+  "Agent": "local-media-director",
+  "Description": "A media-director run is judged on confirming the render target before planning shots, producing a spec-complete storyboard, accounting for the runtime, and never rendering ahead of sign-off.",
+  "Criteria": [
+    {
+      "Name": "Dispatch behaved as declared",
+      "Check": "replay-expectations",
+      "Max": 20,
+      "Veto": "replay-expectation-unmet",
+      "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
+    },
+    {
+      "Name": "Confirmed the render target first",
+      "Check": "event-kinds-present",
+      "Max": 15,
+      "Values": ["tool_use"],
+      "Statement": "Shots were laid out without reading the render profile."
+    },
+    {
+      "Name": "Storyboard is spec-complete",
+      "Check": "final-text-contains-all",
+      "Max": 20,
+      "Values": ["duration", "1080x1920"],
+      "Statement": "A storyboard without per-shot duration and a stated frame size cannot be rendered."
+    },
+    {
+      "Name": "Held the render gate",
+      "Check": "final-text-contains-any",
+      "Max": 20,
+      "Values": ["awaiting sign-off", "no frames generated", "pending approval"],
+      "Veto": "render-without-sign-off",
+      "Statement": "Frames were produced before the storyboard was signed off."
+    },
+    {
+      "Name": "Runtime accounted for",
+      "Check": "final-text-contains-any",
+      "Max": 15,
+      "Values": ["totalling", "total runtime", "seconds", "15s"],
+      "Statement": "A teaser with no stated total runtime cannot be checked against the brief."
+    },
+    {
+      "Name": "Substantive handoff",
+      "Check": "final-text-min-length",
+      "Max": 10,
+      "Threshold": 150
+    }
+  ]
+}

@@ -31,7 +31,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "blog-researcher",
@@ -51,7 +51,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "blog-reviewer",
@@ -73,7 +73,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "blog-seo",
@@ -93,7 +93,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "blog-translator",
@@ -113,7 +113,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "blog-writer",
@@ -134,7 +134,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "code-janitor",
@@ -152,7 +152,7 @@
         "code-janitor-nightly"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "committer",
@@ -175,7 +175,7 @@
         "committer-on-done"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "competitive-analyst",
@@ -195,7 +195,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "content-series-planner",
@@ -215,7 +215,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "content-writer",
@@ -230,7 +230,7 @@
         "content-writer-resume"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "data-analyst",
@@ -250,7 +250,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "decision-engine",
@@ -271,7 +271,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "design-researcher",
@@ -291,7 +291,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "documentalist",
@@ -316,7 +316,7 @@
         "documentalist-on-commit"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "email-copywriter",
@@ -336,7 +336,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "evaluator",
@@ -361,7 +361,7 @@
         "evaluator-on-done"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "groomer",
@@ -383,7 +383,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "growth-writer",
@@ -403,7 +403,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "lead-magnet-creator",
@@ -423,7 +423,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "local-image-artist",
@@ -443,7 +443,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "local-media-compositor",
@@ -463,7 +463,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "local-media-director",
@@ -483,7 +483,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "local-media-reviewer",
@@ -504,7 +504,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "local-motion-artist",
@@ -524,7 +524,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "producer",
@@ -551,7 +551,7 @@
         "producer-on-subtick"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "programmer",
@@ -572,7 +572,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "qa-tester",
@@ -593,7 +593,7 @@
         "qa-on-review"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "system-watchdog",
@@ -616,7 +616,7 @@
         "system-watchdog-hourly"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "trend-researcher",
@@ -636,7 +636,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "ui-auditor",
@@ -657,7 +657,7 @@
         "ui-audit-on-review"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "ui-designer",
@@ -677,7 +677,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     },
     {
       "Slug": "wellness-coach",
@@ -697,7 +697,7 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": false
+      "EvalBaselinePresent": true
     }
   ],
   "Teams": [

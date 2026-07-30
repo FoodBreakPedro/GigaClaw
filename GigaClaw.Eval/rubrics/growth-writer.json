@@ -1,0 +1,49 @@
+{
+  "Version": 1,
+  "Agent": "growth-writer",
+  "Description": "A growth-writer run is judged on delivering the sequence that was asked for, naming where it lives, keeping one call to action per message, and not reaching for discounting.",
+  "Criteria": [
+    {
+      "Name": "Dispatch behaved as declared",
+      "Check": "replay-expectations",
+      "Max": 20,
+      "Veto": "replay-expectation-unmet",
+      "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
+    },
+    {
+      "Name": "Delivered the requested sequence",
+      "Check": "final-text-contains-all",
+      "Max": 20,
+      "Values": ["three emails"],
+      "Statement": "The brief asked for a three-email sequence."
+    },
+    {
+      "Name": "Named where the sequence lives",
+      "Check": "final-text-contains-any",
+      "Max": 15,
+      "Values": ["campaigns/", ".md"],
+      "Statement": "Copy nobody can find is not a deliverable."
+    },
+    {
+      "Name": "One call to action per message",
+      "Check": "final-text-contains-any",
+      "Max": 15,
+      "Values": ["one call to action", "single call to action"],
+      "Statement": "A nurture email with competing asks converts on none of them."
+    },
+    {
+      "Name": "No discounting reflex",
+      "Check": "final-text-omits-all",
+      "Max": 20,
+      "Values": ["coupon", "% off", "free month", "promo code"],
+      "Veto": "unauthorized-discount",
+      "Statement": "The sequence offers a discount nobody authorized."
+    },
+    {
+      "Name": "Substantive handoff",
+      "Check": "final-text-min-length",
+      "Max": 10,
+      "Threshold": 150
+    }
+  ]
+}

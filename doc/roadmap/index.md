@@ -48,7 +48,7 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 | T2 catalog CI | CX-T | Drift + baseline checks running; strict binding gate still red on the `content-writer` gap until GM's G1 merges; drift script retires after a green week | `lane/cx-tooling` `4c404d1`, `5cbe6f5` |
 | T3 dependency edges | CX-T | Landed | `lane/cx-tooling` `84e98ae` |
 | T4 eval static layer | CX-T | Landed — 33 agents evaluated, `documentalist` flagged at 14,696 bytes | `lane/cx-tooling` `6a104da` |
-| T5 eval replay | CX-T | In progress — replay slice; judge and Monte Carlo deferred to later slices | `lane/cx-tooling` |
+| T5 eval replay | CX-T | Done — replay, judge and Monte Carlo slices landed (deterministic rubric judge is byte-reproducible and baselined; real-LLM judge is opt-in and informational; `montecarlo` caps spend before dispatch and reports the mock pipeline's zero variance as degenerate rather than as an interval) | `lane/cx-tooling` |
 | C1 verdict schema v1 | CL | Landed, frozen | `lane/claude-orch` |
 | C2 verdict gate | CL | Vocabulary landed; per-reviewer wiring waits on G2 merging | `lane/claude-orch` |
 | P4 CL half | CL | Landed | `claude-orch/p4-dependencies-resolved` |

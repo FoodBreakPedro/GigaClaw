@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "blog-draft-release-notes",
+  "Family": "blog",
+  "Agent": "blog-writer",
+  "Scenario": "blog-draft-release-notes",
+  "MaxTurns": 4,
+  "Ticket": {
+    "Id": 4202,
+    "Title": "Draft the launch post for the scheduling rework",
+    "Status": "InProgress",
+    "Assignee": "blog-writer",
+    "Description": "Write a 900-word launch post covering the new scheduling engine: what changed, why the old cron-only model was limiting, and how existing schedules migrate. Answer-first opening, one summary box, no invented statistics.",
+    "Comments": [
+      {
+        "Author": "producer",
+        "Body": "The migration section is the part readers care about. Lead with it after the summary."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "draft is ready for review"
+  }
+}

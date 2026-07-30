@@ -1,0 +1,35 @@
+{
+  "Version": 1,
+  "Agent": "default",
+  "Description": "Applies to any agent without a bespoke rubric. Scores only what every agent owes regardless of discipline: the dispatch behaved as the fixture declares, the stream is clean, and the final message is a real handoff rather than a placeholder.",
+  "Criteria": [
+    {
+      "Name": "Dispatch behaved as declared",
+      "Check": "replay-expectations",
+      "Max": 40,
+      "Veto": "replay-expectation-unmet",
+      "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
+    },
+    {
+      "Name": "Stream carries no error",
+      "Check": "no-error-events",
+      "Max": 20,
+      "Veto": "stream-error",
+      "Statement": "The run emitted an error event."
+    },
+    {
+      "Name": "Final message is a handoff",
+      "Check": "final-text-min-length",
+      "Max": 20,
+      "Threshold": 80,
+      "Statement": "The closing message must state what was done, not merely that something was."
+    },
+    {
+      "Name": "No placeholder handoff",
+      "Check": "final-text-omits-all",
+      "Max": 20,
+      "Values": ["TODO", "lorem ipsum", "as an ai", "placeholder text"],
+      "Statement": "The closing message contains placeholder or boilerplate text."
+    }
+  ]
+}
