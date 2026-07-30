@@ -1335,7 +1335,7 @@
     "semantic_hash": "30798a398934422d4dbcbefa70c875b4"
   },
   "ProjectTemplate/Agents/scripts/cognitive_load.py": {
-    "mtime": 1785450890.0084589,
+    "mtime": 1785451441.6537871,
     "ast_hash": "09ed50f7e0830ed60ab7309b642549e9",
     "semantic_hash": "09ed50f7e0830ed60ab7309b642549e9"
   },
@@ -1355,7 +1355,7 @@
     "semantic_hash": "6b1e83d4273edda5fa017ab5a2a23ff6"
   },
   "ProjectTemplate/Agents/scripts/lint_prose.py": {
-    "mtime": 1785450890.008938,
+    "mtime": 1785451441.6543572,
     "ast_hash": "228bf4e0011dfd9c886a4f86c860a2a0",
     "semantic_hash": "228bf4e0011dfd9c886a4f86c860a2a0"
   },
@@ -2700,7 +2700,7 @@
     "semantic_hash": "ac4cdbbb1ca873c11d3726d74f5512cf"
   },
   "ProjectTemplate/Agents/scripts/handoff_contract.py": {
-    "mtime": 1785450890.008734,
+    "mtime": 1785451441.654138,
     "ast_hash": "07a272856778ca647f23f41238f733b0",
     "semantic_hash": "07a272856778ca647f23f41238f733b0"
   },
@@ -2715,7 +2715,7 @@
     "semantic_hash": "113c9594e60c080fd47a75a874047d77"
   },
   "ProjectTemplate/Agents/scripts/verdict_contract.py": {
-    "mtime": 1785450890.0091536,
+    "mtime": 1785451441.6545973,
     "ast_hash": "4316ec976b69b7af8591304bf0ee860d",
     "semantic_hash": "4316ec976b69b7af8591304bf0ee860d"
   },
@@ -3180,8 +3180,8 @@
     "semantic_hash": "ac1c9e6fe69c311ed67db45a80631e8c"
   },
   "GigaClaw.Core.Tests/Packs/CoreInitManifestTests.cs": {
-    "mtime": 1785451290.2051466,
-    "ast_hash": "7265f6d6e6449552039751906eef8d92",
+    "mtime": 1785451791.398812,
+    "ast_hash": "8b063e62162970f35315f659fdebc13d",
     "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Packs/PackQuarantineTests.cs": {
@@ -3360,8 +3360,33 @@
     "semantic_hash": ""
   },
   "doc/roadmap/SESSION-HANDOFF.md": {
-    "mtime": 1785448774.690039,
-    "ast_hash": "260aad081337c142a2bf6a16a0b5a514",
+    "mtime": 1785451495.0256531,
+    "ast_hash": "030aaaa8a9a696b0a29943fcae0c21d5",
+    "semantic_hash": ""
+  },
+  ".obsidian/app.json": {
+    "mtime": 1785451754.2483964,
+    "ast_hash": "99914b932bd37a50b983c5e7c90ae93b",
+    "semantic_hash": ""
+  },
+  ".obsidian/appearance.json": {
+    "mtime": 1785451754.2491605,
+    "ast_hash": "99914b932bd37a50b983c5e7c90ae93b",
+    "semantic_hash": ""
+  },
+  ".obsidian/core-plugins.json": {
+    "mtime": 1785451753.8041682,
+    "ast_hash": "7c877bea49eaeabb100563bd157b9051",
+    "semantic_hash": ""
+  },
+  ".obsidian/graph.json": {
+    "mtime": 1785451795.937,
+    "ast_hash": "02f7aac88c3cce616bd2c201111c33fd",
+    "semantic_hash": ""
+  },
+  ".obsidian/workspace.json": {
+    "mtime": 1785451829.370682,
+    "ast_hash": "9e5802d02b371333f0a08e9e5add882b",
     "semantic_hash": ""
   }
 }
