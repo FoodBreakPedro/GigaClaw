@@ -12,8 +12,7 @@
   ],
   "vetoItems": [],
   "evidence": [
-    { "kind": "path", "ref": ".agents/evaluator/memory/scores.json", "note": "score cache revision 214" },
-    { "kind": "hash", "ref": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d", "note": "ticket snapshot digest" }
+    { "kind": "hash", "ref": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d", "note": "ticket snapshot digest - the evaluator judges board state, not a file" }
   ],
   "reviewedAtUtc": "2026-07-30T02:05:00Z",
   "inputDigest": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d"

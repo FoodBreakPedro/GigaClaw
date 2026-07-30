@@ -44,7 +44,7 @@ GIGACLAW-VERDICT v1 <agent> <SHIP|FIX|BLOCK> artifact-sha256:<digest>
 
 The **last** marker in a comment body wins, so an edited comment cannot resurrect an earlier judgement. Marker and body must agree on `agent`, `verdict` and `inputDigest`; a comment that disagrees with itself is not a verdict.
 
-Agents may additionally write the verdict to a workspace file, but the comment is authoritative — it is what the board and the automation engine read.
+Agents may additionally write the verdict to a workspace file, but the comment is authoritative — it is what the board and the automation engine read. A verdict that exists only as a file is invisible: nothing scans the workspace for judgements.
 
 ## Validating
 
@@ -76,6 +76,8 @@ The automation condition `verdictIs` reads the newest verdict on the firing tick
 Three automations on the same Review column therefore express advance, repair and escalate. `agent` (which accepts `{assignee}`) restricts the scan to one reviewer, so a second reviewer's older verdict never shadows the one being gated on. Entries the condition doesn't recognize match nothing — a typo blocks rather than opens the gate.
 
 `requireFreshArtifact` (default on) re-hashes the files listed as `path` evidence; unless one still matches `inputDigest`, the outcome is `STALE`. Freshness that cannot be verified — no path evidence, missing file, unreadable workspace — is stale too. Turn it off only for reviewers whose input is not a workspace file.
+
+That case is real: the evaluator judges board state, not a file, so its `inputDigest` is a ticket-snapshot digest no file will ever hash to. Such a verdict must **not** list `path` evidence pointing at something unrelated — a cache file, a report it happened to write — because that reads as a stale artifact rather than as "not file-based". Cite the snapshot as `hash` evidence, and set `requireFreshArtifact: false` on any condition that gates on it.
 
 ## Consumers
 
