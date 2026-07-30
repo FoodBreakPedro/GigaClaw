@@ -13,7 +13,7 @@ For a high-level overview see the root [README.md](../README.md). For repo layou
 - [Ticket scheduling](./ticket-scheduling.md) — park tickets with a future fire time; `ScheduledPromotionService` auto-promotes them when due.
 - [Agent dispatch](./agent-dispatch.md) — running the `claude` CLI as a subprocess and streaming its output.
 - [Project template](./project-template.md) — embedded `ProjectTemplate/` files copied into each workspace on Initialize.
-- [Pack infrastructure (O7)](./pack-infrastructure.md) — **design spec, awaiting owner approval**: pack manifest, composition rules, versioning, core-pack extraction, and the CI binding gate.
+- [Pack infrastructure (O7)](./pack-infrastructure.md) — pack manifest, composition rules, versioning, core-pack extraction, and the CI binding gate. Approved; the manifest, composer and staged install/uninstall engine have landed (§11).
 - [Verdict contract](./verdict-contract.md) — the typed `SHIP`/`FIX`/`BLOCK` judgement every reviewer, gate and eval judge shares.
 - [Handoff contract](./handoff-contract.md) — what one agent leaves the next: outputs, owned files, assumptions, open loops.
 - [Executable teams](./executable-teams.md) — `TeamDefinition`/`TeamRun`/`TeamTask`: roles, task graphs, fan-out, join policies and the synthesizer.
