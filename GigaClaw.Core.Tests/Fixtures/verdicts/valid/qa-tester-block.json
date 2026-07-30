@@ -14,12 +14,11 @@
     {
       "code": "cannot-exercise-change",
       "statement": "The debug instance exits at startup with SQLITE_CANTOPEN, so no acceptance criterion was observed at runtime.",
-      "evidenceRefs": ["runs/447/qa-startup.log"]
+      "evidenceRefs": ["sha256:0c92a48eb15d7f36c0d8241be5739af06c1e8d4b27950fa3e6c81d70b4925fe8"]
     }
   ],
   "evidence": [
-    { "kind": "path", "ref": "runs/447/qa-startup.log", "note": "startup failure output" },
-    { "kind": "hash", "ref": "sha256:0c92a48eb15d7f36c0d8241be5739af06c1e8d4b27950fa3e6c81d70b4925fe8" }
+    { "kind": "hash", "ref": "sha256:0c92a48eb15d7f36c0d8241be5739af06c1e8d4b27950fa3e6c81d70b4925fe8", "note": "ticket snapshot digest" }
   ],
   "reviewedAtUtc": "2026-07-30T11:41:05Z",
   "inputDigest": "sha256:0c92a48eb15d7f36c0d8241be5739af06c1e8d4b27950fa3e6c81d70b4925fe8"

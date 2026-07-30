@@ -53,8 +53,11 @@ public class TemplateVerdictContractTests
     {
         var fixtures = Directory.GetFiles(Path.Combine(FixturesDir, "valid"), "*.json").OrderBy(p => p).ToArray();
 
-        // One worked example per reviewer that gates a pipeline (A11/P8).
-        Assert.Equal(5, fixtures.Length);
+        // One worked example per gated *pipeline*, not per reviewer. blog-reviewer serves two:
+        // the file-based path and the AD-7 content path, whose draft is the ticket description and
+        // whose verdict therefore cites hash evidence only. Counting reviewers instead of pipelines
+        // is what let the AD-7 path ship without a typed verdict at all.
+        Assert.Equal(6, fixtures.Length);
 
         foreach (var fixture in fixtures)
         {
