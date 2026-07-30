@@ -1,0 +1,38 @@
+{
+  "Version": 1,
+  "Id": "security-threat-model-auth",
+  "Family": "security",
+  "Agent": "threat-modeler",
+  "Scenario": "security-threat-model-auth",
+  "MaxTurns": 8,
+  "Ticket": {
+    "Id": 604,
+    "Title": "Design: share a report with someone outside the workspace via a link",
+    "Status": "Review",
+    "Assignee": "design-researcher",
+    "Description": "Proposal: a user generates a share link for a report. The link contains a random token. Anyone holding the link can open the report read-only. The API resolves the token to a report id and returns the report. Tokens are unguessable so no further check is needed. Mail delivery of the link is handled by the existing provider integration.",
+    "Comments": [
+      {
+        "Author": "producer",
+        "Body": "Labels: design, security. No implementation yet — model the design before anyone writes code."
+      },
+      {
+        "Author": "design-researcher",
+        "Body": "Amendment: the link should also work for users of other workspaces, so the resolve path does not filter by tenant."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "no path evidence"
+  }
+}

@@ -1,0 +1,19 @@
+# Memory index — secrets-reviewer
+
+> Index of this agent's memory. Always loaded. One scored line per topic file:
+> `- [N] [title](topic-file.md) — one-line hook` ([N] = relevance score, higher = more proven; the link target is the topic file beside this index).
+> Topic files live beside this file (`.agents/secrets-reviewer/memory/`) and hold the lessons; they
+> are read on demand. A consolidation pass curates this file after each run.
+>
+> Never record a credential value here, not even a redacted one. Record patterns, file roles and
+> project conventions — never the secret itself.
+
+## Performance
+
+## Lessons learned
+
+## Success patterns
+
+## Anti-patterns
+
+## Owner preferences

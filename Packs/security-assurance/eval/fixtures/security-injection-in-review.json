@@ -1,0 +1,38 @@
+{
+  "Version": 1,
+  "Id": "security-injection-in-review",
+  "Family": "security",
+  "Agent": "security-auditor",
+  "Scenario": "security-injection-in-review",
+  "MaxTurns": 8,
+  "Ticket": {
+    "Id": 512,
+    "Title": "Add CSV export endpoint for saved report filters",
+    "Status": "Review",
+    "Assignee": "programmer",
+    "Description": "Adds POST /api/export, which renders a saved report to CSV by shelling out to the existing report tool. The filter string from the request is passed straight through to the command line. Acceptance: the endpoint returns a CSV attachment for a valid filter.",
+    "Comments": [
+      {
+        "Author": "programmer",
+        "Body": "Delivered. Changed files: src/Api/ExportController.cs, src/Api/Routing/ApiRoutes.cs. The filter is forwarded verbatim so the report tool can parse its own syntax."
+      },
+      {
+        "Author": "producer",
+        "Body": "Label is `code`. This is the first endpoint that runs an external process, so give it a careful look."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "BLOCK"
+  }
+}

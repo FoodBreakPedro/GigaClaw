@@ -1,0 +1,23 @@
+{
+  "_comment": "Default model per agent, in the object form doc/pack-infrastructure.md §7.2 requires of a pack: every mapping states the criterion that chose the tier, because 'a model default with a stated criterion' is one of the five bindings a pack agent must ship. Model ids must match GigaClaw.Core/Models/ClaudeModelCatalog.cs. Tier policy for this pack: no security-analysis agent may be mapped to the Fable tier — safety classifiers route those prompts back to Opus at a higher price, so a Fable mapping is a cost trap and not a saving (see doc/roadmap/packs-and-later.md, Pack 1). Below Opus is allowed only where the criterion names the deterministic tool or bounded input that carries the judgement.",
+
+  "security-auditor": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Runs on every code-labeled ticket entering Review, so its tier sets the pack's recurring cost floor; owner decision Q3 (2026-07-30) fixes it at Sonnet for exactly that reason. The rubric is a fixed taxonomy over the changed files — untrusted input, authn/authz, secrets handling, injection sinks — rather than open-ended discovery, and the expensive half of the judgement is delegated: any finding it cannot substantiate from the diff is a BLOCK escalation to the owner, never a quiet SHIP."
+  },
+
+  "threat-modeler": {
+    "model": "claude-opus-4-8",
+    "criterion": "Open-ended system decomposition with no checklist to fall back on: output quality is dominated by the breadth of hypotheses generated about trust boundaries an implementer never wrote down. It fires only on design-labeled tickets, a small fraction of board volume, so the per-run premium does not compound the way security-auditor's does — the cost argument that put the auditor on Sonnet does not transfer."
+  },
+
+  "supply-chain-reviewer": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Lookup-and-compare, not reasoning: scripts/sbom_diff.py produces the changed-dependency set and the advisory feeds supply the severity, so the model's job is matching versions against affected ranges and writing the finding up. Sonnet is the tier at which that stays reliable while running weekly on a full lockfile. Kept above Haiku because the version-range arithmetic is where a wrong answer is silent."
+  },
+
+  "secrets-reviewer": {
+    "model": "claude-haiku-4-5",
+    "criterion": "Detection is deterministic — scripts/privacy_guard.py owns the pattern set and the exit code — so the model triages a bounded, pre-filtered candidate list: for each hit, decide live credential versus test fixture versus documentation placeholder. That is short-context classification over evidence the tool already located. The guard rail that makes the cheap tier safe is structural: an empty candidate list is only a SHIP when the detector actually ran and exited 0, and any candidate it cannot classify from the surrounding lines is a BLOCK, not a judgement call."
+  }
+}
