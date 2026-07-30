@@ -7,6 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\GigaClaw.Catalog\GigaClaw.Catalog.csproj" />
+    <!-- The replay layer dispatches through the product's own ClaudeRunner instead of
+         re-implementing the subprocess contract, so a replay exercises the real dispatch path. -->
+    <ProjectReference Include="..\GigaClaw.Core\GigaClaw.Core.csproj" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
   <ItemGroup>

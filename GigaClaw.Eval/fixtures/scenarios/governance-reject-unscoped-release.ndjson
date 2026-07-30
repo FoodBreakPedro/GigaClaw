@@ -1,0 +1,5 @@
+{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Two blocking conditions are stated in the ticket itself: no rollback plan, and no owner sign-off. Neither needs investigation."}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Rejected. A production release outside the window requires a written rollback path and an owner sign-off, and this request has neither; two automation runs are also still in flight against the same workspace. Post the rollback plan and the sign-off, then re-request."}]}}
+{"type":"result","subtype":"success","is_error":false,"duration_ms":95,"num_turns":1,"total_cost_usd":0.0288,"usage":{"input_tokens":260,"output_tokens":410,"cache_read_input_tokens":11200,"cache_creation_input_tokens":700}}
+{"_meta":{"exit":0}}

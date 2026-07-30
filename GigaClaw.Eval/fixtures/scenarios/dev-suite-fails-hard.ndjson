@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"The isolated test instance could not start: port 5232 is already bound. No test result can be reported from this run."}]}}
+{"type":"result","subtype":"error","is_error":true,"duration_ms":70,"total_cost_usd":0.0031,"usage":{"input_tokens":110,"output_tokens":60,"cache_read_input_tokens":3400,"cache_creation_input_tokens":0}}
+{"_meta":{"exit":1}}

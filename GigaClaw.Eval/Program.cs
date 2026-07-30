@@ -2,30 +2,37 @@ namespace GigaClaw.Eval;
 
 internal static class Program
 {
+    // Options that consume the following argument; anything else that is not "--" prefixed is a
+    // positional (the verb, then the target).
+    private static readonly string[] ValueOptions = ["--root"];
+
     private static int Main(string[] args)
     {
         if (args.Length == 0 || args.Contains("--help", StringComparer.Ordinal))
             return Usage();
 
-        var target = args.FirstOrDefault(argument =>
-            !argument.StartsWith("--", StringComparison.Ordinal));
+        var positionals = Positionals(args);
+        var verb = positionals.FirstOrDefault() switch
+        {
+            "replay" => "replay",
+            "static" => "static",
+            _ => "static"
+        };
+        var target = positionals.FirstOrDefault() is "replay" or "static"
+            ? positionals.Skip(1).FirstOrDefault()
+            : positionals.FirstOrDefault();
         if (target is null)
             return Usage();
+
         var rootArgument = OptionValue(args, "--root");
         var root = FindRepositoryRoot(rootArgument ?? Directory.GetCurrentDirectory());
-        var strict = args.Contains("--strict", StringComparer.Ordinal);
-        var updateBaselines = args.Contains("--update-baselines", StringComparer.Ordinal);
         var writeReport = !args.Contains("--no-report", StringComparer.Ordinal);
 
         try
         {
-            var result = new StaticEvalRunner(root).Run(
-                target,
-                strict,
-                updateBaselines,
-                writeReport);
-            Print(result);
-            return result.ExitCode;
+            return verb == "replay"
+                ? RunReplay(root, target, args, writeReport)
+                : RunStatic(root, target, args, writeReport);
         }
         catch (ArgumentException exception)
         {
@@ -37,6 +44,27 @@ internal static class Program
             Console.Error.WriteLine($"eval: {exception.Message}");
             return 1;
         }
+    }
+
+    private static int RunStatic(string root, string target, string[] args, bool writeReport)
+    {
+        var result = new StaticEvalRunner(root).Run(
+            target,
+            args.Contains("--strict", StringComparer.Ordinal),
+            args.Contains("--update-baselines", StringComparer.Ordinal),
+            writeReport);
+        Print(result);
+        return result.ExitCode;
+    }
+
+    private static int RunReplay(string root, string target, string[] args, bool writeReport)
+    {
+        var result = new ReplayRunner(root).Run(
+            target,
+            args.Contains("--real-cli", StringComparer.Ordinal),
+            writeReport);
+        Print(result);
+        return result.ExitCode;
     }
 
     private static void Print(EvalRunResult result)
@@ -57,6 +85,43 @@ internal static class Program
             $"{checks.Count(check => check.Status == "warning")} warning(s), " +
             $"{checks.Count(check => check.Status == "pass")} pass(es).");
         Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
+    }
+
+    private static void Print(ReplayRunResult result)
+    {
+        var fixtures = result.Reports.SelectMany(report => report.Fixtures).ToArray();
+        foreach (var report in result.Reports)
+        {
+            foreach (var fixture in report.Fixtures)
+            {
+                foreach (var check in fixture.Checks.Where(check => check.Status != "pass"))
+                    Console.WriteLine(
+                        $"{report.Agent}/{fixture.Fixture}: {check.Category}/{check.Status}: {check.Id}: {check.Message}");
+            }
+        }
+
+        var mode = result.Reports.FirstOrDefault()?.Mode ?? "mock";
+        Console.WriteLine(
+            $"Replayed {fixtures.Length} fixture(s) across {result.Reports.Count} agent(s) in {mode} mode: " +
+            $"{fixtures.Count(fixture => fixture.Status == "pass")} pass(es), " +
+            $"{fixtures.Count(fixture => fixture.Status != "pass")} failure(s).");
+        Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
+    }
+
+    private static string[] Positionals(string[] args)
+    {
+        var positionals = new List<string>();
+        for (var index = 0; index < args.Length; index++)
+        {
+            if (ValueOptions.Contains(args[index], StringComparer.Ordinal))
+            {
+                index++;
+                continue;
+            }
+            if (args[index].StartsWith("--", StringComparison.Ordinal)) continue;
+            positionals.Add(args[index]);
+        }
+        return [.. positionals];
     }
 
     private static string? OptionValue(string[] args, string option)
@@ -87,7 +152,9 @@ internal static class Program
     private static int Usage()
     {
         Console.Error.WriteLine(
-            "Usage: GigaClaw.Eval <agent|all> [--strict] [--update-baselines] [--no-report] [--root PATH]");
+            "Usage: GigaClaw.Eval [static] <agent|all> [--strict] [--update-baselines] [--no-report] [--root PATH]");
+        Console.Error.WriteLine(
+            "       GigaClaw.Eval replay <fixture|family|agent|all> [--real-cli] [--no-report] [--root PATH]");
         return 2;
     }
 }

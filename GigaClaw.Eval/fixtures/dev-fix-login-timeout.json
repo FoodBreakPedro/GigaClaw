@@ -1,0 +1,38 @@
+{
+  "Version": 1,
+  "Id": "dev-fix-login-timeout",
+  "Family": "dev",
+  "Agent": "programmer",
+  "Scenario": "dev-fix-login-timeout",
+  "MaxTurns": 6,
+  "Ticket": {
+    "Id": 4101,
+    "Title": "Session cookie expires 30 minutes early on the login page",
+    "Status": "InProgress",
+    "Assignee": "programmer",
+    "Description": "Users are signed out roughly 30 minutes before the configured session lifetime. The auth cookie is issued with an absolute expiry computed from local time while the validator compares against UTC. Fix the expiry computation and cover it with a regression test.",
+    "Comments": [
+      {
+        "Author": "groomer",
+        "Body": "Reproduced on the debug instance: the offset matches the host's UTC offset exactly."
+      },
+      {
+        "Author": "producer",
+        "Body": "Keep the change inside the auth service; do not touch the middleware pipeline."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "regression test"
+  }
+}

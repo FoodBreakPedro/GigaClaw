@@ -1,0 +1,6 @@
+{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Checking the existing drafts folder so the new post follows the house structure."},{"type":"tool_use","id":"toolu_blog_1","name":"Bash","input":{"command":"ls content/drafts"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_blog_1","content":"2026-05-scheduling-rework.md\n"}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Wrote content/drafts/2026-05-scheduling-rework.md: 912 words, answer-first opening, one Key Takeaways box, migration steps ahead of the rationale as requested. No statistics were invented; every number comes from the linked changelog. The draft is ready for review."}]}}
+{"type":"result","subtype":"success","is_error":false,"duration_ms":240,"num_turns":2,"total_cost_usd":0.0934,"usage":{"input_tokens":510,"output_tokens":1240,"cache_read_input_tokens":21500,"cache_creation_input_tokens":1900}}
+{"_meta":{"exit":0}}

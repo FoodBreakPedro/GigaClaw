@@ -7,5 +7,10 @@
     "Unit": "utf8Bytes",
     "WarningThreshold": 12288,
     "MaximumThreshold": 16384
+  },
+  "Replay": {
+    "FixtureRoot": "GigaClaw.Eval/fixtures",
+    "ArtifactSubdirectory": "replay",
+    "TimeoutSeconds": 120
   }
 }

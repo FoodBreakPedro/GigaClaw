@@ -9,11 +9,14 @@ public sealed record PromptBudgetConfig(
     int WarningThreshold,
     int MaximumThreshold);
 
+// Replay is optional and defaulted so a config written before the replay layer existed
+// (and the ones the static tests synthesize) still deserializes.
 public sealed record EvalConfig(
     int Version,
     string ArtifactRoot,
     string BaselineRoot,
-    PromptBudgetConfig PromptBudget);
+    PromptBudgetConfig PromptBudget,
+    ReplayConfig? Replay = null);
 
 public sealed record EvalCheckResult(
     string Id,
