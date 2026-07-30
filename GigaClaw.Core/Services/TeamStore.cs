@@ -34,8 +34,8 @@ public sealed record TeamTaskDraft(string TemplateKey, string RoleId, string Age
 /// definition snapshot, <see cref="ListTasksAsync"/> and the live dependency edges — nothing about
 /// a run exists only in memory.
 /// </para>
-/// The run lifecycle (fan-out, dispatch, cancellation) and the join/synthesizer behavior are
-/// deliberately not here: this type only stores and reads the shapes they operate on.
+/// The run lifecycle — fan-out, dispatch, the join, the synthesizer, cancellation — is deliberately
+/// not here: this type only stores and reads the shapes <see cref="TeamRunService"/> operates on.
 /// </summary>
 public sealed class TeamStore
 {

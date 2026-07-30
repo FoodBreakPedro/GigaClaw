@@ -15,8 +15,7 @@ namespace GigaClaw.Core.Tests.Services;
 /// cancellation propagates to every open task, and a run survives losing every service instance —
 /// because none of its state ever lived in one.
 /// <para>
-/// The join policy and the synthesizer are part 3: these tests assert a run whose tasks have all
-/// finished is still <see cref="TeamRunStatus.Running"/>, so that slice has something to move.
+/// The join policy and the synthesizer are part 3, covered by <see cref="TeamRunJoinTests"/>.
 /// </para>
 /// </summary>
 public sealed class TeamRunLifecycleTests
@@ -165,7 +164,7 @@ public sealed class TeamRunLifecycleTests
         Assert.Equal(TeamRunService.ReadyStatus, released!.Status);
         Assert.Equal(TeamTaskStatus.Dispatched, (await sut.Teams.GetTaskByTicketAsync(sut.Slug, dedup.TicketId))!.Status);
 
-        // Every task is finished, but the join is part 3 — the run must still be open for it.
+        // The dedup task was only just released, so the all-done join has something left to wait on.
         Assert.Equal(TeamRunStatus.Running, (await sut.Teams.GetRunAsync(sut.Slug, run.Id))!.Status);
     }
 

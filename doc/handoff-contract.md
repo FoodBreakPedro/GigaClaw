@@ -56,7 +56,7 @@ Exit codes: `0` valid · `1` contract violation · `2` unreadable input. Structu
 
 - **Dispatch** — before running an agent against a ticket, the engine finds the newest readable handoff and prepends a rendering of it to the run's context: summary, produced artifacts, assumptions, *unmet* criteria, open loops, and the files the previous run claimed. Criteria already met are left out; they are not worth the next hop's prompt budget.
 - **File-ownership leases** — `ownedFiles` is the declared scope a lease is taken on, so two runs whose scopes intersect serialize instead of racing. Overstating scope blocks other agents; understating it corrupts their work.
-- **Team runs** — a synthesizer reads the branch handoffs to join parallel work.
+- **Team runs** — when a team run joins, the synthesizer's brief is a rendering of each reporting lane's handoff, alongside a named list of the lanes that produced none. See [executable teams](./executable-teams.md).
 
 Worked examples and the rejection corpus live in `GigaClaw.Core.Tests/Fixtures/handoffs/`; `TemplateHandoffContractTests` runs the real validator over all of them and cross-checks the host-side reader, so the two implementations cannot drift.
 
