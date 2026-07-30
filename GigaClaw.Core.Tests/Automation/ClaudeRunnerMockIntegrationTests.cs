@@ -20,7 +20,9 @@ public sealed class MockClaudeBinFixture : IDisposable
         {
             var mockBin = Path.Combine(dir.FullName, "GigaClaw.ClaudeMock", "bin");
             if (!Directory.Exists(mockBin)) continue;
-            var found = Directory.EnumerateFiles(mockBin, exe, SearchOption.AllDirectories).FirstOrDefault();
+            var found = Directory.EnumerateFiles(mockBin, exe, SearchOption.AllDirectories)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
             if (found is not null)
             {
                 Environment.SetEnvironmentVariable("GIGACLAW_CLAUDE_BIN", found);

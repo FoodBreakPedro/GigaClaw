@@ -21,6 +21,7 @@
     <ProjectReference Include="..\GigaClaw.QaRunner\GigaClaw.QaRunner.csproj" />
     <ProjectReference Include="..\GigaClaw.Web\GigaClaw.Web.csproj" />
     <ProjectReference Include="..\GigaClaw.Catalog\GigaClaw.Catalog.csproj" />
+    <ProjectReference Include="..\GigaClaw.ClaudeMock\GigaClaw.ClaudeMock.csproj" />
   </ItemGroup>
 
   <ItemGroup>
