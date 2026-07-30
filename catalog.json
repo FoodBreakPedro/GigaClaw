@@ -1,13 +1,13 @@
 {
   "Version": 3,
   "Summary": {
-    "Agents": 33,
-    "Contracts": 33,
-    "Automations": 43,
-    "EnabledAutomations": 42,
-    "ExplicitModelMappings": 33,
-    "Teams": 9,
-    "Scripts": 20
+    "Agents": 37,
+    "Contracts": 37,
+    "Automations": 50,
+    "EnabledAutomations": 49,
+    "ExplicitModelMappings": 37,
+    "Teams": 10,
+    "Scripts": 21
   },
   "Packs": [
     {
@@ -16,6 +16,15 @@
       "Kind": "core",
       "DependsOn": [],
       "AgentCount": 33
+    },
+    {
+      "Id": "security-assurance",
+      "Version": "1.0.0",
+      "Kind": "specialist",
+      "DependsOn": [
+        "core"
+      ],
+      "AgentCount": 4
     }
   ],
   "Agents": [
@@ -366,6 +375,7 @@
         "growth-marketing",
         "health-performance",
         "local-media-creation",
+        "security-review",
         "software-engineering",
         "ux-design"
       ],
@@ -417,6 +427,7 @@
         "growth-marketing",
         "health-performance",
         "local-media-creation",
+        "security-review",
         "software-engineering",
         "ux-design"
       ],
@@ -635,6 +646,7 @@
         "growth-marketing",
         "health-performance",
         "local-media-creation",
+        "security-review",
         "software-engineering",
         "ux-design"
       ],
@@ -697,6 +709,72 @@
       "EvalFixturePresent": true
     },
     {
+      "Slug": "secrets-reviewer",
+      "Pack": "security-assurance",
+      "ContractPresent": true,
+      "RiskClass": "security-review",
+      "ExplicitModelMapping": "claude-haiku-4-5",
+      "ModelCriterion": "Detection is deterministic \u2014 scripts/privacy_guard.py owns the pattern set and the exit code \u2014 so the model triages a bounded, pre-filtered candidate list: for each hit, decide live credential versus test fixture versus documentation placeholder. That is short-context classification over evidence the tool already located. The guard rail that makes the cheap tier safe is structural: an empty candidate list is only a SHIP when the detector actually ran and exited 0, and any candidate it cannot classify from the surrounding lines is a BLOCK, not a judgement call.",
+      "ActionModels": [
+        "claude-haiku-4-5"
+      ],
+      "ProjectFallbackRequired": false,
+      "Teams": [
+        "security-review",
+        "software-engineering"
+      ],
+      "EnabledDispatchingAutomations": [
+        "security-gate-on-review"
+      ],
+      "DisabledDispatchingAutomations": [],
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
+    },
+    {
+      "Slug": "security-auditor",
+      "Pack": "security-assurance",
+      "ContractPresent": true,
+      "RiskClass": "security-review",
+      "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Runs on every code-labeled ticket entering Review, so its tier sets the pack\u0027s recurring cost floor; owner decision Q3 (2026-07-30) fixes it at Sonnet for exactly that reason. The rubric is a fixed taxonomy over the changed files \u2014 untrusted input, authn/authz, secrets handling, injection sinks \u2014 rather than open-ended discovery, and the expensive half of the judgement is delegated: any finding it cannot substantiate from the diff is a BLOCK escalation to the owner, never a quiet SHIP.",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
+      "Teams": [
+        "security-review",
+        "software-engineering"
+      ],
+      "EnabledDispatchingAutomations": [
+        "security-gate-on-review"
+      ],
+      "DisabledDispatchingAutomations": [],
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
+    },
+    {
+      "Slug": "supply-chain-reviewer",
+      "Pack": "security-assurance",
+      "ContractPresent": true,
+      "RiskClass": "security-review",
+      "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Lookup-and-compare, not reasoning: scripts/sbom_diff.py produces the changed-dependency set and the advisory feeds supply the severity, so the model\u0027s job is matching versions against affected ranges and writing the finding up. Sonnet is the tier at which that stays reliable while running weekly on a full lockfile. Kept above Haiku because the version-range arithmetic is where a wrong answer is silent.",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
+      "Teams": [
+        "security-review",
+        "software-engineering"
+      ],
+      "EnabledDispatchingAutomations": [
+        "dependency-audit-weekly"
+      ],
+      "DisabledDispatchingAutomations": [],
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
+    },
+    {
       "Slug": "system-watchdog",
       "Pack": "core",
       "ContractPresent": true,
@@ -721,6 +799,28 @@
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
       "EvalFixturePresent": false
+    },
+    {
+      "Slug": "threat-modeler",
+      "Pack": "security-assurance",
+      "ContractPresent": true,
+      "RiskClass": "security-design",
+      "ExplicitModelMapping": "claude-opus-4-8",
+      "ModelCriterion": "Open-ended system decomposition with no checklist to fall back on: output quality is dominated by the breadth of hypotheses generated about trust boundaries an implementer never wrote down. It fires only on design-labeled tickets, a small fraction of board volume, so the per-run premium does not compound the way security-auditor\u0027s does \u2014 the cost argument that put the auditor on Sonnet does not transfer.",
+      "ActionModels": [
+        "claude-opus-4-8"
+      ],
+      "ProjectFallbackRequired": false,
+      "Teams": [
+        "governance-ops",
+        "security-review"
+      ],
+      "EnabledDispatchingAutomations": [
+        "threat-model-on-review"
+      ],
+      "DisabledDispatchingAutomations": [],
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
     },
     {
       "Slug": "trend-researcher",
@@ -856,7 +956,8 @@
         "documentalist",
         "evaluator",
         "producer",
-        "system-watchdog"
+        "system-watchdog",
+        "threat-modeler"
       ]
     },
     {
@@ -900,6 +1001,18 @@
       ]
     },
     {
+      "Slug": "security-review",
+      "Agents": [
+        "documentalist",
+        "evaluator",
+        "producer",
+        "secrets-reviewer",
+        "security-auditor",
+        "supply-chain-reviewer",
+        "threat-modeler"
+      ]
+    },
+    {
       "Slug": "software-engineering",
       "Agents": [
         "code-janitor",
@@ -909,7 +1022,10 @@
         "groomer",
         "producer",
         "programmer",
-        "qa-tester"
+        "qa-tester",
+        "secrets-reviewer",
+        "security-auditor",
+        "supply-chain-reviewer"
       ]
     },
     {
@@ -1352,6 +1468,62 @@
       "Enabled": true,
       "Agents": [],
       "Models": []
+    },
+    {
+      "Id": "security-gate-on-review",
+      "Enabled": true,
+      "Agents": [
+        "secrets-reviewer",
+        "security-auditor"
+      ],
+      "Models": [
+        "claude-haiku-4-5",
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "threat-model-on-review",
+      "Enabled": true,
+      "Agents": [
+        "threat-modeler"
+      ],
+      "Models": [
+        "claude-opus-4-8"
+      ]
+    },
+    {
+      "Id": "dependency-audit-weekly",
+      "Enabled": true,
+      "Agents": [
+        "supply-chain-reviewer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "security-verdict-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "secrets-verdict-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "threat-model-verdict-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "supply-chain-verdict-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
     }
   ],
   "Scripts": [
@@ -1369,6 +1541,7 @@
     "scripts/media_generate.py",
     "scripts/privacy_guard.py",
     "scripts/reddit_trends.py",
+    "scripts/sbom_diff.py",
     "scripts/schema_check.py",
     "scripts/social_contract.py",
     "scripts/source_inventory.py",

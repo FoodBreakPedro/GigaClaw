@@ -71,6 +71,20 @@
       <LogicalName>GigaClaw.Core.AgentsTemplate/%(RecursiveDir)SKILL.md</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
+    <!-- Progressive disclosure (G4): SKILL.md is the always-loaded index and the detail lives in
+         references/. Those files are read on demand, so a SKILL that links to one and does not ship
+         it leaves the agent pointing at a file that does not exist in its workspace. They were
+         committed without being embedded, which is why this glob exists. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\**\references\*.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <!-- The shared handoff reference (G3). Sits at Agents/ root like preamble.md, so neither the
+         per-agent globs above nor the workspace-root glob below picks it up. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\handoff.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/handoff.md</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
     <!-- New per-topic memory layout: each agent ships a memory/MEMORY.md index skeleton. Topic
          files are created at runtime by the consolidation pass, so only the index is embedded. -->
     <EmbeddedResource Include="..\ProjectTemplate\Agents\**\memory\*.md">

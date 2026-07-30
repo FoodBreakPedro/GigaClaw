@@ -10,18 +10,26 @@ public sealed class CatalogGeneratorTests
     {
         var catalog = new CatalogGenerator().Generate(RepositoryRoot());
 
-        Assert.Equal(33, catalog.Summary.Agents);
-        Assert.Equal(33, catalog.Summary.Contracts);
+        // 33 core + the 4 agents of the security-assurance pack. Asserted as two numbers rather
+        // than one so a pack silently vanishing from the catalog fails here.
+        Assert.Equal(37, catalog.Summary.Agents);
+        Assert.Equal(33, catalog.Agents.Count(agent => agent.Pack == "core"));
+        Assert.Equal(4, catalog.Agents.Count(agent => agent.Pack == "security-assurance"));
+        Assert.Equal(37, catalog.Summary.Contracts);
         // 29 before C2 + the 14 verdict gate arms, all live now that blog-reviewer's AD-7 protocol
         // emits a typed verdict beside its CONTENT-REVIEW markers. Enabled trails total by one:
         // `weekly-ticket-example` is a shipped-off sample, not a gate.
-        Assert.Equal(43, catalog.Summary.Automations);
-        Assert.Equal(42, catalog.Summary.EnabledAutomations);
-        Assert.Equal(33, catalog.Summary.ExplicitModelMappings);
-        Assert.Equal(9, catalog.Summary.Teams);
+        // 43 core + the pack's 7. Enabled trails by one: `weekly-ticket-example` is a shipped-off
+        // sample, not a gate, and every pack automation is enabled by the binding rule.
+        Assert.Equal(50, catalog.Summary.Automations);
+        Assert.Equal(49, catalog.Summary.EnabledAutomations);
+        Assert.Equal(37, catalog.Summary.ExplicitModelMappings);
+        // 9 core teams + the pack's security-review.
+        Assert.Equal(10, catalog.Summary.Teams);
         // 15 at T1 + the five contract files lane CL added (schema_check, verdict_contract,
-        // handoff_contract and the two schemas). The catalog counts them because agents call them.
-        Assert.Equal(20, catalog.Summary.Scripts);
+        // handoff_contract and the two schemas) + sbom_diff.py, which the security pack contributes
+        // and its supply-chain lane calls. The catalog counts them because agents call them.
+        Assert.Equal(21, catalog.Summary.Scripts);
         var contentWriter = Assert.Single(catalog.Agents, agent => agent.Slug == "content-writer");
         Assert.True(contentWriter.ContractPresent);
         Assert.Equal("content-write", contentWriter.RiskClass);
@@ -30,10 +38,15 @@ public sealed class CatalogGeneratorTests
         Assert.Contains("content-engine", contentWriter.Teams);
         Assert.NotEmpty(contentWriter.EnabledDispatchingAutomations);
         Assert.Contains("scripts/content_contract.py", catalog.Scripts);
-        Assert.Equal(9, catalog.Teams.Count);
-        Assert.Equal(43, catalog.Automations.Count);
+        Assert.Equal(10, catalog.Teams.Count);
+        // 43 core + the pack's 7.
+        Assert.Equal(50, catalog.Automations.Count);
+        // Core only. A baseline is the *reviewed* static-check snapshot and §9 keeps it a
+        // core-owned artifact about pack content, so a pack's baselines appear when someone
+        // reviews them — not when the pack lands. The binding rule requires a fixture, which the
+        // pack's four agents do have (see Eval_fixture_presence_tracks_fixtures_not_baselines).
         Assert.All(
-            catalog.Agents,
+            catalog.Agents.Where(agent => agent.Pack == "core"),
             agent => Assert.True(
                 agent.EvalBaselinePresent,
                 $"Missing committed eval baseline for {agent.Slug}."));
@@ -59,7 +72,8 @@ public sealed class CatalogGeneratorTests
         Assert.True(
             uncriteriaed.Count == 0,
             "models.json entries with a model but no stated criterion: " + string.Join(", ", uncriteriaed));
-        Assert.Equal(33, catalog.Agents.Count(agent => !string.IsNullOrWhiteSpace(agent.ModelCriterion)));
+        Assert.Equal(33, catalog.Agents.Count(agent =>
+            agent.Pack == "core" && !string.IsNullOrWhiteSpace(agent.ModelCriterion)));
     }
 
     /// <summary>
@@ -79,11 +93,15 @@ public sealed class CatalogGeneratorTests
             .OrderBy(slug => slug, StringComparer.Ordinal)
             .ToArray();
 
+        // Core's six replayed agents, plus all four of the pack's — a pack ships a fixture per
+        // agent from its first commit, which is the binding rule core is grandfathered out of.
         Assert.Equal(
-            ["approval-gatekeeper", "blog-writer", "growth-writer", "local-media-director", "programmer", "qa-tester"],
+            ["approval-gatekeeper", "blog-writer", "growth-writer", "local-media-director", "programmer",
+             "qa-tester", "secrets-reviewer", "security-auditor", "supply-chain-reviewer", "threat-modeler"],
             withFixture);
-        Assert.All(catalog.Agents, agent => Assert.True(agent.EvalBaselinePresent));
-        Assert.All(catalog.Agents, agent => Assert.Equal("core", agent.Pack));
+        Assert.All(
+            catalog.Agents.Where(agent => agent.Pack == "core"),
+            agent => Assert.True(agent.EvalBaselinePresent));
     }
 
     /// <summary>
@@ -113,7 +131,11 @@ public sealed class CatalogGeneratorTests
         var second = CatalogGenerator.RenderMarkdown(catalog);
 
         Assert.Equal(first, second);
-        Assert.DoesNotContain("202", first, StringComparison.Ordinal);
+        // The real property is "no generation timestamp", so that the committed artifact is
+        // reproducible and CI's drift check means something. The old proxy banned the substring
+        // "202" outright, which a model criterion citing owner decision Q3 (2026-07-30) trips —
+        // that is content, not a stamp.
+        Assert.DoesNotMatch(@"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}", first);
     }
 
     [Fact]

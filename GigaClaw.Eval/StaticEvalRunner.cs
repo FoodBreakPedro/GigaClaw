@@ -87,11 +87,7 @@ public sealed partial class StaticEvalRunner
     private EvalAgentResult EvaluateAgent(AgentCatalogEntry agent)
     {
         var checks = new List<EvalCheckResult>();
-        var agentDirectory = Path.Combine(
-            _repositoryRoot,
-            "ProjectTemplate",
-            "Agents",
-            agent.Slug);
+        var agentDirectory = Path.Combine(AgentsRootFor(agent.Pack), agent.Slug);
         var skillPath = Path.Combine(agentDirectory, "SKILL.md");
         string? skill = null;
         byte[] skillBytes = [];
@@ -116,7 +112,7 @@ public sealed partial class StaticEvalRunner
         checks.Add(CheckContract(agent));
         checks.Add(CheckMemory(agent.Slug, agentDirectory));
         checks.Add(CheckModel(agent));
-        checks.Add(CheckScripts(skill));
+        checks.Add(CheckScripts(skill, agent.Pack));
         checks.Add(CheckPromptBudget(skillBytes));
 
         var baselineStatus = CompareBaseline(agent.Slug, checks);
@@ -238,7 +234,7 @@ public sealed partial class StaticEvalRunner
         return Check("model.resolve", Error, "Catalog provides no explicit, action, or project-fallback model path.");
     }
 
-    private EvalCheckResult CheckScripts(string? skill)
+    private EvalCheckResult CheckScripts(string? skill, string? pack)
     {
         if (skill is null)
             return Check("scripts.resolve", Error, "Script references could not be inspected because SKILL.md did not parse.");
@@ -253,6 +249,9 @@ public sealed partial class StaticEvalRunner
                     _repositoryRoot,
                     "ProjectTemplate",
                     "Agents",
+                    path.Replace('/', Path.DirectorySeparatorChar))) &&
+                !File.Exists(Path.Combine(
+                    AgentsRootFor(pack),
                     path.Replace('/', Path.DirectorySeparatorChar))))
             .ToArray();
         if (missing.Length > 0)
@@ -346,20 +345,38 @@ public sealed partial class StaticEvalRunner
             EvalJson.Serialize(report));
     }
 
+    /// <summary>
+    /// The composed contract set: core's, then each pack's. A pack ships its agents' contracts in
+    /// its own <c>Agents/contracts.json</c> fragment, so reading only core's file reports every
+    /// pack agent as contract-less — the exact binding the pack does satisfy.
+    /// Slugs are globally unique (D2), so the union cannot collide.
+    /// </summary>
     private Dictionary<string, JsonElement> ReadContracts()
     {
-        using var document = JsonDocument.Parse(File.ReadAllText(
-            Path.Combine(
-                _repositoryRoot,
-                "ProjectTemplate",
-                "Agents",
-                "contracts.json")));
-        return document.RootElement.GetProperty("agents")
-            .EnumerateObject()
-            .ToDictionary(
-                property => property.Name,
-                property => property.Value.Clone(),
-                StringComparer.Ordinal);
+        var contracts = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+
+        var manifests = new List<string>
+        {
+            Path.Combine(_repositoryRoot, "ProjectTemplate", "Agents", "contracts.json"),
+        };
+        var packsRoot = Path.Combine(_repositoryRoot, "Packs");
+        if (Directory.Exists(packsRoot))
+        {
+            manifests.AddRange(Directory
+                .EnumerateDirectories(packsRoot)
+                .Select(pack => Path.Combine(pack, "Agents", "contracts.json"))
+                .Where(File.Exists));
+        }
+
+        foreach (var manifest in manifests)
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(manifest));
+            if (!document.RootElement.TryGetProperty("agents", out var agents)) continue;
+            foreach (var property in agents.EnumerateObject())
+                contracts[property.Name] = property.Value.Clone();
+        }
+
+        return contracts;
     }
 
     private string BaselinePath(string slug) =>
@@ -406,4 +423,18 @@ public sealed partial class StaticEvalRunner
 
     [GeneratedRegex(@"\.agents/scripts/([A-Za-z0-9_.-]+)", RegexOptions.CultureInvariant)]
     private static partial Regex SharedScriptReferenceRegex();
+
+    /// <summary>
+    /// The <c>Agents/</c> root that ships this agent. Core stays at <c>ProjectTemplate/Agents</c>
+    /// (§2 keeps it in place because that literal path is hardcoded in the catalog, this runner,
+    /// four test classes and evalconfig.json); every other pack lives at
+    /// <c>Packs/&lt;id&gt;/Agents</c>. Before core became a pack the catalog only ever listed core
+    /// agents, so a single hardcoded root was correct — the moment a pack lands it silently
+    /// resolves every pack agent to a path that does not exist.
+    /// </summary>
+    private string AgentsRootFor(string? pack) =>
+        string.IsNullOrEmpty(pack) || pack == "core"
+            ? Path.Combine(_repositoryRoot, "ProjectTemplate", "Agents")
+            : Path.Combine(_repositoryRoot, "Packs", pack, "Agents");
+
 }

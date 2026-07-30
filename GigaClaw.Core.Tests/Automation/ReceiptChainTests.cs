@@ -38,9 +38,28 @@ public class ReceiptChainTests
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Emitters =
         ReceiptEmitterTable.Compose(PythonContractRunner.RepositoryRoot);
 
-    private static Dictionary<string, string> Skills() =>
-        Directory.EnumerateFiles(AgentsDir, "SKILL.md", SearchOption.AllDirectories)
+    /// <summary>
+    /// Every agent the composed system ships, core and packs alike. The receipt-emitter table is
+    /// now a union across pack manifests (§7.3), so resolving its entries against core's directory
+    /// alone would fail for any pack that declares an emitter — which is exactly what a pack is
+    /// allowed to do.
+    /// </summary>
+    private static Dictionary<string, string> Skills()
+    {
+        var roots = new List<string> { AgentsDir };
+        var packsRoot = Path.Combine(PythonContractRunner.RepositoryRoot, "Packs");
+        if (Directory.Exists(packsRoot))
+        {
+            roots.AddRange(Directory
+                .EnumerateDirectories(packsRoot)
+                .Select(pack => Path.Combine(pack, "Agents"))
+                .Where(Directory.Exists));
+        }
+
+        return roots
+            .SelectMany(root => Directory.EnumerateFiles(root, "SKILL.md", SearchOption.AllDirectories))
             .ToDictionary(path => new DirectoryInfo(Path.GetDirectoryName(path)!).Name, File.ReadAllText);
+    }
 
     private static Dictionary<string, HashSet<string>> Families(Dictionary<string, string> skills)
     {
