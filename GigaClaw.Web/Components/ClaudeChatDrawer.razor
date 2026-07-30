@@ -168,7 +168,7 @@
                 else
                 {
                     <div class="chat-message chat-message-@msg.Role">
-                        <div class="chat-bubble markdown-body">@((MarkupString)RenderMarkdown(msg.Text))</div>
+                        <div class="chat-bubble markdown-body">@((MarkupString)msg.RenderedHtml)</div>
                     </div>
                 }
             }
@@ -227,24 +227,27 @@
                 </div>
             }
             <textarea @ref="_inputRef"
-                      value="@_inputText"
-                      @oninput="OnInput"
+                      data-has-images="@(_pendingImages.Count > 0 ? "true" : "false")"
                       disabled="@(_loading && _activeRun?.Backend == HermesAgentService.BackendName)"
-                      placeholder="@(_loading ? L["ChatInjectPlaceholder"] : L["ChatPlaceholder"])"
-                      @onkeydown="OnKeyDown"></textarea>
+                      placeholder="@(_loading ? L["ChatInjectPlaceholder"] : L["ChatPlaceholder"])"></textarea>
             @if (_loading && !string.IsNullOrEmpty(_activeStreamId))
             {
                 <div class="chat-input-actions">
                     @if (_activeRun?.Backend != HermesAgentService.BackendName)
                     {
-                        <button class="chat-inject-btn" @onclick="Inject" disabled="@string.IsNullOrWhiteSpace(_inputText)" title="@L["ChatInject"]">↩ @L["ChatInject"]</button>
+                        <button class="chat-inject-btn"
+                                data-chat-submit="true"
+                                @onclick="SubmitComposer"
+                                title="@L["ChatInject"]">↩ @L["ChatInject"]</button>
                     }
                     <button class="chat-stop-btn" @onclick="StopActiveRun" title="@L["Stop"]">⏹ @L["Stop"]</button>
                 </div>
             }
             else
             {
-                <button @onclick="Send" disabled="@((string.IsNullOrWhiteSpace(_inputText) && _pendingImages.Count == 0) || _loading)">@L["Send"]</button>
+                <button data-chat-submit="true"
+                        @onclick="SubmitComposer"
+                        disabled="@_loading">@L["Send"]</button>
             }
         </div>
     }
@@ -271,7 +274,6 @@
     private bool _ready = false;
 
     private readonly List<ChatMessage> _messages = [];
-    private string _inputText = "";
     private bool _loading = false;
     private ElementReference _messagesRef;
     private ElementReference _inputRef;
@@ -285,6 +287,9 @@
     private string? _sessionModel; // model used by the current session (for detecting changes)
     private string? _streamingText;
     private List<string> _ollamaModels = new();
+    private bool _composerInstalled;
+    private int _lastScrolledMessageCount = -1;
+    private int _lastScrolledStreamingLength = -1;
     private const string DefaultModel = ClaudeModelCatalog.DefaultModel;
     private static readonly IReadOnlyList<string> ClaudeModels = ClaudeModelCatalog.Models;
 
@@ -294,7 +299,19 @@
     private readonly List<PendingImage> _pendingImages = [];
     private string? _pasteError;
 
-    private record ChatMessage(string Role, string Text);
+    private record ChatMessage
+    {
+        public ChatMessage(string role, string text)
+        {
+            Role = role;
+            Text = text;
+            RenderedHtml = GigaClaw.Web.Markdown.ChatMarkdownRenderer.Render(text);
+        }
+
+        public string Role { get; }
+        public string Text { get; }
+        public string RenderedHtml { get; }
+    }
     private sealed record ToolCallMessage(string ToolName, string Preview, string Detail)
         : ChatMessage("tool_use", ToolName);
     private sealed record AskUserQuestionMessage(string Prompt, string[] Options, string? RunId = null)
@@ -369,6 +386,7 @@
     {
         _activeTarget = target;
         _messages.Clear();
+        _composerInstalled = false;
         string? latestMessageAt = null;
         try
         {
@@ -457,6 +475,7 @@
     {
         await StopStream();
         _view = View.Selection;
+        _composerInstalled = false;
         _activeTarget = null;
         _messages.Clear();
         _streamingText = null;
@@ -488,44 +507,78 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (_view != View.Conversation)
         {
-            try { await _inputRef.FocusAsync(); } catch { }
+            _composerInstalled = false;
+            return;
         }
-        if (_view == View.Conversation)
+
+        _dotnetRef ??= DotNetObjectReference.Create(this);
+        if (!_composerInstalled)
         {
-            try { await JS.InvokeVoidAsync("chatDrawerInstallEnterGuard", _inputRef); } catch { }
-            _dotnetRef ??= DotNetObjectReference.Create(this);
-            try { await JS.InvokeVoidAsync("chatDrawerInstallPasteHandler", _inputRef, _dotnetRef); } catch { }
+            try
+            {
+                await JS.InvokeVoidAsync("chatDrawerComposer.install", _inputRef, _dotnetRef);
+                await JS.InvokeVoidAsync("chatDrawerInstallPasteHandler", _inputRef, _dotnetRef);
+                await _inputRef.FocusAsync();
+                _composerInstalled = true;
+            }
+            catch
+            {
+                // The textarea may disappear while the drawer is transitioning.
+            }
         }
+        else
+        {
+            try { await JS.InvokeVoidAsync("chatDrawerComposer.sync", _inputRef); } catch { }
+        }
+
+        var streamingLength = _streamingText?.Length ?? 0;
+        if (_messages.Count != _lastScrolledMessageCount
+            || streamingLength != _lastScrolledStreamingLength)
+        {
+            _lastScrolledMessageCount = _messages.Count;
+            _lastScrolledStreamingLength = streamingLength;
+            try { await JS.InvokeVoidAsync("chatDrawerScrollToBottom", _messagesRef); } catch { }
+        }
+    }
+
+    private async Task SubmitComposer()
+    {
+        string text;
         try
         {
-            await JS.InvokeVoidAsync("chatDrawerScrollToBottom", _messagesRef);
+            text = await JS.InvokeAsync<string>("chatDrawerComposer.takeValue", _inputRef);
         }
-        catch { }
-    }
-
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !e.ShiftKey)
+        catch
         {
-            if (_loading && !string.IsNullOrEmpty(_activeStreamId))
-            {
-                if (_activeRun?.Backend != HermesAgentService.BackendName)
-                    await Inject();
-            }
-            else
-                await Send();
+            return;
         }
+        await SubmitComposerText(text);
     }
 
-    private async Task Inject()
+    [JSInvokable]
+    public Task SubmitComposerFromJs(string text) =>
+        InvokeAsync(() => SubmitComposerText(text));
+
+    private async Task SubmitComposerText(string text)
     {
-        var text = _inputText.Trim();
+        if (_loading && !string.IsNullOrEmpty(_activeStreamId))
+        {
+            if (_activeRun?.Backend != HermesAgentService.BackendName)
+                await Inject(text);
+            return;
+        }
+
+        await Send(text);
+    }
+
+    private async Task Inject(string rawText)
+    {
+        var text = rawText.Trim();
         if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(_activeStreamId)) return;
 
         _messages.Add(new ChatMessage("inject", text));
-        _inputText = "";
         StateHasChanged();
 
         using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
@@ -542,11 +595,6 @@
             _messages.Add(new ChatMessage("error", ex.Message));
         }
         StateHasChanged();
-    }
-
-    private void OnInput(ChangeEventArgs e)
-    {
-        _inputText = e.Value?.ToString() ?? "";
     }
 
     [JSInvokable]
@@ -576,9 +624,9 @@
         if (idx >= 0 && idx < _pendingImages.Count) _pendingImages.RemoveAt(idx);
     }
 
-    private async Task Send()
+    private async Task Send(string rawText)
     {
-        var text = _inputText.Trim();
+        var text = rawText.Trim();
         if ((string.IsNullOrEmpty(text) && _pendingImages.Count == 0) || _loading || _activeTarget is null) return;
 
         _hitMaxTurns = false;
@@ -586,7 +634,6 @@
         if (!string.IsNullOrEmpty(text))
             _messages.Add(new ChatMessage("user", text));
         var imagesPayload = _pendingImages.Select(p => new { dataUrl = p.DataUrl, mime = p.Mime, name = p.Name, sizeBytes = p.SizeBytes }).ToList();
-        _inputText = "";
         _pendingImages.Clear();
         _pasteError = null;
         _loading = true;
@@ -722,8 +769,7 @@
     private async Task Continue()
     {
         _hitMaxTurns = false;
-        _inputText = "Continue";
-        await Send();
+        await Send("Continue");
     }
 
     private static string GetToolPreview(string toolName, string? detail) =>

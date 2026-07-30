@@ -17,6 +17,7 @@ internal sealed class TriggerHandler
     private readonly MemberService _members;
     private readonly SessionRegistry _sessions;
     private readonly AgentRunRegistry _runs;
+    private readonly TeamRunService _teamRuns;
     private readonly ILogger _logger;
 
     public TriggerHandler(
@@ -27,6 +28,7 @@ internal sealed class TriggerHandler
         MemberService members,
         SessionRegistry sessions,
         AgentRunRegistry runs,
+        TeamRunService teamRuns,
         ILogger logger)
     {
         _projects = projects;
@@ -36,6 +38,7 @@ internal sealed class TriggerHandler
         _members = members;
         _sessions = sessions;
         _runs = runs;
+        _teamRuns = teamRuns;
         _logger = logger;
     }
 
@@ -74,6 +77,12 @@ internal sealed class TriggerHandler
                 _logger.LogInformation("Config change detected on disk for {Slug} — reloading", project.Slug);
                 await _runtimeManager.ReloadProjectAsync(project.Slug);
             }
+            // Team runs are reconciled from the board before the triggers are polled, so a task
+            // released this tick is already in the dispatch column when its agent's trigger looks.
+            // This is also the whole resume path: after a restart there is no in-memory run state
+            // to rebuild — the first tick reads the open runs and continues from the tickets.
+            await _teamRuns.ReconcileProjectAsync(project.Slug);
+
             if (rt.Config is null) continue;
             foreach (var automation in rt.Config.Automations)
             {

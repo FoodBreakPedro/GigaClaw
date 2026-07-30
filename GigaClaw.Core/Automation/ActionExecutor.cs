@@ -26,6 +26,7 @@ internal sealed class ActionExecutor
     private readonly ProjectService _projects;
     private readonly RunStateManager _runState;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly TeamRunService _teamRuns;
     private readonly ILogger _logger;
 
     // Serializes in-process git operations per repository. Keyed by the git cwd so one
@@ -51,6 +52,7 @@ internal sealed class ActionExecutor
         ProjectService projects,
         RunStateManager runState,
         IHttpClientFactory httpClientFactory,
+        TeamRunService teamRuns,
         ILogger logger)
     {
         _tickets = tickets;
@@ -64,6 +66,7 @@ internal sealed class ActionExecutor
         _projects = projects;
         _runState = runState;
         _httpClientFactory = httpClientFactory;
+        _teamRuns = teamRuns;
         _logger = logger;
     }
 
@@ -94,7 +97,11 @@ internal sealed class ActionExecutor
             TicketCountInColumnConditionSpec c     => EvaluateTicketCountInColumnAsync(rt, c, firing),
             TicketAgeConditionSpec c               => EvaluateTicketAgeAsync(rt, c, firing),
             VerdictIsConditionSpec c               => EvaluateVerdictIsAsync(rt, c, firing),
+<<<<<<< HEAD
             RepairBudgetConditionSpec c            => EvaluateRepairBudgetAsync(rt, c, firing),
+=======
+            DependenciesResolvedConditionSpec c    => EvaluateDependenciesResolvedAsync(rt, c, firing),
+>>>>>>> claude-orch/c4-executable-teams
             _                                      => Task.FromResult(true),
         };
 
@@ -220,6 +227,7 @@ internal sealed class ActionExecutor
         return ConditionEvaluators.VerdictIs(c, resolution.Outcome);
     }
 
+<<<<<<< HEAD
     // ── Repair loop (C3) ────────────────────────────────────────────────────
 
     /// <summary>
@@ -228,10 +236,16 @@ internal sealed class ActionExecutor
     /// or re-triggered run respect the cap instead of restarting it.
     /// </summary>
     private async Task<bool> EvaluateRepairBudgetAsync(ProjectRuntime rt, RepairBudgetConditionSpec c, TriggerFiring firing)
+=======
+    // A firing without a ticket has no dependency edges to consult, so it cannot claim to be
+    // unblocked: this gate exists to hold work back, and fails closed when it cannot check.
+    private async Task<bool> EvaluateDependenciesResolvedAsync(ProjectRuntime rt, DependenciesResolvedConditionSpec c, TriggerFiring firing)
+>>>>>>> claude-orch/c4-executable-teams
     {
         if (firing.TicketId is null) return false;
         var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
         if (ticket is null) return false;
+<<<<<<< HEAD
 
         var agent = string.IsNullOrWhiteSpace(c.Agent)
             ? null
@@ -307,6 +321,11 @@ internal sealed class ActionExecutor
             .Select(x => new VerdictComment(x.Content, x.Author, x.CreatedAt))
             .ToList();
 
+=======
+        return ConditionEvaluators.DependenciesResolved(c, ticket.BlockedBy);
+    }
+
+>>>>>>> claude-orch/c4-executable-teams
     private async Task<bool> EvaluateTicketAgeAsync(ProjectRuntime rt, TicketAgeConditionSpec c, TriggerFiring firing)
     {
         if (firing.TicketId is null) return true;
@@ -474,6 +493,9 @@ internal sealed class ActionExecutor
                     }
                     case CreateTicketActionSpec cta:
                         await ExecuteCreateTicketActionAsync(rt, cta, state);
+                        break;
+                    case StartTeamRunActionSpec str:
+                        await ExecuteStartTeamRunActionAsync(rt, firing, str);
                         break;
                     default:
                         throw new NotSupportedException($"Unhandled action type {action.GetType().Name}. Register it in ActionExecutor.ExecuteAutomationAsync.");
@@ -744,6 +766,9 @@ internal sealed class ActionExecutor
                     // createTicket was missing here: a createTicket placed after a runAgent used to
                     // fall through the (previously default-less) switch and silently do nothing.
                     case CreateTicketActionSpec cta: await ExecuteCreateTicketActionAsync(rt, cta, state); break;
+                    // A team run started after a runAgent is the normal shape: the producer decides
+                    // the work needs a team, then the team fans out behind its ticket.
+                    case StartTeamRunActionSpec str: await ExecuteStartTeamRunActionAsync(rt, firing, str); break;
                     case RunAgentActionSpec ra:
                     {
                         var (skip, runTask, agentName, runId) = await StartAgentRunAsync(rt, firing, ra, ct);
@@ -1073,6 +1098,41 @@ internal sealed class ActionExecutor
             _logger.LogInformation("createTicket: created ticket #{Id} '{Title}' in project {Project}", ticket.Id, ticket.Title, rt.Slug);
         }
         catch (Exception ex) { _logger.LogWarning(ex, "createTicket failed in project {Project}", rt.Slug); }
+    }
+
+    /// <summary>
+    /// Starts a team run against the firing ticket. The heavy lifting (fan-out, edges, release)
+    /// lives in <see cref="TeamRunService"/>; this arm only resolves the team and reports the
+    /// outcome on the ticket, so a failed start is visible on the board instead of only in the log.
+    /// </summary>
+    private async Task ExecuteStartTeamRunActionAsync(ProjectRuntime rt, TriggerFiring firing, StartTeamRunActionSpec spec)
+    {
+        if (firing.TicketId is null)
+        {
+            // A run is bound to a parent ticket by definition; a ticketless firing has nothing to
+            // hang one on. Skip rather than throw — the rest of the chain is still meaningful.
+            _logger.LogWarning("startTeamRun: no ticket in the firing — skipping team '{Team}'", spec.Team);
+            return;
+        }
+
+        try
+        {
+            var run = await _teamRuns.StartRunAsync(rt.Slug, spec.Team, firing.TicketId.Value);
+            _logger.LogInformation(
+                "startTeamRun: team '{Team}' run #{RunId} is {Status} on ticket #{TicketId} in {Project}",
+                run.TeamSlug, run.Id, run.Status, firing.TicketId, rt.Slug);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "startTeamRun failed for team '{Team}' in project {Project}", spec.Team, rt.Slug);
+            try
+            {
+                await _tickets.AddActivityAsync(
+                    rt.Slug, firing.TicketId.Value,
+                    $"Team run '{spec.Team}' could not be started: {exception.Message}", "automation");
+            }
+            catch { /* non-blocking */ }
+        }
     }
 
     private async Task ExecuteCommitAgentMemoryActionAsync(ProjectRuntime rt, CommitAgentMemoryActionSpec cm, TriggerFiring? firing = null)

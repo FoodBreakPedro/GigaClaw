@@ -1,12 +1,43 @@
 @inherits LayoutComponentBase
+@inject LocalizationService L
+@implements IDisposable
 
 <EscapeKeyHost />
-@Body
+<div class="app-shell">
+    <header class="app-shell-header">
+        <a class="app-shell-brand" href="/" aria-label="GigaClaw — @L["AllBoardsNavLabel"]">
+            <img src="/GigaClaw-Logo-Horizontal.webp" alt="GigaClaw" />
+        </a>
+        <nav class="app-shell-nav" aria-label="GigaClaw">
+            <a href="/">&#128203; @L["AllBoardsNavLabel"]</a>
+            <a href="/projects">@L["Projects"]</a>
+            <a href="/settings">&#9881;&#65039; @L["SettingsTitle"]</a>
+        </nav>
+    </header>
+    <main class="app-shell-main">
+        @Body
+    </main>
+</div>
 
 <UpdateBanner />
+<OnboardingGate />
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        L.OnLanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLanguageChanged;
+    }
+}

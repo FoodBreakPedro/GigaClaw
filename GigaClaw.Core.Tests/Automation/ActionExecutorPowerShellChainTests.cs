@@ -66,6 +66,7 @@ public class ActionExecutorPowerShellChainTests
             tickets, members, labels, sessions, runs, runner, cost, loc, projects,
             new RunStateManager(runs, cost, tickets, NullLogger.Instance),
             httpClientFactory ?? FakeHttpClientFactory.Unused,
+            TestTeamRuns.For(projects, tickets),
             NullLogger.Instance);
 
         var ticket = await tickets.CreateTicketAsync(project.Slug, "Publish the launch post", status: "Review");

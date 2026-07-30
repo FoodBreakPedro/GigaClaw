@@ -128,7 +128,11 @@ public sealed class TicketCommentAddedTriggerSpec : TriggerSpec
 [JsonDerivedType(typeof(AllSubTicketsInStatusConditionSpec), "allSubTicketsInStatus")]
 [JsonDerivedType(typeof(TicketCountInColumnConditionSpec), "ticketCountInColumn")]
 [JsonDerivedType(typeof(VerdictIsConditionSpec), "verdictIs")]
+<<<<<<< HEAD
 [JsonDerivedType(typeof(RepairBudgetConditionSpec), "repairBudget")]
+=======
+[JsonDerivedType(typeof(DependenciesResolvedConditionSpec), "dependenciesResolved")]
+>>>>>>> claude-orch/c4-executable-teams
 public abstract class ConditionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -241,6 +245,7 @@ public sealed class VerdictIsConditionSpec : ConditionSpec
 }
 
 /// <summary>
+<<<<<<< HEAD
 /// The cap half of the bounded repair loop (see <c>doc/verdict-contract.md</c>). Pairs with
 /// <c>verdictIs: ["FIX"]</c>: one automation carries <c>mode: "withinCap"</c> and re-dispatches the
 /// producing agent, its twin carries <c>mode: "exhausted"</c> and escalates the ticket to the owner.
@@ -272,6 +277,21 @@ public sealed class RepairBudgetConditionSpec : ConditionSpec
     /// rather than loops.
     /// </summary>
     public int? MaxCycles { get; set; }
+=======
+/// Matches when every ticket the firing ticket is <c>blockedBy</c> has reached one of
+/// <see cref="ResolvedStatuses"/>. A ticket with no dependency edges matches — nothing is
+/// blocking it. (This is the opposite default from <see cref="AllSubTicketsInStatusConditionSpec"/>,
+/// where "no sub-tickets" must not look like "all sub-tickets finished".)
+/// <para>
+/// Only direct blockers are checked. A transitive blocker cannot be an issue while the ticket
+/// between them is unresolved, and once that one is Done its own blockers are irrelevant.
+/// </para>
+/// </summary>
+public sealed class DependenciesResolvedConditionSpec : ConditionSpec
+{
+    public override string UiTypeKey => "dependenciesResolved";
+    public List<string> ResolvedStatuses { get; set; } = new() { "Done" };
+>>>>>>> claude-orch/c4-executable-teams
 }
 
 public sealed class TicketAgeConditionSpec : ConditionSpec
@@ -295,6 +315,7 @@ public sealed class TicketAgeConditionSpec : ConditionSpec
 [JsonDerivedType(typeof(ExecutePowerShellActionSpec), "executePowerShell")]
 [JsonDerivedType(typeof(CreateTicketActionSpec), "createTicket")]
 [JsonDerivedType(typeof(HttpRequestActionSpec), "httpRequest")]
+[JsonDerivedType(typeof(StartTeamRunActionSpec), "startTeamRun")]
 public abstract class ActionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -397,6 +418,30 @@ public sealed class CreateTicketActionSpec : ActionSpec
     public string CreatedBy { get; set; } = "automation";
     /// <summary>Skip creation if an open ticket with the same resolved title already exists.</summary>
     public bool SkipIfExists { get; set; } = true;
+}
+
+/// <summary>
+/// Starts a <c>TeamRun</c> of the named team definition against the firing ticket, which becomes
+/// the run's parent. The run fans out one sub-ticket per task template, assigned to the role's
+/// agent, with the template's <c>dependsOn</c> materialized as ordinary ticket dependency edges —
+/// see <c>doc/executable-teams.md</c>.
+/// <para>
+/// The action is <b>idempotent per (ticket, team)</b>: firing again while the run is still open
+/// re-attaches to it instead of fanning out a second set of sub-tickets, so it is safe under a
+/// repeating <c>ticketInColumn</c> trigger. A filter-only team (empty task graph) is refused —
+/// there is nothing to execute.
+/// </para>
+/// The action only <i>starts</i> the run. Ordering, release and cancellation are then driven from
+/// the board by <c>TeamRunService</c>; dispatch itself stays the job of the ordinary per-agent
+/// automations that watch the dispatch column.
+/// </summary>
+public sealed class StartTeamRunActionSpec : ActionSpec
+{
+    public override string UiTypeKey => "startTeamRun";
+
+    /// <summary>Slug of the team definition to run. A project-scoped definition wins over the
+    /// built-in team of the same slug.</summary>
+    public required string Team { get; set; }
 }
 
 /// <summary>

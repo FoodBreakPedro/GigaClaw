@@ -52,5 +52,7 @@
   "PalActCreateTicket": "Créer un ticket",
   "PalActCreateTicketHint": "Crée un nouveau ticket ; supporte les placeholders de date et le contrôle d'idempotence",
   "PalActHttpRequest": "Requête HTTP",
-  "PalActHttpRequestHint": "Appelle un webhook ou une API et capture la réponse pour les actions suivantes de la chaîne"
+  "PalActHttpRequestHint": "Appelle un webhook ou une API et capture la réponse pour les actions suivantes de la chaîne",
+  "PalActStartTeamRun": "Démarrer une équipe",
+  "PalActStartTeamRunHint": "Déploie une définition d\u2019équipe en sous-tickets sous le ticket déclencheur, reliés par des dépendances"
 }
