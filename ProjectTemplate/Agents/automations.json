@@ -1222,6 +1222,788 @@
           "author": "automation"
         }
       ]
+    },
+    {
+      "id": "verdict-gate-qa-ship-to-done",
+      "name": "Verdict gate: a qa-tester SHIP verdict advances a programmer ticket out of Review",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "SHIP"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "external",
+            "publish",
+            "deploy",
+            "outbound"
+          ],
+          "negate": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} advanced — qa-tester returned SHIP.\n\nThe automation engine re-read the reviewer's `GIGACLAW-VERDICT v1` comment and re-checked it against the v1 contract (marker/body agreement, schema, no veto item on a SHIP) before moving this ticket to Done. Nothing was taken on the reviewer's word.\n\nArtifact freshness is deliberately not re-hashed for qa-tester: its judgement covers a multi-file code change and an executed test run, not one workspace file, so no path evidence can hash to `inputDigest`. See `.agents/scripts/verdict.schema.json`."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Done"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-ui-ship-to-done",
+      "name": "Verdict gate: a ui-auditor SHIP verdict advances a ui-designer ticket out of Review",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "SHIP"
+          ],
+          "agent": "ui-auditor",
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "external",
+            "publish",
+            "deploy",
+            "outbound"
+          ],
+          "negate": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} advanced — ui-auditor returned SHIP.\n\nThe automation engine re-read the reviewer's `GIGACLAW-VERDICT v1` comment, re-checked it against the v1 contract, and re-hashed the audited source file so a stale approval could not be replayed against changed bytes. Only then was this ticket moved to Done."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Done"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-blog-ship-to-seo",
+      "name": "Verdict gate: a blog-reviewer SHIP verdict hands a blog-writer draft to blog-seo",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "blog-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "SHIP"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} advanced — blog-reviewer returned SHIP.\n\nThe automation engine re-read the `GIGACLAW-VERDICT v1` comment, re-checked it against the v1 contract, and re-hashed the reviewed draft file: it still matches `inputDigest`, so the approval is not stale. Handed to blog-seo in Todo."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "blog-seo"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Todo"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-media-ship-to-owner",
+      "name": "Verdict gate: a local-media-reviewer SHIP verdict parks the render for owner approval",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "SHIP"
+          ],
+          "agent": "local-media-reviewer",
+          "requireFreshArtifact": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "setLabels",
+          "add": [
+            "pending-approval"
+          ],
+          "remove": [
+            "approved"
+          ]
+        },
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} advanced to owner approval — local-media-reviewer returned SHIP.\n\nThe automation engine re-read the `GIGACLAW-VERDICT v1` comment, re-checked it against the v1 contract, and re-hashed the reviewed render: it still matches `inputDigest`. Local media is never auto-shipped — the machine only certifies the review.\n\n@owner — move to Done to approve, or to Todo with feedback to revise."
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-repair-round",
+      "name": "Verdict gate: a FIX verdict returns the work to the producing agent while the repair budget holds",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor",
+          "blog-reviewer",
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer",
+            "blog-writer",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "repairBudget",
+          "mode": "withinCap"
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} repair round — returning the work to {assignee}.\n\nThe reviewer returned FIX and `maxReviewCycles` still has a round left, so the automation engine re-dispatches the producing agent with the refused categories and veto items injected into its run context. When the budget runs out the ticket escalates to the owner instead of looping."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "InProgress"
+        },
+        {
+          "type": "runAgent",
+          "agent": "{assignee}",
+          "concurrencyGroup": "{assignee}",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "{assignee}"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "{assignee}"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-repair-exhausted",
+      "name": "Verdict gate: a FIX verdict with the repair budget spent escalates to the owner",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor",
+          "blog-reviewer",
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer",
+            "blog-writer",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted"
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\n@owner — the repair budget for this ticket is spent, so the automation engine stopped the produce/review loop and parked the ticket here rather than starting another round. Every round's reasons are above; no run log is needed. Unblocking the ticket (or moving it back to Todo with feedback) hands the agents a fresh budget."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-block-escalate",
+      "name": "Verdict gate: BLOCK, INVALID, STALE or MISSING blocks the ticket with a receipt",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor",
+          "blog-reviewer",
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer",
+            "blog-writer",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "BLOCK",
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "requireFreshArtifact": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — the reviewer's verdict does not permit an exit.\n\nThe newest verdict on this ticket resolved to one of:\n- `BLOCK` — the reviewer escalated deliberately;\n- `INVALID` — the comment breaks the v1 verdict contract (`.agents/scripts/verdict.schema.json`);\n- `STALE` — the reviewed artifact changed after the review, so the judgement no longer applies;\n- `MISSING` — the reviewer answered in prose and posted no parseable verdict.\n\nThe gate fails closed: an unreadable, absent or stale verdict blocks the ticket, it never passes it. A reviewer that writes prose instead of a verdict stalls the pipeline visibly instead of letting work through.\n\n@owner — read the newest reviewer comment, then either fix the artifact and move the ticket back to Todo, or re-run the reviewer so it posts a contract-valid verdict. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-qa-repair-round",
+      "name": "Verdict gate: a qa-tester FIX verdict returns the work to the programmer while the repair budget holds",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "withinCap",
+          "agent": "qa-tester"
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} repair round — returning the work to {assignee}.\n\nqa-tester returned FIX and `maxReviewCycles` still has a round left, so the automation engine re-dispatches the producing agent with the failed acceptance criteria and veto items injected into its run context. When the budget runs out the ticket escalates to the owner instead of looping."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "InProgress"
+        },
+        {
+          "type": "runAgent",
+          "agent": "{assignee}",
+          "concurrencyGroup": "{assignee}",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "{assignee}"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "{assignee}"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-qa-repair-exhausted",
+      "name": "Verdict gate: a qa-tester FIX verdict with the repair budget spent escalates to the owner",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "agent": "qa-tester"
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\n@owner — the repair budget for this ticket is spent, so the automation engine stopped the programmer/qa loop and parked the ticket here rather than starting another round. Every round's reasons are above; no run log is needed. Unblocking the ticket (or moving it back to Todo with feedback) hands the agents a fresh budget."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-qa-block-escalate",
+      "name": "Verdict gate: a qa-tester BLOCK, INVALID, STALE or MISSING verdict blocks the ticket with a receipt",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "BLOCK",
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — qa-tester's verdict does not permit an exit.\n\nThe newest qa-tester verdict on this ticket resolved to one of:\n- `BLOCK` — the change could not be exercised, or the failure keeps repeating;\n- `INVALID` — the comment breaks the v1 verdict contract (`.agents/scripts/verdict.schema.json`);\n- `MISSING` — qa-tester answered in prose and posted no parseable verdict.\n\nThe gate fails closed: an unreadable or absent verdict blocks the ticket, it never passes it. A reviewer that writes prose instead of a verdict stalls the pipeline visibly instead of letting untested work through.\n\n@owner — read the newest qa-tester comment, then either fix the change and move the ticket back to Todo, or re-run qa-tester so it posts a contract-valid verdict. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-ship-to-done",
+      "name": "Verdict gate (AD-7, OFF until blog-reviewer's AD-7 protocol emits GIGACLAW-VERDICT): SHIP marks the draft ready-for-cms",
+      "enabled": false,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "SHIP"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "external",
+            "publish",
+            "deploy",
+            "outbound"
+          ],
+          "negate": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} advanced — blog-reviewer returned SHIP on the AD-7 draft.\n\nArtifact freshness is deliberately not re-hashed here: under AD-7 the draft is the ticket **description**, not a workspace file, and content-writer deletes its scratch draft before exiting. There is nothing on disk that can hash to `inputDigest`, so the digest is checked for contract validity only."
+        },
+        {
+          "type": "setLabels",
+          "add": [
+            "ready-for-cms"
+          ]
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Done"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-repair-round",
+      "name": "Verdict gate (AD-7, OFF until blog-reviewer's AD-7 protocol emits GIGACLAW-VERDICT): FIX returns the draft to content-writer",
+      "enabled": false,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "withinCap",
+          "agent": "blog-reviewer"
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} repair round — returning the draft to {assignee}.\n\nblog-reviewer returned FIX and `maxReviewCycles` still has a round left. The ticket goes back to InProgress (not Todo) so the AD-7 revision loop rewrites the description in place, with the refused categories and veto items injected into the run context."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "InProgress"
+        },
+        {
+          "type": "runAgent",
+          "agent": "{assignee}",
+          "concurrencyGroup": "{assignee}",
+          "maxTurns": 150,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "{assignee}"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "{assignee}"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-repair-exhausted",
+      "name": "Verdict gate (AD-7, OFF until blog-reviewer's AD-7 protocol emits GIGACLAW-VERDICT): a spent repair budget escalates to the owner",
+      "enabled": false,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "agent": "blog-reviewer"
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\n@owner — the AD-7 revision budget for this draft is spent, so the automation engine stopped the writer/reviewer loop and parked the ticket here rather than starting a third round. Every round's reasons are above. Unblocking the ticket hands the agents a fresh budget."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-block-escalate",
+      "name": "Verdict gate (AD-7, OFF until blog-reviewer's AD-7 protocol emits GIGACLAW-VERDICT): BLOCK, INVALID or MISSING blocks the draft with a receipt",
+      "enabled": false,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "BLOCK",
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — the AD-7 review verdict does not permit an exit.\n\nThe newest blog-reviewer verdict on this draft resolved to `BLOCK` (unreadable draft or spent budget), `INVALID` (the comment breaks the v1 verdict contract in `.agents/scripts/verdict.schema.json`) or `MISSING` (the reviewer answered in prose and posted no parseable verdict).\n\nThe gate fails closed: an unreadable or absent verdict blocks the draft, it never passes it.\n\n@owner — read the newest blog-reviewer comment, then either repair the ticket description and move the ticket back to Todo, or re-run the reviewer so it posts a contract-valid verdict."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
     }
   ]
 }
