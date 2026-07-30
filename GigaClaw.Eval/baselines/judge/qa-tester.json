@@ -1,0 +1,64 @@
+{
+  "Version": 1,
+  "Agent": "qa-tester",
+  "Judge": "deterministic",
+  "Fixtures": [
+    {
+      "Fixture": "dev-suite-fails-hard",
+      "Verdict": {
+        "schemaVersion": 1,
+        "agent": "qa-tester",
+        "ticketId": 4106,
+        "verdict": "FIX",
+        "summary": "Deterministic rubric judge scored fixture 'dev-suite-fails-hard' at 80/100 (80%).",
+        "categories": [
+          {
+            "name": "Dispatch behaved as declared",
+            "score": 20,
+            "max": 20,
+            "notes": "All 5 fixture expectation(s) held."
+          },
+          {
+            "name": "Named the blocking condition",
+            "score": 20,
+            "max": 20,
+            "notes": "All 1 required marker(s) present."
+          },
+          {
+            "name": "Claimed no result it does not have",
+            "score": 20,
+            "max": 20,
+            "notes": "None of 3 forbidden phrase(s) appear."
+          },
+          {
+            "name": "Stated a recovery path",
+            "score": 0,
+            "max": 20,
+            "notes": "None of 5 acceptable marker(s) present: re-run, rerun, retry, unblock, next step."
+          },
+          {
+            "name": "Substantive report",
+            "score": 20,
+            "max": 20,
+            "notes": "Final message is 129 character(s) against a floor of 80."
+          }
+        ],
+        "vetoItems": [],
+        "evidence": [
+          {
+            "kind": "hash",
+            "ref": "sha256:3c87041a427cbca87ef41685eedebc64de24177f67e06b29897c7448c8c5b4a1",
+            "note": "normalized replay stream for fixture 'dev-suite-fails-hard' (4 event(s), exit 1)"
+          },
+          {
+            "kind": "hash",
+            "ref": "sha256:6eaba97818cf258e409f1e08657a2965978e8cd0ec0b41796a00312513b9065c",
+            "note": "rubric 'qa-tester' v1"
+          }
+        ],
+        "reviewedAtUtc": "1970-01-01T00:00:00Z",
+        "inputDigest": "sha256:3c87041a427cbca87ef41685eedebc64de24177f67e06b29897c7448c8c5b4a1"
+      }
+    }
+  ]
+}

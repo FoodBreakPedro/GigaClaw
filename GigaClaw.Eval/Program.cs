@@ -15,10 +15,11 @@ internal static class Program
         var verb = positionals.FirstOrDefault() switch
         {
             "replay" => "replay",
+            "judge" => "judge",
             "static" => "static",
             _ => "static"
         };
-        var target = positionals.FirstOrDefault() is "replay" or "static"
+        var target = positionals.FirstOrDefault() is "replay" or "judge" or "static"
             ? positionals.Skip(1).FirstOrDefault()
             : positionals.FirstOrDefault();
         if (target is null)
@@ -30,9 +31,12 @@ internal static class Program
 
         try
         {
-            return verb == "replay"
-                ? RunReplay(root, target, args, writeReport)
-                : RunStatic(root, target, args, writeReport);
+            return verb switch
+            {
+                "replay" => RunReplay(root, target, args, writeReport),
+                "judge" => RunJudge(root, target, args, writeReport),
+                _ => RunStatic(root, target, args, writeReport),
+            };
         }
         catch (ArgumentException exception)
         {
@@ -62,6 +66,17 @@ internal static class Program
         var result = new ReplayRunner(root).Run(
             target,
             args.Contains("--real-cli", StringComparer.Ordinal),
+            writeReport);
+        Print(result);
+        return result.ExitCode;
+    }
+
+    private static int RunJudge(string root, string target, string[] args, bool writeReport)
+    {
+        var result = new JudgeRunner(root).Run(
+            target,
+            args.Contains("--llm", StringComparer.Ordinal),
+            args.Contains("--update-baselines", StringComparer.Ordinal),
             writeReport);
         Print(result);
         return result.ExitCode;
@@ -103,6 +118,27 @@ internal static class Program
         var mode = result.Reports.FirstOrDefault()?.Mode ?? "mock";
         Console.WriteLine(
             $"Replayed {fixtures.Length} fixture(s) across {result.Reports.Count} agent(s) in {mode} mode: " +
+            $"{fixtures.Count(fixture => fixture.Status == "pass")} pass(es), " +
+            $"{fixtures.Count(fixture => fixture.Status != "pass")} failure(s).");
+        Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
+    }
+
+    private static void Print(JudgeRunResult result)
+    {
+        var fixtures = result.Reports.SelectMany(report => report.Fixtures).ToArray();
+        foreach (var fixture in fixtures)
+        {
+            foreach (var check in fixture.Checks.Where(check => check.Status != "pass"))
+                Console.WriteLine(
+                    $"{fixture.Agent}/{fixture.Fixture}: {check.Category}/{check.Status}: {check.Id}: {check.Message}");
+            if (fixture.Verdict is not null)
+                Console.WriteLine(
+                    $"{fixture.Agent}/{fixture.Fixture}: {fixture.Verdict.Verdict} " +
+                    $"({RubricJudge.Percent(fixture.Verdict)}%) baseline={fixture.BaselineStatus}");
+        }
+
+        Console.WriteLine(
+            $"Judged {fixtures.Length} fixture(s) across {result.Reports.Count} agent(s): " +
             $"{fixtures.Count(fixture => fixture.Status == "pass")} pass(es), " +
             $"{fixtures.Count(fixture => fixture.Status != "pass")} failure(s).");
         Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
@@ -155,6 +191,8 @@ internal static class Program
             "Usage: GigaClaw.Eval [static] <agent|all> [--strict] [--update-baselines] [--no-report] [--root PATH]");
         Console.Error.WriteLine(
             "       GigaClaw.Eval replay <fixture|family|agent|all> [--real-cli] [--no-report] [--root PATH]");
+        Console.Error.WriteLine(
+            "       GigaClaw.Eval judge  <fixture|family|agent|all> [--llm] [--update-baselines] [--no-report] [--root PATH]");
         return 2;
     }
 }

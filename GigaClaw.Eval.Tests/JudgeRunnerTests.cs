@@ -1,0 +1,325 @@
+using System.Diagnostics;
+using System.Text.Json;
+
+namespace GigaClaw.Eval.Tests;
+
+/// <summary>
+/// Judge tests run against the real repository: the committed fixtures, rubrics and baselines, and
+/// the mock claude CLI built from GigaClaw.ClaudeMock (<c>dotnet build GigaClaw.ClaudeMock -c
+/// Release</c>). They share the replay collection because judging replays, and the replay layer
+/// sets GIGACLAW_CLAUDE_BIN process-wide.
+/// </summary>
+[Collection("Replay")]
+public sealed class JudgeRunnerTests
+{
+    private static readonly string RepositoryRoot = FindRepositoryRoot();
+    private const string Fixture = "dev-fix-login-timeout";
+    private const string Agent = "programmer";
+
+    [Fact]
+    public void Judge_IsByteIdentical_AcrossRepeatedRunsOfTheSameFixture()
+    {
+        var runner = new JudgeRunner(RepositoryRoot);
+
+        var first = runner.Run(Fixture);
+        var firstReport = File.ReadAllText(runner.ReportPath(Agent));
+        var second = runner.Run(Fixture);
+        var secondReport = File.ReadAllText(runner.ReportPath(Agent));
+
+        Assert.Equal(0, first.ExitCode);
+        Assert.Equal(0, second.ExitCode);
+        // The written artifact is what CI diffs, so comparing the files is the real guarantee.
+        Assert.Equal(firstReport, secondReport);
+
+        var firstVerdict = Assert.Single(Assert.Single(first.Reports).Fixtures).Verdict;
+        var secondVerdict = Assert.Single(Assert.Single(second.Reports).Fixtures).Verdict;
+        Assert.NotNull(firstVerdict);
+        Assert.Equal(
+            JsonSerializer.Serialize(firstVerdict),
+            JsonSerializer.Serialize(secondVerdict));
+        // A wall clock would be the one thing that could differ between the two.
+        Assert.Equal(RubricJudge.DeterministicReviewInstant, firstVerdict!.ReviewedAtUtc);
+    }
+
+    [Fact]
+    public void Judge_MatchesTheCommittedBaselineForEveryFixture()
+    {
+        var result = new JudgeRunner(RepositoryRoot).Run("all", writeReport: false);
+
+        Assert.Equal(0, result.ExitCode);
+        var fixtures = result.Reports.SelectMany(report => report.Fixtures).ToArray();
+        Assert.Equal(6, fixtures.Length);
+        Assert.All(fixtures, fixture =>
+        {
+            Assert.Equal("match", fixture.BaselineStatus);
+            Assert.Equal("pass", fixture.Status);
+            Assert.NotNull(fixture.Verdict);
+        });
+
+        // The rubric found a real gap in one committed fixture; a baseline that hid it would be
+        // worth nothing. dev-suite-fails-hard reports its blocker but proposes no way forward.
+        var qa = fixtures.Single(fixture => fixture.Agent == "qa-tester");
+        Assert.Equal("FIX", qa.Verdict!.Verdict);
+    }
+
+    [Fact]
+    public void Judge_RejectsAVerdictThatBreaksTheContract_InsteadOfWritingIt()
+    {
+        var runner = new JudgeRunner(RepositoryRoot);
+        var fixture = LoadFixture(Fixture);
+        // Two criteria under one name: the contract forbids a repeated category, so the verdict
+        // this rubric produces must never reach a report or a baseline.
+        var rubric = new AgentRubric(
+            Version: 1,
+            Agent: Agent,
+            Description: "Deliberately contract-breaking.",
+            Criteria:
+            [
+                new RubricCriterion("Same name", "replay-expectations", 10),
+                new RubricCriterion("Same name", "no-error-events", 10),
+            ]);
+
+        var result = runner.JudgeSingle(fixture, rubric);
+
+        Assert.Equal("error", result.Status);
+        Assert.Null(result.Verdict);
+        Assert.Contains(
+            result.Checks,
+            check => check.Id == "judge.contract" && check.Status == "error" &&
+                     check.Message.Contains("repeats a category name", StringComparison.Ordinal));
+        // The result record is exactly what gets serialized into the report file.
+        Assert.DoesNotContain("schemaVersion", JsonSerializer.Serialize(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Judge_TurnsAFailedVetoCriterionIntoABlock()
+    {
+        var runner = new JudgeRunner(RepositoryRoot);
+        var rubric = new AgentRubric(
+            Version: 1,
+            Agent: Agent,
+            Description: "One veto criterion the committed scenario cannot satisfy.",
+            Criteria:
+            [
+                new RubricCriterion("Dispatch behaved as declared", "replay-expectations", 50),
+                new RubricCriterion(
+                    "Shipped the migration",
+                    "final-text-contains-all",
+                    50,
+                    Values: ["this phrase is not in the scenario"],
+                    Veto: "migration-missing",
+                    Statement: "The run never shipped the migration it was dispatched for."),
+            ]);
+
+        var result = runner.JudgeSingle(LoadFixture(Fixture), rubric);
+
+        Assert.Equal("pass", result.Status);
+        Assert.Equal("BLOCK", result.Verdict!.Verdict);
+        var veto = Assert.Single(result.Verdict.VetoItems);
+        Assert.Equal("migration-missing", veto.Code);
+        // A veto item must cite evidence the verdict actually lists, or the contract rejects it.
+        Assert.All(veto.EvidenceRefs, reference =>
+            Assert.Contains(result.Verdict.Evidence, evidence => evidence.Ref == reference));
+    }
+
+    [Fact]
+    public void EveryCommittedBaselineVerdictPassesTheShippedValidator()
+    {
+        var directory = Path.Combine(RepositoryRoot, "GigaClaw.Eval", "baselines", "judge");
+        var baselines = Directory.GetFiles(directory, "*.json").OrderBy(path => path, StringComparer.Ordinal).ToArray();
+        Assert.Equal(6, baselines.Length);
+
+        var scratch = Path.Combine(Path.GetTempPath(), "gigaclaw-judge-verdicts-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratch);
+        try
+        {
+            foreach (var path in baselines)
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                foreach (var entry in document.RootElement.GetProperty("Fixtures").EnumerateArray())
+                {
+                    var name = entry.GetProperty("Fixture").GetString()!;
+                    var verdict = Path.Combine(scratch, $"{name}.json");
+                    File.WriteAllText(verdict, entry.GetProperty("Verdict").GetRawText());
+
+                    // The Python validator shipped to workspaces is the authoring-side enforcement
+                    // point. A judge verdict it would reject is not the same object a reviewer emits.
+                    var (exitCode, output) = RunValidator(verdict);
+                    Assert.True(exitCode == 0, $"{name} must satisfy the v1 verdict contract:{Environment.NewLine}{output}");
+                }
+            }
+        }
+        finally
+        {
+            try { Directory.Delete(scratch, recursive: true); } catch (IOException) { }
+        }
+    }
+
+    [Fact]
+    public void LlmJudge_IsInformational_AndRecordsWhatProducedIt()
+    {
+        var runner = new JudgeRunner(
+            RepositoryRoot,
+            request => Canned(request, "SHIP", 100, request.InputDigest));
+
+        var result = runner.Run(Fixture, llm: true, writeReport: false);
+        var judged = Assert.Single(Assert.Single(result.Reports).Fixtures);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("deterministic+llm", judged.Mode);
+        // The deterministic verdict is still the one that is baselined and reported.
+        Assert.Equal(RubricJudge.DeterministicReviewInstant, judged.Verdict!.ReviewedAtUtc);
+        Assert.Equal("match", judged.BaselineStatus);
+
+        Assert.NotNull(judged.Model);
+        Assert.Equal("claude-opus-5", judged.Model!.ReportedModel);
+        Assert.Equal("mock-cli 9.9.9", judged.Model.CliVersion);
+        Assert.Equal(1, judged.Model.MaxTurns);
+        Assert.StartsWith("sha256:", judged.Model.PromptDigest, StringComparison.Ordinal);
+
+        Assert.NotNull(judged.Tolerance);
+        Assert.True(judged.Tolerance!.WithinTolerance);
+        Assert.True(judged.Tolerance.DecisionAgrees);
+    }
+
+    [Fact]
+    public void LlmJudge_DiscardsAVerdictBoundToADifferentStream_WithoutFailingTheRun()
+    {
+        var runner = new JudgeRunner(
+            RepositoryRoot,
+            request => Canned(request, "SHIP", 100, "sha256:" + new string('b', 64)));
+
+        var result = runner.Run(Fixture, llm: true, writeReport: false);
+        var judged = Assert.Single(Assert.Single(result.Reports).Fixtures);
+
+        // Discarded, but an unreproducible judge never breaks the build.
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("pass", judged.Status);
+        Assert.Null(judged.Tolerance);
+        var check = Assert.Single(judged.Checks, check => check.Id == "judge.llm.contract");
+        Assert.Equal("error", check.Status);
+        Assert.Equal("informational", check.Category);
+        Assert.Contains("bound to", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LlmJudge_IsRefused_UnlessTheCostIsAcknowledged()
+    {
+        var previous = Environment.GetEnvironmentVariable(LlmJudge.AllowVariable);
+        Environment.SetEnvironmentVariable(LlmJudge.AllowVariable, null);
+        try
+        {
+            var result = new JudgeRunner(RepositoryRoot).Run(Fixture, llm: true, writeReport: false);
+            var judged = Assert.Single(Assert.Single(result.Reports).Fixtures);
+
+            Assert.Equal(0, result.ExitCode);
+            var check = Assert.Single(judged.Checks, check => check.Id == "judge.llm.contract");
+            Assert.Contains(LlmJudge.AllowVariable, check.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(LlmJudge.AllowVariable, previous);
+        }
+    }
+
+    [Fact]
+    public void EveryFixtureAgentHasAResolvableRubric()
+    {
+        var runner = new JudgeRunner(RepositoryRoot);
+        var replay = new ReplayRunner(RepositoryRoot);
+
+        foreach (var fixture in replay.LoadFixtures())
+        {
+            var (rubric, source) = runner.LoadRubric(fixture.Agent);
+            Assert.Equal(fixture.Agent, source);
+            Assert.Equal(fixture.Agent, rubric.Agent);
+            Assert.NotEmpty(rubric.Criteria);
+        }
+
+        // An agent without a bespoke rubric still gets judged, by the shared default.
+        var (fallback, fallbackSource) = runner.LoadRubric("documentalist");
+        Assert.Equal("default", fallbackSource);
+        Assert.Equal("default", fallback.Agent);
+    }
+
+    private static LlmJudgeTranscript Canned(LlmJudgeRequest request, string decision, double score, string digest)
+    {
+        var verdict = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["schemaVersion"] = 1,
+            ["agent"] = request.Fixture.Agent,
+            ["ticketId"] = request.Fixture.Ticket.Id,
+            ["verdict"] = decision,
+            ["summary"] = "Canned judge reply used to exercise the transport.",
+            ["categories"] = new[] { new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["name"] = "Overall", ["score"] = score, ["max"] = 100.0,
+            } },
+            ["vetoItems"] = Array.Empty<object>(),
+            ["evidence"] = new[] { new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["kind"] = "hash", ["ref"] = digest,
+            } },
+            ["reviewedAtUtc"] = "2026-07-30T12:00:00Z",
+            ["inputDigest"] = digest,
+        };
+
+        var body = JsonSerializer.Serialize(verdict, new JsonSerializerOptions { WriteIndented = true });
+        var text =
+            $"GIGACLAW-VERDICT v1 {request.Fixture.Agent} {decision} artifact-{digest}\n\n" +
+            $"```json\n{body}\n```\n";
+        return new LlmJudgeTranscript(text, "mock-cli", "mock-cli 9.9.9", "claude-opus-5", "claude-opus-5", 1);
+    }
+
+    private static ReplayFixture LoadFixture(string id) =>
+        new ReplayRunner(RepositoryRoot).LoadFixtures().Single(fixture => fixture.Id == id);
+
+    private static (int ExitCode, string Output) RunValidator(string verdictPath)
+    {
+        var script = Path.Combine(RepositoryRoot, "ProjectTemplate", "Agents", "scripts", "verdict_contract.py");
+        foreach (var (executable, prefix) in new (string, string[])[]
+                 { ("python3", []), ("python", []), ("py", ["-3"]) })
+        {
+            var info = new ProcessStartInfo(executable)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                WorkingDirectory = RepositoryRoot,
+            };
+            foreach (var argument in prefix.Append(script).Append(verdictPath))
+                info.ArgumentList.Add(argument);
+
+            try
+            {
+                using var process = Process.Start(info);
+                if (process is null) continue;
+                var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+                process.WaitForExit();
+                return (process.ExitCode, output);
+            }
+            catch (Exception)
+            {
+                // Interpreter not installed under this name; try the next.
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Python 3 was not found (tried python3, python, py -3). The verdict contract's single " +
+            "implementation is Python, so it is a prerequisite for judging.");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (var current = new DirectoryInfo(AppContext.BaseDirectory);
+             current is not null;
+             current = current.Parent)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "catalog.json")) &&
+                Directory.Exists(Path.Combine(current.FullName, "ProjectTemplate", "Agents")))
+            {
+                return current.FullName;
+            }
+        }
+        throw new DirectoryNotFoundException("Could not locate the repository root from the test assembly.");
+    }
+}

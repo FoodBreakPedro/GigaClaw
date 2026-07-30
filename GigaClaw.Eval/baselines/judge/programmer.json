@@ -1,0 +1,70 @@
+{
+  "Version": 1,
+  "Agent": "programmer",
+  "Judge": "deterministic",
+  "Fixtures": [
+    {
+      "Fixture": "dev-fix-login-timeout",
+      "Verdict": {
+        "schemaVersion": 1,
+        "agent": "programmer",
+        "ticketId": 4101,
+        "verdict": "SHIP",
+        "summary": "Deterministic rubric judge scored fixture 'dev-fix-login-timeout' at 100/100 (100%).",
+        "categories": [
+          {
+            "name": "Dispatch behaved as declared",
+            "score": 20,
+            "max": 20,
+            "notes": "All 5 fixture expectation(s) held."
+          },
+          {
+            "name": "Investigated before editing",
+            "score": 15,
+            "max": 15,
+            "notes": "All 1 required event kind(s) appear."
+          },
+          {
+            "name": "Reported the fix and its regression test",
+            "score": 25,
+            "max": 25,
+            "notes": "All 2 required marker(s) present."
+          },
+          {
+            "name": "No hedged handoff",
+            "score": 20,
+            "max": 20,
+            "notes": "None of 5 forbidden phrase(s) appear."
+          },
+          {
+            "name": "Bounded tool use",
+            "score": 10,
+            "max": 10,
+            "notes": "1 tool call(s) against a ceiling of 4."
+          },
+          {
+            "name": "Substantive handoff",
+            "score": 10,
+            "max": 10,
+            "notes": "Final message is 272 character(s) against a floor of 120."
+          }
+        ],
+        "vetoItems": [],
+        "evidence": [
+          {
+            "kind": "hash",
+            "ref": "sha256:4402f8299690bcbaa7c8ded18a6316ec76478ff774da3c26fce4b9a6ae43cb26",
+            "note": "normalized replay stream for fixture 'dev-fix-login-timeout' (7 event(s), exit 0)"
+          },
+          {
+            "kind": "hash",
+            "ref": "sha256:a20e92753635411865e325129ae2d39ce296ad0e75c2bd242ac0b8bf746ae1ad",
+            "note": "rubric 'programmer' v1"
+          }
+        ],
+        "reviewedAtUtc": "1970-01-01T00:00:00Z",
+        "inputDigest": "sha256:4402f8299690bcbaa7c8ded18a6316ec76478ff774da3c26fce4b9a6ae43cb26"
+      }
+    }
+  ]
+}

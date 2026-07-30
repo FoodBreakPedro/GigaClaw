@@ -12,5 +12,12 @@
     "FixtureRoot": "GigaClaw.Eval/fixtures",
     "ArtifactSubdirectory": "replay",
     "TimeoutSeconds": 120
+  },
+  "Judge": {
+    "RubricRoot": "GigaClaw.Eval/rubrics",
+    "ArtifactSubdirectory": "judge",
+    "BaselineSubdirectory": "judge",
+    "ShipThresholdPercent": 90,
+    "LlmTolerancePercent": 10
   }
 }

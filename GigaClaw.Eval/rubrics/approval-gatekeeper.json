@@ -1,0 +1,49 @@
+{
+  "Version": 1,
+  "Agent": "approval-gatekeeper",
+  "Description": "A gatekeeper run is judged on stating a decision, citing the conditions that produced it, telling the requester how to come back, and never waiving the gate it exists to hold.",
+  "Criteria": [
+    {
+      "Name": "Dispatch behaved as declared",
+      "Check": "replay-expectations",
+      "Max": 20,
+      "Veto": "replay-expectation-unmet",
+      "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
+    },
+    {
+      "Name": "Stated a decision",
+      "Check": "final-text-contains-any",
+      "Max": 20,
+      "Values": ["rejected", "approved", "blocked"],
+      "Statement": "A gatekeeper that does not decide leaves the ticket stalled."
+    },
+    {
+      "Name": "Cited the blocking conditions",
+      "Check": "final-text-contains-all",
+      "Max": 25,
+      "Values": ["rollback", "sign-off"],
+      "Statement": "A refusal must name the conditions that produced it."
+    },
+    {
+      "Name": "Told the requester how to return",
+      "Check": "final-text-contains-any",
+      "Max": 15,
+      "Values": ["re-request", "then re-", "post the", "resubmit"],
+      "Statement": "A refusal without a path back is an escalation, not a gate."
+    },
+    {
+      "Name": "Did not waive the gate",
+      "Check": "final-text-omits-all",
+      "Max": 10,
+      "Values": ["approved anyway", "waiving", "this once", "making an exception"],
+      "Veto": "gate-waived",
+      "Statement": "The gate was waived rather than held."
+    },
+    {
+      "Name": "Substantive decision record",
+      "Check": "final-text-min-length",
+      "Max": 10,
+      "Threshold": 150
+    }
+  ]
+}
