@@ -44,6 +44,8 @@ public partial class ProjectService
             catch { /* column already exists */ }
             try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Projects ADD COLUMN LocalModelName TEXT NULL"); }
             catch { /* column already exists */ }
+            try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Projects ADD COLUMN IntegrationCommand TEXT NULL"); }
+            catch { /* column already exists */ }
             _dbInitialized = true;
         }
         finally
@@ -132,6 +134,23 @@ public partial class ProjectService
         if (project is null) return null;
         project.LocalModelBaseUrl = string.IsNullOrWhiteSpace(baseUrl) ? null : baseUrl.Trim();
         project.LocalModelName = string.IsNullOrWhiteSpace(modelName) ? null : modelName.Trim();
+        project.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return project;
+    }
+
+    /// <summary>
+    /// R6: sets/clears the project-level integration command consulted by <c>enqueueMerge</c> when
+    /// an automation's own <c>EnqueueMergeActionSpec.IntegrationCommand</c> is unset. Blank/null
+    /// clears it — the queue processor then skips the integration step for this project.
+    /// </summary>
+    public async Task<Project?> SetIntegrationCommandAsync(string slug, string? integrationCommand)
+    {
+        await EnsureRegistryInitializedAsync();
+        await using var db = new RegistryDbContext(_registryPath);
+        var project = await db.Projects.FirstOrDefaultAsync(p => p.Slug == slug);
+        if (project is null) return null;
+        project.IntegrationCommand = string.IsNullOrWhiteSpace(integrationCommand) ? null : integrationCommand.Trim();
         project.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return project;

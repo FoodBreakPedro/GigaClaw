@@ -65,5 +65,10 @@
   "HrAbortOnFailure": "Abort remaining actions when the request fails",
   "StrTeam": "Team",
   "StrTeamPlaceholder": "parallel-review",
-  "StrHint": "Starts a run of this team on the firing ticket: one sub-ticket per task, assigned to the role\u2019s agent, blocked tickets waiting on their dependencies. Firing again while the run is open re-attaches to it instead of fanning out twice."
+  "StrHint": "Starts a run of this team on the firing ticket: one sub-ticket per task, assigned to the role\u2019s agent, blocked tickets waiting on their dependencies. Firing again while the run is open re-attaches to it instead of fanning out twice.",
+
+  "ActionEnqueueMerge": "Enqueue merge",
+  "EmIntegrationCommand": "Integration command (optional, overrides the project setting)",
+  "EmIntegrationCommandPlaceholder": "dotnet test GigaClaw.Core.Tests -c Release",
+  "EmHint": "Enqueues the firing ticket's worktree branch on the project's merge queue. Requires an owner-approved project (settings.json) \u2014 otherwise the entry is held, not merged. Blank uses the project's own integration command, or skips the check if neither is set."
 }

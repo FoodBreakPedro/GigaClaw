@@ -134,6 +134,21 @@ public class AppSettingsService
         return _data.ApprovedOutboundHosts ?? [];
     }
 
+    /// <summary>
+    /// R6 (doc/roadmap/lane-codex-runtime.md) trust anchor for the merge queue: the same
+    /// "owner's settings.json, outside every workspace and every agent's write globs" pattern R3
+    /// uses for <see cref="GetApprovedOutboundHosts"/>. A ticket label is orchestration metadata an
+    /// agent can set itself — it is not authorization to land that agent's own branch. Listing a
+    /// project slug here is the owner's explicit statement that the merge queue may actually merge
+    /// for that project; an unlisted project's candidates stay held. Re-reads the file on every call
+    /// so an owner edit takes effect on the queue processor's next poll without an engine restart.
+    /// </summary>
+    public IReadOnlyCollection<string> GetApprovedMergeProjects()
+    {
+        Load();
+        return _data.ApprovedMergeProjects ?? [];
+    }
+
     private void Load()
     {
         if (!File.Exists(_settingsPath)) return;
@@ -163,5 +178,6 @@ public class AppSettingsService
         public string? HermesApiBaseUrl { get; set; }
         public string? HermesApiKey { get; set; }
         public List<string>? ApprovedOutboundHosts { get; set; }
+        public List<string>? ApprovedMergeProjects { get; set; }
     }
 }

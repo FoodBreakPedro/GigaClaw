@@ -313,6 +313,7 @@ public sealed class TicketAgeConditionSpec : ConditionSpec
 [JsonDerivedType(typeof(CreateTicketActionSpec), "createTicket")]
 [JsonDerivedType(typeof(HttpRequestActionSpec), "httpRequest")]
 [JsonDerivedType(typeof(StartTeamRunActionSpec), "startTeamRun")]
+[JsonDerivedType(typeof(EnqueueMergeActionSpec), "enqueueMerge")]
 public abstract class ActionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -547,4 +548,42 @@ public sealed class HttpRequestActionSpec : ActionSpec
     /// <see cref="FailureComment"/> is posted. Only when the firing has a ticket.
     /// </summary>
     public string? FailureStatus { get; set; }
+}
+
+/// <summary>
+/// R6 (doc/roadmap/lane-codex-runtime.md, Task R6): enqueues the firing ticket's R5 worktree branch
+/// (<c>ticket/&lt;id&gt;</c>) onto the project's durable merge queue (<c>MergeQueueStore</c>). The
+/// action itself only records intent — it never rebases or merges inline, because the whole point
+/// of a queue is that candidates land one at a time, serialized by <c>MergeQueueProcessor</c>
+/// (a hosted background service, the same shape as <c>FileLeaseReaper</c>) rather than by whichever
+/// automation chain happens to fire first.
+/// <para>
+/// <b>Trust gate.</b> Landing a branch is a stronger action than writing a ticket label — an agent
+/// with board-write could set a "ready-to-merge" label on its own ticket, so a label is never
+/// treated as authorization here (see <c>MergeApprovalGate</c>, modeled on R3's
+/// <c>OutboundApprovalGate</c>). Without the project's slug listed in the owner's
+/// <c>settings.json</c> (<see cref="Services.AppSettingsService.GetApprovedMergeProjects"/>), the
+/// entry is enqueued in a <c>held</c> state and a <c>merge-held/v1</c> receipt is written — nothing
+/// merges until the owner approves the project, and approval is re-read on every poll so flipping it
+/// takes effect without an engine restart.
+/// </para>
+/// <para>
+/// Re-firing this action against a ticket that already has an active (queued/held/merging) entry is
+/// idempotent — it returns the existing entry rather than enqueuing a duplicate — so it is safe
+/// under a repeating <c>ticketInColumn</c> trigger, mirroring <c>StartTeamRunActionSpec</c>'s
+/// idempotent-per-ticket contract.
+/// </para>
+/// </summary>
+public sealed class EnqueueMergeActionSpec : ActionSpec
+{
+    public override string UiTypeKey => "enqueueMerge";
+
+    /// <summary>
+    /// Shell command run in the candidate's rebased worktree before it merges. Null/blank falls
+    /// back to the project's own <see cref="Models.Project.IntegrationCommand"/>; when both are
+    /// unset the integration step is skipped and the skip is recorded on the merge receipt (never
+    /// silently treated as green). Snapshotted onto the queue entry at enqueue time, not re-resolved
+    /// at merge time, so a queued candidate's gate cannot shift out from under it mid-queue.
+    /// </summary>
+    public string? IntegrationCommand { get; set; }
 }

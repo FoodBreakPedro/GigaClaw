@@ -18,6 +18,7 @@
             <option value="createTicket">@L["ActionCreateTicket"]</option>
             <option value="httpRequest">@L["ActionHttpRequest"]</option>
             <option value="startTeamRun">@L["ActionStartTeamRun"]</option>
+            <option value="enqueueMerge">@L["ActionEnqueueMerge"]</option>
         </select>
     </label>
 
@@ -231,6 +232,13 @@
             </label>
             <p class="field-hint">@L["StrHint"]</p>
             break;
+        case EnqueueMergeActionSpec s:
+            <label>@L["EmIntegrationCommand"]
+                <input placeholder="@L["EmIntegrationCommandPlaceholder"]" value="@(s.IntegrationCommand ?? "")"
+                       @onchange="e => s.IntegrationCommand = string.IsNullOrWhiteSpace((string?)e.Value) ? null : (string)e.Value!" />
+            </label>
+            <p class="field-hint">@L["EmHint"]</p>
+            break;
     }
 
     <div class="node-editor-actions">
@@ -279,6 +287,7 @@
         CreateTicketActionSpec => "createTicket",
         HttpRequestActionSpec => "httpRequest",
         StartTeamRunActionSpec => "startTeamRun",
+        EnqueueMergeActionSpec => "enqueueMerge",
         _ => throw new NotSupportedException($"No UI mapping for action type {Action.GetType().Name}. Register it in ActionEditor.razor."),
     };
 
@@ -319,6 +328,7 @@
             "createTicket" => new CreateTicketActionSpec(),
             "httpRequest" => new HttpRequestActionSpec(),
             "startTeamRun" => new StartTeamRunActionSpec { Team = "" },
+            "enqueueMerge" => new EnqueueMergeActionSpec(),
             _ => throw new NotSupportedException($"Unknown action type key '{e.Value}'. Register it in ActionEditor.razor."),
         };
         await OnReplace.InvokeAsync(spec);

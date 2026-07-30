@@ -65,5 +65,10 @@
   "HrAbortOnFailure": "Abortar acciones restantes si la solicitud falla",
   "StrTeam": "Equipo",
   "StrTeamPlaceholder": "revisión-paralela",
-  "StrHint": "Inicia una ejecución de este equipo en el ticket activador: un sub-ticket por tarea, asignado al agente del rol, los tickets bloqueados esperando sus dependencias. Activar de nuevo mientras la ejecución está abierta se vuelve a vincular a ella en lugar de desplegarse dos veces."
+  "StrHint": "Inicia una ejecución de este equipo en el ticket activador: un sub-ticket por tarea, asignado al agente del rol, los tickets bloqueados esperando sus dependencias. Activar de nuevo mientras la ejecución está abierta se vuelve a vincular a ella en lugar de desplegarse dos veces.",
+
+  "ActionEnqueueMerge": "Encolar fusión",
+  "EmIntegrationCommand": "Comando de integración (opcional, sobrescribe el ajuste del proyecto)",
+  "EmIntegrationCommandPlaceholder": "dotnet test GigaClaw.Core.Tests -c Release",
+  "EmHint": "Encola la rama del worktree del ticket activador en la cola de fusión del proyecto. Requiere un proyecto aprobado por el propietario (settings.json); si no, la entrada queda retenida, no se fusiona. En blanco usa el comando de integración del proyecto, o se omite la comprobación si ninguno está definido."
 }

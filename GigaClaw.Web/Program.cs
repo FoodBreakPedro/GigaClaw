@@ -76,6 +76,10 @@ builder.Services.AddSingleton<CostTracker>();
 // R4: durable per-project file-ownership leases (doc/roadmap/lane-codex-runtime.md).
 builder.Services.AddSingleton<GigaClaw.Core.Automation.Policy.FileLeaseStore>();
 builder.Services.AddHostedService<GigaClaw.Core.Services.FileLeaseReaper>();
+// R6: durable per-project merge queue + integration gate (doc/roadmap/lane-codex-runtime.md).
+// Opt-in: no shipped template automation enqueues onto it yet (SP-3 gate decides default-on later).
+builder.Services.AddSingleton<GigaClaw.Core.Automation.Policy.MergeQueueStore>();
+builder.Services.AddHostedService<GigaClaw.Core.Services.MergeQueueProcessor>();
 // Durable cost records: cost-log.jsonl (daily budget) + per-ticket token/USD totals.
 builder.Services.AddHostedService<RunCostRecorder>();
 builder.Services.AddSingleton<AutomationEngine>();

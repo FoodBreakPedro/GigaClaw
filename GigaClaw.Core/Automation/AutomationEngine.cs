@@ -30,6 +30,7 @@ public sealed class AutomationEngine : BackgroundService
         IHttpClientFactory httpClientFactory,
         AppSettingsService appSettings,
         FileLeaseStore leases,
+        MergeQueueStore mergeQueue,
         ILogger<AutomationEngine> logger)
     {
         _runs = runs;
@@ -44,7 +45,10 @@ public sealed class AutomationEngine : BackgroundService
         // R4: leases are per-ticket file-ownership locks, durable across restarts (see
         // FileLeaseStore/FileLeaseReaper) — passed through so ActionExecutor actually leases a
         // dispatch's declared scope instead of running unleased.
-        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger, outboundGate, leases);
+        // R6: same trust-anchor pattern as outboundGate above, but for the merge queue — read fresh
+        // from the owner's settings.json on every enqueue (see MergeApprovalGate).
+        var mergeApproval = new MergeApprovalGate(appSettings.GetApprovedMergeProjects);
+        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger, outboundGate, leases, mergeQueue, mergeApproval);
         _triggerHandler = new TriggerHandler(projects, _runtimeManager, executor, tickets, members, sessions, runs, teamRuns, logger);
 
         store.OnConfigChangedOnDisk += slug =>

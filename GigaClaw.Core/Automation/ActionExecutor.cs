@@ -34,6 +34,10 @@ internal sealed class ActionExecutor
     // that never passes this parameter keeps working unchanged. Production (AutomationEngine)
     // wires a real store backed by the per-project SQLite db.
     private readonly FileLeaseStore? _leases;
+    // R6: null means enqueueMerge is a no-op (logged, not enqueued) — same "unwired = pre-feature
+    // behavior" shape as _leases. Production (AutomationEngine) wires a real store.
+    private readonly MergeQueueStore? _mergeQueue;
+    private readonly MergeApprovalGate _mergeApproval;
 
     // Serializes in-process git operations per repository. Keyed by the git cwd so one
     // repo's slow/hung git (bounded by ProcessRunner's timeout) can't stall other projects.
@@ -61,7 +65,9 @@ internal sealed class ActionExecutor
         TeamRunService teamRuns,
         ILogger logger,
         OutboundApprovalGate? outboundGate = null,
-        FileLeaseStore? leases = null)
+        FileLeaseStore? leases = null,
+        MergeQueueStore? mergeQueue = null,
+        MergeApprovalGate? mergeApproval = null)
     {
         _tickets = tickets;
         _members = members;
@@ -80,6 +86,11 @@ internal sealed class ActionExecutor
         // (AutomationEngine) passes a gate anchored on the owner's app settings.json.
         _outboundGate = outboundGate ?? new OutboundApprovalGate(static () => []);
         _leases = leases;
+        _mergeQueue = mergeQueue;
+        // Fail closed: a caller that never wired an approval gate gets deny-all (every project
+        // held), not allow-all. Production (AutomationEngine) passes a gate anchored on the
+        // owner's app settings.json, exactly like _outboundGate above.
+        _mergeApproval = mergeApproval ?? new MergeApprovalGate(static () => []);
     }
 
     // ── Condition evaluation ────────────────────────────────────────────────
@@ -504,6 +515,9 @@ internal sealed class ActionExecutor
                     case StartTeamRunActionSpec str:
                         await ExecuteStartTeamRunActionAsync(rt, firing, str);
                         break;
+                    case EnqueueMergeActionSpec em when firing.TicketId is not null:
+                        await ExecuteEnqueueMergeActionAsync(rt, firing, em, ct);
+                        break;
                     default:
                         throw new NotSupportedException($"Unhandled action type {action.GetType().Name}. Register it in ActionExecutor.ExecuteAutomationAsync.");
                 }
@@ -816,6 +830,9 @@ internal sealed class ActionExecutor
                     // A team run started after a runAgent is the normal shape: the producer decides
                     // the work needs a team, then the team fans out behind its ticket.
                     case StartTeamRunActionSpec str: await ExecuteStartTeamRunActionAsync(rt, firing, str); break;
+                    // enqueueMerge after a runAgent is the normal shape too: the committer role
+                    // enqueues the ticket's worktree branch once the preceding run finished.
+                    case EnqueueMergeActionSpec em when firing.TicketId is not null: await ExecuteEnqueueMergeActionAsync(rt, firing, em, ct); break;
                     case RunAgentActionSpec ra:
                     {
                         var (skip, runTask, agentName, runId) = await StartAgentRunAsync(rt, firing, ra, ct);
@@ -863,6 +880,7 @@ internal sealed class ActionExecutor
                     case AddCommentActionSpec:
                     case SetLabelsActionSpec:
                     case AssignTicketActionSpec:
+                    case EnqueueMergeActionSpec:
                         break;
                     case MoveTicketStatusActionSpec:
                         // Deliberately unsupported after a runAgent: the pre-run move is what
@@ -1193,6 +1211,81 @@ internal sealed class ActionExecutor
                     $"Team run '{spec.Team}' could not be started: {exception.Message}", "automation");
             }
             catch { /* non-blocking */ }
+        }
+    }
+
+    // ── R6: merge queue + integration gate ──────────────────────────────────
+
+    /// <summary>
+    /// Enqueues the firing ticket's R5 worktree branch onto the project's durable merge queue
+    /// (<see cref="MergeQueueStore"/>). This method only records intent — it never rebases or
+    /// merges inline; <see cref="Services.MergeQueueProcessor"/> drains the queue one candidate at a
+    /// time. A ticket with no recorded worktree (never dispatched with <c>isolation: "worktree"</c>,
+    /// or the worktree was already cleaned up) has nothing to merge and bounces immediately rather
+    /// than enqueuing a candidate that can never rebase.
+    /// </summary>
+    private async Task ExecuteEnqueueMergeActionAsync(ProjectRuntime rt, TriggerFiring firing, EnqueueMergeActionSpec spec, CancellationToken ct)
+    {
+        if (_mergeQueue is null)
+        {
+            _logger.LogDebug("enqueueMerge: no merge queue store wired — skipping for ticket #{Id}", firing.TicketId);
+            return;
+        }
+
+        var ticketId = firing.TicketId!.Value;
+        try
+        {
+            var ticket = await _tickets.GetTicketAsync(rt.Slug, ticketId);
+            if (ticket is null)
+            {
+                _logger.LogWarning("enqueueMerge: ticket #{Id} not found in project {Project}", ticketId, rt.Slug);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(ticket.WorktreeBranch) || string.IsNullOrWhiteSpace(ticket.WorktreePath))
+            {
+                var receipt = MergeReceipts.Bounced(
+                    ticketId, ticket.WorktreeBranch, "no-worktree",
+                    "Ticket has no recorded worktree branch — nothing to merge. Dispatch it with " +
+                    "isolation: \"worktree\" before enqueueing a merge.");
+                try { await _tickets.AddCommentAsync(rt.Slug, ticketId, receipt, "automation"); }
+                catch (Exception ex) { _logger.LogWarning(ex, "enqueueMerge: failed to write merge-bounced receipt for ticket #{Id}", ticketId); }
+                try { await _tickets.MoveTicketAsync(rt.Slug, ticketId, "Blocked", "automation"); }
+                catch (Exception ex) { _logger.LogWarning(ex, "enqueueMerge: failed to move ticket #{Id} to Blocked", ticketId); }
+                return;
+            }
+
+            var project = await _projects.GetProjectAsync(rt.Slug);
+            // Per-automation override wins; absent falls back to the project-level setting; both
+            // absent means the integration step is skipped (recorded on the eventual receipt), not
+            // silently treated as green. Snapshotted now so a later edit to either setting cannot
+            // change the gate under an already-queued candidate.
+            var integrationCommand = string.IsNullOrWhiteSpace(spec.IntegrationCommand)
+                ? project?.IntegrationCommand
+                : spec.IntegrationCommand;
+
+            // R3/R6 trust anchor: read fresh on every enqueue, never cached — see MergeApprovalGate.
+            var approved = _mergeApproval.IsApproved(rt.Slug);
+            var result = await _mergeQueue.EnqueueAsync(
+                rt.Slug, ticketId, ticket.WorktreeBranch, integrationCommand, approved, DateTime.UtcNow, ct);
+
+            // Only the FIRST time an entry lands in Held is worth a receipt — a repeated firing of
+            // this action against a ticket that is already held (idempotent re-enqueue) must not
+            // spam the same receipt on every poll.
+            if (result.IsNew && result.Entry.State == MergeQueueState.Held)
+            {
+                var receipt = MergeReceipts.Held(ticketId, ticket.WorktreeBranch);
+                try { await _tickets.AddCommentAsync(rt.Slug, ticketId, receipt, "automation"); }
+                catch (Exception ex) { _logger.LogWarning(ex, "enqueueMerge: failed to write merge-held receipt for ticket #{Id}", ticketId); }
+            }
+
+            _logger.LogInformation(
+                "enqueueMerge: ticket #{Id} branch {Branch} is {State} in project {Project}",
+                ticketId, ticket.WorktreeBranch, result.Entry.State, rt.Slug);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "enqueueMerge failed for ticket #{Id} in project {Project}", ticketId, rt.Slug);
         }
     }
 
