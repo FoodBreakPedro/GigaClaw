@@ -65,14 +65,14 @@
     "semantic_hash": "093268fb1151c1d32f9cce43781efc79"
   },
   "GigaClaw.Core.Tests/Automation/ActionExecutorHttpRequestTests.cs": {
-    "mtime": 1785437026.8782754,
-    "ast_hash": "b366d9c13b6462eb962c758bb2980212",
-    "semantic_hash": "b366d9c13b6462eb962c758bb2980212"
+    "mtime": 1785534094.4773607,
+    "ast_hash": "b7a2913ca3b18dc8c84b82d2a67e28d2",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Automation/ActionExecutorPowerShellChainTests.cs": {
-    "mtime": 1785437026.8784864,
-    "ast_hash": "8928457d6e8545c09b23e0cc12f9b403",
-    "semantic_hash": "8928457d6e8545c09b23e0cc12f9b403"
+    "mtime": 1785534091.500816,
+    "ast_hash": "ee7853d62413f4c5dcbb431122582e34",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Automation/ActionExecutorSetLabelsTests.cs": {
     "mtime": 1785437026.8786268,
@@ -195,9 +195,9 @@
     "semantic_hash": "9c5125449bab7435d80d1a935253ff31"
   },
   "GigaClaw.Core.Tests/Automation/TemplateAutomationContractTests.cs": {
-    "mtime": 1785444948.2326477,
-    "ast_hash": "4d297a764b064053a5a3afd736523e81",
-    "semantic_hash": "4d297a764b064053a5a3afd736523e81"
+    "mtime": 1785515469.4212475,
+    "ast_hash": "e2274624c928aa4992cd13376594ea88",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Automation/TicketCommentAddedSignalPathTests.cs": {
     "mtime": 1785437026.8802447,
@@ -390,9 +390,9 @@
     "semantic_hash": "010a8d9eeb44acbe892cf92d50cb1be8"
   },
   "GigaClaw.Core.Tests/Web/BoardFullscreenEscTests.cs": {
-    "mtime": 1785060562.9225996,
-    "ast_hash": "f1476c29ebfc657c0923df2b1a67a769",
-    "semantic_hash": "f1476c29ebfc657c0923df2b1a67a769"
+    "mtime": 1785514385.189355,
+    "ast_hash": "2abc9f6618669bd5dd0c2bcf0ab46fb3",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Web/BoardLegacyManagerRemovalTests.cs": {
     "mtime": 1785060562.9227707,
@@ -425,9 +425,9 @@
     "semantic_hash": "0b523ac75542ead5ad37f42d502f3acc"
   },
   "GigaClaw.Core.Tests/Web/Opus48ModelSupportTests.cs": {
-    "mtime": 1785060562.9217827,
-    "ast_hash": "ec345423cffe59854e9f0151a368f776",
-    "semantic_hash": "ec345423cffe59854e9f0151a368f776"
+    "mtime": 1785514385.1913342,
+    "ast_hash": "5255d59c607f21ab061ba4511bd1df88",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Web/ProjectDeleteRelocationTests.cs": {
     "mtime": 1785060562.9220843,
@@ -440,9 +440,9 @@
     "semantic_hash": "0c4b660bb5905d9dbd8ea104a4afe8c6"
   },
   "GigaClaw.Core/Automation/ActionExecutor.cs": {
-    "mtime": 1785447346.5003843,
-    "ast_hash": "f6064fc9fb6e8e2ebeeadc6f2763b8fd",
-    "semantic_hash": "f6064fc9fb6e8e2ebeeadc6f2763b8fd"
+    "mtime": 1785454095.24447,
+    "ast_hash": "8540bf91e774c9b87f15883e40fb65b7",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Automation/ActionTemplate.cs": {
     "mtime": 1785274197.5926518,
@@ -455,14 +455,14 @@
     "semantic_hash": "607743904083c07dd7a2ae50f0ff6777"
   },
   "GigaClaw.Core/Automation/AutomationConfig.cs": {
-    "mtime": 1785437026.8873873,
-    "ast_hash": "aee9732fe39c085541b105ecd4dc75cf",
-    "semantic_hash": "aee9732fe39c085541b105ecd4dc75cf"
+    "mtime": 1785453073.7776344,
+    "ast_hash": "99852ef4f24cdd0db8b0e48a0e483fa1",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Automation/AutomationEngine.cs": {
-    "mtime": 1785437026.8876426,
-    "ast_hash": "29bd38e7649ad0b64fce706e87ea0146",
-    "semantic_hash": "29bd38e7649ad0b64fce706e87ea0146"
+    "mtime": 1785454102.2186723,
+    "ast_hash": "3065648614f8b5c4613437bcf4c5a061",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Automation/AutomationStore.cs": {
     "mtime": 1785447346.5006156,
@@ -470,9 +470,9 @@
     "semantic_hash": "eef75dc5a8a8e72ee9a7701dac6e58bd"
   },
   "GigaClaw.Core/Automation/ClaudeRunner.cs": {
-    "mtime": 1785437110.725772,
-    "ast_hash": "ca04dd21eed57a2ac2cb0b08206dce43",
-    "semantic_hash": "ca04dd21eed57a2ac2cb0b08206dce43"
+    "mtime": 1785454087.5218198,
+    "ast_hash": "dc65e54f73a90379d05ae3bb261066a0",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Automation/ClaudeStreamPump.cs": {
     "mtime": 1785060562.8996673,
@@ -505,9 +505,9 @@
     "semantic_hash": "79e6e241410ed0fb7aefad46ed3d4810"
   },
   "GigaClaw.Core/Automation/ProcessLifecycleManager.cs": {
-    "mtime": 1785060562.9015894,
-    "ast_hash": "2fe0d917385d982809bae2b527c2beff",
-    "semantic_hash": "2fe0d917385d982809bae2b527c2beff"
+    "mtime": 1785364357.1841362,
+    "ast_hash": "1e4801c5241d8674fa7fe717e6417b20",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Automation/ProjectRuntime.cs": {
     "mtime": 1785060562.900617,
@@ -620,14 +620,14 @@
     "semantic_hash": "e7f9afa76bc469679ba8025d4ba45c15"
   },
   "GigaClaw.Core/Localization/ActionEditor.en.json": {
-    "mtime": 1785437026.889379,
-    "ast_hash": "960579212310e8614e0e20f983eb071e",
-    "semantic_hash": "960579212310e8614e0e20f983eb071e"
+    "mtime": 1785453510.165389,
+    "ast_hash": "fcb9672d851be62b36bf2bf2fc1aa40e",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Localization/ActionEditor.fr.json": {
-    "mtime": 1785437026.8896482,
-    "ast_hash": "ba5877e077eb10f2cd7b293c276d8cf6",
-    "semantic_hash": "ba5877e077eb10f2cd7b293c276d8cf6"
+    "mtime": 1785453552.495387,
+    "ast_hash": "5b4c04eea6bd429aad35906ee883166b",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Localization/AgentRunDrawer.en.json": {
     "mtime": 1784977378.6197553,
@@ -635,19 +635,19 @@
     "semantic_hash": "3394da39f79a942c9ed8e2b4c2618078"
   },
   "GigaClaw.Core/Localization/AgentRunDrawer.fr.json": {
-    "mtime": 1784977378.6198125,
+    "mtime": 1785513303.0204961,
     "ast_hash": "ab379a7e11a1711dc8d8c83b1d1302d9",
     "semantic_hash": "ab379a7e11a1711dc8d8c83b1d1302d9"
   },
   "GigaClaw.Core/Localization/Automations.en.json": {
-    "mtime": 1785274197.594687,
-    "ast_hash": "b246280d0298a9181d65491a2a3af381",
-    "semantic_hash": "b246280d0298a9181d65491a2a3af381"
+    "mtime": 1785514385.1918573,
+    "ast_hash": "d4086e135975262842654bfe4e7e039f",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Localization/Automations.fr.json": {
-    "mtime": 1785274197.59497,
-    "ast_hash": "62e3dab6f628f484415f672654e3940b",
-    "semantic_hash": "62e3dab6f628f484415f672654e3940b"
+    "mtime": 1785514385.1921191,
+    "ast_hash": "a0795ab9105edf79c4b4318fd57cfc24",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Localization/Board.en.json": {
     "mtime": 1785311461.7542148,
@@ -655,19 +655,19 @@
     "semantic_hash": "abc71b07a7c87526722be0fc01f34eca"
   },
   "GigaClaw.Core/Localization/Board.fr.json": {
-    "mtime": 1785311461.7547107,
+    "mtime": 1785513303.0210793,
     "ast_hash": "238173f249a45329063956d34bf11854",
     "semantic_hash": "238173f249a45329063956d34bf11854"
   },
   "GigaClaw.Core/Localization/Common.en.json": {
-    "mtime": 1784977378.6202424,
-    "ast_hash": "eb161fc55a0dff4e7d75881984dbe909",
-    "semantic_hash": "eb161fc55a0dff4e7d75881984dbe909"
+    "mtime": 1785514385.192362,
+    "ast_hash": "0cbc05af345c47184af71e1239d20a3d",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Localization/Common.fr.json": {
-    "mtime": 1784977378.6203046,
-    "ast_hash": "c007aa61aa91e527aeb6ecc6237e6bf2",
-    "semantic_hash": "c007aa61aa91e527aeb6ecc6237e6bf2"
+    "mtime": 1785514385.1925712,
+    "ast_hash": "0d60f173de2abbcbd29351111ba1dd8a",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Localization/ConditionEditor.en.json": {
     "mtime": 1785437026.8897808,
@@ -675,7 +675,7 @@
     "semantic_hash": "6fce37c10c44444399f0e6b1449ba722"
   },
   "GigaClaw.Core/Localization/ConditionEditor.fr.json": {
-    "mtime": 1785437026.8899128,
+    "mtime": 1785513303.0216324,
     "ast_hash": "7010754283885eeb58487c8647f20b62",
     "semantic_hash": "7010754283885eeb58487c8647f20b62"
   },
@@ -685,7 +685,7 @@
     "semantic_hash": "24900b89aac10f2f8d631ba186813fd0"
   },
   "GigaClaw.Core/Localization/Dashboard.fr.json": {
-    "mtime": 1784977378.6205719,
+    "mtime": 1785513303.0217671,
     "ast_hash": "fe56f6ed4609e83cf43c85ae461fd222",
     "semantic_hash": "fe56f6ed4609e83cf43c85ae461fd222"
   },
@@ -695,19 +695,19 @@
     "semantic_hash": "071c80078c28763ea4b8daaa922f35fc"
   },
   "GigaClaw.Core/Localization/Home.fr.json": {
-    "mtime": 1785060562.9065611,
+    "mtime": 1785513303.0218697,
     "ast_hash": "1de893b62f613e33e4fd97513efe84f9",
     "semantic_hash": "1de893b62f613e33e4fd97513efe84f9"
   },
   "GigaClaw.Core/Localization/NodePalette.en.json": {
-    "mtime": 1785437026.8900626,
-    "ast_hash": "1f9c92df8f83ef21376c8f847fd58279",
-    "semantic_hash": "1f9c92df8f83ef21376c8f847fd58279"
+    "mtime": 1785514385.1930702,
+    "ast_hash": "6cd7af075828e78c70aa108f0dc62803",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Localization/NodePalette.fr.json": {
-    "mtime": 1785437026.890216,
-    "ast_hash": "366dfb9a28228167013256c8fbd5adba",
-    "semantic_hash": "366dfb9a28228167013256c8fbd5adba"
+    "mtime": 1785514385.1934407,
+    "ast_hash": "876f5674e2a8c3d27606f6baab048d4e",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Localization/ProjectSettings.en.json": {
     "mtime": 1785437019.6523895,
@@ -715,7 +715,7 @@
     "semantic_hash": "bacbc1d813ba91aa2b24616a179ae7b6"
   },
   "GigaClaw.Core/Localization/ProjectSettings.fr.json": {
-    "mtime": 1785437019.6526144,
+    "mtime": 1785513303.0223386,
     "ast_hash": "33a36fcee3dd33a3d4386b9ddabf4e23",
     "semantic_hash": "33a36fcee3dd33a3d4386b9ddabf4e23"
   },
@@ -725,7 +725,7 @@
     "semantic_hash": "05aa43dc1248c28f0409ae0690364bfe"
   },
   "GigaClaw.Core/Localization/TriggerEditor.fr.json": {
-    "mtime": 1784977378.6211083,
+    "mtime": 1785513303.022435,
     "ast_hash": "556b9fe2e5c5fae579d9d47104d9160f",
     "semantic_hash": "556b9fe2e5c5fae579d9d47104d9160f"
   },
@@ -775,14 +775,14 @@
     "semantic_hash": "a255825fd0468e5a0cc33ca8e5cbbc43"
   },
   "GigaClaw.Core/Models/Project.cs": {
-    "mtime": 1785060562.8985453,
-    "ast_hash": "348c3146a1b5c53f7618e363d5131f2e",
-    "semantic_hash": "348c3146a1b5c53f7618e363d5131f2e"
+    "mtime": 1785453073.7779725,
+    "ast_hash": "78f4bfff9801a2fbf38838d952a752b7",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Models/Ticket.cs": {
-    "mtime": 1785437026.8908262,
-    "ast_hash": "eb259d224ec8ba33c69876ee75a2fd71",
-    "semantic_hash": "eb259d224ec8ba33c69876ee75a2fd71"
+    "mtime": 1785364202.6855407,
+    "ast_hash": "8ce1e613cf88e9f2fee4853981d441a1",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Models/TicketPriority.cs": {
     "mtime": 1785060562.8977764,
@@ -815,9 +815,9 @@
     "semantic_hash": "f88f31f753e4ef999904f81f545d6c14"
   },
   "GigaClaw.Core/Services/AppSettingsService.cs": {
-    "mtime": 1785311461.7556438,
-    "ast_hash": "1920114bb1f3429bcb0c0a150fec31ba",
-    "semantic_hash": "1920114bb1f3429bcb0c0a150fec31ba"
+    "mtime": 1785453073.7781293,
+    "ast_hash": "ddd3ea10b7dfdd8e464f11ef5562b1eb",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Services/ChatService.cs": {
     "mtime": 1785060562.9044623,
@@ -840,9 +840,9 @@
     "semantic_hash": "be38307758d95262db6acf7ab0dd27a9"
   },
   "GigaClaw.Core/Services/DashboardRefreshService.cs": {
-    "mtime": 1785060562.90466,
-    "ast_hash": "aa1c591e7302d8ed35b81a65043819c7",
-    "semantic_hash": "aa1c591e7302d8ed35b81a65043819c7"
+    "mtime": 1785454110.7726839,
+    "ast_hash": "bcfbc76f3891c8b0e4e1ceefafb7a7fa",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Services/DashboardScriptRunner.cs": {
     "mtime": 1785102257.7290895,
@@ -885,9 +885,9 @@
     "semantic_hash": "c7f4480fea8502afdc61156c00253281"
   },
   "GigaClaw.Core/Services/ProjectService.cs": {
-    "mtime": 1785060562.9055438,
-    "ast_hash": "f9b1a4a4ea2480cab35d4d8ec2e040de",
-    "semantic_hash": "f9b1a4a4ea2480cab35d4d8ec2e040de"
+    "mtime": 1785453073.7782927,
+    "ast_hash": "6379840ca85ab323a5447b544633fe50",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Services/ScheduledPromotionService.cs": {
     "mtime": 1785060562.9051921,
@@ -900,9 +900,9 @@
     "semantic_hash": "a102a5775dbc8d0edffa84b3f4b681e2"
   },
   "GigaClaw.Core/Services/TicketService.cs": {
-    "mtime": 1785437026.891705,
-    "ast_hash": "189c08aace87db2915c419244cf08bda",
-    "semantic_hash": "189c08aace87db2915c419244cf08bda"
+    "mtime": 1785364224.0171049,
+    "ast_hash": "ea6b22dc0cba17e0dfbbd586b1aa2c9a",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Services/TileFrequency.cs": {
     "mtime": 1785060562.904196,
@@ -975,9 +975,9 @@
     "semantic_hash": "3d3768740665a26d662823dd691865a5"
   },
   "GigaClaw.Web/Api/Endpoints.Chat.cs": {
-    "mtime": 1785311461.756476,
-    "ast_hash": "fb2fb540bcb6193f83206e479e0a7796",
-    "semantic_hash": "fb2fb540bcb6193f83206e479e0a7796"
+    "mtime": 1785454120.035627,
+    "ast_hash": "37413d76f7c0055e5b0b388e2f373bf9",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Api/Endpoints.Columns.cs": {
     "mtime": 1785060562.9137564,
@@ -1020,9 +1020,9 @@
     "semantic_hash": "e1eca3d5f2db245472986ad09ae26769"
   },
   "GigaClaw.Web/Api/Endpoints.Runs.cs": {
-    "mtime": 1785311461.7568834,
-    "ast_hash": "5215c62ced1721b2fd4d3579be9f74cb",
-    "semantic_hash": "5215c62ced1721b2fd4d3579be9f74cb"
+    "mtime": 1785454124.937798,
+    "ast_hash": "aa1ad117300d9a3ea8d0cf15e0804e0e",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Api/Endpoints.Skills.cs": {
     "mtime": 1785060562.9125845,
@@ -1030,9 +1030,9 @@
     "semantic_hash": "57419966591f232796754d3741fa5487"
   },
   "GigaClaw.Web/Api/Endpoints.Tickets.cs": {
-    "mtime": 1785437026.8919969,
-    "ast_hash": "b8c366279704c75ded59565fc39d10ac",
-    "semantic_hash": "b8c366279704c75ded59565fc39d10ac"
+    "mtime": 1785514385.1961257,
+    "ast_hash": "11bf45a5f52d70b7164acab8ad48d2fd",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Api/Endpoints.cs": {
     "mtime": 1785153885.4406292,
@@ -1045,9 +1045,9 @@
     "semantic_hash": "49e13b7b62517d5d5ea96e3813c86e6a"
   },
   "GigaClaw.Web/Components/ActionEditor.razor": {
-    "mtime": 1785437026.8924725,
-    "ast_hash": "5f21db3c2fa9ca3af974e390382c6310",
-    "semantic_hash": "5f21db3c2fa9ca3af974e390382c6310"
+    "mtime": 1785453499.1689608,
+    "ast_hash": "b2e970c0bcb4fc660e04320d3bcf6785",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/AgentRunDrawer.razor": {
     "mtime": 1785060562.90901,
@@ -1085,19 +1085,19 @@
     "semantic_hash": "00e9889b42c52a1663643de807c48238"
   },
   "GigaClaw.Web/Components/Layout/ReconnectModal.razor": {
-    "mtime": 1784977378.6278417,
-    "ast_hash": "2f2378bed0d87a86800610190fd1da17",
-    "semantic_hash": "2f2378bed0d87a86800610190fd1da17"
+    "mtime": 1785514385.1962934,
+    "ast_hash": "e2e1bba21367cb4f0041b730f9dc12b5",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/Layout/ReconnectModal.razor.js": {
-    "mtime": 1784977378.6280253,
-    "ast_hash": "bdc7a0873231c569cd31aa85311186a3",
-    "semantic_hash": "bdc7a0873231c569cd31aa85311186a3"
+    "mtime": 1785514385.1966195,
+    "ast_hash": "38d8a9758570b3cdcb858199d735c19b",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/Layout/UpdateBanner.razor": {
-    "mtime": 1785084896.3507051,
-    "ast_hash": "8cde3148b39b978d620765bef1f8b864",
-    "semantic_hash": "8cde3148b39b978d620765bef1f8b864"
+    "mtime": 1785514385.1968677,
+    "ast_hash": "7b03713456d2339a5de55a5a8c605b9f",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/NodePalette.razor": {
     "mtime": 1785437026.892748,
@@ -1110,19 +1110,19 @@
     "semantic_hash": "c8af5b8bbe3f478ca56b9dff95264621"
   },
   "GigaClaw.Web/Components/Pages/Board.razor": {
-    "mtime": 1785447346.5032773,
-    "ast_hash": "8ff1d917d730365b0e39f73ff92f7783",
-    "semantic_hash": "8ff1d917d730365b0e39f73ff92f7783"
+    "mtime": 1785514385.1972816,
+    "ast_hash": "e86cf2ad8cbcfca52a615672ad18513b",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/Pages/Dashboard.razor": {
-    "mtime": 1785437019.6545756,
-    "ast_hash": "2051a421c42dcb8f0eaac1cdb50737b9",
-    "semantic_hash": "2051a421c42dcb8f0eaac1cdb50737b9"
+    "mtime": 1785454129.0068333,
+    "ast_hash": "ed6df2353d1451f55d026d0994317331",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/Pages/Error.razor": {
-    "mtime": 1784977378.6288679,
-    "ast_hash": "895aa385b310af50d09fd583be83b251",
-    "semantic_hash": "895aa385b310af50d09fd583be83b251"
+    "mtime": 1785514385.197436,
+    "ast_hash": "af30818cfeaedba8d8c230fbf5364dc1",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/Pages/Home.razor": {
     "mtime": 1785437019.6547525,
@@ -1130,9 +1130,9 @@
     "semantic_hash": "7d9e4531ae457539bcd64f0be8e8d88b"
   },
   "GigaClaw.Web/Components/Pages/NotFound.razor": {
-    "mtime": 1784977378.6290812,
-    "ast_hash": "b43132764687de5710f24e46d3d3f7ff",
-    "semantic_hash": "b43132764687de5710f24e46d3d3f7ff"
+    "mtime": 1785514385.1975849,
+    "ast_hash": "d416bdb30b4d47e57209672dee783403",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/Pages/ProjectSettings.razor": {
     "mtime": 1785437019.6548874,
@@ -1140,9 +1140,9 @@
     "semantic_hash": "9ae8157af7b5f28beb1effd6835c63d9"
   },
   "GigaClaw.Web/Components/Routes.razor": {
-    "mtime": 1784977378.6292694,
-    "ast_hash": "e7369bc27ad40e65009faaaa1e965d93",
-    "semantic_hash": "e7369bc27ad40e65009faaaa1e965d93"
+    "mtime": 1785514385.1984854,
+    "ast_hash": "53b6675af97f3894520608e2f6ad6a5c",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/SharedRenderHelpers.cs": {
     "mtime": 1785060562.9083965,
@@ -1185,9 +1185,9 @@
     "semantic_hash": "9ea5b88c87779d1f9012fdd4f5622fbc"
   },
   "GigaClaw.Web/Program.cs": {
-    "mtime": 1785444867.0981522,
-    "ast_hash": "852072c20c7a4e42ab03e777e8da5171",
-    "semantic_hash": "852072c20c7a4e42ab03e777e8da5171"
+    "mtime": 1785454114.9384696,
+    "ast_hash": "3ed1585fa53cd824ae64d64b0216dccc",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Properties/launchSettings.json": {
     "mtime": 1785060562.911295,
@@ -1240,9 +1240,9 @@
     "semantic_hash": "e0deca2d151cda065c3480a8adffde9a"
   },
   "GigaClaw.Web/Services/UpdateCheckService.cs": {
-    "mtime": 1785084896.3514032,
-    "ast_hash": "f0102b840fcdaa4754b4e5fed5d06ca5",
-    "semantic_hash": "f0102b840fcdaa4754b4e5fed5d06ca5"
+    "mtime": 1785514385.1986196,
+    "ast_hash": "c99de7b08ae040e48fb24dd1e87a94bd",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Services/VersionFormatter.cs": {
     "mtime": 1785060562.9149387,
@@ -1250,14 +1250,14 @@
     "semantic_hash": "800515dbcacb86a615e062a722096bb3"
   },
   "GigaClaw.Web/appsettings.json": {
-    "mtime": 1784977378.6312485,
-    "ast_hash": "f7e65dde4e5533740a0d57ac9355c0e8",
-    "semantic_hash": "f7e65dde4e5533740a0d57ac9355c0e8"
+    "mtime": 1785514385.198802,
+    "ast_hash": "732f4d75514e890746f0170256ed9654",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/wwwroot/imageUpload.js": {
-    "mtime": 1784977378.6320856,
-    "ast_hash": "7d24c38c1f655c9a6ed976273d3b3478",
-    "semantic_hash": "7d24c38c1f655c9a6ed976273d3b3478"
+    "mtime": 1785514385.1989372,
+    "ast_hash": "31541cf38cc44da63c548418f95ad623",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/wwwroot/js/agent-sse.js": {
     "mtime": 1785437019.6556904,
@@ -1315,9 +1315,9 @@
     "semantic_hash": "719d8b85ac3751fe060f23e0b02ee422"
   },
   "ProjectTemplate/Agents/models.json": {
-    "mtime": 1785447021.786256,
-    "ast_hash": "544f8718da4864d2a5699d88db04b0ef",
-    "semantic_hash": "544f8718da4864d2a5699d88db04b0ef"
+    "mtime": 1785515036.2098799,
+    "ast_hash": "be7b1739c4e5b504a4e1fca01b3bb1ba",
+    "semantic_hash": ""
   },
   "ProjectTemplate/Agents/scripts/agent_ticket.py": {
     "mtime": 1785105711.9155726,
@@ -1335,9 +1335,9 @@
     "semantic_hash": "30798a398934422d4dbcbefa70c875b4"
   },
   "ProjectTemplate/Agents/scripts/cognitive_load.py": {
-    "mtime": 1785451441.6537871,
-    "ast_hash": "09ed50f7e0830ed60ab7309b642549e9",
-    "semantic_hash": "09ed50f7e0830ed60ab7309b642549e9"
+    "mtime": 1785514385.199225,
+    "ast_hash": "6e055844d2f2322c2ba308252f4981f9",
+    "semantic_hash": ""
   },
   "ProjectTemplate/Agents/scripts/content_contract.py": {
     "mtime": 1785437026.8960133,
@@ -1355,9 +1355,9 @@
     "semantic_hash": "6b1e83d4273edda5fa017ab5a2a23ff6"
   },
   "ProjectTemplate/Agents/scripts/lint_prose.py": {
-    "mtime": 1785451441.6543572,
-    "ast_hash": "228bf4e0011dfd9c886a4f86c860a2a0",
-    "semantic_hash": "228bf4e0011dfd9c886a4f86c860a2a0"
+    "mtime": 1785514385.200486,
+    "ast_hash": "d6b1ccbdf56f3a0e1847c701899ba59c",
+    "semantic_hash": ""
   },
   "ProjectTemplate/Agents/scripts/media_contract.py": {
     "mtime": 1785154589.0001893,
@@ -1430,23 +1430,23 @@
     "semantic_hash": "ed40d13b35757cf2bf7e08dd7ec1c5c7"
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1785447021.78193,
-    "ast_hash": "93afda88c8e611711c6e357fde5c62ed",
+    "mtime": 1785453844.152066,
+    "ast_hash": "58168252211cbcb09c5cd5d176bb01be",
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1785154644.0636015,
-    "ast_hash": "e0aedb7e2af634e2dcc6050b1df96690",
+    "mtime": 1785514385.1884346,
+    "ast_hash": "cad7946dca0498785a2df5c82d7491ed",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1785450967.9269168,
+    "mtime": 1785453473.905304,
     "ast_hash": "6a52eaef851a894ead2cf260e5087490",
     "semantic_hash": ""
   },
   "GigaClaw.QaRunner/README.md": {
-    "mtime": 1785239758.418191,
-    "ast_hash": "a10069621ff621a53a27e91bf7840ed4",
+    "mtime": 1785514385.195978,
+    "ast_hash": "ab1f7b3d98e0503c68e48027898d2d35",
     "semantic_hash": ""
   },
   "ProjectTemplate/.dashboard/content-health/tile.yaml": {
@@ -1810,8 +1810,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1785311461.7604487,
-    "ast_hash": "379dd1d18c8283938b0d1592c794cb23",
+    "mtime": 1785514385.2008374,
+    "ast_hash": "998482189ceec1b07ffed93885fa775a",
     "semantic_hash": ""
   },
   "doc/agent-dispatch.md": {
@@ -1895,8 +1895,8 @@
     "semantic_hash": ""
   },
   "doc/update-check.md": {
-    "mtime": 1785084896.3526437,
-    "ast_hash": "93b17f62499700c193add59a8e92d7ea",
+    "mtime": 1785514385.2010932,
+    "ast_hash": "97c23ac24994cc9ce7a9b17c333b86ae",
     "semantic_hash": ""
   },
   "doc/worktree-workflow.md": {
@@ -1915,18 +1915,8 @@
     "semantic_hash": ""
   },
   "docs/dev-notes/os_analysis_report.md": {
-    "mtime": 1785084896.3529751,
-    "ast_hash": "21d937be80d734fbb2e4d430f7c43958",
-    "semantic_hash": ""
-  },
-  "docs/dev-notes/rebrand_implementation_plan.md": {
-    "mtime": 1785084860.0880191,
-    "ast_hash": "9bf21fa1e6bcc59fec33a00b76de3563",
-    "semantic_hash": ""
-  },
-  "docs/dev-notes/rebrand_walkthrough.md": {
-    "mtime": 1785084860.0881994,
-    "ast_hash": "2406318ad6fe8e1912a919d9ca89f323",
+    "mtime": 1785514385.2012448,
+    "ast_hash": "6b03037e81271ffed07f6cda6f03ba73",
     "semantic_hash": ""
   },
   "tasks/hyperlane-migration-runbook.md": {
@@ -1935,8 +1925,8 @@
     "semantic_hash": ""
   },
   "tasks/plan.md": {
-    "mtime": 1785274197.6030107,
-    "ast_hash": "8974c7167c9ad4760dd9f2719ebdbebf",
+    "mtime": 1785514385.2014391,
+    "ast_hash": "c4576c93a86341fc99c749a5522fc0da",
     "semantic_hash": ""
   },
   "tasks/todo.md": {
@@ -1945,8 +1935,8 @@
     "semantic_hash": ""
   },
   "tasks/venture-prep/karalungaming/BRAND.md": {
-    "mtime": 1785274197.6036527,
-    "ast_hash": "3eadd7e3a9386474da9d5ad3bdf4a715",
+    "mtime": 1785453474.88079,
+    "ast_hash": "295230a24b164f58f2dcdd6ad1ffd4b8",
     "semantic_hash": ""
   },
   "tasks/venture-prep/karalungaming/ROLLOUT.md": {
@@ -2010,9 +2000,9 @@
     "semantic_hash": ""
   },
   "GigaClaw.Catalog/CatalogGenerator.cs": {
-    "mtime": 1785447021.7823315,
-    "ast_hash": "bb7910e4e26bcc0d34ca302a9d888e23",
-    "semantic_hash": "bb7910e4e26bcc0d34ca302a9d888e23"
+    "mtime": 1785535595.4542882,
+    "ast_hash": "d8e25bfa98f244c2b6a596683a70fd01",
+    "semantic_hash": ""
   },
   "GigaClaw.Catalog/GigaClaw.Catalog.csproj": {
     "mtime": 1785437026.877054,
@@ -2050,9 +2040,9 @@
     "semantic_hash": "3d09478d2ad69cfec2e94a8ed3e061dd"
   },
   "GigaClaw.Core.Tests/Automation/TemplateHandoffContractTests.cs": {
-    "mtime": 1785437026.8799295,
+    "mtime": 1785514385.1885858,
     "ast_hash": "1d90737a05dec8d23b3c116b2bdc6d3d",
-    "semantic_hash": "1d90737a05dec8d23b3c116b2bdc6d3d"
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Automation/TemplateVerdictContractTests.cs": {
     "mtime": 1785444436.8881395,
@@ -2175,9 +2165,9 @@
     "semantic_hash": "81ef7be43cffe3dc4385850098371e8e"
   },
   "GigaClaw.Core.Tests/Helpers/PythonContractRunner.cs": {
-    "mtime": 1785437026.8843033,
-    "ast_hash": "5a174d73b4194677e56b3f4892818fad",
-    "semantic_hash": "5a174d73b4194677e56b3f4892818fad"
+    "mtime": 1785514385.189065,
+    "ast_hash": "9d72ad05d22b186075af2f557926d0e3",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Helpers/TestTeamRuns.cs": {
     "mtime": 1785437026.8845527,
@@ -2185,9 +2175,9 @@
     "semantic_hash": "e289a66af38f3e7cf8f2d97e582ed020"
   },
   "GigaClaw.Core.Tests/Services/CatalogGeneratorTests.cs": {
-    "mtime": 1785447898.8101778,
-    "ast_hash": "0deeae7624a2ed1ad981d6357ccc56ff",
-    "semantic_hash": "0deeae7624a2ed1ad981d6357ccc56ff"
+    "mtime": 1785535613.946651,
+    "ast_hash": "c247a9beb24b7ec3cc4de12ab3aa21d6",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Services/TeamRunJoinTests.cs": {
     "mtime": 1785437026.8860445,
@@ -2230,9 +2220,9 @@
     "semantic_hash": "87262262b8f298bdc0dd63a36043600d"
   },
   "GigaClaw.Core.Tests/Web/UnifiedBoardTests.cs": {
-    "mtime": 1785437019.6520953,
-    "ast_hash": "5e656fb251a9bd58610734fa699dfaf5",
-    "semantic_hash": "5e656fb251a9bd58610734fa699dfaf5"
+    "mtime": 1785514385.1914952,
+    "ast_hash": "c344eb3da51d658329b17ee31b160847",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Automation/Handoffs/RunHandoff.cs": {
     "mtime": 1785437026.8879623,
@@ -2255,7 +2245,7 @@
     "semantic_hash": "d6a63710dace06ee809e0edb3e98aaa6"
   },
   "GigaClaw.Core/Localization/UnifiedBoard.fr.json": {
-    "mtime": 1785437019.6527874,
+    "mtime": 1785513303.0226173,
     "ast_hash": "68cb3f531d9aa4f7cc93086704ec9673",
     "semantic_hash": "68cb3f531d9aa4f7cc93086704ec9673"
   },
@@ -2295,9 +2285,9 @@
     "semantic_hash": "eb2e6edb9f75e5590b0826a64119f573"
   },
   "GigaClaw.Eval.Tests/JudgeRunnerTests.cs": {
-    "mtime": 1785437052.723424,
-    "ast_hash": "b76b6bc9ccc872d7c2110e3addb591aa",
-    "semantic_hash": "b76b6bc9ccc872d7c2110e3addb591aa"
+    "mtime": 1785453867.8355217,
+    "ast_hash": "4e9a1c40e2900f2bc27e15b875796d42",
+    "semantic_hash": ""
   },
   "GigaClaw.Eval.Tests/MonteCarloRunnerTests.cs": {
     "mtime": 1785437052.7236722,
@@ -2305,14 +2295,14 @@
     "semantic_hash": "c1f528e691961c53c73095885b4dc543"
   },
   "GigaClaw.Eval.Tests/ReplayRunnerTests.cs": {
-    "mtime": 1785437052.724001,
-    "ast_hash": "2c86b0db5fd2de3158aab566f587170b",
-    "semantic_hash": "2c86b0db5fd2de3158aab566f587170b"
+    "mtime": 1785535860.326323,
+    "ast_hash": "dee64178c379b7effd8c4d69e3a51b9e",
+    "semantic_hash": ""
   },
   "GigaClaw.Eval.Tests/StaticEvalRunnerTests.cs": {
-    "mtime": 1785447021.7859013,
-    "ast_hash": "486afdbf40460e077057c067f7a3e547",
-    "semantic_hash": "486afdbf40460e077057c067f7a3e547"
+    "mtime": 1785515198.1224895,
+    "ast_hash": "6bb04681bf8d04653d1ab92db1b00fef",
+    "semantic_hash": ""
   },
   "GigaClaw.Eval/EvalModels.cs": {
     "mtime": 1785437052.7244427,
@@ -2320,9 +2310,9 @@
     "semantic_hash": "d28d1a403dbbe7c7285464342ee43af9"
   },
   "GigaClaw.Eval/GigaClaw.Eval.csproj": {
-    "mtime": 1785437052.724731,
-    "ast_hash": "8e4a1256d6912ec3e5a02eeaaa77208a",
-    "semantic_hash": "8e4a1256d6912ec3e5a02eeaaa77208a"
+    "mtime": 1785515185.9167309,
+    "ast_hash": "2480ecfc57c3ae1de03a6ed7de6249dd",
+    "semantic_hash": ""
   },
   "GigaClaw.Eval/JudgeModels.cs": {
     "mtime": 1785437052.7249951,
@@ -2350,19 +2340,19 @@
     "semantic_hash": "5d6ed8e685071f1fdfaabb96656f98e1"
   },
   "GigaClaw.Eval/Program.cs": {
-    "mtime": 1785437052.7263107,
-    "ast_hash": "52b4c673b19c44051c37a24b41057072",
-    "semantic_hash": "52b4c673b19c44051c37a24b41057072"
+    "mtime": 1785515184.052455,
+    "ast_hash": "03916c3f71f79e83724cb83963b5ddec",
+    "semantic_hash": ""
   },
   "GigaClaw.Eval/ReplayModels.cs": {
-    "mtime": 1785437052.7267249,
-    "ast_hash": "90d63068cd08c6bb8bc5313a7586f00d",
-    "semantic_hash": "90d63068cd08c6bb8bc5313a7586f00d"
+    "mtime": 1785534102.434025,
+    "ast_hash": "9b48b214c6edfd49290d0d3205181140",
+    "semantic_hash": ""
   },
   "GigaClaw.Eval/ReplayRunner.cs": {
-    "mtime": 1785437052.726904,
-    "ast_hash": "32673375c3b4962bbfe94b61fdd61db0",
-    "semantic_hash": "32673375c3b4962bbfe94b61fdd61db0"
+    "mtime": 1785365529.7293122,
+    "ast_hash": "51e9b8fab1976bc38d4881d63bfd3e1e",
+    "semantic_hash": ""
   },
   "GigaClaw.Eval/RubricJudge.cs": {
     "mtime": 1785437052.7270951,
@@ -2470,32 +2460,32 @@
     "semantic_hash": "268ed29d12939100eeebb7e42fe648b6"
   },
   "GigaClaw.Eval/baselines/judge/approval-gatekeeper.json": {
-    "mtime": 1785437052.731108,
+    "mtime": 1785535784.3844543,
     "ast_hash": "1e2160f7c170c10cacae435e0a612932",
     "semantic_hash": "1e2160f7c170c10cacae435e0a612932"
   },
   "GigaClaw.Eval/baselines/judge/blog-writer.json": {
-    "mtime": 1785437052.7313113,
+    "mtime": 1785535784.3829603,
     "ast_hash": "bead68424c7810893ce41f2ad4534660",
     "semantic_hash": "bead68424c7810893ce41f2ad4534660"
   },
   "GigaClaw.Eval/baselines/judge/growth-writer.json": {
-    "mtime": 1785437052.731653,
+    "mtime": 1785535784.3850834,
     "ast_hash": "a8aeb14130cc471e495434cdf609beac",
     "semantic_hash": "a8aeb14130cc471e495434cdf609beac"
   },
   "GigaClaw.Eval/baselines/judge/local-media-director.json": {
-    "mtime": 1785437052.7318134,
+    "mtime": 1785535784.3857477,
     "ast_hash": "2ddf01bf049883f86cf462908b6efc4f",
     "semantic_hash": "2ddf01bf049883f86cf462908b6efc4f"
   },
   "GigaClaw.Eval/baselines/judge/programmer.json": {
-    "mtime": 1785437052.7321153,
+    "mtime": 1785535784.3838637,
     "ast_hash": "d3591d92eff49edf4cc6e66e807d539c",
     "semantic_hash": "d3591d92eff49edf4cc6e66e807d539c"
   },
   "GigaClaw.Eval/baselines/judge/qa-tester.json": {
-    "mtime": 1785437052.7322965,
+    "mtime": 1785535784.3841496,
     "ast_hash": "596294a96dde901c158f238b7855774c",
     "semantic_hash": "596294a96dde901c158f238b7855774c"
   },
@@ -2570,9 +2560,9 @@
     "semantic_hash": "5f93349e0ca9e7db21e7c1b021296527"
   },
   "GigaClaw.Eval/evalconfig.json": {
-    "mtime": 1785437052.7352078,
-    "ast_hash": "c519ccb32ecc605bbfc0ec79e18b8069",
-    "semantic_hash": "c519ccb32ecc605bbfc0ec79e18b8069"
+    "mtime": 1785534153.721628,
+    "ast_hash": "ea29d97873ec8cc09626838a9d24925e",
+    "semantic_hash": ""
   },
   "GigaClaw.Eval/fixtures/blog-draft-release-notes.json": {
     "mtime": 1785437052.735447,
@@ -2645,9 +2635,9 @@
     "semantic_hash": "25e4f6dc535a88bf19ec64cf27f85863"
   },
   "GigaClaw.Web/Components/Pages/AppSettings.razor": {
-    "mtime": 1785437019.6537507,
-    "ast_hash": "31b195023bbac443e856a6de5aa81cd3",
-    "semantic_hash": "31b195023bbac443e856a6de5aa81cd3"
+    "mtime": 1785514385.1970546,
+    "ast_hash": "02be9e23b3172771f8cba8e61f1ec2bb",
+    "semantic_hash": ""
   },
   "GigaClaw.Web/Components/Pages/UnifiedBoard.razor": {
     "mtime": 1785437019.6550157,
@@ -2700,9 +2690,9 @@
     "semantic_hash": "ac4cdbbb1ca873c11d3726d74f5512cf"
   },
   "ProjectTemplate/Agents/scripts/handoff_contract.py": {
-    "mtime": 1785451441.654138,
-    "ast_hash": "07a272856778ca647f23f41238f733b0",
-    "semantic_hash": "07a272856778ca647f23f41238f733b0"
+    "mtime": 1785514385.1994054,
+    "ast_hash": "8e2fc51e4cbc2b278f7eaa21487e61e2",
+    "semantic_hash": ""
   },
   "ProjectTemplate/Agents/scripts/schema_check.py": {
     "mtime": 1785437026.8963318,
@@ -2715,14 +2705,14 @@
     "semantic_hash": "113c9594e60c080fd47a75a874047d77"
   },
   "ProjectTemplate/Agents/scripts/verdict_contract.py": {
-    "mtime": 1785451441.6545973,
-    "ast_hash": "4316ec976b69b7af8591304bf0ee860d",
-    "semantic_hash": "4316ec976b69b7af8591304bf0ee860d"
+    "mtime": 1785514385.200692,
+    "ast_hash": "0001c90b8dc430fe1344d360665170fa",
+    "semantic_hash": ""
   },
   "catalog.json": {
-    "mtime": 1785447898.820945,
-    "ast_hash": "a7251e99dcdd7e65f1452214b3b2902b",
-    "semantic_hash": "a7251e99dcdd7e65f1452214b3b2902b"
+    "mtime": 1785535501.7727654,
+    "ast_hash": "d72f5e0b6089d14cef6c06aed743ebda",
+    "semantic_hash": ""
   },
   "Claude Ecosystem Comparison.md": {
     "mtime": 1785437026.8762987,
@@ -2750,8 +2740,8 @@
     "semantic_hash": ""
   },
   "GigaClaw.Eval/README.md": {
-    "mtime": 1785437052.7265625,
-    "ast_hash": "a07c8054b61c21378a54075969454acf",
+    "mtime": 1785534349.6840622,
+    "ast_hash": "82cc7fcbdabb21f5b7a7d328cf420972",
     "semantic_hash": ""
   },
   "ProjectTemplate/.dashboard/active-runs/tile.yaml": {
@@ -2780,8 +2770,8 @@
     "semantic_hash": ""
   },
   "doc/catalog.md": {
-    "mtime": 1785447898.821247,
-    "ast_hash": "3a3369687273a9a693c9e1b65c29b39d",
+    "mtime": 1785535501.7736814,
+    "ast_hash": "69cc75fe8bd69ff35d57226baa190793",
     "semantic_hash": ""
   },
   "doc/executable-teams.md": {
@@ -2800,8 +2790,8 @@
     "semantic_hash": ""
   },
   "doc/roadmap/index.md": {
-    "mtime": 1785448784.5969214,
-    "ast_hash": "d7ea134b80b66816f38fbac72cdfee5a",
+    "mtime": 1785515043.5615823,
+    "ast_hash": "6c13164ad3b040a50d72d26f3106c3c0",
     "semantic_hash": ""
   },
   "doc/roadmap/lane-claude-orchestration.md": {
@@ -2855,9 +2845,9 @@
     "semantic_hash": "0acb6243f45809fe85aa8a9536502599"
   },
   "GigaClaw.Core.Tests/Automation/PolicyHookTransportTests.cs": {
-    "mtime": 1785437110.7251859,
-    "ast_hash": "1802f8c6cf6e5995eb7ddb9d3a533c28",
-    "semantic_hash": "1802f8c6cf6e5995eb7ddb9d3a533c28"
+    "mtime": 1785454166.8485098,
+    "ast_hash": "249b07aeacec275c462f9fb59a897b1b",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Automation/PolicyInventoryRunnerTests.cs": {
     "mtime": 1785437110.7253869,
@@ -2875,9 +2865,9 @@
     "semantic_hash": "fc4523f9601e71dbe5b18fbf57b463f2"
   },
   "GigaClaw.Core/Automation/Policy/PolicyHookTransport.cs": {
-    "mtime": 1785447898.811299,
-    "ast_hash": "26ebab3f3b1bedb155b86f80e1c29558",
-    "semantic_hash": "26ebab3f3b1bedb155b86f80e1c29558"
+    "mtime": 1785454133.3307388,
+    "ast_hash": "1f33ddedd920f59a2e328711f423d400",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Automation/Policy/R2-VALIDATION.md": {
     "mtime": 1785437110.7278843,
@@ -2885,8 +2875,8 @@
     "semantic_hash": ""
   },
   "GigaClaw.Core/Automation/Policy/SP1-REVIEW.md": {
-    "mtime": 1785447898.8117285,
-    "ast_hash": "ea073f94e11910bf3f245d76daeabd04",
+    "mtime": 1785534300.4536495,
+    "ast_hash": "9e98e2ddcf4077f68ac40812fd03da31",
     "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Fixtures/verdicts/valid/blog-reviewer-ad7-ship.json": {
@@ -3075,7 +3065,7 @@
     "semantic_hash": "a16b39a76cbf14ae25b3179a1ed0c2b1"
   },
   "GigaClaw.Core/Packs/IPackSource.cs": {
-    "mtime": 1785451268.780313,
+    "mtime": 1785453473.9061024,
     "ast_hash": "5a0ccc24e80b19ff021b80f0bbc07ff9",
     "semantic_hash": ""
   },
@@ -3105,9 +3095,9 @@
     "semantic_hash": "d40de56c41f3c09383aefe4bc71fe676"
   },
   "GigaClaw.Core/Packs/PackInstaller.cs": {
-    "mtime": 1785447346.5025616,
-    "ast_hash": "c139b4849b8bc089fff4f98e1bae4d43",
-    "semantic_hash": "c139b4849b8bc089fff4f98e1bae4d43"
+    "mtime": 1785514385.1949697,
+    "ast_hash": "07599818412e87d2e2e0d442d228ca7a",
+    "semantic_hash": ""
   },
   "GigaClaw.Core/Packs/PackLock.cs": {
     "mtime": 1785444867.0972772,
@@ -3175,13 +3165,13 @@
     "semantic_hash": "42de710a969c8f132213390614418e65"
   },
   "GigaClaw.Core.Tests/Fixtures/core-init-manifest.json": {
-    "mtime": 1785447898.809517,
-    "ast_hash": "ac1c9e6fe69c311ed67db45a80631e8c",
-    "semantic_hash": "ac1c9e6fe69c311ed67db45a80631e8c"
+    "mtime": 1785514385.1888833,
+    "ast_hash": "c9a9fddd80a4c8a2e25ae4cb536f89e7",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Packs/CoreInitManifestTests.cs": {
-    "mtime": 1785451290.2051466,
-    "ast_hash": "7265f6d6e6449552039751906eef8d92",
+    "mtime": 1785514385.1892335,
+    "ast_hash": "475819b805d6b6878a71c5870f35628b",
     "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Packs/PackQuarantineTests.cs": {
@@ -3190,7 +3180,7 @@
     "semantic_hash": "d00add3594170612b1e289cc817bc85b"
   },
   "GigaClaw.Core.Tests/Packs/SecurityAssurancePackTests.cs": {
-    "mtime": 1785450628.2816966,
+    "mtime": 1785453473.9059062,
     "ast_hash": "5b860228be67472643bde098671605c9",
     "semantic_hash": ""
   },
@@ -3230,7 +3220,7 @@
     "semantic_hash": "159985da9636c89882d7d8315bb69b4d"
   },
   "GigaClaw.Eval/baselines/threat-modeler.json": {
-    "mtime": 1785447898.8126163,
+    "mtime": 1785515776.5487828,
     "ast_hash": "78bb8a62cf7d765b371b6ae48fc4035d",
     "semantic_hash": "78bb8a62cf7d765b371b6ae48fc4035d"
   },
@@ -3275,14 +3265,14 @@
     "semantic_hash": "4eaf81b842166590b4d0bf026a043df0"
   },
   "Packs/security-assurance/eval/fixtures/security-threat-model-auth.json": {
-    "mtime": 1785447898.8201392,
-    "ast_hash": "cc7d301bd175f3392775686eb701687c",
-    "semantic_hash": "cc7d301bd175f3392775686eb701687c"
+    "mtime": 1785515765.3252065,
+    "ast_hash": "006f0697ef128ecff0250e29a347332b",
+    "semantic_hash": ""
   },
   "Packs/security-assurance/pack.json": {
-    "mtime": 1785447898.820325,
-    "ast_hash": "99ab9a6cbae68e9c19f21bb86129630c",
-    "semantic_hash": "99ab9a6cbae68e9c19f21bb86129630c"
+    "mtime": 1785534173.5685177,
+    "ast_hash": "28acc2280eeb2f1652a97142cbe161a1",
+    "semantic_hash": ""
   },
   "ProjectTemplate/pack.json": {
     "mtime": 1785447346.503422,
@@ -3340,8 +3330,8 @@
     "semantic_hash": ""
   },
   "Packs/security-assurance/Agents/threat-modeler/SKILL.md": {
-    "mtime": 1785447898.8167744,
-    "ast_hash": "b34fb6691e99379d5970027d8a5c860b",
+    "mtime": 1785515754.3129935,
+    "ast_hash": "fe8f5aee4bfcf53c7828e11afbeaa5e6",
     "semantic_hash": ""
   },
   "Packs/security-assurance/Agents/threat-modeler/memory/MEMORY.md": {
@@ -3360,8 +3350,598 @@
     "semantic_hash": ""
   },
   "doc/roadmap/SESSION-HANDOFF.md": {
-    "mtime": 1785451495.0256531,
-    "ast_hash": "030aaaa8a9a696b0a29943fcae0c21d5",
+    "mtime": 1785514385.2009928,
+    "ast_hash": "580196a818d5c3babff3721d2f4738b0",
+    "semantic_hash": ""
+  },
+  ".obsidian/app.json": {
+    "mtime": 1785453473.897958,
+    "ast_hash": "99914b932bd37a50b983c5e7c90ae93b",
+    "semantic_hash": ""
+  },
+  ".obsidian/appearance.json": {
+    "mtime": 1785453473.8981574,
+    "ast_hash": "99914b932bd37a50b983c5e7c90ae93b",
+    "semantic_hash": ""
+  },
+  ".obsidian/core-plugins.json": {
+    "mtime": 1785453473.8984501,
+    "ast_hash": "7c877bea49eaeabb100563bd157b9051",
+    "semantic_hash": ""
+  },
+  ".obsidian/graph.json": {
+    "mtime": 1785453473.8985896,
+    "ast_hash": "02f7aac88c3cce616bd2c201111c33fd",
+    "semantic_hash": ""
+  },
+  ".obsidian/workspace.json": {
+    "mtime": 1785453473.9050944,
+    "ast_hash": "3814ce173a15273540a4d059aed82a4a",
+    "semantic_hash": ""
+  },
+  ".obsidian/community-plugins.json": {
+    "mtime": 1785453473.8982913,
+    "ast_hash": "9e7e0172311e83f35b4a2a916d226493",
+    "semantic_hash": ""
+  },
+  ".obsidian/plugins/karpathywiki/data.json": {
+    "mtime": 1785453473.8988576,
+    "ast_hash": "ee198d12c24b3e78046d9a39e5e0662e",
+    "semantic_hash": ""
+  },
+  ".obsidian/plugins/karpathywiki/main.js": {
+    "mtime": 1785453473.904319,
+    "ast_hash": "79de08740bc4fcf96f59a1aed0318374",
+    "semantic_hash": ""
+  },
+  ".obsidian/plugins/karpathywiki/manifest.json": {
+    "mtime": 1785453473.9048183,
+    "ast_hash": "f130c7684dc5fb31f50a24ef51183b3b",
+    "semantic_hash": ""
+  },
+  "wiki/Welcome to Karpathy LLM Wiki.md": {
+    "mtime": 1785453473.9686122,
+    "ast_hash": "daebc7f29c4171669bd76596ce7bafda",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/README.md": {
+    "mtime": 1785453474.8794878,
+    "ast_hash": "6e1178f3260e47ae043c23d209266eba",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamelifteat/BRAND.md": {
+    "mtime": 1785453474.8796282,
+    "ast_hash": "4c8e03279c881c83b4d56ee40f1cbf3d",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamelifteat/content-engine.md": {
+    "mtime": 1785453474.879728,
+    "ast_hash": "bb5621eac39554114c513d184552bb03",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamelifteat/intel-watchlist.md": {
+    "mtime": 1785453474.879835,
+    "ast_hash": "50578f4897469bfd6ee09e5099ae81fd",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamelifteat/trend-profile.md": {
+    "mtime": 1785453474.8799312,
+    "ast_hash": "2564bfd4d522bf3d72bda20da210c57f",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamepowergym/BRAND.md": {
+    "mtime": 1785453474.8800592,
+    "ast_hash": "55a498b886e97d679f5c4c6cff2ab231",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamepowergym/intel-watchlist.md": {
+    "mtime": 1785453474.880153,
+    "ast_hash": "fcc753c3ecafaed17a12c92d22379d76",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamepowergym/trend-profile.md": {
+    "mtime": 1785453474.8802433,
+    "ast_hash": "91db3692e5289550906d76b8d318b63f",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/hyperlanetravels/BRAND.md": {
+    "mtime": 1785453474.8803785,
+    "ast_hash": "52b154bfb90ee19494d60c9ac1f1c2b7",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/hyperlanetravels/content-engine.md": {
+    "mtime": 1785453474.8804786,
+    "ast_hash": "a1d24a1115df257d92417d5358c04c42",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/hyperlanetravels/intel-watchlist.md": {
+    "mtime": 1785453474.8805726,
+    "ast_hash": "33a1ef51b79a9fae8b96ebf32132533a",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/hyperlanetravels/trend-profile.md": {
+    "mtime": 1785453474.8806686,
+    "ast_hash": "c4a7933b9965a019a89bb7fcb0dce537",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/karalungaming/activation-kit.md": {
+    "mtime": 1785453474.8808913,
+    "ast_hash": "a400e9a46c01779a9ff39808359da87b",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/pedrorzabala/BRAND.md": {
+    "mtime": 1785453474.8810332,
+    "ast_hash": "07a24b5acd4670cf31f527ad466da22b",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/pedrorzabala/activation-kit.md": {
+    "mtime": 1785453474.881164,
+    "ast_hash": "d45e8cabf88e85ac9d823c2d8213eb06",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/zabsconsulting/BRAND.md": {
+    "mtime": 1785453474.881317,
+    "ast_hash": "3529d66d226e98318e880fea50aa4615",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/zabsconsulting/intel-watchlist.md": {
+    "mtime": 1785453474.8814347,
+    "ast_hash": "f2cdbdcd05edc01588ee10594e0ad740",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/zabsconsulting/offer-ai-visibility-audit.md": {
+    "mtime": 1785453474.8815763,
+    "ast_hash": "f2d621fb38ce14e312ac8ca9a11a4ce5",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/zabsconsulting/trend-profile.md": {
+    "mtime": 1785453474.881692,
+    "ast_hash": "8cd38d02b3e8b9a9453531e681e8f725",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Automation/TemplateScriptEncodingTests.cs": {
+    "mtime": 1785514385.188686,
+    "ast_hash": "e600cf75f74915d89eb2c3d73268b387",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/ActionEditor.es.json": {
+    "mtime": 1785453520.4592872,
+    "ast_hash": "208b65eb0bfc58b49512fa218bdd009b",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/AgentRunDrawer.es.json": {
+    "mtime": 1785514385.191716,
+    "ast_hash": "d79713975b7db862781dc35603a2f5b6",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/Automations.es.json": {
+    "mtime": 1785514385.1919656,
+    "ast_hash": "c8b93fcf47d679616b8bb1ebc62f34e3",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/Board.es.json": {
+    "mtime": 1785514385.1922371,
+    "ast_hash": "1e9de192236820a2265846db600427cf",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/Common.es.json": {
+    "mtime": 1785514385.1924524,
+    "ast_hash": "bfabdee52d6a48852fe9d21d7f0a331d",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/ConditionEditor.es.json": {
+    "mtime": 1785514385.1926663,
+    "ast_hash": "ff77d03fce803506ff0626e4f5e23c5c",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/Dashboard.es.json": {
+    "mtime": 1785514385.192767,
+    "ast_hash": "2e7ad973c0a63910def38f94e1521d48",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/Home.es.json": {
+    "mtime": 1785514385.1928864,
+    "ast_hash": "cc215b522696708f90a7cbbaa80fd8ae",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/NodePalette.es.json": {
+    "mtime": 1785514385.1931796,
+    "ast_hash": "deb54231553b3edc5215257c56e94ff4",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/ProjectSettings.es.json": {
+    "mtime": 1785514385.193906,
+    "ast_hash": "9b2781980b934cd5dd3278aecc83a4cb",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/TriggerEditor.es.json": {
+    "mtime": 1785514385.1940286,
+    "ast_hash": "50c8072e91532cbe9b166c5b6b34343f",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Localization/UnifiedBoard.es.json": {
+    "mtime": 1785514385.1941907,
+    "ast_hash": "db75ada5e8da48cdfc3d5806bfc654d7",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/REVIEW-security-assurance-2026-07-31.md": {
+    "mtime": 1785515457.4909892,
+    "ast_hash": "3eb927dcf55ac8f380c5af7fd622537d",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Automation/ActionExecutorOutboundApprovalTests.cs": {
+    "mtime": 1785534261.1183221,
+    "ast_hash": "d77ad4ef1b3fabce8d4a65a3c9c7ffd2",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/security-auditor.json": {
+    "mtime": 1785535784.386097,
+    "ast_hash": "489d34c380cd492f717dfbf7814f3b6e",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/supply-chain-reviewer.json": {
+    "mtime": 1785535784.386468,
+    "ast_hash": "9e858212ddf4ce067b1074631ac2e678",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/threat-modeler.json": {
+    "mtime": 1785535784.386583,
+    "ast_hash": "b9a608a050799a66f693fb22e521c80d",
+    "semantic_hash": ""
+  },
+  "Packs/security-assurance/eval/fixtures/security-secret-clean-diff.json": {
+    "mtime": 1785534162.927849,
+    "ast_hash": "c72e7d820a0d39757e537cd88f85aa5a",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Automation/FileLeaseStoreTests.cs": {
+    "mtime": 1785363439.5759892,
+    "ast_hash": "dee4ed9e2c6e245e77f9b836a8965a4f",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Automation/GlobIntersectionTests.cs": {
+    "mtime": 1785535601.3102996,
+    "ast_hash": "3c6bb93ea0583a05baec8ebdf136e10b",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Automation/Policy/FileLeaseStore.cs": {
+    "mtime": 1785363590.676086,
+    "ast_hash": "788c6417ba956a8ead3e511bde6b203d",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Services/FileLeaseReaper.cs": {
+    "mtime": 1785535327.0914836,
+    "ast_hash": "2b3a0682df0b2c3ae0b31959baabbc74",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/blog-researcher.json": {
+    "mtime": 1785535784.3831172,
+    "ast_hash": "95d9e895b77e488131318109e49018f7",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/blog-reviewer.json": {
+    "mtime": 1785535784.3831906,
+    "ast_hash": "786761b11bd3c7a7649fcabbf2703851",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/blog-seo.json": {
+    "mtime": 1785535784.3832612,
+    "ast_hash": "dc2ff3bc3213831989bdfaebf4ff226b",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/blog-translator.json": {
+    "mtime": 1785535784.3833313,
+    "ast_hash": "69061e89176fef95599ed8286c6297ec",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/code-janitor.json": {
+    "mtime": 1785535784.3840604,
+    "ast_hash": "f217a686747857d9b97fd31cf84fa9bb",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/committer.json": {
+    "mtime": 1785535784.3835845,
+    "ast_hash": "2961c02a985531737a3a4d43460c8ba2",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/competitive-analyst.json": {
+    "mtime": 1785535784.384644,
+    "ast_hash": "91607d8919f552d6a5bd018acfe66bda",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/content-series-planner.json": {
+    "mtime": 1785535784.3847196,
+    "ast_hash": "0a82fb419eec9ff2a42da74fd31fb846",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/content-writer.json": {
+    "mtime": 1785535784.3847995,
+    "ast_hash": "2301da0c4a3e3a1a04f2e608c3859436",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/data-analyst.json": {
+    "mtime": 1785535784.3848858,
+    "ast_hash": "a0a3ff98053a367d705a8974393af9d4",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/decision-engine.json": {
+    "mtime": 1785535784.3842227,
+    "ast_hash": "c595d9143dbee6473561cc9cd5972bac",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/design-researcher.json": {
+    "mtime": 1785535784.3834012,
+    "ast_hash": "6c0876b82fbcd4edeb0fe9b139910a38",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/documentalist.json": {
+    "mtime": 1785535784.383647,
+    "ast_hash": "77ca10def26f8bccdd608a4dfb88bd34",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/email-copywriter.json": {
+    "mtime": 1785535784.3845847,
+    "ast_hash": "30bbda6e33841d6f8a47ffd894f5a389",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/evaluator.json": {
+    "mtime": 1785535784.3843062,
+    "ast_hash": "4f3bd3eecc02cb4793e0451bc9bf7959",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/groomer.json": {
+    "mtime": 1785535784.3839805,
+    "ast_hash": "5e04a1fe81ba59f02c03262c159737e8",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/lead-magnet-creator.json": {
+    "mtime": 1785535784.3849785,
+    "ast_hash": "1bbf3ab184a69e6d7dc94b3679549ff2",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/local-image-artist.json": {
+    "mtime": 1785535784.3854036,
+    "ast_hash": "c9252a631b0fa92ffa2a9f822ddf1b51",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/local-media-compositor.json": {
+    "mtime": 1785535784.385331,
+    "ast_hash": "72d7832bab68b9067ff8713ed2325ccd",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/local-media-reviewer.json": {
+    "mtime": 1785535784.3856573,
+    "ast_hash": "0a8bb703f7989cb086b0b00270eb7d49",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/local-motion-artist.json": {
+    "mtime": 1785535784.3854868,
+    "ast_hash": "7ec9dfb2d29a724c81d8c6be5d51a276",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/producer.json": {
+    "mtime": 1785535784.3855672,
+    "ast_hash": "ead6d396f245af4e9c66cb53bd5ba0b2",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/system-watchdog.json": {
+    "mtime": 1785535784.3845234,
+    "ast_hash": "8feaa89838f9addbe2465209f263a5e9",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/trend-researcher.json": {
+    "mtime": 1785535784.385183,
+    "ast_hash": "dcd6daa42f21beab8203744ee8e97f68",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/ui-auditor.json": {
+    "mtime": 1785535784.3834658,
+    "ast_hash": "7cffb3294f3bf0ffd170c8dd355e1796",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/ui-designer.json": {
+    "mtime": 1785535784.383529,
+    "ast_hash": "4691c79af623311fbe59e9d6f157fa2a",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/baselines/judge/wellness-coach.json": {
+    "mtime": 1785535784.3852658,
+    "ast_hash": "452f2f35d17a3ec92adea38524b5a6ac",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/blog-researcher-brief-scheduling-engine.json": {
+    "mtime": 1785535708.8789449,
+    "ast_hash": "eccbf11a4936680df5c9e4915e824bf3",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/blog-reviewer-ad7-ship-migration-guide.json": {
+    "mtime": 1785535013.1096513,
+    "ast_hash": "21d66fa897b958946fe17b38645277ce",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/blog-seo-schema-repair-launch-post.json": {
+    "mtime": 1785535712.9995673,
+    "ast_hash": "281f8a5618c5ff11bb8ef096b5f40ce2",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/blog-translator-locale-parity-es.json": {
+    "mtime": 1785535716.5001245,
+    "ast_hash": "604507db2347d471b18e5acee469027b",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/design-researcher-dna-extraction.json": {
+    "mtime": 1785535721.4060018,
+    "ast_hash": "ac01d07d667e7fcdeadf435ea152d94d",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/design-ui-auditor-contrast-fix.json": {
+    "mtime": 1785535393.5227077,
+    "ast_hash": "8b20ac3e30afaee18fa263fd5e85bd33",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/design-ui-designer-cobalt-theme.json": {
+    "mtime": 1785535726.207026,
+    "ast_hash": "a69235348a2ef388064f417be2ff3346",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/dev-commit-hunk-level-isolate.json": {
+    "mtime": 1785535080.0357764,
+    "ast_hash": "2cacd14de7e2c19392212dc7b4624fd4",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/dev-docs-sync-after-commit.json": {
+    "mtime": 1785535111.3468332,
+    "ast_hash": "b5149da46a4819f90c80b5fe526fc331",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/dev-groom-backlog-ticket.json": {
+    "mtime": 1785535095.021203,
+    "ast_hash": "385ac203978e98adb7eedccb9f0fc88c",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/dev-janitor-nightly-dead-code-sweep.json": {
+    "mtime": 1785535066.2397683,
+    "ast_hash": "cf41bc378920c3456ffc784412d15dec",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/governance-decision-adr-proposal.json": {
+    "mtime": 1785535734.415609,
+    "ast_hash": "26f597bbf9ba01f385bf32a2bf604f2c",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/governance-evaluator-post-mortem.json": {
+    "mtime": 1785535264.6907928,
+    "ast_hash": "a86f7a94df7f13e2fd1b9c6c038f346f",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/governance-watchdog-probe-red.json": {
+    "mtime": 1785535282.2087111,
+    "ast_hash": "7e22bcc16b82f549c1d9beeccb0ec5dc",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/growth-cold-email-outreach.json": {
+    "mtime": 1785535742.2035403,
+    "ast_hash": "16e0ce5dfc731b3e83d21ea602a97937",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/growth-competitive-pricing-audit.json": {
+    "mtime": 1785535126.6686378,
+    "ast_hash": "2eedca889483c9fed6a3520138a55703",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/growth-content-series-roadmap.json": {
+    "mtime": 1785535141.1484282,
+    "ast_hash": "2b26675949eb34b95409c65783828d11",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/growth-content-writer-ad7-draft.json": {
+    "mtime": 1785535750.5056546,
+    "ast_hash": "979bfd2e1eb1030571665c50936ed7df",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/growth-data-analyst-churn-query.json": {
+    "mtime": 1785535170.7999077,
+    "ast_hash": "fb583288a8fc5200480d1412aecdb90f",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/growth-lead-magnet-checklist.json": {
+    "mtime": 1785535746.3488553,
+    "ast_hash": "ba212bacb7815975e521aee6ae393174",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/growth-trend-reddit-brief-blocked.json": {
+    "mtime": 1785535220.8259497,
+    "ast_hash": "008d6b692d574acbd0a3e90d2d906b62",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/growth-wellness-ergonomics-guide.json": {
+    "mtime": 1785535233.3892915,
+    "ast_hash": "342436bb486538e8efbc2c5af61d2ffc",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/media-compositor-render-teaser.json": {
+    "mtime": 1785535315.5611565,
+    "ast_hash": "2429032175c3337df0a0286887612a27",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/media-image-artist-hero-still.json": {
+    "mtime": 1785535300.2232862,
+    "ast_hash": "62ceafd4449ec1abb8ef0b139e5e06d6",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/media-motion-artist-clip-submit.json": {
+    "mtime": 1785535345.712607,
+    "ast_hash": "e553607484527042de1600f3f05da06a",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/media-producer-decompose-epic.json": {
+    "mtime": 1785535360.8084164,
+    "ast_hash": "a886afc75cbffd2d48e88f56b3d98e6a",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval/fixtures/media-reviewer-ship-render.json": {
+    "mtime": 1785535329.9609385,
+    "ast_hash": "a159f3097e77ad21c8692a23d0eea6e3",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Automation/ActionExecutorFileLeaseTests.cs": {
+    "mtime": 1785363480.924469,
+    "ast_hash": "052c32267373a58f79e1dbdca62b485e",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Automation/ActionExecutorWorktreeTests.cs": {
+    "mtime": 1785364600.037704,
+    "ast_hash": "996e72c3d2b48a0f21b2c5dd36a91f3e",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Automation/ProcessLifecycleManagerTests.cs": {
+    "mtime": 1785364627.7665138,
+    "ast_hash": "bae36cf282d786c150f1f786dd851c04",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Automation/WorktreeManagerTests.cs": {
+    "mtime": 1785364422.710823,
+    "ast_hash": "2d824ee1cee096dd2f6a09d4b3929a8d",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Automation/WorktreeManager.cs": {
+    "mtime": 1785364519.4858174,
+    "ast_hash": "51ee35abc8556bc19a0dfb478cd45d0a",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval.Tests/ReplayRunnerNormalizeTests.cs": {
+    "mtime": 1785365507.3077915,
+    "ast_hash": "334da46e90f48951b9f843f611b14232",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Automation/MergeQueueTests.cs": {
+    "mtime": 1785452844.3496485,
+    "ast_hash": "74fc35b2c6245093d1d32c423eef0ce0",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Automation/MergeEngine.cs": {
+    "mtime": 1785452592.535522,
+    "ast_hash": "6d000e97386fd079ed2442e06ddf2d98",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Automation/Policy/MergeApprovalGate.cs": {
+    "mtime": 1785452497.382867,
+    "ast_hash": "41d4627117bbf650901a513eb803aa30",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Automation/Policy/MergeQueueStore.cs": {
+    "mtime": 1785452566.6827028,
+    "ast_hash": "7ba0bab3b4e27046000d3b290a9d2cce",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Services/MergeQueueProcessor.cs": {
+    "mtime": 1785452771.4075534,
+    "ast_hash": "c4091dd91cad7eb816c7b719db24261c",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core/Automation/Runners/IAgentRunner.cs": {
+    "mtime": 1785454081.2925007,
+    "ast_hash": "720c92875162754637c7459666c1d866",
     "semantic_hash": ""
   }
 }
