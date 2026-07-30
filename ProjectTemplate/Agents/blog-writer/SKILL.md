@@ -61,3 +61,11 @@ python3 .agents/scripts/agent_ticket.py \
 Delete the scratch comment file after success. Every helper command asserts its HTTP response and verifies returned state.
 
 If you cannot finish the draft (missing brief, unusable topic, unavailable sources, missing canonical domain), move the ticket to `Blocked` with a comment explaining what is missing. **Never end your turn with the ticket in `InProgress`.**
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"blog-reviewer"` for review, or `null` if returning to owner.
+- **`ownedFiles`**: Post draft path (e.g., `["posts/<slug>.md"]`).
+- **`outputs`**: Draft post path ref and word count notes.

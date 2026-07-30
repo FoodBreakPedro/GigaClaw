@@ -43,6 +43,14 @@
       <LogicalName>GigaClaw.Core.AgentsTemplate/models.json</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
+    <!-- Team roster. The nine built-in teams are data, not C# constants: AgentTeamService reads
+         this file, Initialize writes it to <workspace>/.agents/teams.json, and anything that
+         composes into that file (a pack, or the owner) adds a team or a membership without
+         recompiling GigaClaw.Core. See doc/executable-teams.md. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\teams.json">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/teams.json</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\ProjectTemplate\Agents\BRAND.md">
       <LogicalName>GigaClaw.Core.AgentsTemplate/BRAND.md</LogicalName>
       <WithCulture>false</WithCulture>
@@ -63,6 +71,20 @@
       <LogicalName>GigaClaw.Core.AgentsTemplate/%(RecursiveDir)SKILL.md</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
+    <!-- Progressive disclosure (G4): SKILL.md is the always-loaded index and the detail lives in
+         references/. Those files are read on demand, so a SKILL that links to one and does not ship
+         it leaves the agent pointing at a file that does not exist in its workspace. They were
+         committed without being embedded, which is why this glob exists. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\**\references\*.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <!-- The shared handoff reference (G3). Sits at Agents/ root like preamble.md, so neither the
+         per-agent globs above nor the workspace-root glob below picks it up. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\handoff.md">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/handoff.md</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
     <!-- New per-topic memory layout: each agent ships a memory/MEMORY.md index skeleton. Topic
          files are created at runtime by the consolidation pass, so only the index is embedded. -->
     <EmbeddedResource Include="..\ProjectTemplate\Agents\**\memory\*.md">
@@ -70,9 +92,27 @@
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
     <!-- Files copied to the workspace root on Initialize (e.g. CLAUDE.md). The glob excludes
-         the Agents/ subtree since those go through the AgentsTemplate prefix above. -->
-    <EmbeddedResource Include="..\ProjectTemplate\**\*.*" Exclude="..\ProjectTemplate\Agents\**\*.*">
+         the Agents/ subtree since those go through the AgentsTemplate prefix above, and pack.json
+         because that is core's *manifest*, not workspace content: it is embedded under the Packs
+         prefix below and must never be written into a workspace root. -->
+    <!-- The .DS_Store/Thumbs.db exclusions are the same class of hazard as the __pycache__ one
+         above, and for the same reason: MSBuild globs the working directory, not git. Finder
+         writes .DS_Store into ProjectTemplate/ the first time anyone opens it; it is gitignored
+         but still on disk, so without this it is embedded, written into every initialized
+         workspace, and then rejected by core's own pack composition as an undeclared root file. -->
+    <EmbeddedResource Include="..\ProjectTemplate\**\*.*"
+                      Exclude="..\ProjectTemplate\Agents\**\*.*;..\ProjectTemplate\pack.json;..\ProjectTemplate\**\.DS_Store;..\ProjectTemplate\**\Thumbs.db;..\ProjectTemplate\**\desktop.ini">
       <LogicalName>GigaClaw.Core.AgentsTemplateRoot/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <!-- Pack manifests (doc/pack-infrastructure.md §2), prefix GigaClaw.Core.Packs/<pack-id>/…
+         `core` is the one pack whose content is *not* also under this prefix: ProjectTemplate/
+         stays in place (§2 D1), so its Agents/ and root files keep the two AgentsTemplate prefixes
+         above and CorePackSource maps all three onto one IPackSource. That asymmetry is what lets
+         CatalogGenerator, StaticEvalRunner, evalconfig.json and the template contract tests keep
+         pointing at the literal path `ProjectTemplate/Agents`. -->
+    <EmbeddedResource Include="..\ProjectTemplate\pack.json">
+      <LogicalName>GigaClaw.Core.Packs/core/pack.json</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
   </ItemGroup>

@@ -13,9 +13,90 @@ teams are exactly that, so team filtering behaves as it always has — see [Kanb
   `TeamJoinPolicy` (`AllDone` / `Quorum` / `FirstFailure`) and `Validate()`, the I/O-free structural
   verdict (unknown roles, duplicate keys, dangling or cyclic dependencies, out-of-range quorum).
 - `GigaClaw.Core/Models/TeamRun.cs` — `TeamRun`, `TeamTask` and their status enums.
-- `GigaClaw.Core/Services/TeamStore.cs` — persistence for all three, plus the inline migration.
-- `GigaClaw.Core/Services/AgentTeamService.cs` — the nine built-in definitions and the `AgentTeam`
+- `GigaClaw.Core/Services/TeamStore.cs` — persistence for all three, the inline migration, and the
+  seed pass that writes the roster into a project.
+- `GigaClaw.Core/Models/TeamSeed.cs` — the `teams.json` document format, its parser and the
+  composition rules.
+- `GigaClaw.Core/Services/AgentTeamService.cs` — resolves the roster and produces the `AgentTeam`
   projection the team filter and the catalog consume.
+
+## Where team definitions come from
+
+Teams are **data, not code**. The nine built-ins live in `ProjectTemplate/Agents/teams.json`,
+embedded as `GigaClaw.Core.AgentsTemplate/teams.json` and written to `<workspace>/.agents/teams.json`
+by Initialize like every other template asset — see [Project template](./project-template.md). That
+is what makes a team addable by something other than a `GigaClaw.Core` rebuild.
+
+```jsonc
+{
+  "schemaVersion": 1,
+  "teams": [
+    { "slug": "software-engineering", "name": "Software Engineering", "description": "…",
+      "icon": "💻", "agentSlugs": ["programmer", "groomer", "…"] }
+  ],
+  "teamMembership": { "software-engineering": ["security-auditor"] }
+}
+```
+
+`agentSlugs` is the shorthand for a pure member filter (one seat per agent, role id = agent slug); a
+team that spells out `roles` / `taskGraph` / `joinPolicy` / `synthesizerRole` instead is an
+executable team declared entirely in data. A bare JSON array of teams is also accepted, which is the
+shape a single contributor's fragment takes. A `schemaVersion` above the one this build understands
+is **refused**, not best-effort parsed — `System.Text.Json` drops unknown members silently, so a
+newer roster would otherwise load as a quietly wrong one.
+
+**Composition.** `TeamSeed.Compose` unions teams by slug and a duplicate slug is a hard error: team
+slugs are one flat namespace, and letting the last contributor win would make the roster depend on
+composition order. `teamMembership` is applied after every team exists — so a contributor may join a
+team declared by another — and it only ever **adds** seats, never removes one.
+
+**Resolution**, in order:
+
+1. `<workspace>/.agents/teams.json`, when the workspace has a readable one. This is what a pack
+   composes into, so a team or membership it contributes is live with no rebuild.
+2. The embedded core roster — every workspace with no file of its own, which is every workspace
+   initialized before the roster became data.
+3. `AgentTeamService.CompiledFallbackDefinitions`, the pre-data C# list. It exists only so a broken
+   or missing resource cannot empty the member filter; a test asserts it is seat-for-seat equal to
+   the embedded roster, so the two cannot drift.
+
+A malformed or structurally invalid roster degrades to the built-ins rather than being partially
+applied — a bad file must not be able to hide every agent on the board.
+
+`AgentTeamService.AllTeamsSlug` is unchanged: `all` is the no-filter sentinel, ships first in the
+roster with no members, and is what `GetTeamBySlug` falls back to for an unknown slug.
+
+### Seeding a project
+
+`TeamStore.SeedDefinitionsAsync(projectSlug)` writes the workspace's roster into that project's
+`TeamDefinitions`. It runs automatically, once per database file per process, on the first
+definition call — not only at Initialize — so a project created before the roster became data
+migrates on its own.
+
+Nothing the owner authored is ever overwritten. `TeamDefinitionRow.SeedHash` is the SHA-256 of the
+payload **as the seed wrote it**, and it is the ownership marker:
+
+| Row state | Seed does |
+|---|---|
+| no row for the slug | insert it, with `SeedHash` |
+| `SeedHash` still matches the stored payload | refresh it — a roster change, or a pack's new seat, reaches projects that already exist |
+| `SeedHash` is null (owner-authored) or no longer matches (owner-edited) | leave it exactly as it is |
+
+`SaveDefinitionAsync` clears `SeedHash`, so an owner write takes the row out of the seed's hands for
+good. The column arrives through the usual inline `ALTER TABLE … ADD COLUMN SeedHash TEXT NULL`,
+which rewrites no row: every definition that predates it reads back as owner-authored, which is what
+it is.
+
+Seeded rows are also what makes a data-added team *runnable* per project, because
+`TeamRunService.ResolveDefinitionAsync` reads the project row first.
+
+### What a pack supplies
+
+To add a team: one entry under `teams` in the `teams.json` it composes into the workspace. To add a
+member to a team it does not own: one entry under `teamMembership`. Neither requires recompiling
+`GigaClaw.Core`. The manifest, the composer that merges several contributors' fragments into the one
+workspace file, and the CI gate over them are [pack infrastructure](./pack-infrastructure.md) (T6);
+this file describes the format and the runtime that consume their output.
 
 ## Storage
 Three tables in the **per-project** database (see [Storage](./storage.md)): `TeamDefinitions`,
@@ -145,10 +226,16 @@ nothing about a run ever lived outside the project database.
 - `TeamRunService.ReconcileProjectAsync(slug)` (engine tick / restart), `FailTaskAsync` and
   `CancelRunAsync` / `CancelRunsForParentAsync`.
 - `TeamJoinEvaluator.Evaluate` / `Succeeded` for the join decision, with no I/O.
-- `AgentTeamService.GetDefinitions()` / `GetDefinitionBySlug(slug)` for the built-ins.
+- `AgentTeamService.GetDefinitions()` / `GetDefinitionBySlug(slug)` for the built-ins, and their
+  `(…, workspacePath)` overloads for a workspace's composed roster.
+- `TeamStore.SeedDefinitionsAsync(slug)` to write the roster into a project explicitly.
 
 ## Not implemented yet
 - **File-ownership leases** — two lanes writing the same file still race; `ownedFiles` from the
   handoff is the declared scope a lease will be taken on (lane CX-R's R4).
 - **Team presets** — no built-in definition ships a task graph yet, so every executable team is one
-  a project defines itself. The nine built-ins remain pure member filters.
+  a project or its roster defines itself. The nine built-ins remain pure member filters.
+- **A pack team in the board's team picker** — the Blazor filter still calls the project-less
+  `AgentTeamService.GetTeams()`, so a team contributed by a workspace roster resolves and runs but is
+  not yet offered in the dropdown. Passing the project's workspace path to the `(…, workspacePath)`
+  overloads is the one-line wiring that closes it, and it belongs with the composer in T6.

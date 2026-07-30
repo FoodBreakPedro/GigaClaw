@@ -1,7 +1,7 @@
 # SP-1 Policy Enforcement Review Sheet & Inventory
 
 **Date**: 2026-07-30  
-**Status**: Fixtures Executed (33/33 agents exercised). Policy enforcement currently set to `warn` for all agents.
+**Status**: Signed off, and **enforced as of R3**. Fixtures executed (33/33 agents exercised); 31 agents run in `block`, and `programmer` and `code-janitor` are held in `warn` per the recommendations below. Enforcement lives in `ProjectTemplate/Agents/contracts.json` as `enforcement: "warn" | "block"` — a manifest-wide `defaults` floor with a per-agent override — and is re-read on every dispatch, so a flip is a config edit rather than a redeploy. `TemplateEnforcementStateTests` walks all 33 agents and fails if this document and the manifest disagree.
 
 ---
 
@@ -11,6 +11,7 @@
 2. **Current Enforcement State**: **`warn`** across all agents. Policy violations emit structured `policy-violation/v1` run events without blocking Claude executions.
 3. **Zero Fabricated Outcomes**: All 33 template agents have been exercised against synthetic in-glob and out-of-glob tool operations.
 4. **Sign-off Rule**: Flipping an agent's policy enforcement from `warn` to `block` requires human review of this document.
+5. **What blocking means**: in `block` the PreToolUse hook answers Claude with a `permissionDecision: "deny"` and the tool call never runs; in `warn` the identical violation is recorded as a `policy-violation/v1` run event and the call proceeds, so shadow mode stays a true no-op and this inventory keeps filling for agents not yet flipped. A contract that cannot be parsed enforces regardless of what it asked for.
 
 ---
 

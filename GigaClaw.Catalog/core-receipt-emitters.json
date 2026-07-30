@@ -1,0 +1,11 @@
+{
+  "_comment": "Core's receiptEmitters table (doc/pack-infrastructure.md §7.3). Which agents may be the SOURCE of a receipt family that other agents consume — a family mentioned by exactly one agent owns itself and needs no entry. This lived as a hardcoded Dictionary in GigaClaw.Core.Tests/Automation/ReceiptChainTests.cs, which meant a pack introducing a new emitter of GIGACLAW-VERDICT failed a core test until a human edited core's test file. It is now data, unioned across every pack's `receiptEmitters` manifest field by GigaClaw.Catalog/ReceiptEmitterTable.cs. It sits here rather than under ProjectTemplate/ on purpose: ProjectTemplate/Agents/** and ProjectTemplate/** compose into an initialized workspace, and this table is build-time review data that no workspace should receive. MIGRATION: once ProjectTemplate/pack.json exists, move this object under its `receiptEmitters` key and delete this file — ReceiptEmitterTable already prefers the manifest and unions both, so the move is a no-op for callers.",
+  "receiptEmitters": {
+    "BLOG-REVIEW": ["blog-reviewer"],
+    "BLOG-SEO": ["blog-seo"],
+    "CONTENT-REVIEW": ["blog-reviewer"],
+    "UI-AUDIT": ["ui-auditor"],
+    "GIGACLAW-VERDICT": ["blog-reviewer", "ui-auditor", "qa-tester", "local-media-reviewer", "evaluator"],
+    "GIGACLAW-HANDOFF": ["programmer", "qa-tester", "blog-writer", "blog-reviewer", "blog-seo", "producer"]
+  }
+}

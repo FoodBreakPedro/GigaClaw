@@ -50,6 +50,9 @@ builder.Services.AddSingleton<MemberService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddSingleton<DashboardService>();
 builder.Services.AddSingleton<AgentsTemplateService>();
+// O7 pack infrastructure: the staged install/uninstall engine for pack.json bundles
+// (see doc/pack-infrastructure.md). Stateless — every call carries its own workspace.
+builder.Services.AddSingleton<GigaClaw.Core.Packs.PackInstaller>();
 builder.Services.AddSingleton<AgentTeamService>();
 builder.Services.AddSingleton<TeamStore>();
 builder.Services.AddSingleton<TeamRunService>();

@@ -64,3 +64,11 @@ python3 .agents/scripts/agent_ticket.py \
 ```
 
 The helper uses the atomic transition endpoint and checked marker receipt. Delete scratch reports after success.
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"ui-auditor"` or `"programmer"`, or `null`.
+- **`ownedFiles`**: UI spec/mockup files under `design/`.
+- **`outputs`**: Design specification artifact refs.

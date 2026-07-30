@@ -39,3 +39,11 @@ python3 .agents/scripts/agent_ticket.py \
 ```
 
 The helper uses the atomic transition endpoint and writes the marker receipt last. Delete the scratch report after success.
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"ui-designer"` for UI layout drafting, or `null`.
+- **`ownedFiles`**: Design research documents under `doc/design/`.
+- **`outputs`**: Design research artifact refs.

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "agent": "blog-reviewer",
+  "ticketId": 101,
+  "runId": "run-101-3",
+  "summary": "Reviewed blog post draft, verified code snippets, and approved for SEO optimization.",
+  "inputs": [
+    {
+      "kind": "path",
+      "ref": "posts/2026-07-30-dotnet10-blazor-performance.md",
+      "note": "Draft post from blog-writer"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "path",
+      "ref": "reports/reviews/blog-101-review.json",
+      "note": "Review verdict and approved draft"
+    }
+  ],
+  "ownedFiles": [
+    "reports/reviews/blog-101-review.json"
+  ],
+  "assumptions": [],
+  "openLoops": [],
+  "acceptanceCriteria": [
+    {
+      "statement": "Review blog post quality, accuracy, and brand voice",
+      "met": true,
+      "evidenceRef": "reports/reviews/blog-101-review.json"
+    }
+  ],
+  "nextRole": "blog-seo",
+  "producedAtUtc": "2026-07-30T21:00:00Z"
+}

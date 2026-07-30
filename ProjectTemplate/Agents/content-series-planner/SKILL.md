@@ -124,3 +124,11 @@ starts. Include `[content-series-planner:v1 series-key=<key> result=complete]`.
 | Partial creation, duplicate key, or schedule failure | status → `Blocked` + one reconciliation comment; reruns reuse existing item keys |
 
 **Never end your turn with the ticket in `InProgress`.**
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"content-writer"` or `"blog-writer"` for article drafting, or `null`.
+- **`ownedFiles`**: Content series plan file under `content/plans/`.
+- **`outputs`**: Series plan artifact ref and topic outline refs.

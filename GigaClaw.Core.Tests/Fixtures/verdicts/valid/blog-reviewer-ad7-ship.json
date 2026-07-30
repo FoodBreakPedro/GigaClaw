@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "agent": "blog-reviewer",
+  "ticketId": 850,
+  "verdict": "SHIP",
+  "summary": "AD-7 content-pipeline draft approved; frontmatter, headings, voice and SEO metadata verified.",
+  "categories": [
+    { "name": "Content quality & pacing", "score": 30, "max": 30, "notes": "Clear structure, clean pacing, zero fluff." },
+    { "name": "SEO & navigation", "score": 25, "max": 25, "notes": "Title, meta description, and primary keyword valid." },
+    { "name": "E-E-A-T & trust", "score": 15, "max": 15, "notes": "Valid claims and source references." },
+    { "name": "Technical & schema elements", "score": 15, "max": 15, "notes": "Frontmatter parsed cleanly." },
+    { "name": "AI citation readiness (GEO)", "score": 15, "max": 15, "notes": "Extractable layout and entity definitions present." }
+  ],
+  "vetoItems": [],
+  "evidence": [
+    { "kind": "hash", "ref": "sha256:7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a", "note": "ticket description draft snapshot" }
+  ],
+  "reviewedAtUtc": "2026-07-30T21:00:00Z",
+  "inputDigest": "sha256:7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a",
+  "reviewCycle": { "current": 1, "max": 2 }
+}

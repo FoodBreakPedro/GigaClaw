@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "security-assurance",
+  "name": "Security Assurance",
+  "description": "Adversarial security review as a four-lane parallel preset: code audit, threat model, supply chain, secrets. Every lane emits a typed verdict; any critical finding is a BLOCK and a hard veto.",
+  "version": "1.0.0",
+  "kind": "specialist",
+  "removable": true,
+  "requiresRuntime": { "min": 1, "max": 1 },
+  "dependsOn": [{ "id": "core", "minVersion": "1.0.0" }],
+
+  "provides": {
+    "agents": ["secrets-reviewer", "security-auditor", "supply-chain-reviewer", "threat-modeler"],
+    "scripts": ["scripts/sbom_diff.py"],
+    "teams": ["security-review"],
+    "automations": [
+      "security-gate-on-review",
+      "threat-model-on-review",
+      "dependency-audit-weekly",
+      "security-verdict-escalate",
+      "secrets-verdict-escalate",
+      "threat-model-verdict-escalate",
+      "supply-chain-verdict-escalate"
+    ],
+    "rootFiles": ["SECURITY-REVIEW.md"]
+  },
+
+  "teamMembership": {
+    "software-engineering": ["security-auditor", "secrets-reviewer", "supply-chain-reviewer"],
+    "governance-ops": ["threat-modeler"]
+  },
+
+  "automationPatches": [
+    {
+      "automation": "assignee-dispatch",
+      "op": "addAssignees",
+      "slugs": ["security-auditor", "threat-modeler", "supply-chain-reviewer", "secrets-reviewer"]
+    },
+    {
+      "automation": "assignee-resume",
+      "op": "addAssignees",
+      "slugs": ["security-auditor", "threat-modeler", "supply-chain-reviewer", "secrets-reviewer"]
+    },
+    {
+      "automation": "owner-feedback",
+      "op": "addAssignees",
+      "slugs": ["security-auditor", "threat-modeler", "supply-chain-reviewer", "secrets-reviewer"]
+    }
+  ],
+
+  "receiptEmitters": {
+    "GIGACLAW-VERDICT": ["security-auditor", "threat-modeler", "supply-chain-reviewer", "secrets-reviewer"],
+    "GIGACLAW-HANDOFF": ["threat-modeler", "security-auditor"]
+  },
+
+  "permissions": {
+    "riskClasses": ["security-review", "security-design"],
+    "actions": [
+      "runAgent",
+      "moveTicketStatus",
+      "addComment",
+      "consolidateAgentMemory",
+      "commitAgentMemory"
+    ],
+    "network": "declared",
+    "networkHosts": ["api.osv.dev", "api.github.com", "services.nvd.nist.gov"],
+    "allowedWriteGlobs": [
+      "doc/security/**",
+      ".agents/security-auditor/memory/**",
+      ".agents/threat-modeler/memory/**",
+      ".agents/supply-chain-reviewer/memory/**",
+      ".agents/secrets-reviewer/memory/**"
+    ]
+  },
+
+  "evalFixtures": [
+    "security-injection-in-review",
+    "security-threat-model-auth",
+    "security-supply-chain-advisory",
+    "security-secret-in-diff"
+  ]
+}

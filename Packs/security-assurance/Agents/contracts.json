@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "agents": {
+    "security-auditor": {
+      "dispatches": ["security-gate-on-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["doc/security/**", ".agents/security-auditor/memory/**"],
+      "riskClass": "security-review",
+      "maxReviewCycles": 2
+    },
+    "threat-modeler": {
+      "dispatches": ["threat-model-on-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["doc/security/**", ".agents/threat-modeler/memory/**"],
+      "riskClass": "security-design",
+      "maxReviewCycles": 2
+    },
+    "supply-chain-reviewer": {
+      "dispatches": ["dependency-audit-weekly", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["doc/security/**", ".agents/supply-chain-reviewer/memory/**"],
+      "riskClass": "security-review",
+      "maxReviewCycles": 2
+    },
+    "secrets-reviewer": {
+      "dispatches": ["security-gate-on-review", "assignment", "resume", "owner-feedback"],
+      "ticketExit": ["Review", "Todo", "Blocked"],
+      "allowedWriteGlobs": ["doc/security/**", ".agents/secrets-reviewer/memory/**"],
+      "riskClass": "security-review",
+      "maxReviewCycles": 2
+    }
+  }
+}

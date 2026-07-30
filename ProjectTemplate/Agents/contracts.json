@@ -4,10 +4,12 @@
     "maxDispatchAttempts": 3,
     "retryBackoffSeconds": 300,
     "requireAtomicHandoff": true,
-    "requireAuthorOnBoardWrites": true
+    "requireAuthorOnBoardWrites": true,
+    "enforcement": "block"
   },
   "agents": {
     "programmer": {
+      "enforcement": "warn",
       "dispatches": ["assignment", "resume", "owner-feedback"],
       "ticketExit": ["Review", "Todo", "Blocked"],
       "allowedWriteGlobs": ["**"],
@@ -38,6 +40,7 @@
       "riskClass": "git-write"
     },
     "code-janitor": {
+      "enforcement": "warn",
       "dispatches": ["code-janitor-nightly"],
       "ticketExit": [],
       "allowedWriteGlobs": ["**"],

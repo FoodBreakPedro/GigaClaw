@@ -1,0 +1,166 @@
+{
+  "automations": [
+    {
+      "id": "security-gate-on-review",
+      "name": "Security: audit code tickets entering Review",
+      "enabled": true,
+      "trigger": { "type": "statusChange", "pollSeconds": 30, "to": "Review" },
+      "conditions": [{ "type": "labels", "labels": ["code"] }],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "security-auditor",
+          "maxTurns": 80,
+          "concurrencyGroup": "security-auditor",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "runAgent",
+          "agent": "secrets-reviewer",
+          "maxTurns": 30,
+          "concurrencyGroup": "secrets-reviewer",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-haiku-4-5",
+          "restoreStatusOnFail": false
+        },
+        { "type": "consolidateAgentMemory", "agent": "security-auditor" },
+        { "type": "commitAgentMemory", "agent": "security-auditor" }
+      ]
+    },
+    {
+      "id": "threat-model-on-review",
+      "name": "Security: threat-model design tickets entering Review",
+      "enabled": true,
+      "trigger": { "type": "statusChange", "pollSeconds": 30, "to": "Review" },
+      "conditions": [{ "type": "labels", "labels": ["design", "security"] }],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "threat-modeler",
+          "maxTurns": 60,
+          "concurrencyGroup": "threat-modeler",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-opus-4-8",
+          "restoreStatusOnFail": false
+        },
+        { "type": "consolidateAgentMemory", "agent": "threat-modeler" },
+        { "type": "commitAgentMemory", "agent": "threat-modeler" }
+      ]
+    },
+    {
+      "id": "dependency-audit-weekly",
+      "name": "Security: weekly supply-chain audit",
+      "enabled": true,
+      "trigger": { "type": "interval", "cron": "0 4 * * 1" },
+      "conditions": [],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "supply-chain-reviewer",
+          "maxTurns": 40,
+          "concurrencyGroup": "git",
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        { "type": "consolidateAgentMemory", "agent": "supply-chain-reviewer" },
+        { "type": "commitAgentMemory", "agent": "supply-chain-reviewer" }
+      ]
+    },
+
+    {
+      "id": "security-verdict-escalate",
+      "name": "Security: any security-auditor BLOCK, invalid or stale verdict stops the ticket",
+      "enabled": true,
+      "trigger": { "type": "ticketCommentAdded", "pollSeconds": 30 },
+      "conditions": [
+        {
+          "type": "verdictIs",
+          "verdicts": ["BLOCK", "INVALID", "STALE"],
+          "agent": "security-auditor",
+          "requireFreshArtifact": true
+        }
+      ],
+      "actions": [
+        { "type": "moveTicketStatus", "to": "Blocked" },
+        {
+          "type": "addComment",
+          "author": "system",
+          "content": "Security review stopped ticket {ticketId}: the newest security-auditor verdict is BLOCK, invalid, or stale against the current artifact. Read the GIGACLAW-VERDICT comment above. A BLOCK is a veto — it is cleared by fixing the finding and obtaining a fresh SHIP, not by moving the ticket."
+        }
+      ]
+    },
+    {
+      "id": "secrets-verdict-escalate",
+      "name": "Security: any secrets-reviewer BLOCK, invalid or stale verdict stops the ticket",
+      "enabled": true,
+      "trigger": { "type": "ticketCommentAdded", "pollSeconds": 30 },
+      "conditions": [
+        {
+          "type": "verdictIs",
+          "verdicts": ["BLOCK", "INVALID", "STALE"],
+          "agent": "secrets-reviewer",
+          "requireFreshArtifact": true
+        }
+      ],
+      "actions": [
+        { "type": "moveTicketStatus", "to": "Blocked" },
+        {
+          "type": "addComment",
+          "author": "system",
+          "content": "Secrets review stopped ticket {ticketId}: the newest secrets-reviewer verdict is BLOCK, invalid, or stale against the current artifact. Read the GIGACLAW-VERDICT comment above. Rotate any exposed credential before the ticket moves again — removing the line does not un-leak it."
+        }
+      ]
+    },
+    {
+      "id": "threat-model-verdict-escalate",
+      "name": "Security: any threat-modeler BLOCK, invalid or stale verdict stops the ticket",
+      "enabled": true,
+      "trigger": { "type": "ticketCommentAdded", "pollSeconds": 30 },
+      "conditions": [
+        {
+          "type": "verdictIs",
+          "verdicts": ["BLOCK", "INVALID", "STALE"],
+          "agent": "threat-modeler",
+          "requireFreshArtifact": false
+        }
+      ],
+      "actions": [
+        { "type": "moveTicketStatus", "to": "Blocked" },
+        {
+          "type": "addComment",
+          "author": "system",
+          "content": "Threat model stopped ticket {ticketId}: the newest threat-modeler verdict is BLOCK or invalid. Its input is the ticket's own design description rather than a workspace file, so freshness is not re-hashed here — re-run the threat model after the design changes. Read the GIGACLAW-VERDICT comment above."
+        }
+      ]
+    },
+    {
+      "id": "supply-chain-verdict-escalate",
+      "name": "Security: any supply-chain-reviewer BLOCK, invalid or stale verdict stops the ticket",
+      "enabled": true,
+      "trigger": { "type": "ticketCommentAdded", "pollSeconds": 30 },
+      "conditions": [
+        {
+          "type": "verdictIs",
+          "verdicts": ["BLOCK", "INVALID", "STALE"],
+          "agent": "supply-chain-reviewer",
+          "requireFreshArtifact": false
+        }
+      ],
+      "actions": [
+        { "type": "moveTicketStatus", "to": "Blocked" },
+        {
+          "type": "addComment",
+          "author": "system",
+          "content": "Supply-chain review stopped ticket {ticketId}: the newest supply-chain-reviewer verdict is BLOCK or invalid. Its input digest covers a lockfile set plus a point-in-time advisory snapshot, which no single workspace file hashes to, so freshness is not re-hashed here. Read the GIGACLAW-VERDICT comment above."
+        }
+      ]
+    }
+  ]
+}

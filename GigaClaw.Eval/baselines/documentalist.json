@@ -24,8 +24,8 @@
     },
     {
       "Id": "prompt.budget",
-      "Category": "policy",
-      "Status": "warning"
+      "Category": "integrity",
+      "Status": "pass"
     },
     {
       "Id": "scripts.resolve",

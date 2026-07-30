@@ -59,8 +59,33 @@ public sealed class AutomationStore : IDisposable
             config = new AutomationConfig();
         }
 
+        ApplyQuarantine(config, workspace);
+
         entry.LastLoaded = config;
         return (config, workspace, configPath);
+    }
+
+    /// <summary>
+    /// §5: a quarantined pack's automations are force-disabled at config load. Done here rather
+    /// than at evaluation so every reader — the engine, the editor, the API — sees one answer, and
+    /// the owner can see in the UI that the automation is off and why.
+    ///
+    /// <para>The disable is not written back by this method; it reaches disk only if something
+    /// saves the config afterwards, and that is harmless because updating the pack reinstalls its
+    /// automations from pack data, which restores <c>enabled</c> wholesale.</para>
+    /// </summary>
+    internal static void ApplyQuarantine(
+        AutomationConfig config, string workspace, int runtimeVersion = Packs.PackRuntime.Version)
+    {
+        var quarantine = PackQuarantine.ForWorkspace(workspace, runtimeVersion);
+        if (quarantine.IsEmpty) return;
+
+        foreach (var automation in config.Automations)
+        {
+            if (!automation.Enabled) continue;
+            if (quarantine.PackOfAutomation(automation.Id) is null) continue;
+            automation.Enabled = false;
+        }
     }
 
     public AutomationConfig? GetCached(string slug) =>

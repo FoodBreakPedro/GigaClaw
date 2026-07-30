@@ -1,0 +1,40 @@
+## 100-Point Quality Scoring System
+
+Evaluate drafts strictly across these 5 categories:
+
+### 1. Content Quality & Pacing (30 pts)
+- **Coverage & Utility (7 pts)**: Covers the topic thoroughly with actionable steps and zero fluff.
+- **Readability & Pacing (7 pts)**: From `lint_prose` — 7 pts if Flesch is 60-70 **and** burstiness >= 0.4; 4 pts if only one holds; 0 if neither.
+- **Originality & Value (5 pts)**: Supported unique insights or clear synthesis; non-generic.
+- **Paragraph Structure (4 pts)**: 2-4 sentences max per paragraph — 4 pts if `cognitive_load` reports zero reading-fatigue paragraphs, else 0.
+- **Engagement Elements (4 pts)**: Examples, analogies, code snippets, visual comparison tables.
+- **Grammar & Clarity (3 pts)**: Clean prose, active voice, zero grammatical errors.
+
+### 2. SEO & Navigation (25 pts)
+- **Heading Hierarchy (5 pts)**: Clean H1/H2/H3 structure matching search intent.
+- **Title & Metadata (4 pts)**: Distinctive title + 150-160 char meta description matching content.
+- **Topic Consistency (4 pts)**: Headers and body focus on a single core topic.
+- **Internal/External Linking (6 pts)**: Relevant contextual anchors and tier-1 source links.
+- **URL Path (3 pts)**: Clean, readable slug.
+- **Formatting (3 pts)**: Lists, bold text key terms, and summary boxes.
+
+### 3. E-E-A-T & Trust (15 pts)
+- **Author Attribution (4 pts)**: Clear author bio/byline.
+- **Source Verifiability (4 pts)**: Citations for all statistics and claims.
+- **Evidence Basis (4 pts)**: Reproducible steps or verifiable code/benchmark references.
+- **Trust Elements (3 pts)**: Disclaimers, published date, canonical tag.
+
+### 4. Technical & Schema Elements (15 pts)
+- **JSON-LD Schema Markup (4 pts)**: `BlogPosting` present and valid; plus `FAQPage` when the post has an FAQ section and `HowTo` when it is a step-by-step guide.
+- **Image Alt Text & Formatting (4 pts)**: Alt text on all visual assets.
+- **Structured Data Elements (4 pts)**: Tables, bullet points, TL;DR callouts.
+- **Social Meta Tags (3 pts)**: `og:title`, `og:description`, `og:image`.
+
+### 5. AI Citation Readiness / GEO (15 pts)
+
+Score this category from `ai_citation_score`: `round(GEO score / 100 * 15)`. The sub-items below explain that number and drive the fix list.
+
+- **Self-Contained Citability (4 pts)**: Key concepts defined cleanly in 1-2 sentence blocks.
+- **Entity Clarity (4 pts)**: Consistent naming of technical concepts and products.
+- **Extractable Layout (4 pts)**: Comparison tables, structured lists, definition boxes.
+- **Query Alignment (3 pts)**: Clear FAQ or key question response sections.

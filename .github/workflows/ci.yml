@@ -20,14 +20,23 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # T1/T2: committed catalog artifacts must remain deterministic. The strict
-      # binding gate is enabled after the known content-writer team gap is fixed.
+      # T1/T2: committed catalog artifacts must remain deterministic. Enforces strict
+      # five-part binding checks for every agent discovered in ProjectTemplate/Agents.
       - name: Catalog drift check
         shell: pwsh
         run: |
           dotnet run --project GigaClaw.Catalog -- generate
           git diff --exit-code -- catalog.json doc/catalog.md
-          dotnet run --project GigaClaw.Catalog -- check
+          dotnet run --project GigaClaw.Catalog -- check --strict
+
+      # T6: the five-binding rule as a gate (doc/pack-infrastructure.md §7). --strict-packs is
+      # strict for pack agents and baseline for core agents, which is what lets a pack land while
+      # core still carries known gaps — and, more importantly, stops a pack landing with any of
+      # them. A pack that cannot meet the bar on its first commit is the anti-pattern the rule
+      # exists to prevent, so this is unconditional for packs whatever mode core is in (owner Q2).
+      - name: Pack composition and strict binding gate
+        shell: pwsh
+        run: dotnet run --project GigaClaw.Catalog -- check --strict-packs
 
       - name: Build
         run: |
@@ -42,7 +51,7 @@ jobs:
           dotnet test GigaClaw.Core.Tests -c Release --no-build --nologo --logger "console;verbosity=minimal"
           dotnet test GigaClaw.Eval.Tests -c Release --no-build --nologo --logger "console;verbosity=minimal"
 
-      # T4: committed static baselines are the reviewed policy snapshot. Baseline mode
-      # still fails malformed inputs and baseline drift while reporting known findings.
+      # T4: committed static baselines are the reviewed policy snapshot. Strict mode fails on
+      # findings outside the baseline as well as on malformed inputs and baseline drift.
       - name: Static agent eval
-        run: dotnet run --project GigaClaw.Eval -c Release --no-build -- all
+        run: dotnet run --project GigaClaw.Eval -c Release --no-build -- all --strict

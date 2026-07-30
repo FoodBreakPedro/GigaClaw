@@ -1,6 +1,6 @@
 # Pack infrastructure (O7) — design spec
 
-**Status:** drafted by lane CL (task C9), **awaiting owner approval**. Implemented by lane CX-T (task T6).
+**Status:** drafted by lane CL (task C9), **approved 2026-07-30** (§10). Implemented by lane CX-T (task T6) — see [§11](#11-implementation-status-t6) for what has landed.
 **Scope:** the manifest, the composition rules, the versioning model, the core-pack extraction, and the CI gate that keeps packs from becoming a 203-agent catalog. Not the pack contents — those are GM authoring work, sequenced in [packs-and-later.md](./roadmap/packs-and-later.md).
 
 Everything asserted here about current behaviour was read out of the code at `lane/claude-orch` `f4dd69a` (and, for `GigaClaw.Catalog`/`GigaClaw.Eval`, `lane/cx-tooling`). Where a decision could go two ways, both are stated, one is recommended, and the reason is given. Four questions are escalated to the owner in §9 — they are the only ones left open.
@@ -398,6 +398,29 @@ Note what the verdict machinery buys here: `BLOCK` is a **hard veto** because `v
 | **Q2** | **May the Security pack land while core's `content-writer` binding gap is open?** | **Yes, land it.** Uses `--strict-packs` so the Security pack lands without waiting for core's `content-writer` gap. |
 | **Q3** | **Model tier for security-auditor & threat-modeler in Security pack?** | **Use Sonnet 4-6.** `security-auditor` uses `claude-sonnet-4-6` to manage recurring ticket review costs. |
 | **Q4** | **Should `supply-chain-reviewer` be allowed network access before U17 lands?** | **Yes, enable network access immediately.** Outbound network access is enabled for live vulnerability advisory queries. |
+
+---
+
+## 11. Implementation status (T6)
+
+Landed in `GigaClaw.Core/Packs/`:
+
+| File | Covers |
+|---|---|
+| `PackManifest.cs` | The §3 record model plus `PackRuntime` (the §5 pack-runtime constant) and `PackCompatibility`. |
+| `PackManifestParser.cs` | §3 parsing and every rule decidable from one manifest. Hand-parsed, so a renamed or unknown field can never be silently dropped. |
+| `IPackSource.cs` | `DirectoryPackSource` (working tree, for the build-time tools) and `EmbeddedPackSource` (Q1's production shape). The core-pack extraction plugs in as one more `EmbeddedPackSource`. |
+| `PackComposer.cs` | §4 composition: declared-and-verified `provides`, D2 collisions, D4 references, core-first topological order, the §4 merge table, §7.5/§7.6 permission closure. |
+| `PackInstaller.cs` · `PackInstaller.Uninstall.cs` · `WorkspaceMergeTransaction.cs` | D5's staged install and §4's uninstall. |
+| `PackLock.cs` · `PackFileHash.cs` | `packs.lock.json` and the single hash implementation install and uninstall must agree on. |
+
+Three details the §4 sketch leaves implicit, resolved as follows:
+
+- **Merge artifacts are not opaque files.** `automations.json`, `contracts.json`, `models.json` and `teams.json` are read from the workspace, merged in memory and written back — they are never copied over, because the owner's automation edits land in the same file via `AutomationStore.SaveAsync`. They are therefore tracked by the lockfile's `automations`/`contractKeys`/`modelKeys`/`teams` key lists, not by `fileHashes`, which is exactly why §4's lockfile carries both.
+- **Lock entries carry the data uninstall's own rules require**: `kind`, `removable` and `dependsOn` (steps 1's two refusals), `requiresRuntime` (quarantine after a runtime bump), and `mergeEntryHashes` — the per-entry hash that answers step 3's "still byte-identical to what was installed?" for merge artifacts, which the key lists alone cannot.
+- **`teamMembership` reversal** is a set subtraction of the pack's own agent slugs from every surviving team, matching the `automationPatches` reversal in step 3.
+
+Not yet landed, and sequenced after the teams change: the core-pack extraction (§6), `AgentTeamService` reading composed `teams.json` (D8), and the catalog/eval integration and CI gate (§7, §9). Until core is a pack, `PackComposeOptions.HostProvidedAgents` lets D4's reference resolution see the `ProjectTemplate` agents that belong to no manifest; the installer fills it from the workspace, the catalog passes nothing, and it is empty at every call site once §6 lands.
 
 ---
 

@@ -43,3 +43,11 @@ python3 .agents/scripts/agent_ticket.py \
 Delete the scratch comment file after success. For comments/status-only exits, use the helper's `comment` and `status` commands; every command asserts the response and returned state.
 
 If the brief cannot be completed (topic unusable, no primary source, missing input), move the ticket to `Blocked` with a comment explaining what is missing instead of handing off. **Never end your turn with the ticket in `InProgress`.**
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"blog-writer"` on success, or `null` if blocked/returning to owner.
+- **`ownedFiles`**: `["content/briefs/<slug>-brief.md"]`.
+- **`outputs`**: Brief artifact path ref and source inventory digest.

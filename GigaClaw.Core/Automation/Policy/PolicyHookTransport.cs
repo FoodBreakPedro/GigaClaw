@@ -35,6 +35,34 @@ public sealed class PolicyHookTransport : IAsyncDisposable
         "Content-Type: application/json\r\n" +
         "Content-Length: 2\r\n" +
         "Connection: close\r\n\r\n{}");
+    /// <summary>
+    /// Claude Code's PreToolUse deny contract. The hook answers 200 with a decision body rather
+    /// than an HTTP error — an error status is a transport failure, which fails open, and a denial
+    /// is the opposite of that.
+    /// </summary>
+    private static byte[] DenyResponse(string reason)
+    {
+        var body = JsonSerializer.Serialize(new
+        {
+            hookSpecificOutput = new
+            {
+                hookEventName = "PreToolUse",
+                permissionDecision = "deny",
+                permissionDecisionReason = reason,
+            },
+        });
+        var bytes = Encoding.UTF8.GetBytes(body);
+        var header = Encoding.ASCII.GetBytes(
+            "HTTP/1.1 200 OK\r\n" +
+            "Content-Type: application/json\r\n" +
+            $"Content-Length: {bytes.Length}\r\n" +
+            "Connection: close\r\n\r\n");
+        var response = new byte[header.Length + bytes.Length];
+        header.CopyTo(response, 0);
+        bytes.CopyTo(response, header.Length);
+        return response;
+    }
+
     private static readonly byte[] NotFoundResponse = Encoding.ASCII.GetBytes(
         "HTTP/1.1 404 Not Found\r\n" +
         "Content-Type: application/json\r\n" +
@@ -162,8 +190,10 @@ public sealed class PolicyHookTransport : IAsyncDisposable
                     return;
                 }
 
-                Observe(request.Body);
-                await stream.WriteAsync(OkResponse, cancellationToken);
+                var denyReason = Observe(request.Body);
+                await stream.WriteAsync(
+                    denyReason is null ? OkResponse : DenyResponse(denyReason),
+                    cancellationToken);
             }
             catch (Exception ex) when (
                 ex is InvalidDataException or
@@ -172,12 +202,22 @@ public sealed class PolicyHookTransport : IAsyncDisposable
                 DecoderFallbackException)
             {
                 EnqueueMalformed(ex.Message);
-                try { await stream.WriteAsync(OkResponse, cancellationToken); } catch { }
+                // A hook exchange we could not parse is exactly the case that must not fail open
+                // once the agent is enforcing: we do not know what tool call it described.
+                var response = _policy.Enforcement == PolicyEnforcementMode.Block || !_policy.IsValid
+                    ? DenyResponse($"Malformed policy hook exchange: {ex.Message}")
+                    : OkResponse;
+                try { await stream.WriteAsync(response, cancellationToken); } catch { }
             }
         }
     }
 
-    private void Observe(string body)
+    /// <summary>
+    /// Records violations and returns the reason the tool call must be denied, or null to let it
+    /// through. Only the agent's own enforcement mode decides denial — a Warn decision, or a Block
+    /// decision on an agent still in shadow mode, is recorded and allowed.
+    /// </summary>
+    private string? Observe(string body)
     {
         using var document = JsonDocument.Parse(body);
         var root = document.RootElement;
@@ -188,7 +228,7 @@ public sealed class PolicyHookTransport : IAsyncDisposable
         if (string.Equals(hookEvent, "UserPromptSubmit", StringComparison.Ordinal))
         {
             Interlocked.Increment(ref _acknowledgementCount);
-            return;
+            return null;
         }
         if (!string.Equals(hookEvent, "PreToolUse", StringComparison.Ordinal))
         {
@@ -206,6 +246,11 @@ public sealed class PolicyHookTransport : IAsyncDisposable
 
         Interlocked.Increment(ref _acknowledgementCount);
 
+        // Every violation is recorded whether or not it is enforced, so the SP-1 inventory keeps
+        // filling for agents still in shadow mode. Denial reasons accumulate across the evaluations
+        // of one tool call: a single Bash line can be both an out-of-glob write and a destructive
+        // git command, and reporting only the first would hide half the reason.
+        string? denyReason = null;
         foreach (var evaluation in PolicyHookToolCallAdapter.Evaluate(_policy, tool, toolInput))
         {
             if (!evaluation.Decision.IsViolation)
@@ -221,7 +266,16 @@ public sealed class PolicyHookTransport : IAsyncDisposable
                 evaluation.Call.Target,
                 evaluation.Decision.Kind,
                 evaluation.Decision.Reason));
+
+            if (_policy.Enforces(evaluation.Decision))
+            {
+                denyReason = denyReason is null
+                    ? evaluation.Decision.Reason
+                    : $"{denyReason} {evaluation.Decision.Reason}";
+            }
         }
+
+        return denyReason;
     }
 
     private void EnqueueMalformed(string reason)
@@ -440,6 +494,66 @@ internal static partial class PolicyHookToolCallAdapter
             "revert", "rm", "switch", "tag",
         };
 
+    /// <summary>
+    /// Git verbs whose destructive form is a flag rather than the verb itself, mapped to the flags
+    /// that make them destructive. Long and short forms are both listed because a policy that only
+    /// catches <c>--force</c> is bypassed by <c>-f</c>.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string[]> DestructiveGitFlags =
+        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            // --force-with-lease is deliberately absent: it refuses when the remote moved, which
+            // is the check a bare --force removes.
+            ["push"] = ["--force", "-f", "--delete", "--mirror", "--prune"],
+            ["reset"] = ["--hard"],
+            ["clean"] = ["-f", "-fd", "-fdx", "-fx", "-df", "--force"],
+            ["checkout"] = ["--force", "-f"],
+            ["branch"] = ["-D", "--delete", "-d"],
+            ["tag"] = ["-d", "--delete"],
+            ["rm"] = ["-r", "-rf", "-fr", "--force", "-f"],
+            ["stash"] = ["drop", "clear"],
+            ["restore"] = ["--staged", "--worktree", "--source"],
+        };
+
+    /// <summary>Git verbs that are destructive whatever flags they carry.</summary>
+    private static readonly HashSet<string> AlwaysDestructiveGitVerbs =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "filter-branch", "filter-repo", "gc", "prune", "reflog",
+        };
+
+    /// <summary>
+    /// Flags that skip the repository's own gates. These are verb-independent: <c>--no-verify</c>
+    /// means the same thing on commit, push and merge, and skipping a pre-commit hook is exactly
+    /// the move a policy layer exists to notice.
+    /// </summary>
+    private static readonly HashSet<string> GateSkippingGitFlags =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "--no-verify", "-n", "--no-gpg-sign", "--no-post-rewrite",
+        };
+
+    private static bool IsDestructiveGit(string? verb, IReadOnlyList<string> args)
+    {
+        if (verb is null)
+            return false;
+
+        if (AlwaysDestructiveGitVerbs.Contains(verb))
+            return true;
+
+        // `-n` means --dry-run on push and --no-verify on commit. Treating it as gate-skipping
+        // everywhere would flag the safest command git has, so it only counts where it is unsafe.
+        var gateSkipping = args.Any(arg =>
+            GateSkippingGitFlags.Contains(arg) &&
+            !(string.Equals(arg, "-n", StringComparison.Ordinal) &&
+              !string.Equals(verb, "commit", StringComparison.OrdinalIgnoreCase)));
+        if (gateSkipping)
+            return true;
+
+        return DestructiveGitFlags.TryGetValue(verb, out var flags) &&
+               args.Any(arg => flags.Contains(arg, StringComparer.OrdinalIgnoreCase));
+    }
+
     // curl writes with -o; -O derives the name from the URL and takes no argument.
     // wget writes the document with -O and its log with -o.
     private static readonly char[] CurlOutputFlags = ['o'];
@@ -570,6 +684,10 @@ internal static partial class PolicyHookToolCallAdapter
         if (string.Equals(executable, "git", StringComparison.OrdinalIgnoreCase))
         {
             var verb = FindGitVerb(args);
+            // Reported alongside the git-write, not instead of it: the command is still a git write,
+            // and collapsing the two would lose the ordinary capability row from the inventory.
+            if (IsDestructiveGit(verb, args))
+                calls.Add(PolicyToolCall.GitDestructive(command));
             if (verb is not null && GitWriteCommands.Contains(verb))
                 calls.Add(PolicyToolCall.GitWrite(command));
             return;

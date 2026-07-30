@@ -24,3 +24,11 @@ canonical scene plan, asset manifest, and approvals.
 - Owner/runtime/provider decision needed: `Blocked`.
 - Correctable internal issue within the approved path: `Todo`.
 - Never publish and never move the ticket to `Done`.
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"local-media-reviewer"` for media review, or `null`.
+- **`ownedFiles`**: Composed media asset paths under `media/output/`.
+- **`outputs`**: Composed media artifact refs.

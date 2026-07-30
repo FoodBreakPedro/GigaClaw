@@ -79,3 +79,11 @@ tradeoffs, move the ticket to `Review`, and stop. The owner approves the stage b
 - Approved execution spec for a dependent worker: comment with its path and SHA-256, then `Review`.
 - Missing runtime, model, approval, or pipeline evidence: `Blocked` with exact remediation.
 - Never end in `InProgress`.
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"local-media-compositor"` for media assembly, or `null`.
+- **`ownedFiles`**: Media storyboard and brief files under `media/briefs/`.
+- **`outputs`**: Storyboard artifact refs.

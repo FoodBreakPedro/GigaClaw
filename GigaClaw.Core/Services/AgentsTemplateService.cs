@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
+using GigaClaw.Core.Packs;
 
 namespace GigaClaw.Core.Services;
 
@@ -53,7 +54,16 @@ public sealed class AgentsTemplateService
 
     /// <summary>
     /// AD-9 model seeding: agent-slug → default Claude model id, sourced from the embedded
-    /// <c>ProjectTemplate/Agents/models.json</c> map (a flat JSON object of string → string).
+    /// <c>ProjectTemplate/Agents/models.json</c> map. A value is either a bare model id string or
+    /// an object <c>{ "model": "<id>", "criterion": "<why this tier>" }</c>. Both shapes seed the
+    /// same <see cref="Models.Member.DefaultModel"/>; the criterion is review metadata read by
+    /// <c>GigaClaw.Catalog</c>, which gates on its presence (doc/pack-infrastructure.md §7).
+    /// <para>
+    /// Reading the object form here is not optional. This method used to accept only
+    /// <see cref="JsonValueKind.String"/> and <em>silently skip</em> anything else, so an
+    /// object-valued entry would have left that agent with no default model and no error — the
+    /// failure would have surfaced as an unexplained fallback-model member weeks later.
+    /// </para>
     /// Missing or malformed <c>models.json</c> degrades to an empty map rather than throwing —
     /// member creation must never be blocked by a template-config problem. Slugs absent from the
     /// map simply get no explicit <see cref="Models.Member.DefaultModel"/>, falling back to the
@@ -73,11 +83,8 @@ public sealed class AgentsTemplateService
             foreach (var prop in doc.RootElement.EnumerateObject())
             {
                 if (prop.Name.StartsWith('_')) continue; // e.g. "_comment" — not an agent slug
-                if (prop.Value.ValueKind == JsonValueKind.String)
-                {
-                    var value = prop.Value.GetString();
-                    if (!string.IsNullOrWhiteSpace(value)) map[prop.Name] = value;
-                }
+                var value = ReadModelId(prop.Value);
+                if (!string.IsNullOrWhiteSpace(value)) map[prop.Name] = value;
             }
         }
         catch
@@ -88,6 +95,19 @@ public sealed class AgentsTemplateService
 
         return map;
     }
+
+    /// <summary>
+    /// The one place that knows <c>models.json</c> accepts two value shapes. An object without a
+    /// usable <c>model</c> string yields null, which seeds nothing — the same outcome as an absent
+    /// slug, never a silently wrong model id.
+    /// </summary>
+    private static string? ReadModelId(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.String => value.GetString(),
+        JsonValueKind.Object when value.TryGetProperty("model", out var model)
+            && model.ValueKind == JsonValueKind.String => model.GetString(),
+        _ => null
+    };
 
     /// <summary>
     /// Shared "create any agent member that doesn't exist yet" step, seeding
@@ -125,44 +145,27 @@ public sealed class AgentsTemplateService
         return conflicts;
     }
 
-    public async Task<InitializeResult> InitializeAsync(string workspacePath, bool overwriteConflicts)
+    /// <summary>
+    /// Composes the selected packs into a workspace. Since T6 this is a pack install
+    /// (doc/pack-infrastructure.md §6): the bytes come from the <c>core</c> pack rather than from a
+    /// bare loop over embedded resources, so the same staged transaction, the same owner-edit
+    /// protection and the same <c>.agents/packs.lock.json</c> record apply to core as to any other
+    /// pack. The one path a workspace gains relative to the pre-T6 writer is that lockfile.
+    /// </summary>
+    public async Task<InitializeResult> InitializeAsync(
+        string workspacePath,
+        bool overwriteConflicts,
+        IReadOnlyList<IPackSource>? packs = null)
     {
-        var written = new List<string>();
-        var skipped = new List<string>();
-
         Directory.CreateDirectory(workspacePath);
 
-        foreach (var rel in RelativePaths())
-        {
-            var dest = Path.Combine(workspacePath, ".agents", rel.Replace('/', Path.DirectorySeparatorChar));
-            var exists = File.Exists(dest);
-            if (exists && !overwriteConflicts)
-            {
-                skipped.Add(".agents/" + rel);
-                continue;
-            }
+        var install = await new PackInstaller().InstallAsync(
+            workspacePath,
+            packs ?? [CorePack.Source(_assembly)],
+            new PackInstallOptions(overwriteConflicts));
 
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            var bytes = ReadAsset(AgentsPrefix, rel);
-            await File.WriteAllBytesAsync(dest, bytes);
-            written.Add(".agents/" + rel);
-        }
-
-        foreach (var rel in RootRelativePaths())
-        {
-            var dest = Path.Combine(workspacePath, rel.Replace('/', Path.DirectorySeparatorChar));
-            var exists = File.Exists(dest);
-            if (exists && !overwriteConflicts)
-            {
-                skipped.Add(rel);
-                continue;
-            }
-
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            var bytes = ReadAsset(RootPrefix, rel);
-            await File.WriteAllBytesAsync(dest, bytes);
-            written.Add(rel);
-        }
+        var written = install.Written.ToList();
+        var skipped = install.PreservedOwnerEdits.ToList();
 
         var gitInitResult = GitInitResult.NotAttempted;
         var gitDir = Path.Combine(workspacePath, ".git");

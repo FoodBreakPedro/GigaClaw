@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "agent": "blog-researcher",
+  "ticketId": 101,
+  "runId": "run-101-1",
+  "summary": "Researched key features of .NET 10 Blazor Server performance optimizations.",
+  "inputs": [],
+  "outputs": [
+    {
+      "kind": "path",
+      "ref": "doc/research/dotnet10-blazor-notes.md",
+      "note": "Detailed performance benchmarks and API changes"
+    }
+  ],
+  "ownedFiles": [
+    "doc/research/dotnet10-blazor-notes.md"
+  ],
+  "assumptions": [
+    "Focused on server-side rendering performance rather than WebAssembly."
+  ],
+  "openLoops": [],
+  "acceptanceCriteria": [
+    {
+      "statement": "Gather performance benchmark data for .NET 10 Blazor Server",
+      "met": true,
+      "evidenceRef": "doc/research/dotnet10-blazor-notes.md"
+    }
+  ],
+  "nextRole": "blog-writer",
+  "producedAtUtc": "2026-07-30T20:30:00Z"
+}

@@ -58,3 +58,7 @@ Thumbs.db
 # otherwise be embedded into GigaClaw.Core and copied into every workspace.
 __pycache__/
 *.pyc
+
+
+# Transient lock from the graphify hook (the graph output itself is tracked).
+graphify-out/.rebuild.lock

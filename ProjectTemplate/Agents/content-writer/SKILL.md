@@ -134,3 +134,11 @@ to `Review`), rather than re-writing the description.
 - Never reassign the ticket away from yourself when moving to `Review` — that is what lets
   `content-reviewer-on-review` find it.
 - Never end your turn with the ticket in `InProgress`.
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"blog-reviewer"` for review, or `null` if returning to owner.
+- **`ownedFiles`**: Written content files under `content/`.
+- **`outputs`**: Article file artifact refs.
