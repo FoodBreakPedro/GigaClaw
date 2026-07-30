@@ -400,7 +400,7 @@ else
                     <label class="field-label">@L["AgentTeam"]</label>
                     <div class="assignee-picker-wrapper" style="margin-bottom:0.5rem;">
                         <select class="assignee-select" value="@_selectedTeamSlug" @onchange="OnTeamChanged">
-                            @foreach (var team in AgentTeamService.GetTeams())
+                            @foreach (var team in AgentTeamService.GetTeams(_workspacePath))
                             {
                                 <option value="@team.Slug">@GetTeamDisplayName(team)</option>
                             }
@@ -521,7 +521,7 @@ else
                     {
                         <div class="label-dropdown">
                             <div class="team-filter-pills" style="padding:0.25rem 0.5rem; border-bottom:1px solid var(--border); display:flex; gap:0.25rem; flex-wrap:wrap;">
-                                @foreach (var team in AgentTeamService.GetTeams())
+                                @foreach (var team in AgentTeamService.GetTeams(_workspacePath))
                                 {
                                     <button class="header-action-btn @(_selectedTeamSlug == team.Slug ? "settings-primary" : "")"
                                             style="font-size:0.75rem; padding:2px 6px;"
@@ -2231,7 +2231,14 @@ else
     // ── Agent Teams & Assignee autocomplete ──
     private string _selectedTeamSlug = AgentTeamService.AllTeamsSlug;
 
-    private IEnumerable<Member> FilteredMembers => AgentTeamService.FilterMembersByTeam(_selectedTeamSlug, _allMembers);
+    // Teams are composed data, not C# constants: a pack that ships a team writes it into
+    // <workspace>/.agents/teams.json. Without the workspace path the project-less overload
+    // answers with the built-in nine, so a pack team would resolve, seed and run while never
+    // appearing in this filter.
+    private string? _workspacePath =>
+        _project is null ? null : ProjectService.ResolveWorkspacePath(_project);
+
+    private IEnumerable<Member> FilteredMembers => AgentTeamService.FilterMembersByTeam(_selectedTeamSlug, _allMembers, _workspacePath);
 
     private void OnTeamChanged(ChangeEventArgs e)
     {
@@ -2263,7 +2270,7 @@ else
     private List<Member> GetAssigneeSuggestions()
     {
         var query = _assigneeSearch?.Trim() ?? "";
-        var teamFiltered = AgentTeamService.FilterMembersByTeam(_selectedTeamSlug, _allMembers);
+        var teamFiltered = AgentTeamService.FilterMembersByTeam(_selectedTeamSlug, _allMembers, _workspacePath);
         return teamFiltered
             .Where(m => string.IsNullOrEmpty(query)
                 || m.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
