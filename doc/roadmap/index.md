@@ -29,6 +29,32 @@ Per owner direction: **Codex** takes the most complex surgical code changes (str
 
 Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/cx-tooling`, `lane/claude-orch`, `lane/gemini-vol`). A lane never edits another lane's files outside a documented merge window; cross-lane needs are raised as notes in the lane doc and resolved at sync points. Lane CL runs the merge queue: every lane branch is reviewed (five-axis) before merging to main. Existing tests must pass with `dotnet test GigaClaw.Core.Tests -c Release`; new projects must also be built and have their own tests invoked explicitly by CI.
 
+## Lane status (living — updated by CL as the merge-queue owner)
+
+**Last updated 2026-07-30.** Codex reached its weekly usage cap on 2026-07-30; lanes CX-R and CX-T are reassigned to Claude subagents working in the existing lane worktrees, under the same file boundaries and verification bar. Gemini keeps lane GM.
+
+| Task | Lane | State | Where |
+|---|---|---|---|
+| R1 policy chokepoint | CX-R | Landed | `lane/cx-runtime` `cfbe9ab` |
+| R2 shadow enforcement | CX-R | Checkpointed, verified green (708 tests), regression tests outstanding | `lane/cx-runtime` `1931c72` |
+| R3 block mode | CX-R | Gated — needs the SP-1 inventory to hold real dispatches (all 33 rows read `not-exercised`) and owner sign-off | — |
+| T1 typed catalog | CX-T | Landed | `lane/cx-tooling` `4c404d1` |
+| T2 catalog CI | CX-T | Drift + baseline checks running; strict binding gate still red on the `content-writer` gap until GM's G1 merges; drift script retires after a green week | `lane/cx-tooling` `4c404d1`, `5cbe6f5` |
+| T3 dependency edges | CX-T | Landed | `lane/cx-tooling` `84e98ae` |
+| T4 eval static layer | CX-T | Landed — 33 agents evaluated, `documentalist` flagged at 14,696 bytes | `lane/cx-tooling` `6a104da` |
+| T5 eval replay | CX-T | In progress (replay slice; judge and Monte Carlo deferred) | `lane/cx-tooling` |
+| C1 verdict schema v1 | CL | Landed, frozen | `lane/claude-orch` |
+| C2 verdict gate | CL | Vocabulary landed; per-reviewer wiring waits on G2 merging | `lane/claude-orch` |
+| P4 CL half | CL | Landed | `claude-orch/p4-dependencies-resolved` |
+| C6 handoff artifacts | CL | In progress — CX-R's R4 leases wait on its `ownedFiles` interface | — |
+| G1 cheap defects | GM | Landed | `lane/gemini-vol` |
+| G2 reviewer rewrites | GM | Under CL review — receipt-chain, cycle-counter and evaluator-transport findings fixed; two rubric findings outstanding | `lane/gemini-vol` |
+
+Open cross-lane items:
+
+- R2's acceptance asks for durable ticket-comment receipts. That crosses the `ActionExecutor` boundary CL owns, so the branch records queryable run-log receipts instead and the criterion stays explicitly unmet until a shared merge window.
+- `lane/cx-tooling` and branches based on it cannot be pushed to GitHub with the current credentials: they touch `.github/workflows/ci.yml` and the token lacks the `workflow` scope.
+
 ## Codebase validation (2026-07-30)
 
 Validated against `origin/main` at `fe98829`. These findings are requirements, not optional implementation notes:
