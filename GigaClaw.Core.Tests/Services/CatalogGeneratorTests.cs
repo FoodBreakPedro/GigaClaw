@@ -12,8 +12,10 @@ public sealed class CatalogGeneratorTests
 
         Assert.Equal(33, catalog.Summary.Agents);
         Assert.Equal(33, catalog.Summary.Contracts);
-        Assert.Equal(29, catalog.Summary.Automations);
-        Assert.Equal(28, catalog.Summary.EnabledAutomations);
+        // 29 before C2 + the 14 verdict gate arms (10 live, 4 AD-7 arms that ship switched off
+        // until blog-reviewer's AD-7 protocol emits a typed verdict).
+        Assert.Equal(43, catalog.Summary.Automations);
+        Assert.Equal(38, catalog.Summary.EnabledAutomations);
         Assert.Equal(33, catalog.Summary.ExplicitModelMappings);
         Assert.Equal(9, catalog.Summary.Teams);
         // 15 at T1 + the five contract files lane CL added (schema_check, verdict_contract,
@@ -28,7 +30,7 @@ public sealed class CatalogGeneratorTests
         Assert.NotEmpty(contentWriter.EnabledDispatchingAutomations);
         Assert.Contains("scripts/content_contract.py", catalog.Scripts);
         Assert.Equal(9, catalog.Teams.Count);
-        Assert.Equal(29, catalog.Automations.Count);
+        Assert.Equal(43, catalog.Automations.Count);
         Assert.All(
             catalog.Agents,
             agent => Assert.True(
