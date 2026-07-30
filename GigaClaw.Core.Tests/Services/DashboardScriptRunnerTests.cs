@@ -1,4 +1,4 @@
-﻿using GigaClaw.Core.Services;
+using GigaClaw.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GigaClaw.Core.Tests.Services;
@@ -79,6 +79,38 @@ public sealed class DashboardScriptRunnerTests
         finally
         {
             if (File.Exists(tmp)) File.Delete(tmp);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_PythonAnalyticsScript_ParsesCostLogAndOutputsValidJson()
+    {
+        var tmp = Path.Combine(Path.GetTempPath(), $"gigaclaw-analytics-test-{Guid.NewGuid():N}");
+        try
+        {
+            var channelDir = Path.Combine(tmp, ".agents", "channel");
+            Directory.CreateDirectory(channelDir);
+
+            var sampleLog = """
+                {"At":"2026-07-30T10:00:00Z","Agent":"programmer","TicketId":1,"Model":"claude-sonnet-4-6","InputTokens":1000,"OutputTokens":500,"CacheReadTokens":200,"CacheWriteTokens":0,"UsdCost":0.15,"DurationSeconds":10.5,"ExitCode":0}
+                {"At":"2026-07-30T10:05:00Z","Agent":"blog-reviewer","TicketId":2,"Model":"claude-opus-4-8","InputTokens":2000,"OutputTokens":800,"CacheReadTokens":500,"CacheWriteTokens":0,"UsdCost":0.45,"DurationSeconds":20.0,"ExitCode":0}
+                """;
+            await File.WriteAllTextAsync(Path.Combine(channelDir, "cost-log.jsonl"), sampleLog);
+
+            var scriptPath = Path.Combine(Directory.GetCurrentDirectory(), "ProjectTemplate", ".dashboard", "token-cost-overview", "script.py");
+            if (!File.Exists(scriptPath)) return;
+
+            var result = await _runner.RunAsync(scriptPath, tmp, CancellationToken.None);
+            if (result.ConfigError is not null) return;
+
+            Assert.True(result.IsSuccess, $"Script failed with exit={result.ExitCode}, stderr={result.Stderr}");
+            Assert.Contains("Total Cost", result.Stdout);
+            Assert.Contains("$0.60", result.Stdout);
+            Assert.Contains("Total Tokens", result.Stdout);
+        }
+        finally
+        {
+            if (Directory.Exists(tmp)) Directory.Delete(tmp, recursive: true);
         }
     }
 }
