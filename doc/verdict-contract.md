@@ -79,12 +79,48 @@ Three automations on the same Review column therefore express advance, repair an
 
 That case is real: the evaluator judges board state, not a file, so its `inputDigest` is a ticket-snapshot digest no file will ever hash to. Such a verdict must **not** list `path` evidence pointing at something unrelated — a cache file, a report it happened to write — because that reads as a stale artifact rather than as "not file-based". Cite the snapshot as `hash` evidence, and set `requireFreshArtifact: false` on any condition that gates on it.
 
+## The bounded repair loop
+
+A `FIX` is not a rejection, it is a work order: the reviewer is asking the producing agent for another pass. Two automations on the same Review column express the whole loop, distinguished only by the `repairBudget` condition:
+
+```json
+{ "type": "verdictIs", "verdicts": ["FIX"] }
+{ "type": "repairBudget", "mode": "withinCap" }     // → moveTicketStatus InProgress + runAgent {assignee}
+
+{ "type": "verdictIs", "verdicts": ["FIX"] }
+{ "type": "repairBudget", "mode": "exhausted" }     // → addComment "{verdictHistory}" + moveTicketStatus Blocked
+```
+
+`repairBudget` says nothing about whether a repair is outstanding — a fresh ticket is trivially "within cap" — so it is only meaningful next to `verdictIs`. An unknown `mode` matches neither arm, and a contract manifest that exists but cannot be parsed resolves to `exhausted`: an unknowable budget escalates to a human rather than looping.
+
+**The re-dispatch carries the findings.** `ActionExecutor` prepends the outstanding verdict's veto items and below-maximum categories to the run's context, ahead of the [handoff](./handoff-contract.md) and the action's own `context` — the agent is told what was refused instead of re-deriving it from the ticket. When the newest FIX judged the same `inputDigest` as the one before it, the brief says so: the previous attempt changed nothing, and that is a different failure from iterating and still falling short.
+
+**Where the round count comes from.** Not a counter column and not engine memory — the ticket's own comments. One round per `FIX` verdict since the episode opened; a `SHIP`, a `BLOCK` or this loop's own escalation receipt closes the episode and the next `FIX` is round one again. That makes the number auditable (an owner recounts it by reading the ticket), restart-proof (there is no state to lose) and immune to a resumed or re-triggered run restarting the count. Deduplicating identical verdicts was considered and rejected: a reviewer re-reviewing unchanged bytes is exactly the runaway case the cap exists for, so a repeat spends a round like any other.
+
+**The cap** is `maxReviewCycles` from [`contracts.json`](../ProjectTemplate/Agents/contracts.json) — the ticket's assignee first, then the reviewer named in the condition, then the manifest `defaults` block, then 2. `maxCycles` on the condition overrides all of it.
+
+**The escalation comment** is what the owner actually reads, so it is self-contained. The `{verdictHistory}` placeholder — recognized in any `addComment` `content` — expands to the receipt marker plus every round: which reviewer, when, which artifact digest, every veto item and every category below its maximum. No run log required. The block deliberately does not reproduce verdict marker lines, so quoting past judgements cannot be misread as issuing a new one.
+
+````text
+GIGACLAW-REPAIR v1 ticket-42 escalated 2/2
+
+The repair loop is exhausted: blog-reviewer returned FIX 2 times without a SHIP, …
+
+### Round 1/2 — blog-reviewer, FIX, 2026-07-30 12:00Z
+Artifact reviewed: `sha256:…`
+…
+````
+
+Cost is not plumbed separately: the loop dispatches through the ordinary `runAgent` path, so every round accumulates on the ticket's existing token/cost badge via `CostTracker`.
+
 ## Consumers
 
 - **Gate** — `verdictIs` gates ticket exit on a valid verdict instead of prose. Invalid or stale ⇒ Blocked with a receipt.
-- **Repair loop** — a `FIX` verdict re-dispatches the producing agent with the failed categories and veto items injected, capped by `maxReviewCycles` from [`contracts.json`](../ProjectTemplate/Agents/contracts.json).
+- **Repair loop** — `repairBudget` bounds the `FIX` → repair → re-review cycle and escalates on exhaustion (above).
 - **Eval judge** — the eval harness scores agents with the same shape, so an eval verdict and a review verdict are comparable objects.
 
-Worked examples (one per gating reviewer) and the rejection corpus live in `GigaClaw.Core.Tests/Fixtures/verdicts/`; `TemplateVerdictContractTests` runs the validator against all of them, so a schema edit that breaks a reviewer fails the build.
+Worked examples (one per gating reviewer) and the rejection corpus live in `GigaClaw.Core.Tests/Fixtures/verdicts/`; `TemplateVerdictContractTests` runs the validator against all of them, so a schema edit that breaks a reviewer fails the build. `RepairLoopTests` covers the loop end to end over a real project, including a rebuilt executor that must resume the count rather than restart it.
+
+Neither `verdictIs` nor `repairBudget` is wired into [`automations.json`](../ProjectTemplate/Agents/automations.json) yet: until GM's reviewer rewrites land, no agent emits a verdict, so turning the gate on would read as `MISSING` and Block every ticket. The vocabulary ships first; the wiring lands per reviewer as each rewrite arrives.
 
 Related: [automation engine](./automation-engine.md) · [project template](./project-template.md) · [roadmap lane CL](./roadmap/lane-claude-orchestration.md).
