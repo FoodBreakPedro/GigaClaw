@@ -31,7 +31,11 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 
 ## Lane status (living — updated by CL as the merge-queue owner)
 
-**Last updated 2026-07-30.** Codex reached its weekly usage cap on 2026-07-30; lanes CX-R and CX-T are reassigned to Claude subagents working in the existing lane worktrees, under the same file boundaries and verification bar. Gemini keeps lane GM.
+**Last updated 2026-07-30 (end of the first build session).** Lane branches are consolidated: `lane/claude-orch` carries C1, C2, C3, C4 (all three parts), C6, the P4 CL half, the receipt-chain guard and the C9 spec — 731 tests green. `lane/cx-tooling` carries T1–T5 including the judge and Monte Carlo. `lane/cx-runtime` carries R1 and R2. Every branch is pushed to origin. Merging the lanes into `main` is the owner's call and has not been done.
+
+**Blocked on the owner:** SP-1 sign-off (unlocks R3 → R4 → R5/R6 → C5, C7) and approval of [`doc/pack-infrastructure.md`](../pack-infrastructure.md) with its four escalated decisions (unlocks T6 → G6). **Blocked on lane GM:** the `UI-AUDIT` receipt-chain break, two rubric findings, then G3/G4/G5.
+
+**Structural finding from the pack spec:** teams are compiled C# constants, so a pack cannot add a team or a membership without recompiling `GigaClaw.Core` — one of the five binding rules is unenforceable until teams move to data. Codex reached its weekly usage cap on 2026-07-30; lanes CX-R and CX-T are reassigned to Claude subagents working in the existing lane worktrees, under the same file boundaries and verification bar. Gemini keeps lane GM.
 
 | Task | Lane | State | Where |
 |---|---|---|---|
