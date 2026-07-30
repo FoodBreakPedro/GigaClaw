@@ -37,20 +37,70 @@ Audits UIs across 4 key visual dimensions, **25 points each (100 total)**:
 
 ## Verdict & exit
 
-- **PASS** → start the report with `PASS`, include `UI-AUDIT PASS v1 artifact-sha256:<source-digest>`, and leave an existing Review ticket untouched. If dispatched directly on `InProgress`, transition to `Review`.
-- **FAIL cycle 1/2** → include `UI-AUDIT FAIL cycle 1/2 artifact-sha256:<source-digest>`, then atomically hand to `ui-designer` in `Todo`.
-- **FAIL cycle 2/2** → do not start a third designer/auditor loop. Include the receipt, atomically hand to `owner` in `Blocked`, and identify unresolved blockers. Determine the cycle by counting prior FAIL receipts, never from memory.
-- **Cannot read the target file** (path missing, file absent) → move to `Blocked` and comment with what you looked for.
-- **Never end a turn with a ticket assigned to you sitting in `InProgress`.**
+Post your review as a ticket comment containing the typed verdict header and fenced JSON object:
 
-Use `.agents/scripts/agent_ticket.py` for every write. For a first failure:
+```text
+GIGACLAW-VERDICT v1 ui-auditor <SHIP|FIX|BLOCK> artifact-sha256:<inputDigest>
+
+```json
+{
+  "schemaVersion": 1,
+  "agent": "ui-auditor",
+  "ticketId": 913,
+  "verdict": "FIX",
+  "summary": "Contrast and focus-order defects block the design contract; layout and spacing are sound.",
+  "categories": [
+    { "name": "Visual hierarchy", "score": 8, "max": 10 },
+    { "name": "Spacing & alignment", "score": 10, "max": 10 },
+    { "name": "Contrast & legibility", "score": 3, "max": 10, "notes": "Secondary button text is 2.9:1 against its fill." },
+    { "name": "Interaction states", "score": 5, "max": 10, "notes": "Focus ring is removed on the icon buttons." },
+    { "name": "Design-token fidelity", "score": 9, "max": 10 }
+  ],
+  "vetoItems": [
+    {
+      "code": "contrast-below-wcag-aa",
+      "statement": "Secondary button label measures 2.9:1 contrast; WCAG AA requires 4.5:1.",
+      "evidenceRefs": ["design/audits/board-toolbar-audit.md"]
+    },
+    {
+      "code": "focus-indicator-removed",
+      "statement": "Icon buttons set outline:none with no replacement focus indicator.",
+      "evidenceRefs": ["GigaClaw.Web/wwwroot/app.css"]
+    }
+  ],
+  "evidence": [
+    { "kind": "path", "ref": "design/audits/board-toolbar-audit.md", "note": "full audit report" },
+    { "kind": "path", "ref": "GigaClaw.Web/wwwroot/app.css", "note": "source inspected" },
+    { "kind": "hash", "ref": "sha256:b7d1e5f309a4c28d6013fb745e9c8a2d10473e6f8b9c05d2a6e134f78c0b95ad" }
+  ],
+  "reviewedAtUtc": "2026-07-30T10:02:48Z",
+  "inputDigest": "sha256:b7d1e5f309a4c28d6013fb745e9c8a2d10473e6f8b9c05d2a6e134f78c0b95ad",
+  "reviewCycle": { "current": 1, "max": 2 }
+}
+```
+```
+
+#### Machine-Checkable Veto Items
+If issuing `FIX` or `BLOCK`, include machine-checkable veto items:
+- `contrast-below-wcag-aa`: Contrast ratio fails WCAG AA 4.5:1 requirement (`FIX`).
+- `focus-indicator-removed`: Interactive elements set `outline:none` without focus alternative (`FIX`).
+- `html-contract-failure`: `html_contract.py --kind ui` reported structural design errors (`FIX`).
+- `browser-execution-unavailable`: Unable to launch headless browser / render UI for evaluation (`BLOCK`).
+- `review-cycle-exceeded`: Two revision cycles completed without passing audit (`BLOCK`).
+
+**SHIP** (verdict: `SHIP`) → post typed verdict comment with `SHIP` verdict, leave an existing `Review` ticket untouched. If dispatched directly on `InProgress`, transition to `Review`.
+
+**FIX** (verdict: `FIX`, cycle 1/2) → post typed verdict comment with `FIX` verdict, then hand the ticket to `ui-designer` in `Todo` using `agent_ticket.py`:
 
 ```bash
 python3 .agents/scripts/agent_ticket.py \
   --project {project-slug} --ticket {id} --author ui-auditor \
   handoff --assignee ui-designer --status Todo --expected-status Review \
   --content-file design/audits/<slug>-audit.md \
-  --marker "UI-AUDIT FAIL cycle 1/2 artifact-sha256:<source-digest>"
+  --marker "GIGACLAW-VERDICT v1 ui-auditor FIX artifact-sha256:<source-digest>"
 ```
 
-The helper uses the atomic transition endpoint and writes the marker receipt last. PASS comments use `comment --marker`; delete only scratch files, never the durable audit report.
+**BLOCK** (verdict: `BLOCK`, cycle 2/2 or unreadable target) → post typed verdict comment with `BLOCK` verdict, then hand the ticket to `owner` in `Blocked`.
+
+**Never end a turn with a ticket assigned to you sitting in `InProgress`.**
+
