@@ -1945,8 +1945,8 @@
     "semantic_hash": ""
   },
   "tasks/venture-prep/karalungaming/BRAND.md": {
-    "mtime": 1785274197.6036527,
-    "ast_hash": "3eadd7e3a9386474da9d5ad3bdf4a715",
+    "mtime": 1785452839.6640751,
+    "ast_hash": "d69d9a2714b19c5fe6e9db61a1e7dcbc",
     "semantic_hash": ""
   },
   "tasks/venture-prep/karalungaming/ROLLOUT.md": {
@@ -2050,9 +2050,9 @@
     "semantic_hash": "3d09478d2ad69cfec2e94a8ed3e061dd"
   },
   "GigaClaw.Core.Tests/Automation/TemplateHandoffContractTests.cs": {
-    "mtime": 1785437026.8799295,
-    "ast_hash": "1d90737a05dec8d23b3c116b2bdc6d3d",
-    "semantic_hash": "1d90737a05dec8d23b3c116b2bdc6d3d"
+    "mtime": 1785452088.6402545,
+    "ast_hash": "949226f1c167a781102602b45dfd0898",
+    "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Automation/TemplateVerdictContractTests.cs": {
     "mtime": 1785444436.8881395,
@@ -2295,9 +2295,9 @@
     "semantic_hash": "eb2e6edb9f75e5590b0826a64119f573"
   },
   "GigaClaw.Eval.Tests/JudgeRunnerTests.cs": {
-    "mtime": 1785437052.723424,
-    "ast_hash": "b76b6bc9ccc872d7c2110e3addb591aa",
-    "semantic_hash": "b76b6bc9ccc872d7c2110e3addb591aa"
+    "mtime": 1785452098.0830452,
+    "ast_hash": "80ab7b2d71b43bb7a57048111725d265",
+    "semantic_hash": ""
   },
   "GigaClaw.Eval.Tests/MonteCarloRunnerTests.cs": {
     "mtime": 1785437052.7236722,
@@ -3180,8 +3180,8 @@
     "semantic_hash": "ac1c9e6fe69c311ed67db45a80631e8c"
   },
   "GigaClaw.Core.Tests/Packs/CoreInitManifestTests.cs": {
-    "mtime": 1785451791.398812,
-    "ast_hash": "8b063e62162970f35315f659fdebc13d",
+    "mtime": 1785452088.6397202,
+    "ast_hash": "5c9934e57ab73dbb4ed46974a1061a60",
     "semantic_hash": ""
   },
   "GigaClaw.Core.Tests/Packs/PackQuarantineTests.cs": {
@@ -3360,8 +3360,8 @@
     "semantic_hash": ""
   },
   "doc/roadmap/SESSION-HANDOFF.md": {
-    "mtime": 1785451495.0256531,
-    "ast_hash": "030aaaa8a9a696b0a29943fcae0c21d5",
+    "mtime": 1785452307.055889,
+    "ast_hash": "5b0899c8b7da34f8f28416a88acd7e3b",
     "semantic_hash": ""
   },
   ".obsidian/app.json": {
@@ -3385,8 +3385,43 @@
     "semantic_hash": ""
   },
   ".obsidian/workspace.json": {
-    "mtime": 1785451829.370682,
-    "ast_hash": "9e5802d02b371333f0a08e9e5add882b",
+    "mtime": 1785451881.519257,
+    "ast_hash": "3814ce173a15273540a4d059aed82a4a",
+    "semantic_hash": ""
+  },
+  ".obsidian/community-plugins.json": {
+    "mtime": 1785451878.5069985,
+    "ast_hash": "9e7e0172311e83f35b4a2a916d226493",
+    "semantic_hash": ""
+  },
+  ".obsidian/plugins/karpathywiki/data.json": {
+    "mtime": 1785451941.336999,
+    "ast_hash": "ee198d12c24b3e78046d9a39e5e0662e",
+    "semantic_hash": ""
+  },
+  ".obsidian/plugins/karpathywiki/main.js": {
+    "mtime": 1785451875.6757152,
+    "ast_hash": "79de08740bc4fcf96f59a1aed0318374",
+    "semantic_hash": ""
+  },
+  ".obsidian/plugins/karpathywiki/manifest.json": {
+    "mtime": 1785451875.1333039,
+    "ast_hash": "f130c7684dc5fb31f50a24ef51183b3b",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Core.Tests/Helpers/KnownWindowsFailureFactAttribute.cs": {
+    "mtime": 1785452073.0060122,
+    "ast_hash": "6bb591f906cfdde35875476ad93e669b",
+    "semantic_hash": ""
+  },
+  "GigaClaw.Eval.Tests/Helpers/KnownWindowsFailureFactAttribute.cs": {
+    "mtime": 1785452088.6167624,
+    "ast_hash": "72f1fe4ecd7e9422f724fc78360bef54",
+    "semantic_hash": ""
+  },
+  "wiki/Welcome to Karpathy LLM Wiki.md": {
+    "mtime": 1785451880.5191813,
+    "ast_hash": "daebc7f29c4171669bd76596ce7bafda",
     "semantic_hash": ""
   }
 }
