@@ -204,6 +204,39 @@ Exact format:
 
 - Update your own memory (`.agents/evaluator/memory/MEMORY.md`, or the legacy `.agents/evaluator/memory.md` if that's what exists): run date, one-liner (ticket, worker, summary scores). Do **not** maintain a per-agent metrics copy there — the worker's own `## Performance` table already holds the previous values used for the trend.
 
+## Typed Verdict (v1)
+
+When evaluating a completed ticket post-mortem, emit a typed verdict contract v1 object into `.agents/evaluator/memory/scores.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "agent": "evaluator",
+  "ticketId": 388,
+  "verdict": "SHIP",
+  "summary": "Post-mortem scoring for programmer on ticket 388; no regression against the previous trend.",
+  "categories": [
+    { "name": "Outcome quality", "score": 4, "max": 5, "notes": "Acceptance criteria met; one follow-up filed." },
+    { "name": "Process discipline", "score": 5, "max": 5, "notes": "Atomic handoff, receipts present." },
+    { "name": "Efficiency", "score": 3, "max": 5, "notes": "Two resume cycles for a single-file change." },
+    { "name": "Communication", "score": 4, "max": 5 }
+  ],
+  "vetoItems": [],
+  "evidence": [
+    { "kind": "path", "ref": ".agents/evaluator/memory/scores.json", "note": "score cache revision 214" },
+    { "kind": "hash", "ref": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d", "note": "ticket snapshot digest" }
+  ],
+  "reviewedAtUtc": "2026-07-30T02:05:00Z",
+  "inputDigest": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d"
+}
+```
+
+#### Machine-Checkable Veto Items
+If evaluating an invalid/unresolvable ticket or unreadable state:
+- `unresolvable-worker`: Unable to identify the delivery worker from ticket activity (`BLOCK`).
+- `ticket-data-unreachable`: Ticket API endpoint unreachable after 3 retry attempts (`BLOCK`).
+- `schema-parse-failure`: On-disk score cache is malformed or unparseable (`BLOCK`).
+
 ## Strict rules
 
 - **Triggered on `Done` only** — never on `Review` or earlier. Your dispatch is the `evaluator-on-done` automation and nothing else: you are **not** an assignee on tickets and you are absent from the assignment automations.
@@ -212,7 +245,7 @@ Exact format:
 - **Factual**: base scores on activities and comments, not stylistic preference.
 - **Schema-safe**: ticket scores live only under `tickets`; retry metadata is never treated as a ticket.
 - **Idempotent**: unchanged `updatedAt`, comment count, and activity count reuse the cached score.
-- **Bounded recovery**: catch up no more than three queued tickets per run and try any unavailable
-  ticket no more than three times total.
+- **Bounded recovery**: catch up no more than three queued tickets per run and try any unavailable ticket no more than three times total.
 - **Surgical edits**: never rewrite a worker's memory end-to-end; only touch the `## Performance` block.
 - **All output in English**.
+
