@@ -62,6 +62,25 @@ public enum PolicyDecisionKind
 }
 
 /// <summary>
+/// What the runtime does with a violation, per agent (R3). <see cref="Warn"/> is R2's shadow mode:
+/// the violation is recorded as a <c>policy-violation/v1</c> run event and the tool call proceeds.
+/// <see cref="Block"/> denies the tool call at the PreToolUse hook.
+/// <para>
+/// Two different absences are treated differently on purpose. A manifest with **no** enforcement
+/// key resolves to <see cref="Warn"/>: pre-R3 workspaces predate the SP-1 review, and silently
+/// promoting them to blocking would enforce a per-agent decision no owner has made for that
+/// workspace. A manifest with a **malformed** enforcement value is a different thing — the owner
+/// meant something and we cannot tell what — so it invalidates the policy and every call Blocks,
+/// which is R1's existing fail-closed path.
+/// </para>
+/// </summary>
+public enum PolicyEnforcementMode
+{
+    Warn,
+    Block,
+}
+
+/// <summary>
 /// Explicit path comparison mode. The loader defaults conservatively to ordinal
 /// matching; it does not claim to detect filesystem format or Git core.ignoreCase.
 /// The R2 hook adapter must supply Insensitive only from known repository/filesystem
@@ -158,7 +177,8 @@ public sealed class ContractPolicy
         int? maxReviewCycles,
         ContractCapability capabilities,
         string? diagnostic,
-        PathCaseSensitivity caseSensitivity)
+        PathCaseSensitivity caseSensitivity,
+        PolicyEnforcementMode enforcement)
     {
         _workspacePath = Path.GetFullPath(workspacePath);
         _caseSensitivity = caseSensitivity;
@@ -172,6 +192,7 @@ public sealed class ContractPolicy
         MaxReviewCycles = maxReviewCycles;
         Capabilities = capabilities;
         Diagnostic = diagnostic;
+        Enforcement = enforcement;
         _ticketExit = new HashSet<string>(ticketExit, StringComparer.OrdinalIgnoreCase);
 
         if (diagnostic is null)
@@ -188,7 +209,29 @@ public sealed class ContractPolicy
     public int? MaxReviewCycles { get; }
     public ContractCapability Capabilities { get; }
     public string? Diagnostic { get; }
+    public PolicyEnforcementMode Enforcement { get; }
     public bool IsValid => Diagnostic is null;
+
+    /// <summary>
+    /// True when this decision must actually stop the tool call.
+    /// <para>
+    /// The split is deliberate: <see cref="PolicyDecisionKind"/> is the *severity of the finding*
+    /// and <see cref="Enforcement"/> is the *action*. R2 classified every real policy violation —
+    /// an out-of-glob write, an out-of-contract ticket exit, a capability the risk class does not
+    /// grant — as <see cref="PolicyDecisionKind.Warn"/>, because nothing enforced anything yet and
+    /// <see cref="PolicyDecisionKind.Block"/> was reserved for structural failures like an
+    /// unreadable manifest or a tool call with no target. Enforcing only on Block would therefore
+    /// enforce nothing that matters.
+    /// </para>
+    /// <para>
+    /// So: in shadow mode nothing is enforced, which keeps warn a true no-op and the SP-1 inventory
+    /// honest. In block mode every violation is enforced. An invalid policy enforces regardless of
+    /// what the manifest said, because a contract we could not read cannot also be trusted to have
+    /// asked for shadow mode.
+    /// </para>
+    /// </summary>
+    public bool Enforces(PolicyDecision decision) =>
+        decision.IsViolation && (!IsValid || Enforcement == PolicyEnforcementMode.Block);
 
     public PolicyDecision Evaluate(PolicyToolCall toolCall)
     {
@@ -229,7 +272,8 @@ public sealed class ContractPolicy
             maxReviewCycles: null,
             ContractCapability.None,
             diagnostic,
-            caseSensitivity);
+            caseSensitivity,
+            PolicyEnforcementMode.Block);
 
     internal static ContractPolicy Create(
         string workspacePath,
@@ -241,7 +285,8 @@ public sealed class ContractPolicy
         IReadOnlyList<string> allowedWriteGlobs,
         IReadOnlyList<string> ticketExit,
         int? maxReviewCycles,
-        PathCaseSensitivity caseSensitivity)
+        PathCaseSensitivity caseSensitivity,
+        PolicyEnforcementMode enforcement)
     {
         if (!RiskCapabilities.TryGetValue(riskClass, out var capabilities))
         {
@@ -277,7 +322,8 @@ public sealed class ContractPolicy
             maxReviewCycles,
             capabilities,
             diagnostic: null,
-            caseSensitivity);
+            caseSensitivity,
+            enforcement);
     }
 
     private PolicyDecision EvaluateFileWrite(string? target)
@@ -471,6 +517,15 @@ public static class ContractPolicyLoader
             requireAtomicHandoff,
             requireAuthorOnBoardWrites);
 
+        // Manifest-wide floor, then the per-agent override below. Absent means warn — see
+        // PolicyEnforcementMode for why absent and malformed resolve differently.
+        if (!TryReadOptionalEnforcement(
+                defaultsElement,
+                PolicyEnforcementMode.Warn,
+                out var enforcement,
+                out error))
+            return Invalid(error!);
+
         if (!TryGetPropertyIgnoreCase(root, "agents", out var agents))
             return Invalid("required property 'agents' is missing");
         if (agents.ValueKind != JsonValueKind.Object)
@@ -507,6 +562,12 @@ public static class ContractPolicyLoader
             maxReviewCycles = parsedMaxReviewCycles;
         }
 
+        // Per-agent override. SP-1 signed enforcement off agent by agent — programmer and
+        // code-janitor stay in warn because both declare `**` write globs by design — so the
+        // per-agent value is the one that decides, with the manifest default as the floor.
+        if (!TryReadOptionalEnforcement(entry, enforcement, out enforcement, out error))
+            return Invalid(error!);
+
         return ContractPolicy.Create(
             workspacePath,
             agentName,
@@ -517,7 +578,8 @@ public static class ContractPolicyLoader
             globs!,
             ticketExit!,
             maxReviewCycles,
-            caseSensitivity);
+            caseSensitivity,
+            enforcement);
 
         ContractPolicy Invalid(string diagnostic) =>
             ContractPolicy.Invalid(
@@ -525,6 +587,46 @@ public static class ContractPolicyLoader
                 agentName,
                 $"Contract manifest '{manifestPath}': {diagnostic}.",
                 caseSensitivity);
+    }
+
+    /// <summary>
+    /// Reads an optional <c>enforcement</c> string. Absent keeps <paramref name="fallback"/>;
+    /// anything that is not exactly "warn" or "block" (case-insensitively) is an error rather
+    /// than a silent fallback, because a typo like "blocked" would otherwise read as shadow mode
+    /// on an agent the owner believed was enforcing.
+    /// </summary>
+    private static bool TryReadOptionalEnforcement(
+        JsonElement element,
+        PolicyEnforcementMode fallback,
+        out PolicyEnforcementMode enforcement,
+        out string? error)
+    {
+        enforcement = fallback;
+        error = null;
+
+        if (!TryGetPropertyIgnoreCase(element, "enforcement", out var value))
+            return true;
+
+        if (value.ValueKind != JsonValueKind.String)
+        {
+            error = "optional property 'enforcement' must be the string \"warn\" or \"block\"";
+            return false;
+        }
+
+        switch (value.GetString())
+        {
+            case string s when string.Equals(s, "warn", StringComparison.OrdinalIgnoreCase):
+                enforcement = PolicyEnforcementMode.Warn;
+                return true;
+            case string s when string.Equals(s, "block", StringComparison.OrdinalIgnoreCase):
+                enforcement = PolicyEnforcementMode.Block;
+                return true;
+            default:
+                error =
+                    $"optional property 'enforcement' must be \"warn\" or \"block\", " +
+                    $"not '{value.GetString()}'";
+                return false;
+        }
     }
 
     private static bool TryReadRequiredString(

@@ -35,6 +35,34 @@ public sealed class PolicyHookTransport : IAsyncDisposable
         "Content-Type: application/json\r\n" +
         "Content-Length: 2\r\n" +
         "Connection: close\r\n\r\n{}");
+    /// <summary>
+    /// Claude Code's PreToolUse deny contract. The hook answers 200 with a decision body rather
+    /// than an HTTP error — an error status is a transport failure, which fails open, and a denial
+    /// is the opposite of that.
+    /// </summary>
+    private static byte[] DenyResponse(string reason)
+    {
+        var body = JsonSerializer.Serialize(new
+        {
+            hookSpecificOutput = new
+            {
+                hookEventName = "PreToolUse",
+                permissionDecision = "deny",
+                permissionDecisionReason = reason,
+            },
+        });
+        var bytes = Encoding.UTF8.GetBytes(body);
+        var header = Encoding.ASCII.GetBytes(
+            "HTTP/1.1 200 OK\r\n" +
+            "Content-Type: application/json\r\n" +
+            $"Content-Length: {bytes.Length}\r\n" +
+            "Connection: close\r\n\r\n");
+        var response = new byte[header.Length + bytes.Length];
+        header.CopyTo(response, 0);
+        bytes.CopyTo(response, header.Length);
+        return response;
+    }
+
     private static readonly byte[] NotFoundResponse = Encoding.ASCII.GetBytes(
         "HTTP/1.1 404 Not Found\r\n" +
         "Content-Type: application/json\r\n" +
@@ -162,8 +190,10 @@ public sealed class PolicyHookTransport : IAsyncDisposable
                     return;
                 }
 
-                Observe(request.Body);
-                await stream.WriteAsync(OkResponse, cancellationToken);
+                var denyReason = Observe(request.Body);
+                await stream.WriteAsync(
+                    denyReason is null ? OkResponse : DenyResponse(denyReason),
+                    cancellationToken);
             }
             catch (Exception ex) when (
                 ex is InvalidDataException or
@@ -172,12 +202,22 @@ public sealed class PolicyHookTransport : IAsyncDisposable
                 DecoderFallbackException)
             {
                 EnqueueMalformed(ex.Message);
-                try { await stream.WriteAsync(OkResponse, cancellationToken); } catch { }
+                // A hook exchange we could not parse is exactly the case that must not fail open
+                // once the agent is enforcing: we do not know what tool call it described.
+                var response = _policy.Enforcement == PolicyEnforcementMode.Block || !_policy.IsValid
+                    ? DenyResponse($"Malformed policy hook exchange: {ex.Message}")
+                    : OkResponse;
+                try { await stream.WriteAsync(response, cancellationToken); } catch { }
             }
         }
     }
 
-    private void Observe(string body)
+    /// <summary>
+    /// Records violations and returns the reason the tool call must be denied, or null to let it
+    /// through. Only the agent's own enforcement mode decides denial — a Warn decision, or a Block
+    /// decision on an agent still in shadow mode, is recorded and allowed.
+    /// </summary>
+    private string? Observe(string body)
     {
         using var document = JsonDocument.Parse(body);
         var root = document.RootElement;
@@ -188,7 +228,7 @@ public sealed class PolicyHookTransport : IAsyncDisposable
         if (string.Equals(hookEvent, "UserPromptSubmit", StringComparison.Ordinal))
         {
             Interlocked.Increment(ref _acknowledgementCount);
-            return;
+            return null;
         }
         if (!string.Equals(hookEvent, "PreToolUse", StringComparison.Ordinal))
         {
@@ -206,6 +246,11 @@ public sealed class PolicyHookTransport : IAsyncDisposable
 
         Interlocked.Increment(ref _acknowledgementCount);
 
+        // Every violation is recorded whether or not it is enforced, so the SP-1 inventory keeps
+        // filling for agents still in shadow mode. Denial reasons accumulate across the evaluations
+        // of one tool call: a single Bash line can be both an out-of-glob write and a destructive
+        // git command, and reporting only the first would hide half the reason.
+        string? denyReason = null;
         foreach (var evaluation in PolicyHookToolCallAdapter.Evaluate(_policy, tool, toolInput))
         {
             if (!evaluation.Decision.IsViolation)
@@ -221,7 +266,16 @@ public sealed class PolicyHookTransport : IAsyncDisposable
                 evaluation.Call.Target,
                 evaluation.Decision.Kind,
                 evaluation.Decision.Reason));
+
+            if (_policy.Enforces(evaluation.Decision))
+            {
+                denyReason = denyReason is null
+                    ? evaluation.Decision.Reason
+                    : $"{denyReason} {evaluation.Decision.Reason}";
+            }
         }
+
+        return denyReason;
     }
 
     private void EnqueueMalformed(string reason)
