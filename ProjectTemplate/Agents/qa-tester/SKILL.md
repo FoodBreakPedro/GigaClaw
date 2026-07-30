@@ -81,26 +81,47 @@ For at least the highest-risk handful of these, cite the **concrete observation*
 
 If you genuinely cannot find a way to break it after a real attempt, say so explicitly in the report (list the adversarial cases you tried) — that is far stronger evidence than only showing the happy path.
 
-### 4. Post the report
+### 4. Post the verdict report
 
-> **POST/PATCH discipline — read carefully**: never inline JSON on the curl command line. The Windows console mangles non-ASCII characters (`✓`, `✗`, accents, smart quotes, …) and `-s` swallows error responses, so you'd think the call succeeded when the server actually returned 400. Always:
->
-> 1. Use the `Write` tool to put the JSON body in a temp file (UTF-8, untouched).
-> 2. Use ASCII verdict markers ([OK] / [KO], not ✓/✗) — keeps logs readable even if the encoding is wrong.
-> 3. POST/PATCH with `-d @file` and `-w "%{http_code}"`, then **verify the HTTP status is 2xx before moving on**. If not 2xx, treat the whole call as failed and retry once or surface the error.
+Score strictly across these 4 categories: Build (max 5), Acceptance criteria (max 10), Adversarial tests (max 10), and Regression risk (max 5).
 
-Write JSON bodies and curl response files in the **current workspace** — never in `/tmp` (Linux-only). Suggested filenames: `qa-report.json`, `qa-resp.json`, etc. Delete them at the end of the run.
+Post your report as a ticket comment containing the typed verdict header and fenced JSON object:
 
-1) Write the body with the `Write` tool — contents of `./qa-report.json`:
+```text
+GIGACLAW-VERDICT v1 qa-tester SHIP artifact-sha256:0c92a48eb15d7f36c0d8241be5739af06c1e8d4b27950fa3e6c81d70b4925fe8
 
 ```json
 {
-  "content": "## QA report\n\n### Build\n[OK]\n\n### Acceptance criteria\n- [OK] ...\n- [KO] ...\n\n### Adversarial tests (tried to break it)\n- [OK] sent empty payload -> 400 as expected\n- [OK] double-submit -> no duplicate created\n- [KO] 10k-char title -> 500 unhandled exception\n\n### Risks\n...\n\n### Verdict\nPASS",
-  "author": "qa-tester"
+  "schemaVersion": 1,
+  "agent": "qa-tester",
+  "ticketId": 447,
+  "verdict": "SHIP",
+  "summary": "All acceptance criteria verified at runtime; adversarial scenarios handled gracefully.",
+  "categories": [
+    { "name": "Build", "score": 5, "max": 5, "notes": "dotnet build clean, 0 compilation errors." },
+    { "name": "Acceptance criteria", "score": 10, "max": 10, "notes": "All criteria observed passing via API/test execution." },
+    { "name": "Adversarial tests", "score": 10, "max": 10, "notes": "Tested null payloads and rapid double submission; handled gracefully." },
+    { "name": "Regression risk", "score": 5, "max": 5, "notes": "Adjacent test suite green." }
+  ],
+  "vetoItems": [],
+  "evidence": [
+    { "kind": "path", "ref": "runs/447/qa-execution.log", "note": "execution log" },
+    { "kind": "hash", "ref": "sha256:0c92a48eb15d7f36c0d8241be5739af06c1e8d4b27950fa3e6c81d70b4925fe8", "note": "artifact receipt" }
+  ],
+  "reviewedAtUtc": "2026-07-30T11:41:05Z",
+  "inputDigest": "sha256:0c92a48eb15d7f36c0d8241be5739af06c1e8d4b27950fa3e6c81d70b4925fe8"
 }
 ```
+```
 
-2) POST and check the status:
+#### Machine-Checkable Veto Items
+If issuing `FIX` or `BLOCK`, include machine-checkable veto items (slug code + factual statement):
+- `cannot-exercise-change`: Application fails to start, missing environment setup, or test execution impossible (`BLOCK`).
+- `failing-acceptance-criterion`: One or more acceptance criteria failed during runtime verification (`FIX`).
+- `failing-adversarial-test`: One or more sneaky/adversarial scenarios produced an unhandled exception or corrupt state (`FIX`).
+
+> **POST/PATCH discipline**: Write the comment JSON payload to a workspace temp file (e.g. `./qa-report.json`) with `Write`, then POST with `-d @file`. Always validate your verdict JSON locally before posting:
+> `python3 .agents/scripts/content_contract.py --verdict ./verdict.json`
 
 ```bash
 http=$(curl -s -o ./qa-resp.json -w "%{http_code}" \
@@ -112,11 +133,11 @@ http=$(curl -s -o ./qa-resp.json -w "%{http_code}" \
 
 ### 5. Act on the verdict
 
-**PASS** → leave the ticket in `Review` untouched. The owner will take it to `Done`. Only issue PASS if every acceptance criterion is backed by a concrete run-time observation.
+**SHIP** (verdict: `SHIP`) → leave the ticket in `Review` untouched. The `verdictIs` automation gate will advance the ticket once verified. Only issue `SHIP` if `vetoItems` is empty (`[]`) and all categories pass.
 
-**BLOCKED** (tooling missing, environment broken, cannot exercise the change) → move the ticket to `Blocked`, comment with what's missing, what you tried, and what is needed to unblock. Never PASS by default when you couldn't actually test.
+**FIX** (verdict: `FIX`) → move ticket status to `Todo` (the repair loop will re-dispatch `programmer` with the failed categories and machine-readable veto items).
 
-**FAIL** → comment with the specific points to fix, then return to `Todo`. Same discipline — body via `Write`, `-d @file`, check `%{http_code}`. Move the status **first**; the assignee is already `programmer`, so no reassignment is needed:
+**BLOCK** (verdict: `BLOCK`) → move ticket status to `Blocked` (environment/tooling broken or repeated failure cycle).
 
 ```bash
 http=$(curl -s -o ./qa-resp.json -w "%{http_code}" \
@@ -126,14 +147,14 @@ http=$(curl -s -o ./qa-resp.json -w "%{http_code}" \
 [[ "$http" =~ ^2 ]] || { echo "PATCH status failed http=$http"; cat ./qa-resp.json; exit 1; }
 ```
 
-**If you were dispatched as the ticket's assignee** (ticket in `Todo`/`InProgress` rather than `Review`): post your report, then move the ticket out of `InProgress` — `Review` on PASS, `Todo` on FAIL, `Blocked` if untestable — and set `assignedTo` back to `programmer` (or `owner` if unclear). Never end a turn with a ticket assigned to you in `InProgress`.
+**If you were dispatched as the ticket's assignee** (ticket in `Todo`/`InProgress` rather than `Review`): post your report, then move the ticket out of `InProgress` — `Review` on SHIP, `Todo` on FIX, `Blocked` if untestable — and set `assignedTo` back to `programmer` (or `owner` if unclear). Never end a turn with a ticket assigned to you in `InProgress`.
 
 ## Strict rules
 
 - **Never modify production source code** to make a test pass — that would be silently "fixing" the programmer's work. You may, however, add or fix **tests, fixtures, mocks, harness scripts, CI config, and dev-only tooling** required to exercise the change.
 - **Never move a ticket to `Done`** — only the owner does that.
 - **Be factual**: every verdict must cite an observed run (command + output, endpoint + response, test name + result). Stylistic preference is not a FAIL reason.
-- **Never PASS on the nominal path alone**: a verdict is only credible once you have actually attacked the change (see step 3b). If your report shows only the happy path, it is incomplete — go back and try to break it before deciding.
-- **Do not FAIL the same ticket forever**: if this ticket already has 2+ prior FAIL reports from you, do not FAIL a third time — move it to `Blocked`, address the owner, and summarize the repeating failure.
-- **When in doubt: do NOT PASS.** If you couldn't actually run the change, block the ticket and explain why. A false PASS is worse than a block.
+- **Never issue SHIP on the nominal path alone**: a verdict is only credible once you have actually attacked the change (see step 3b). If your report shows only the happy path, it is incomplete — go back and try to break it before deciding.
+- **Do not FAIL/FIX the same ticket forever**: if this ticket already has 2+ prior FIX reports from you, do not issue a third FIX — move it to `Blocked` with a `BLOCK` verdict, address the owner, and summarize the repeating failure.
+- **When in doubt: do NOT issue SHIP.** If you couldn't actually run the change, block the ticket and explain why. A false SHIP is worse than a block.
 - **All output in English**.

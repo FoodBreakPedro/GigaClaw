@@ -133,7 +133,7 @@ python3 .agents/scripts/content_contract.py <filepath> --check-external
 ## Review Execution Protocol
 
 1. Read the article file — use the path from the ticket, defaulting to `content/posts/<slug>.md`. Compute its digest with `agent_ticket.py digest`; never trust a digest copied from an earlier comment.
-2. Search comments for `BLOG-REVIEW (APPROVE|REJECT) ... artifact-sha256:<current-digest>`. If a verdict already exists for this exact version, exit without adding a comment or changing state.
+2. Search comments for `GIGACLAW-VERDICT v1 blog-reviewer (SHIP|FIX|BLOCK) artifact-sha256:<current-digest>` (or legacy `BLOG-REVIEW (APPROVE|REJECT) ...` markers). If a verdict already exists for this exact version, exit without adding a comment or changing state.
 3. Run quality scripts and analyze prose metrics.
 4. Score each of the 5 categories (Total max = 100).
 5. Categorize issues (defect classes only — the score is a separate gate):
@@ -141,17 +141,55 @@ python3 .agents/scripts/content_contract.py <filepath> --check-external
    - **P1 Important**: Low burstiness, missing comparison tables, weak meta description.
    - **P2 Advisory**: Minor formatting polish.
 6. **Enforce the gate**: the article passes only with **score >= 90 AND zero P0 issues**.
-7. Count prior `BLOG-REVIEW REJECT cycle N/2` and `BLOG-SEO RETURN cycle N/2` receipts. The next correction number is one greater than the highest prior number; never infer it from memory.
+7. Read `reviewCycle.current` from the newest `GIGACLAW-VERDICT` comment (or count prior `BLOG-REVIEW REJECT cycle N/2` / `BLOG-SEO RETURN cycle N/2` receipts). The next correction cycle is `reviewCycle.current + 1`; never infer it from memory.
 
 ## Verdict Actions
 
-Post the verdict comment first, then move the ticket. Write each JSON body to a workspace file (never `/tmp`), send it with `-d @file -w "%{http_code}"`, verify the status is 2xx before continuing, and delete the scratch files at the end of the run.
+Post your review as a ticket comment containing BOTH the legacy `BLOG-REVIEW` receipt (required by `blog-seo` and `blog-translator`) and the typed `GIGACLAW-VERDICT` header with fenced JSON object:
 
-**APPROVE** (score >= 90, zero P0) → comment with the full score breakdown and current artifact receipt, then hand the ticket to `blog-seo` in `Todo`.
+```text
+BLOG-REVIEW APPROVE v1 artifact-sha256:4f1c2d9a7b3e5081c6a4d2f8e90b7135ac6e28d4f0917b3c5ea8d6142fb70cd9
+GIGACLAW-VERDICT v1 blog-reviewer SHIP artifact-sha256:4f1c2d9a7b3e5081c6a4d2f8e90b7135ac6e28d4f0917b3c5ea8d6142fb70cd9
 
-The approve comment **must start with the literal token `APPROVE`** on its first line — e.g. `APPROVE — score 93/100` — and include `BLOG-REVIEW APPROVE v1 artifact-sha256:<digest>`. Downstream agents must require a verdict whose digest matches the current source, not merely any historic APPROVE.
+```json
+{
+  "schemaVersion": 1,
+  "agent": "blog-reviewer",
+  "ticketId": 812,
+  "verdict": "SHIP",
+  "summary": "93/100 with zero P0 issues; schema, links and citation readiness all verified.",
+  "categories": [
+    { "name": "Content quality & pacing", "score": 28, "max": 30, "notes": "Two sections open with the same construction." },
+    { "name": "SEO & navigation", "score": 24, "max": 25 },
+    { "name": "E-E-A-T & trust", "score": 14, "max": 15, "notes": "Author bio lacks a credential line." },
+    { "name": "Technical & schema elements", "score": 15, "max": 15, "notes": "content_contract.py passed." },
+    { "name": "AI citation readiness (GEO)", "score": 12, "max": 15, "notes": "ai_citation_score.py reported 80/100." }
+  ],
+  "vetoItems": [],
+  "evidence": [
+    { "kind": "path", "ref": "content/posts/agent-orchestration.md", "note": "reviewed draft" },
+    { "kind": "hash", "ref": "sha256:4f1c2d9a7b3e5081c6a4d2f8e90b7135ac6e28d4f0917b3c5ea8d6142fb70cd9", "note": "artifact receipt" },
+    { "kind": "link", "ref": "https://schema.org/BlogPosting", "note": "JSON-LD type verified" }
+  ],
+  "reviewedAtUtc": "2026-07-30T09:14:22Z",
+  "inputDigest": "sha256:4f1c2d9a7b3e5081c6a4d2f8e90b7135ac6e28d4f0917b3c5ea8d6142fb70cd9",
+  "reviewCycle": { "current": 1, "max": 2 }
+}
+```
+```
 
-Put the full approve report in `./rv-verdict.md`, then use the version marker as the helper idempotency key:
+#### Machine-Checkable Veto Items
+If issuing `FIX` or `BLOCK`, include machine-checkable veto items:
+- `fabricated-or-unsourced-statistics`: P0 issue — fabricated or unsourced statistics (`FIX`).
+- `banned-phrases-present`: P0 issue — banned AI clichés or phrases from `VOICE.md` present (`FIX`).
+- `broken-or-invalid-schema`: P0 issue — JSON-LD schema missing or broken (`FIX`).
+- `broken-links`: P0 issue — dead or invalid external links (`FIX`).
+- `quality-score-below-threshold`: Total score < 90/100 threshold (`FIX`).
+- `review-cycle-exceeded`: Two revision cycles completed without reaching 90 pts (`BLOCK`).
+
+> **POST/PATCH discipline**: Put the full report body in `./rv-verdict.md`, write each JSON payload to a workspace file (never `/tmp`), send with `-d @file -w "%{http_code}"`, verify status is 2xx before continuing, and delete scratch files before exiting.
+
+**SHIP** (verdict: `SHIP`, score >= 90, zero P0) → post typed verdict comment with `SHIP` verdict, then hand the ticket to `blog-seo` in `Todo` using `agent_ticket.py`:
 
 ```bash
 python3 .agents/scripts/agent_ticket.py \
@@ -161,10 +199,25 @@ python3 .agents/scripts/agent_ticket.py \
   --marker "BLOG-REVIEW APPROVE v1 artifact-sha256:<digest>"
 ```
 
-**REJECT cycle 1/2** (score < 90 or any P0) → put the prioritized fix list in `./rv-verdict.md`; its first line is `REJECT — score N/100`, and it includes `BLOG-REVIEW REJECT cycle 1/2 artifact-sha256:<digest>`. Hand off to `blog-writer` in `Todo` using the same helper shape with `--assignee blog-writer`.
+**FIX cycle 1/2** (verdict: `FIX`, score < 90 or P0) → post typed verdict comment with `FIX` verdict and specific veto items, then hand off to `blog-writer` in `Todo` using `agent_ticket.py`:
 
-**REJECT cycle 2/2** → do **not** start a third writer/reviewer loop. Post the verdict receipt, hand the ticket to `owner` in `Blocked`, and state which issues remain. This is an escalation, not an approval.
+```bash
+python3 .agents/scripts/agent_ticket.py \
+  --project {project-slug} --ticket {id} --author blog-reviewer \
+  handoff --assignee blog-writer --status Todo --expected-status Review \
+  --content-file ./rv-verdict.md \
+  --marker "BLOG-REVIEW REJECT cycle 1/2 artifact-sha256:<digest>"
+```
 
-**BLOCKED** (the article file is missing/unreadable, external links cannot be verified, or the cycle limit is reached) → atomically hand to `owner` in `Blocked` and comment with the exact reason. Use `agent_ticket.py`; delete scratch report files after success.
+**BLOCK cycle 2/2** (verdict: `BLOCK`, cycle limit or unreadable target) → do **not** start a third writer/reviewer loop. Post typed verdict comment with `BLOCK` verdict, then hand the ticket to `owner` in `Blocked`:
+
+```bash
+python3 .agents/scripts/agent_ticket.py \
+  --project {project-slug} --ticket {id} --author blog-reviewer \
+  handoff --assignee owner --status Blocked --expected-status Review \
+  --content-file ./rv-verdict.md \
+  --marker "BLOG-REVIEW REJECT cycle 2/2 artifact-sha256:<digest>"
+```
 
 **Never end a turn with the ticket in `InProgress`** — including runs where you were assigned the ticket directly instead of triggered by `blog-reviewer-on-review`.
+

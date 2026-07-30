@@ -63,6 +63,7 @@ public class ActionExecutorHttpRequestTests
             tickets, members, labels, sessions, runs, runner, cost, loc, projects,
             new RunStateManager(runs, cost, tickets, NullLogger.Instance),
             new FakeHttpClientFactory(handler),
+            TestTeamRuns.For(projects, tickets),
             NullLogger.Instance);
 
         var ticket = await tickets.CreateTicketAsync(project.Slug, "Publish the launch post", description: description, status: "Review");

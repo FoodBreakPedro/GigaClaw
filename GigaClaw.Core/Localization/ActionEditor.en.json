@@ -62,5 +62,8 @@
   "HrSecretRefPlaceholder": "CMS_API_TOKEN",
   "HrCaptureHint": "Only the variable name is saved — never the token itself. The response is captured for later actions in this chain as {http.status}, {http.body} and {http.body.field} for each top-level JSON field.",
   "HrTimeout": "Timeout (seconds)",
-  "HrAbortOnFailure": "Abort remaining actions when the request fails"
+  "HrAbortOnFailure": "Abort remaining actions when the request fails",
+  "StrTeam": "Team",
+  "StrTeamPlaceholder": "parallel-review",
+  "StrHint": "Starts a run of this team on the firing ticket: one sub-ticket per task, assigned to the role\u2019s agent, blocked tickets waiting on their dependencies. Firing again while the run is open re-attaches to it instead of fanning out twice."
 }

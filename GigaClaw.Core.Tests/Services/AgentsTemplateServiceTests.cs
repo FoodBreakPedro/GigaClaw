@@ -35,6 +35,9 @@ public sealed class AgentsTemplateServiceTests
         Assert.Equal("claude-opus-4-8", models["approval-gatekeeper"]);
         Assert.Equal("claude-opus-4-8", models["evaluator"]);
 
+        // Every template agent (33/33) must be mapped in models.json.
+        Assert.Equal(33, models.Count);
+
         // Every seeded id must be one GigaClaw actually offers (ClaudeModelCatalog is the source
         // of truth the model selectors use — a typo here would silently seed an unusable model).
         foreach (var (slug, model) in models)
@@ -68,12 +71,15 @@ public sealed class AgentsTemplateServiceTests
         Assert.NotNull(reviewer);
         Assert.Equal("claude-opus-4-8", reviewer!.DefaultModel);
 
-        // An agent with no entry in models.json (e.g. producer) gets no explicit DefaultModel —
-        // it falls back to the project's FallbackModel per AD-9's three-level resolution, it is
-        // not silently defaulted to some hardcoded value here.
         var producer = await members.GetMemberBySlugAsync(project.Slug, "producer");
         Assert.NotNull(producer);
-        Assert.Null(producer!.DefaultModel);
+        Assert.Equal("claude-sonnet-4-6", producer!.DefaultModel);
+
+        // A custom member not in models.json gets no explicit DefaultModel —
+        // it falls back to the project's FallbackModel per AD-9's three-level resolution.
+        var customMember = await members.CreateMemberAsync(project.Slug, "custom-agent-slug");
+        Assert.NotNull(customMember);
+        Assert.Null(customMember!.DefaultModel);
     }
 
     [Fact]

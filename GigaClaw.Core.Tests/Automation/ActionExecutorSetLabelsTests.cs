@@ -27,7 +27,7 @@ public class ActionExecutorSetLabelsTests
         var executor = new ActionExecutor(
             tickets, members, labels, sessions, runs, runner, cost, loc, projects,
             new RunStateManager(runs, cost, tickets, NullLogger.Instance),
-            FakeHttpClientFactory.Unused, NullLogger.Instance);
+            FakeHttpClientFactory.Unused, TestTeamRuns.For(projects, tickets), NullLogger.Instance);
         var ticket = await tickets.CreateTicketAsync(project.Slug, "Approval", status: "Done");
         var runtime = new ProjectRuntime(project.Slug)
         {

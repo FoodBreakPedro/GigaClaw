@@ -629,6 +629,11 @@ else
         "ticketAge" => new TicketAgeConditionSpec(),
         "hasParent" => new HasParentConditionSpec(),
         "allSubTicketsInStatus" => new AllSubTicketsInStatusConditionSpec { Statuses = new List<string> { "Done" } },
+        "ticketCountInColumn" => new TicketCountInColumnConditionSpec {
+            Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
+        "verdictIs" => new VerdictIsConditionSpec { Verdicts = new List<string> { "SHIP" } },
+        "repairBudget" => new RepairBudgetConditionSpec(),
+        "dependenciesResolved" => new DependenciesResolvedConditionSpec { ResolvedStatuses = new List<string> { "Done" } },
         _ => new TicketInColumnConditionSpec { Columns = new List<string> { "Todo" } },
     };
 
@@ -644,6 +649,7 @@ else
         "executePowerShell" => new ExecutePowerShellActionSpec(),
         "createTicket" => new CreateTicketActionSpec(),
         "httpRequest" => new HttpRequestActionSpec(),
+        "startTeamRun" => new StartTeamRunActionSpec { Team = "" },
         _ => throw new NotSupportedException($"Unknown action type key '{type}'. Register it in Automations.razor BuildAction."),
     };
 

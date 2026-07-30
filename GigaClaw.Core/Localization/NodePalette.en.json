@@ -52,5 +52,7 @@
   "PalActCreateTicket": "Create ticket",
   "PalActCreateTicketHint": "Creates a new ticket; supports date placeholders and idempotency guard",
   "PalActHttpRequest": "HTTP request",
-  "PalActHttpRequestHint": "Calls a webhook or API and captures the response for later actions in the chain"
+  "PalActHttpRequestHint": "Calls a webhook or API and captures the response for later actions in the chain",
+  "PalActStartTeamRun": "Start team run",
+  "PalActStartTeamRunHint": "Fans a team definition out into sub-tickets under the firing ticket, wired with dependency edges"
 }

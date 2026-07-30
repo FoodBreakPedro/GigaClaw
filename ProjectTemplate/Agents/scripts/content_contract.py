@@ -6,6 +6,10 @@ JSON-LD syntax/types, and required OpenGraph metadata. By default external
 links are syntax-checked only; pass --check-external to make network failures
 fatal.
 
+Pass --verdict to validate an agent verdict (verdict.schema.json) instead of an
+article; every other argument is forwarded to verdict_contract.py, which owns
+that contract.
+
 Exit codes: 0 = valid, 1 = contract violations, 2 = unreadable/invalid usage.
 """
 
@@ -217,8 +221,17 @@ Testing is a repeatable verification process.
 
 
 def main() -> int:
+    if "--verdict" in sys.argv[1:]:
+        # Verdicts have exactly one validator; this is the shared enforcement entry point,
+        # not a second implementation. Every other flag passes through untouched.
+        from verdict_contract import main as verdict_main
+
+        sys.argv = [sys.argv[0]] + [arg for arg in sys.argv[1:] if arg != "--verdict"]
+        return verdict_main()
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("path", nargs="?")
+    parser.add_argument("--verdict", action="store_true", help="validate an agent verdict via verdict_contract.py")
     parser.add_argument("--check-external", action="store_true")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--self-test", action="store_true")

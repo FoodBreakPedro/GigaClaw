@@ -1,3 +1,4 @@
+using GigaClaw.Core.Automation.Verdicts;
 using GigaClaw.Core.Models;
 
 namespace GigaClaw.Core.Automation;
@@ -39,6 +40,51 @@ public static class ConditionEvaluators
 
     public static bool AllSubTicketsInStatus(AllSubTicketsInStatusConditionSpec c, IReadOnlyCollection<SubTicketInfo> subs)
         => subs.Count > 0 && subs.All(s => c.Statuses.Contains(s.Status));
+
+    /// <summary>
+    /// Matches when the ticket's newest verdict resolves to one of the configured outcomes.
+    /// Unknown entries in the spec never match, so a typo blocks rather than opens the gate.
+    /// </summary>
+    public static bool VerdictIs(VerdictIsConditionSpec c, VerdictOutcome outcome)
+    {
+        var token = outcome switch
+        {
+            VerdictOutcome.Ship => "SHIP",
+            VerdictOutcome.Fix => "FIX",
+            VerdictOutcome.Block => "BLOCK",
+            VerdictOutcome.Invalid => "INVALID",
+            VerdictOutcome.Stale => "STALE",
+            _ => "MISSING",
+        };
+        return c.Verdicts.Any(v => string.Equals(v, token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Matches when the ticket's repair budget is in the configured state. A null
+    /// <paramref name="state"/> means the budget could not be established (an unreadable contract
+    /// manifest): that resolves to "exhausted", because escalating a ticket to a human is the safe
+    /// failure and re-dispatching it forever is not.
+    /// </summary>
+    public static bool RepairBudget(RepairBudgetConditionSpec c, RepairLoopState? state)
+    {
+        var exhausted = string.Equals(c.Mode, "exhausted", StringComparison.OrdinalIgnoreCase);
+        var withinCap = string.Equals(c.Mode, "withinCap", StringComparison.OrdinalIgnoreCase);
+        if (!exhausted && !withinCap) return false;
+        if (state is null) return exhausted;
+        return exhausted ? state.Exhausted : !state.Exhausted;
+    }
+
+    /// <summary>
+    /// True when nothing is blocking the ticket: every <c>blockedBy</c> edge points at a ticket
+    /// in one of the resolved statuses. No edges = nothing blocking = true.
+    /// </summary>
+    public static bool DependenciesResolved(
+        DependenciesResolvedConditionSpec c,
+        IReadOnlyCollection<TicketDependencyInfo> blockedBy)
+    {
+        var resolved = c.ResolvedStatuses.Count > 0 ? c.ResolvedStatuses : ["Done"];
+        return blockedBy.All(b => resolved.Contains(b.Status));
+    }
 
     public static bool TicketAge(TicketAgeConditionSpec c, DateTime createdAt, DateTime updatedAt, DateTime now)
     {
