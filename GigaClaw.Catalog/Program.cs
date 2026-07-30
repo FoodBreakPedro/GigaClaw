@@ -8,14 +8,18 @@ internal static class Program
     {
         var command = args.FirstOrDefault() ?? "generate";
         var strict = args.Contains("--strict", StringComparer.Ordinal);
+        // §7.4: strict for packs is not conditional on core's mode. A pack that cannot meet the
+        // five-binding bar on its first commit is exactly the anti-pattern the rule exists to
+        // prevent, so --strict-packs gates every pack while leaving core on whatever mode it is in.
+        var strictPacks = args.Contains("--strict-packs", StringComparer.Ordinal);
         var rootArgument = args.Skip(1).FirstOrDefault(argument => !argument.StartsWith("--", StringComparison.Ordinal));
         var root = FindRepositoryRoot(rootArgument ?? Directory.GetCurrentDirectory());
         var generator = new CatalogGenerator();
-        var catalog = generator.Generate(root);
+        var build = generator.Build(root);
         return command switch
         {
-            "generate" => Generate(generator, root, catalog),
-            "check" => Check(generator, root, catalog, strict),
+            "generate" => Generate(generator, root, build.Catalog),
+            "check" => Check(root, build, strict, strictPacks),
             _ => Usage()
         };
     }
@@ -27,16 +31,33 @@ internal static class Program
         return 0;
     }
 
-    private static int Check(CatalogGenerator generator, string root, SystemCatalog catalog, bool strict)
+    private static int Check(string root, CatalogBuild build, bool strict, bool strictPacks)
     {
+        var catalog = build.Catalog;
         var expectedJson = JsonSerializer.Serialize(catalog, new JsonSerializerOptions { WriteIndented = true }) + "\n";
         var expectedMarkdown = CatalogGenerator.RenderMarkdown(catalog);
         var errors = new List<string>();
         CheckFile(Path.Combine(root, "catalog.json"), expectedJson, errors);
         CheckFile(Path.Combine(root, "doc", "catalog.md"), expectedMarkdown, errors);
-        var bindingGaps = CatalogGenerator.FindBindingGaps(catalog);
-        if (strict) errors.AddRange(bindingGaps);
-        else foreach (var gap in bindingGaps) Console.Error.WriteLine($"catalog known binding gap: {gap}");
+
+        foreach (var gap in CatalogGenerator.FindBindingGaps(catalog))
+        {
+            var gated = CatalogGenerator.GatedReasons(gap, strict, strictPacks, catalog);
+            if (gated.Count > 0)
+                errors.Add(new BindingGap(gap.Pack, gap.Slug, gated).ToString());
+            var reported = gap.Missing.Except(gated, StringComparer.Ordinal).ToArray();
+            if (reported.Length > 0)
+                Console.Error.WriteLine($"catalog known binding gap: {new BindingGap(gap.Pack, gap.Slug, reported)}");
+        }
+
+        // §7.5/§7.6 are pack-scoped by construction — they check a pack's data against that pack's
+        // own manifest — so they follow the pack gate, not core's mode.
+        foreach (var violation in build.PackPolicyViolations)
+        {
+            if (strict || strictPacks) errors.Add(violation.ToString());
+            else Console.Error.WriteLine($"catalog known pack policy violation: {violation}");
+        }
+
         CheckReadmeCounts(root, catalog, errors);
         if (errors.Count == 0) return 0;
         foreach (var error in errors) Console.Error.WriteLine($"catalog check: {error}");
@@ -63,5 +84,5 @@ internal static class Program
         throw new DirectoryNotFoundException("Could not find a repository root containing ProjectTemplate/Agents.");
     }
 
-    private static int Usage() { Console.Error.WriteLine("Usage: GigaClaw.Catalog [generate|check] [--strict] [repository-root]"); return 2; }
+    private static int Usage() { Console.Error.WriteLine("Usage: GigaClaw.Catalog [generate|check] [--strict] [--strict-packs] [repository-root]"); return 2; }
 }
