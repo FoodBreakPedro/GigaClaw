@@ -188,3 +188,67 @@ public class PolicyEnforcementModeTests
                  """;
     }
 }
+
+/// <summary>
+/// The shipped template's enforcement state, pinned against SP1-REVIEW.md's per-agent sign-off so
+/// the two cannot drift silently.
+/// </summary>
+public class TemplateEnforcementStateTests
+{
+    private static readonly string[] SignedOffHolds = ["programmer", "code-janitor"];
+
+    [Fact]
+    public async Task Every_template_agent_resolves_to_the_mode_sp1_signed_off()
+    {
+        var agentsDir = Path.Combine(FindRepositoryRoot(), "ProjectTemplate", "Agents");
+        var manifest = Path.Combine(agentsDir, "contracts.json");
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(manifest));
+        var slugs = document.RootElement.GetProperty("agents").EnumerateObject()
+            .Select(p => p.Name).ToArray();
+
+        Assert.Equal(33, slugs.Length);
+
+        foreach (var slug in slugs)
+        {
+            var policy = await ContractPolicyLoader.LoadManifestAsync(
+                manifest,
+                agentsDir,
+                slug,
+                caseSensitivity: PathCaseSensitivity.Sensitive);
+
+            Assert.True(policy.IsValid, $"{slug}: {policy.Diagnostic}");
+            var expected = SignedOffHolds.Contains(slug)
+                ? PolicyEnforcementMode.Warn
+                : PolicyEnforcementMode.Block;
+            Assert.Equal(expected, policy.Enforcement);
+        }
+    }
+
+    [Fact]
+    public async Task The_two_holds_are_exactly_the_agents_that_declare_repo_wide_write_globs()
+    {
+        // This is *why* they are held, not just that they are: an agent whose globs are `**` has no
+        // out-of-glob write to block, so flipping it would enforce nothing while risking its work.
+        var agentsDir = Path.Combine(FindRepositoryRoot(), "ProjectTemplate", "Agents");
+        var manifest = Path.Combine(agentsDir, "contracts.json");
+
+        foreach (var slug in SignedOffHolds)
+        {
+            var policy = await ContractPolicyLoader.LoadManifestAsync(
+                manifest, agentsDir, slug, caseSensitivity: PathCaseSensitivity.Sensitive);
+            Assert.Contains("**", policy.AllowedWriteGlobs);
+        }
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "GigaClaw.slnx")))
+                return directory.FullName;
+            directory = directory.Parent;
+        }
+        throw new DirectoryNotFoundException("Could not locate GigaClaw repository root.");
+    }
+}
