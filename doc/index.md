@@ -14,6 +14,7 @@ For a high-level overview see the root [README.md](../README.md). For repo layou
 - [Agent dispatch](./agent-dispatch.md) — running the `claude` CLI as a subprocess and streaming its output.
 - [Project template](./project-template.md) — embedded `ProjectTemplate/` files copied into each workspace on Initialize.
 - [Verdict contract](./verdict-contract.md) — the typed `SHIP`/`FIX`/`BLOCK` judgement every reviewer, gate and eval judge shares.
+- [Handoff contract](./handoff-contract.md) — what one agent leaves the next: outputs, owned files, assumptions, open loops.
 - [REST API](./rest-api.md) — OpenAPI-driven endpoints under `/api`, with auto-generated Markdown docs.
 - [Storage](./storage.md) — SQLite registry, per-project DBs, run logs, and workspace-side agent state.
 - [Kanban UI](./kanban-ui.md) — Blazor Server board, ticket panel, agent run drawer.

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "agent": "qa-tester",
+  "ticketId": 447,
+  "runId": "3b7d02",
+  "summary": "Could not exercise the change: the debug instance will not start.",
+  "outputs": [{ "kind": "path", "ref": "runs/447/qa-startup.log", "note": "startup failure output" }],
+  "ownedFiles": [],
+  "assumptions": [],
+  "openLoops": [{ "statement": "Test host exits with SQLITE_CANTOPEN; nothing was verified.", "blocking": true }],
+  "acceptanceCriteria": [{ "statement": "Acceptance criteria observed at runtime", "met": false }],
+  "nextRole": null,
+  "producedAtUtc": "2026-07-30T11:41:05Z"
+}

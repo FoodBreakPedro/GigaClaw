@@ -28,6 +28,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from schema_check import validate as validate_schema, workspace_relative_errors
+
 SCHEMA_NAME = "verdict.schema.json"
 MARKER_RE = re.compile(
     r"^GIGACLAW-VERDICT\s+v1\s+(?P<agent>[a-z0-9][a-z0-9-]*)\s+"
@@ -36,94 +38,6 @@ MARKER_RE = re.compile(
 )
 FENCE_RE = re.compile(r"```json\s*\n(?P<body>.*?)\n```", re.DOTALL)
 SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
-
-
-# --------------------------------------------------------------------------
-# Minimal JSON Schema (2020-12 subset) evaluator - the schema file is the truth
-# --------------------------------------------------------------------------
-
-def _type_matches(value: Any, expected: str) -> bool:
-    if expected == "object":
-        return isinstance(value, dict)
-    if expected == "array":
-        return isinstance(value, list)
-    if expected == "string":
-        return isinstance(value, str)
-    if expected == "boolean":
-        return isinstance(value, bool)
-    if expected == "integer":
-        return isinstance(value, int) and not isinstance(value, bool)
-    if expected == "number":
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
-    if expected == "null":
-        return value is None
-    raise ValueError(f"schema uses unsupported type '{expected}'")
-
-
-def _resolve(schema: dict, root: dict) -> dict:
-    ref = schema.get("$ref")
-    if not ref:
-        return schema
-    if not ref.startswith("#/"):
-        raise ValueError(f"schema uses unsupported $ref '{ref}'")
-    node: Any = root
-    for part in ref[2:].split("/"):
-        node = node[part]
-    return node
-
-
-def validate_schema(value: Any, schema: dict, root: dict, path: str = "$") -> list[str]:
-    """Structural validation against the supported schema subset."""
-    schema = _resolve(schema, root)
-    errors: list[str] = []
-
-    if "const" in schema and value != schema["const"]:
-        errors.append(f"{path} must be {json.dumps(schema['const'])}")
-    if "enum" in schema and value not in schema["enum"]:
-        errors.append(f"{path} must be one of {', '.join(map(str, schema['enum']))}")
-
-    expected = schema.get("type")
-    if expected is not None:
-        options = expected if isinstance(expected, list) else [expected]
-        if not any(_type_matches(value, option) for option in options):
-            errors.append(f"{path} must be of type {' or '.join(options)}")
-            return errors  # Further keywords would only echo the same problem.
-
-    if isinstance(value, str):
-        if "minLength" in schema and len(value) < schema["minLength"]:
-            errors.append(f"{path} must be at least {schema['minLength']} character(s)")
-        if "maxLength" in schema and len(value) > schema["maxLength"]:
-            errors.append(f"{path} must be at most {schema['maxLength']} characters")
-        if "pattern" in schema and not re.search(schema["pattern"], value):
-            errors.append(f"{path} must match {schema['pattern']}")
-    elif isinstance(value, (int, float)) and not isinstance(value, bool):
-        if "minimum" in schema and value < schema["minimum"]:
-            errors.append(f"{path} must be >= {schema['minimum']}")
-        if "maximum" in schema and value > schema["maximum"]:
-            errors.append(f"{path} must be <= {schema['maximum']}")
-    elif isinstance(value, list):
-        if "minItems" in schema and len(value) < schema["minItems"]:
-            errors.append(f"{path} must contain at least {schema['minItems']} item(s)")
-        if "maxItems" in schema and len(value) > schema["maxItems"]:
-            errors.append(f"{path} must contain at most {schema['maxItems']} items")
-        item_schema = schema.get("items")
-        if item_schema:
-            for index, item in enumerate(value):
-                errors.extend(validate_schema(item, item_schema, root, f"{path}[{index}]"))
-    elif isinstance(value, dict):
-        properties = schema.get("properties", {})
-        for name in schema.get("required", []):
-            if name not in value:
-                errors.append(f"{path} is missing required property '{name}'")
-        if schema.get("additionalProperties") is False:
-            for name in value:
-                if name not in properties:
-                    errors.append(f"{path} has unknown property '{name}'")
-        for name, sub_schema in properties.items():
-            if name in value:
-                errors.extend(validate_schema(value[name], sub_schema, root, f"{path}.{name}"))
-
-    return errors
 
 
 # --------------------------------------------------------------------------
@@ -142,12 +56,7 @@ def _evidence_ref_errors(entry: dict, path: str) -> list[str]:
             return [f"{path}.ref is a placeholder URL, not evidence: {ref}"]
         return []
     if kind == "path":
-        normalized = ref.replace("\\", "/")
-        if normalized.startswith("/") or re.match(r"^[A-Za-z]:/", normalized) or normalized.startswith("~"):
-            return [f"{path}.ref must be workspace-relative, not absolute: {ref}"]
-        if ".." in normalized.split("/"):
-            return [f"{path}.ref must not traverse outside the workspace: {ref}"]
-        return []
+        return workspace_relative_errors(ref, f"{path}.ref")
     return []
 
 

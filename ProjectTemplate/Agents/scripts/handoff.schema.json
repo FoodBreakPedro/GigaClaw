@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gigaclaw.dev/schemas/handoff/v1.json",
+  "title": "GigaClaw run handoff (v1)",
+  "description": "What one agent leaves behind for the next one: what it produced, what it assumed, what it still owns, and what remains open. Frozen at v1 alongside the verdict contract: additive changes only. An unreadable handoff is treated as no handoff.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "agent",
+    "ticketId",
+    "runId",
+    "summary",
+    "outputs",
+    "ownedFiles",
+    "assumptions",
+    "openLoops",
+    "acceptanceCriteria",
+    "producedAtUtc"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "description": "Handoff contract version. Bumped only for breaking changes.",
+      "const": 1
+    },
+    "agent": {
+      "description": "Slug of the agent that produced this run's work.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "ticketId": {
+      "type": ["integer", "string"],
+      "minimum": 1,
+      "pattern": "^[0-9]+$"
+    },
+    "runId": {
+      "description": "The run that produced this handoff. Makes the chain auditable across restarts.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "summary": {
+      "description": "One line the next agent reads first: what changed and what it now needs to do.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "inputs": {
+      "description": "What this run consumed. Usually the previous handoff's outputs.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "outputs": {
+      "description": "What this run produced, with digests where the next agent must verify them.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "ownedFiles": {
+      "description": "Workspace-relative paths or globs this run wrote or claims. Consumed by the file-ownership lease layer to serialize overlapping runs - overstating scope blocks other agents, understating it corrupts their work.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 400 }
+    },
+    "assumptions": {
+      "description": "Decisions taken without confirmation. The next agent inherits them or challenges them.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 500 }
+    },
+    "openLoops": {
+      "description": "Known-unfinished work. Empty means the run claims it left nothing dangling.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/openLoop" }
+    },
+    "acceptanceCriteria": {
+      "description": "The ticket's criteria as this run understands them, each marked met or not.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/criterion" }
+    },
+    "nextRole": {
+      "description": "Agent slug this work is handed to. Null when the run hands back to the owner.",
+      "type": ["string", "null"],
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "producedAtUtc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": { "enum": ["path", "hash", "link"] },
+        "ref": {
+          "description": "Same discipline as verdict evidence: path = workspace-relative, hash = sha256:<64 hex>, link = absolute https URL.",
+          "type": "string",
+          "minLength": 1
+        },
+        "note": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "openLoop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "blocking": {
+          "description": "True when the next agent cannot finish without this being resolved.",
+          "type": "boolean"
+        }
+      }
+    },
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "met"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "met": { "type": "boolean" },
+        "evidenceRef": {
+          "description": "Ref of an outputs entry that demonstrates it. Required for a met criterion.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
