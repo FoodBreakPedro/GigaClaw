@@ -158,13 +158,39 @@ public sealed class CoreInitManifestTests
     /// outside that list would still be caught. <c>.git/</c> is excluded because Initialize shells out
     /// to <c>git init</c>, whose output is neither template content nor deterministic.</para>
     /// </summary>
+    /// <summary>
+    /// What the composer and installer believed they were doing, captured alongside the tree so a
+    /// drift failure can be attributed. Without this, "the file is not on disk" cannot be told
+    /// apart from "the pack never contained it" or "the installer chose to skip it" — and on
+    /// Windows those three have looked identical through two wrong fixes.
+    /// </summary>
+    internal static string LastInstallDiagnostics = "(not captured)";
+
     internal static async Task<SortedDictionary<string, string>> CaptureInitOutputAsync()
     {
         var workspace = Path.Combine(Path.GetTempPath(), "gigaclaw-core-init-" + Guid.NewGuid().ToString("n"));
         try
         {
             Directory.CreateDirectory(workspace);
-            await new AgentsTemplateService().InitializeAsync(workspace, overwriteConflicts: true);
+
+            var source = CorePack.Source(typeof(AgentsTemplateService).Assembly);
+            var agentPaths = source.AgentRelativePaths();
+            var rootPaths = source.RootRelativePaths();
+
+            var install = await new PackInstaller().InstallAsync(
+                workspace,
+                [source],
+                new PackInstallOptions(OverwriteConflicts: true));
+
+            LastInstallDiagnostics =
+                $"source.AgentRelativePaths={agentPaths.Count} " +
+                $"source.RootRelativePaths={rootPaths.Count} " +
+                $"install.Written={install.Written.Count} " +
+                $"install.PreservedOwnerEdits={install.PreservedOwnerEdits.Count} " +
+                $"install.Quarantined={install.QuarantinedPacks.Count}; " +
+                $"firstAgentPaths=[{string.Join(", ", agentPaths.Take(3))}]; " +
+                $"firstWritten=[{string.Join(", ", install.Written.Take(3))}]";
+
             return HashTree(workspace);
         }
         finally
@@ -192,7 +218,8 @@ public sealed class CoreInitManifestTests
         // "written somewhere else" from "not written at all".
         var sb = new StringBuilder(
             $"Initialize output drifted from the golden manifest. " +
-            $"missing={missing.Count} added={added.Count} changed={changed.Count}.");
+            $"missing={missing.Count} added={added.Count} changed={changed.Count}. " +
+            $"[{LastInstallDiagnostics}]");
         Append(sb, "Missing (in manifest, not written)", missing);
         Append(sb, "Added (written, not in manifest)", added);
         Append(sb, "Changed content", changed);
