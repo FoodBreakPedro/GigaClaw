@@ -3,6 +3,8 @@ using System.Net.Http;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using GigaClaw.Core.Automation.Triggers;
+using GigaClaw.Core.Automation.Handoffs;
+using GigaClaw.Core.Automation.Verdicts;
 using GigaClaw.Core.Services;
 
 namespace GigaClaw.Core.Automation;
@@ -91,6 +93,7 @@ internal sealed class ActionExecutor
             AllSubTicketsInStatusConditionSpec c   => EvaluateAllSubTicketsInStatusAsync(rt, c, firing),
             TicketCountInColumnConditionSpec c     => EvaluateTicketCountInColumnAsync(rt, c, firing),
             TicketAgeConditionSpec c               => EvaluateTicketAgeAsync(rt, c, firing),
+            VerdictIsConditionSpec c               => EvaluateVerdictIsAsync(rt, c, firing),
             _                                      => Task.FromResult(true),
         };
 
@@ -185,12 +188,82 @@ internal sealed class ActionExecutor
         return ConditionEvaluators.CompareCount(c.Operator, count, c.Value);
     }
 
+    // The verdict gate never passes on missing data: no ticket, no comments and an unreadable
+    // workspace all resolve to MISSING/STALE rather than to a silent "condition satisfied".
+    private async Task<bool> EvaluateVerdictIsAsync(ProjectRuntime rt, VerdictIsConditionSpec c, TriggerFiring firing)
+    {
+        if (firing.TicketId is null) return false;
+        var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
+        if (ticket is null) return false;
+
+        var agent = string.IsNullOrWhiteSpace(c.Agent)
+            ? null
+            : ConditionEvaluators.ResolveAgentPlaceholder(c.Agent, ticket.AssignedTo);
+        if (c.Agent is not null && c.Agent.Contains("{assignee}") && agent is null)
+            return false; // Placeholder with nothing to resolve to: fail closed.
+
+        var comments = ticket.Comments
+            .OrderBy(x => x.CreatedAt)
+            .Select(x => new VerdictComment(x.Content, x.Author, x.CreatedAt))
+            .ToList();
+
+        var resolution = VerdictScanner.Resolve(
+            comments,
+            agent,
+            c.RequireFreshArtifact
+                ? verdict => (VerdictReader.IsFresh(verdict, rt.Workspace, out var reason), reason)
+                : null);
+
+        if (resolution.Outcome is VerdictOutcome.Invalid or VerdictOutcome.Stale)
+        {
+            _logger.LogWarning(
+                "[{Slug}] ticket #{TicketId}: {Outcome} verdict — {Diagnostic}",
+                rt.Slug, ticket.Id, resolution.Outcome, resolution.Diagnostic);
+        }
+
+        return ConditionEvaluators.VerdictIs(c, resolution.Outcome);
+    }
+
     private async Task<bool> EvaluateTicketAgeAsync(ProjectRuntime rt, TicketAgeConditionSpec c, TriggerFiring firing)
     {
         if (firing.TicketId is null) return true;
         var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
         if (ticket is null) return false;
         return ConditionEvaluators.TicketAge(c, ticket.CreatedAt, ticket.UpdatedAt, DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Prepends the previous run's handoff to the action's own context, so the next agent starts
+    /// from what the last one actually left behind instead of re-deriving it from the ticket.
+    /// An unreadable handoff is skipped rather than injected half-parsed, and a ticket without one
+    /// dispatches exactly as before.
+    /// </summary>
+    internal async Task<string?> ComposeDispatchContextAsync(ProjectRuntime rt, int? ticketId, string? actionContext)
+    {
+        if (ticketId is null)
+            return actionContext;
+
+        RunHandoff? handoff = null;
+        try
+        {
+            var ticket = await _tickets.GetTicketAsync(rt.Slug, ticketId.Value);
+            if (ticket is not null)
+            {
+                handoff = HandoffReader.Latest(
+                    ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList());
+            }
+        }
+        catch (Exception exception)
+        {
+            // Context enrichment must never be the reason a dispatch fails.
+            _logger.LogWarning(exception, "[{Slug}] could not read the handoff for ticket #{TicketId}", rt.Slug, ticketId);
+        }
+
+        if (handoff is null)
+            return actionContext;
+
+        var rendered = HandoffReader.Render(handoff);
+        return string.IsNullOrWhiteSpace(actionContext) ? rendered : $"{rendered}\n\n{actionContext}";
     }
 
     // ── Action execution ────────────────────────────────────────────────────
@@ -441,7 +514,7 @@ internal sealed class ActionExecutor
             Env = effectiveEnv,
             Model = effectiveModel,
             FallbackModel = fallbackModel,
-            ExtraContext = a.Context,
+            ExtraContext = await ComposeDispatchContextAsync(rt, firing.TicketId, a.Context),
             RetryOnResumeFailure = true,
             OllamaValidationError = ollamaValidationError,
             MaxRunDuration = TimeSpan.FromMinutes(30),

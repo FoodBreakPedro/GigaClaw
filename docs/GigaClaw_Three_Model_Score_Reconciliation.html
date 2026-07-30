@@ -1,0 +1,604 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GigaClaw Ecosystem Analysis — Three-Model Score Reconciliation</title><style>
+:root{--bg:#fbfaf9;--panel:#fff;--ink:#1a1a19;--mut:#6b6b68;--line:#e5e3df;--acc:#b8532a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.wrap{max-width:1360px;margin:0 auto;padding:36px 28px 90px}
+h1{font-size:29px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em}
+.sub{color:var(--mut);margin:0 0 30px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut);margin:46px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:18px 20px;margin-bottom:14px}
+.warn{border-left:3px solid var(--acc)}
+.warn h3{margin:0 0 8px;font-size:15px}
+.warn p{margin:0 0 9px} .warn p:last-child{margin:0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--panel)}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);padding:9px 8px;border-bottom:1.5px solid var(--line);position:sticky;top:0;background:var(--bg);cursor:pointer;white-space:nowrap;user-select:none}
+th:hover{color:var(--ink)}
+td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:#f6f4f1}
+.id{font:12px ui-monospace,Menlo,monospace;color:var(--mut);white-space:nowrap}
+.cat,.src{font-size:12px;color:var(--mut);white-space:nowrap}
+.it{min-width:330px}
+.s{text-align:center;font-weight:640;width:44px;font-variant-numeric:tabular-nums}
+.na{color:#c9c6c1;font-weight:400}
+.v1{color:#1e8449}.v2{color:#7d8b8f}.v3{color:#b9770e}.v4{color:#ca6f1e}.v5{color:#a93226}
+.tot,.n{text-align:center;font-variant-numeric:tabular-nums;color:var(--mut);width:48px}
+.tot{font-weight:640;color:var(--ink)}
+.adjchg{background:#fdf3e7;border-radius:4px}
+.fl{color:var(--acc);cursor:help;font-size:12px}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+button{font:13px inherit;padding:6px 13px;border:1px solid var(--line);background:var(--panel);border-radius:20px;cursor:pointer;color:var(--mut)}
+button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+input{font:13px inherit;padding:7px 12px;border:1px solid var(--line);border-radius:20px;min-width:210px;background:var(--panel);color:var(--ink)}
+.tbl{max-height:660px;overflow:auto;border:1px solid var(--line);border-radius:9px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.gc{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:16px 18px}
+.gc h4{margin:0 0 4px;font-size:15px}
+.gr{font:700 26px/1 ui-monospace,Menlo,monospace;float:right}
+.ga{color:#1e8449}.gb{color:#b9770e}.gd{color:#a93226}
+.gc p{margin:6px 0 0;font-size:13px;color:var(--mut)}
+.tier h3{font-size:14.5px;margin:26px 0 12px;padding-left:11px;border-left:3px solid;letter-spacing:-.01em}
+.pri,.nv{display:flex;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:15px 17px;margin-bottom:9px}
+.pid,.nid{font:600 12px ui-monospace,Menlo,monospace;color:var(--acc);min-width:88px;padding-top:2px}
+.nid{color:#a93226;min-width:74px}
+.pname{font-weight:640;margin-bottom:5px}
+.pwhy{font-size:13.5px;color:#4a4a47}
+.pcost{font-size:12.5px;color:var(--mut);margin-top:7px}
+code{font:12.5px ui-monospace,Menlo,monospace;background:#f0eeea;padding:1px 4px;border-radius:3px}
+.legend{font-size:12.5px;color:var(--mut);margin-top:9px} .legend b{color:var(--ink)}
+.ct{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.ct:last-child{border:0}
+.trip{font:640 13px ui-monospace,Menlo,monospace;min-width:84px;color:var(--mut)}
+</style></head><body><div class="wrap">
+
+<h1>GigaClaw Ecosystem Analysis — Three-Model Score Reconciliation</h1>
+<p class="sub">85 unified line items from three independent analyses · every score as given, totals as computed, plus an adjudicated column after adversarial review · 30 July 2026</p>
+
+<div class="card warn">
+<h3>The total is in the table. It is also the least meaningful number there.</h3>
+<p><b>The scale isn't additive.</b> A <b>1</b> means "we already win"; a <b>5</b> means "we have a hole." Summing them produces verdicts nobody rendered. <b>T16</b> (zero-trust federation) scores 2/2/5 and totals 9 — identical to <b>P22</b>'s unanimous 3/3/3. One is a rejected idea plus one outlier; the other is a settled consensus. 53% of all marks are 4 or 5, so the scale barely discriminates before you average it.</p>
+<p><b>Coverage isn't judgment.</b> Blanks mean "not covered," never zero. Gemini scored 26 of 85 items, Claude 54, Codex 57 — so any total-based ranking is gated by the shortest and least source-verified list. <b>P3</b>, the only finding with a live security consequence, went unscored by Gemini and was thereby demoted below adding 80 markdown files about influencer marketing.</p>
+<p><b>The three aren't independent.</b> All three received the same prompt, which supplied both the gap-seeking frame and the definition of a "5." Claude and Codex agree on 62% of shared items; Gemini agrees with each on roughly 33%, barely above chance. This is two correlated source-audited analyses plus one weakly-correlated documentation reader — not three votes.</p>
+</div>
+
+<h2>How reliable is each analysis</h2>
+<div class="grid">
+<div class="gc"><span class="gr ga">A</span><h4>Codex</h4><p>Pins all five repos to commit SHAs. Permalinks with line ranges into source, not READMEs. Separates audited counts from published claims (204 local agent files vs README's 203). Shows its <code>jq</code> / <code>rg</code> / <code>comm</code> commands. Found a real defect nobody else did. <b>The evidentiary spine.</b></p></div>
+<div class="gc"><span class="gr gb">A−</span><h4>Claude</h4><p>Real verification appendix; re-counted agents, automations, teams. Surfaced ruflo's own in-tree audit grading its headline claims FABRICATED. Deductions: paths without line numbers or SHAs, a 12-vs-13 arithmetic slip, one over-generous self-score on teams. <b>The strongest synthesis.</b></p></div>
+<div class="gc"><span class="gr gd">D</span><h4>Gemini</h4><p>No SHAs, no stated method, no README-vs-code distinction. Citations point at unresolvable local IDE scratch paths, and the named file path routinely differs from the linked target. Calls ruflo "Rust-powered" when its <code>Cargo.toml</code> says otherwise. Lists 32 agents and says 34; says "5 harnesses" and lists 6. <b>Usable only where another analysis independently confirms it.</b></p></div>
+</div>
+<p class="legend">This grading is why the <b>Adj.</b> column exists. Gemini's uncorroborated ruflo scores — federation 5, consensus 4, queen 4, GOAP 5, sub-millisecond HNSW 5 — all rest on a repo whose own in-tree audit graded its headline benchmarks fabricated: "HNSW 150x" measured 1.48x, and Flash-Attention speedups were <code>Math.random()</code>. Both source-verified analyses independently found that ruflo's <code>agent_spawn</code> writes a coordination record rather than spawning a worker. Gemini never mentions this, and its entire swarm / queen / consensus / federation block presumes real spawning.</p>
+
+<h2>They also disagree about GigaClaw itself</h2>
+<div class="card">
+<table>
+<tr><th>Baseline fact</th><th>Claude</th><th>Codex</th><th>Gemini</th><th>Adjudicated</th></tr>
+<tr><td>Agent count</td><td>33</td><td>33</td><td>34</td><td><b>33.</b> Both 33s enumerate agent-by-agent and reconcile to their stated total. Gemini's own list contains 32 names and omits <code>design-researcher</code>; 34 matches nothing, not even itself.</td></tr>
+<tr><td>Teams</td><td>9</td><td>8</td><td>—</td><td><b>Not a real conflict.</b> Claude counts "All Teams"; Codex counts 8 specialty teams. Same nine entries in <code>AgentTeamService.cs</code>. Codex's framing is the correct one — a roster view is not a team.</td></tr>
+<tr><td>Condition types</td><td>10</td><td>9 ("current")</td><td>9</td><td><b>10 defined, 9 in active use.</b> The delta is exactly <code>minDescriptionLength</code>, likely superseded by <code>fieldLength</code>. Codex hedges honestly.</td></tr>
+<tr><td>Agents with model defaults</td><td>13 of 33</td><td>12</td><td>—</td><td><b>12.</b> Claude's own §1.1 enumerates 4 haiku + 4 sonnet + 4 opus, then reports 13 in its optimizations table.</td></tr>
+</table>
+<p class="legend" style="margin-top:12px">Three analyses of one codebase produced four disagreements about that codebase's own inventory. That is the argument for <b>P20</b> on its own.</p>
+</div>
+
+<h2>All 85 line items</h2>
+<div class="ctl">
+<button class="on" data-f="all">All 85</button><button data-f="Agents">Agents</button><button data-f="Teams">Teams</button><button data-f="Patterns">Patterns</button><button data-f="Automations">Automations</button><button data-f="Optimizations">Optimizations</button>
+<button data-f="contested">Contested</button><button data-f="gigaclaw">GigaClaw wins</button><button data-f="adj">Adjudicated</button>
+<input id="q" placeholder="Search line items…">
+</div>
+<div class="tbl"><table id="t"><thead><tr>
+<th data-k="id">ID</th><th data-k="cat">Category</th><th data-k="it">Line item</th><th data-k="src">Source repo</th>
+<th data-k="c" title="Claude — reliability grade A−">Claude</th><th data-k="x" title="Codex — reliability grade A">Codex</th><th data-k="g" title="Gemini — reliability grade D">Gemini</th>
+<th data-k="total" title="Sum of the scores present. Blanks are not zero.">Total</th><th data-k="n" title="How many of the three covered this item">n</th>
+<th data-k="adj" title="Adjudicated after adversarial review. * = changed from the highest raw score; hover the cell for the reason.">Adj.</th>
+</tr></thead><tbody>
+<tr data-cat="Agents" data-adj="1" data-spread="0">
+<td class="id">A1</td><td class="cat">Agents</td><td class="it">Board-native lifecycle agents (producer, groomer, gatekeeper, watchdog, evaluator, committer) operating a live board <span class="fl" title="Unanimous 1s compare no external artifact; prompt invited each analyst to nominate GigaClaw wins">⚑</span></td>
+<td class="src">GigaClaw</td><td class="s v1">1</td><td class="s v1">1</td><td class="s v1">1</td>
+<td class="tot">3</td><td class="n">3</td>
+<td class="s v1">1</td></tr>
+<tr data-cat="Agents" data-adj="3" data-spread="0">
+<td class="id">A10</td><td class="cat">Agents</td><td class="it">Dedicated context-manager agent for multi-agent handoff hygiene</td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s na">—</td><td class="s v3">3</td>
+<td class="tot">6</td><td class="n">2</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Agents" data-adj="5" data-spread="1">
+<td class="id">A11</td><td class="cat">Agents</td><td class="it">Auditor-class agents emitting machine-checkable SHIP / FIX / BLOCK verdicts with veto items <span class="fl" title="Carries Gemini&#x27;s single auditor-gate score; P8 is the same Gemini row and is left blank there">⚑</span></td>
+<td class="src">aaron</td><td class="s v4">4</td><td class="s v4">4</td><td class="s v5">5</td>
+<td class="tot">13</td><td class="n">3</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Agents" data-adj="2" data-spread="0">
+<td class="id">A12</td><td class="cat">Agents</td><td class="it">Business-ops packs: customer support, sales ops, legal/HR, payments, finance (optional, not core)</td>
+<td class="src">wshobson</td><td class="s na">—</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">5</td><td class="n">1</td>
+<td class="s v2 adjchg" title="Optional business-ops packs on a system whose existing 33 agents aren&#x27;t fully contract/model/team-bound.">2*</td></tr>
+<tr data-cat="Agents" data-adj="3" data-spread="1">
+<td class="id">A13</td><td class="cat">Agents</td><td class="it">Ruflo&#x27;s 100+ generic persona catalog used only as a role-design source</td>
+<td class="src">ruflo</td><td class="s v2">2</td><td class="s v3">3</td><td class="s na">—</td>
+<td class="tot">5</td><td class="n">2</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Agents" data-adj="2" data-spread="2">
+<td class="id">A14</td><td class="cat">Agents</td><td class="it">Queen / swarm-leader agent for centralized task distribution <span class="fl" title="Codex&#x27;s 2 is derived from the same bundled &#x27;do not prioritize topologies/federation&#x27; row as T15/T16 - one judgment, three items">⚑</span></td>
+<td class="src">ruflo</td><td class="s v2">2</td><td class="s v2">2</td><td class="s v4">4</td>
+<td class="tot">8</td><td class="n">3</td>
+<td class="s v2 adjchg" title="Queen agent is AutomationEngine with a costume; ruflo&#x27;s agent_spawn writes a record, it doesn&#x27;t spawn.">2*</td></tr>
+<tr data-cat="Agents" data-adj="1" data-spread="0">
+<td class="id">A2</td><td class="cat">Agents</td><td class="it">Governed local-media agent roles with durable job/review lifecycle</td>
+<td class="src">GigaClaw</td><td class="s na">—</td><td class="s v1">1</td><td class="s na">—</td>
+<td class="tot">1</td><td class="n">1</td>
+<td class="s v1">1</td></tr>
+<tr data-cat="Agents" data-adj="5" data-spread="0">
+<td class="id">A3</td><td class="cat">Agents</td><td class="it">Security agents: security-auditor, threat-modeler, supply-chain reviewer, secrets reviewer <span class="fl" title="Claude and Codex cite the identical file+lines (team-spawn.md#L54-57): one piece of evidence read twice">⚑</span></td>
+<td class="src">wshobson</td><td class="s v5">5</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">10</td><td class="n">2</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Agents" data-adj="3" data-spread="0">
+<td class="id">A4</td><td class="cat">Agents</td><td class="it">DevOps agents: deployment-engineer, cloud-architect, kubernetes-architect, terraform, release</td>
+<td class="src">wshobson</td><td class="s v5">5</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">10</td><td class="n">2</td>
+<td class="s v3 adjchg" title="security-auditor (A3) is real and cheap; kubernetes/cloud/terraform for a local Blazor app with no deploy target is catalog padding.">3*</td></tr>
+<tr data-cat="Agents" data-adj="5" data-spread="2">
+<td class="id">A5</td><td class="cat">Agents</td><td class="it">Incident-response / SRE / error-investigator / rollback specialists</td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">8</td><td class="n">2</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Agents" data-adj="5" data-spread="1">
+<td class="id">A6</td><td class="cat">Agents</td><td class="it">Data-engineering / ML / MLOps / vector-DB / model-eval agents</td>
+<td class="src">wshobson</td><td class="s v4">4</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">9</td><td class="n">2</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Agents" data-adj="4" data-spread="1">
+<td class="id">A7</td><td class="cat">Agents</td><td class="it">API + database architect, migration specialist, performance engineer, accessibility reviewer</td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">7</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Agents" data-adj="3" data-spread="1">
+<td class="id">A8</td><td class="cat">Agents</td><td class="it">Full-funnel marketing disciplines + 4-layer marketing OS (paid ads/ROAS, influencer/STAR, launch/RAMP, email/SEND, social/ECHO)</td>
+<td class="src">aaron</td><td class="s v5">5</td><td class="s v5">5</td><td class="s v4">4</td>
+<td class="tot">14</td><td class="n">3</td>
+<td class="s v3 adjchg" title="Take the shape (typed verdicts, append-only registries), reject the roster: 5x16 skills = ~80 new markdown agents onto 33.">3*</td></tr>
+<tr data-cat="Agents" data-adj="3" data-spread="0">
+<td class="id">A9</td><td class="cat">Agents</td><td class="it">Language/framework specialists (python-pro, rust-pro, fastapi-pro) vs one generic programmer</td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Teams" data-adj="2" data-spread="0">
+<td class="id">T1</td><td class="cat">Teams</td><td class="it">GigaClaw&#x27;s 9 board-bound role teams with shared connective agents, as they exist today <span class="fl" title="DIRECT CONTRADICTION with T2: all three report the same fact (teams are filtered member lists); Claude+Gemini score it a win, Codex scores it a blind spot">⚑</span></td>
+<td class="src">GigaClaw</td><td class="s v1">1</td><td class="s na">—</td><td class="s v1">1</td>
+<td class="tot">2</td><td class="n">2</td>
+<td class="s v2 adjchg" title="The board&#x27;s durability is a genuine 1. The team abstraction is not - it has no lifecycle, task graph, or runtime object.">2*</td></tr>
+<tr data-cat="Teams" data-adj="3" data-spread="0">
+<td class="id">T10</td><td class="cat">Teams</td><td class="it">C4 architecture-documentation chain (code -&gt; component -&gt; container -&gt; context)</td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Teams" data-adj="5" data-spread="1">
+<td class="id">T11</td><td class="cat">Teams</td><td class="it">One-owner-per-file ownership boundaries + interface contracts for parallel workers</td>
+<td class="src">wshobson</td><td class="s v4">4</td><td class="s v4">4</td><td class="s v5">5</td>
+<td class="tot">13</td><td class="n">3</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Teams" data-adj="3" data-spread="0">
+<td class="id">T13</td><td class="cat">Teams</td><td class="it">Durable claims/leases, explicit handoff ownership, stale-work reassignment</td>
+<td class="src">ruflo</td><td class="s na">—</td><td class="s v3">3</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Teams" data-adj="3" data-spread="0">
+<td class="id">T14</td><td class="cat">Teams</td><td class="it">Optional ticket-linked mailbox / broadcast events for active teams</td>
+<td class="src">ruflo</td><td class="s na">—</td><td class="s v3">3</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Teams" data-adj="2" data-spread="2">
+<td class="id">T15</td><td class="cat">Teams</td><td class="it">Named swarm topologies + consensus protocols (Raft / Byzantine / Gossip) <span class="fl" title="Claude&#x27;s 2 comes from one bundled row (quantization+consensus+federation), not a separate judgment">⚑</span></td>
+<td class="src">ruflo</td><td class="s v2">2</td><td class="s v2">2</td><td class="s v4">4</td>
+<td class="tot">8</td><td class="n">3</td>
+<td class="s v2 adjchg" title="ruflo&#x27;s own in-tree audit grades its consensus/perf claims FABRICATED; shipped swarms persist topology metadata.">2*</td></tr>
+<tr data-cat="Teams" data-adj="2" data-spread="3">
+<td class="id">T16</td><td class="cat">Teams</td><td class="it">Zero-trust cross-machine agent federation (mTLS, ed25519, PII scrubbing) <span class="fl" title="Claude&#x27;s 2 comes from that same bundled row - the 3-point spread is partly manufactured">⚑</span></td>
+<td class="src">ruflo</td><td class="s v2">2</td><td class="s v2">2</td><td class="s v5">5</td>
+<td class="tot">9</td><td class="n">3</td>
+<td class="s v2 adjchg" title="Gemini&#x27;s 5 cites ruflo README only. Federating one laptop with itself. Both code-level audits say don&#x27;t.">2*</td></tr>
+<tr data-cat="Teams" data-adj="3" data-spread="0">
+<td class="id">T17</td><td class="cat">Teams</td><td class="it">Fix defect: content-writer is absent from every specialty team; add team-membership test</td>
+<td class="src">GigaClaw</td><td class="s na">—</td><td class="s v3">3</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Teams" data-adj="5" data-spread="0">
+<td class="id">T2</td><td class="cat">Teams</td><td class="it">Executable TeamDefinition / TeamRun / TeamTask lifecycle (current teams are only static member filters) <span class="fl" title="Claude&#x27;s blank is an artifact - it states the same defect in prose then scores its own teams 1 instead of scoring the gap">⚑</span></td>
+<td class="src">wshobson</td><td class="s na">—</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">5</td><td class="n">1</td>
+<td class="s v5" title="Codex is right and this is the most consequential scoring error in the set. content-writer sitting in zero teams proves nothing enforces team semantics.">5</td></tr>
+<tr data-cat="Teams" data-adj="5" data-spread="0">
+<td class="id">T3</td><td class="cat">Teams</td><td class="it">Security-audit team: 4 parallel lanes (OWASP / auth / dependency supply-chain / secrets) <span class="fl" title="Same shared citation as A3">⚑</span></td>
+<td class="src">wshobson</td><td class="s v5">5</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">10</td><td class="n">2</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Teams" data-adj="5" data-spread="1">
+<td class="id">T4</td><td class="cat">Teams</td><td class="it">Platform/SRE + incident-response team (detect -&gt; root cause -&gt; fix -&gt; parallel verify)</td>
+<td class="src">wshobson</td><td class="s v4">4</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">9</td><td class="n">2</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Teams" data-adj="4" data-spread="0">
+<td class="id">T5</td><td class="cat">Teams</td><td class="it">Multi-dimensional parallel review team (security / perf / architecture / a11y / coverage) with finding dedup <span class="fl" title="Codex score derived from one presets row (L367) fanned across T5/T6/T8/T9/U9 - one judgment, five items">⚑</span></td>
+<td class="src">wshobson</td><td class="s na">—</td><td class="s v4">4</td><td class="s v4">4</td>
+<td class="tot">8</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Teams" data-adj="5" data-spread="2">
+<td class="id">T6</td><td class="cat">Teams</td><td class="it">Competing-hypothesis debug team (N debuggers in parallel, lead arbitrates evidence) <span class="fl" title="Codex score from same fanned presets row; Gemini 5 vs Claude 3 unadjudicated">⚑</span></td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s v4">4</td><td class="s v5">5</td>
+<td class="tot">12</td><td class="n">3</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Teams" data-adj="4" data-spread="0">
+<td class="id">T7</td><td class="cat">Teams</td><td class="it">ML-pipeline team (data-scientist -&gt; data-engineer -&gt; ml-engineer -&gt; mlops -&gt; perf)</td>
+<td class="src">wshobson</td><td class="s v4">4</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">8</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Teams" data-adj="4" data-spread="1">
+<td class="id">T8</td><td class="cat">Teams</td><td class="it">Migration team (plan -&gt; 2 parallel implementers -&gt; verifier) <span class="fl" title="Codex score from same fanned presets row">⚑</span></td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">7</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Teams" data-adj="4" data-spread="1">
+<td class="id">T9</td><td class="cat">Teams</td><td class="it">Full-stack feature team with explicit human checkpoints <span class="fl" title="Codex score from same fanned presets row">⚑</span></td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">7</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Patterns" data-adj="1" data-spread="0">
+<td class="id">P1</td><td class="cat">Patterns</td><td class="it">Ticket/subticket/status/comment/label coordination as the durable system of record <span class="fl" title="Same - prompt-induced unanimity">⚑</span></td>
+<td class="src">GigaClaw</td><td class="s v1">1</td><td class="s v1">1</td><td class="s v1">1</td>
+<td class="tot">3</td><td class="n">3</td>
+<td class="s v1">1</td></tr>
+<tr data-cat="Patterns" data-adj="4" data-spread="0">
+<td class="id">P10</td><td class="cat">Patterns</td><td class="it">Typed workflow graph over tickets: fan-out, joins, gates, terminal states, max cycles</td>
+<td class="src">aaron</td><td class="s na">—</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">4</td><td class="n">1</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Patterns" data-adj="4" data-spread="0">
+<td class="id">P11</td><td class="cat">Patterns</td><td class="it">Explainable natural-language router (/auto) selecting the smallest safe agent chain, with owner override + max hops</td>
+<td class="src">aaron</td><td class="s v4">4</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">8</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Patterns" data-adj="4" data-spread="0">
+<td class="id">P12</td><td class="cat">Patterns</td><td class="it">Separate canonical business facts / private run evidence / retained knowledge <span class="fl" title="Carries Codex&#x27;s canonical-facts score; P7 is the same Codex row and is left blank there">⚑</span></td>
+<td class="src">aaron</td><td class="s na">—</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">4</td><td class="n">1</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Patterns" data-adj="2" data-spread="1">
+<td class="id">P13</td><td class="cat">Patterns</td><td class="it">Single-source -&gt; multi-harness adapter generation (Claude Code, Codex, Cursor, Gemini, OpenCode, Copilot)</td>
+<td class="src">wshobson</td><td class="s na">—</td><td class="s v5">5</td><td class="s v4">4</td>
+<td class="tot">9</td><td class="n">2</td>
+<td class="s v2 adjchg" title="Multi-harness adapters solve wshobson&#x27;s distribution problem. GigaClaw has one user on one machine.">2*</td></tr>
+<tr data-cat="Patterns" data-adj="2" data-spread="0">
+<td class="id">P14</td><td class="cat">Patterns</td><td class="it">Goal-Oriented Action Planning: A* search over state preconditions for autonomous decomposition</td>
+<td class="src">ruflo</td><td class="s na">—</td><td class="s na">—</td><td class="s v5">5</td>
+<td class="tot">5</td><td class="n">1</td>
+<td class="s v2 adjchg" title="GOAP A* is README-only in every analysis. No code corroboration. 5 columns and a groomer don&#x27;t need A*.">2*</td></tr>
+<tr data-cat="Patterns" data-adj="4" data-spread="1">
+<td class="id">P15</td><td class="cat">Patterns</td><td class="it">HOT / WARM / COLD temperature-tiered memory with hard auto-load caps</td>
+<td class="src">aaron</td><td class="s v3">3</td><td class="s na">—</td><td class="s v4">4</td>
+<td class="tot">7</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Patterns" data-adj="4" data-spread="2">
+<td class="id">P16</td><td class="cat">Patterns</td><td class="it">Semantic / vector memory retrieval behind authoritative markdown (MEMORY.md is grep-only today)</td>
+<td class="src">ruflo</td><td class="s v3">3</td><td class="s v5">5</td><td class="s v5">5</td>
+<td class="tot">13</td><td class="n">3</td>
+<td class="s v4 adjchg" title="Codex&#x27;s hybrid-backend read stands; Gemini&#x27;s &#x27;sub-millisecond HNSW&#x27; is the claim ruflo measured at 1.48x not 150x.">4*</td></tr>
+<tr data-cat="Patterns" data-adj="2" data-spread="0">
+<td class="id">P17</td><td class="cat">Patterns</td><td class="it">Ed25519-signed, hash-chained receipts of every tool call</td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v2 adjchg" title="Single owner. You are the threat model.">2*</td></tr>
+<tr data-cat="Patterns" data-adj="3" data-spread="0">
+<td class="id">P18</td><td class="cat">Patterns</td><td class="it">Shared-memory blackboard with namespaced keys for cross-agent state</td>
+<td class="src">ruflo</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Patterns" data-adj="3" data-spread="0">
+<td class="id">P19</td><td class="cat">Patterns</td><td class="it">In-tree self-audit culture grading own claims CONFIRMED / PARTIAL / FABRICATED</td>
+<td class="src">ruflo</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Patterns" data-adj="1" data-spread="0">
+<td class="id">P2</td><td class="cat">Patterns</td><td class="it">Atomic status/assignee transitions, bounded resume, approval invalidation, artifact digests</td>
+<td class="src">GigaClaw</td><td class="s na">—</td><td class="s v1">1</td><td class="s na">—</td>
+<td class="tot">1</td><td class="n">1</td>
+<td class="s v1">1</td></tr>
+<tr data-cat="Patterns" data-adj="3" data-spread="0">
+<td class="id">P20</td><td class="cat">Patterns</td><td class="it">Typed system catalog + generated docs + CI-enforced topology counts (stronger than drift-check script)</td>
+<td class="src">aaron + wshobson</td><td class="s v3">3</td><td class="s v3">3</td><td class="s na">—</td>
+<td class="tot">6</td><td class="n">2</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Patterns" data-adj="4" data-spread="1">
+<td class="id">P21</td><td class="cat">Patterns</td><td class="it">Progressive-disclosure hard caps (150-line context, 8KB skills, references/ overflow)</td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">7</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Patterns" data-adj="3" data-spread="0">
+<td class="id">P22</td><td class="cat">Patterns</td><td class="it">Documented tiered model policy + centralized alias map covering every agent (models.json covers ~12 of 33)</td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s v3">3</td><td class="s v3">3</td>
+<td class="tot">9</td><td class="n">3</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Patterns" data-adj="2" data-spread="0">
+<td class="id">P23</td><td class="cat">Patterns</td><td class="it">State-file checkpointed orchestrators with resume</td>
+<td class="src">wshobson</td><td class="s v2">2</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">2</td><td class="n">1</td>
+<td class="s v2">2</td></tr>
+<tr data-cat="Patterns" data-adj="2" data-spread="0">
+<td class="id">P25</td><td class="cat">Patterns</td><td class="it">Duplicate-don&#x27;t-depend plugin isolation</td>
+<td class="src">wshobson</td><td class="s v2">2</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">2</td><td class="n">1</td>
+<td class="s v2">2</td></tr>
+<tr data-cat="Patterns" data-adj="5" data-spread="1">
+<td class="id">P3</td><td class="cat">Patterns</td><td class="it">Runtime-enforced permissions: honor allowedWriteGlobs / risk classes at the runner boundary instead of prompt-injecting contracts under --dangerously-skip-permissions <span class="fl" title="Only item with live security consequence; Gemini never scored it, which mathematically demoted it">⚑</span></td>
+<td class="src">wshobson + ruflo</td><td class="s v4">4</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">9</td><td class="n">2</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Patterns" data-adj="5" data-spread="0">
+<td class="id">P4</td><td class="cat">Patterns</td><td class="it">First-class blockedBy / blocks dependency edges for critical-path scheduling <span class="fl" title="Prerequisite for T5/T6/T11/U7/P10 yet ranks ~27th on score">⚑</span></td>
+<td class="src">wshobson</td><td class="s na">—</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">5</td><td class="n">1</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Patterns" data-adj="5" data-spread="0">
+<td class="id">P5</td><td class="cat">Patterns</td><td class="it">Hash-bound evidence, savepoints, branch-aware recovery for governed workflows</td>
+<td class="src">aaron</td><td class="s na">—</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">5</td><td class="n">1</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Patterns" data-adj="5" data-spread="0">
+<td class="id">P6</td><td class="cat">Patterns</td><td class="it">Governed candidate evaluation + promotion for prompts/automations/routing (holdouts, receipts, freshness)</td>
+<td class="src">ruflo</td><td class="s na">—</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">5</td><td class="n">1</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Patterns" data-adj="5" data-spread="1">
+<td class="id">P7</td><td class="cat">Patterns</td><td class="it">Append-only truth registries with sole-writer proposal rule as canonical state</td>
+<td class="src">aaron</td><td class="s v4">4</td><td class="s na">—</td><td class="s v5">5</td>
+<td class="tot">9</td><td class="n">2</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Patterns" data-adj="4" data-spread="0">
+<td class="id">P8</td><td class="cat">Patterns</td><td class="it">Typed, versioned quality-gate artifacts with independent numeric verdicts (replacing prose rubrics)</td>
+<td class="src">aaron</td><td class="s v4">4</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">8</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Patterns" data-adj="4" data-spread="2">
+<td class="id">P9</td><td class="cat">Patterns</td><td class="it">First-class structured handoff artifacts: inputs, outputs, evidence, assumptions, owned files, open loops, next role <span class="fl" title="Claude scored this 2 (&#x27;contracts.json is comparable&#x27;); Codex 4. Absorbs the duplicate P24 row.">⚑</span></td>
+<td class="src">aaron</td><td class="s v2">2</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">6</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Automations" data-adj="1" data-spread="0">
+<td class="id">U1</td><td class="cat">Automations</td><td class="it">Board event engine: 8 triggers x 10 conditions x 10 actions with retry, debounce, firing caps, concurrency groups <span class="fl" title="Same - prompt-induced unanimity">⚑</span></td>
+<td class="src">GigaClaw</td><td class="s v1">1</td><td class="s v1">1</td><td class="s na">—</td>
+<td class="tot">2</td><td class="n">2</td>
+<td class="s v1">1</td></tr>
+<tr data-cat="Automations" data-adj="4" data-spread="0">
+<td class="id">U10</td><td class="cat">Automations</td><td class="it">Automated iterative repair loop: re-dispatch fix + re-audit up to N times before human escalation</td>
+<td class="src">aaron</td><td class="s na">—</td><td class="s na">—</td><td class="s v4">4</td>
+<td class="tot">4</td><td class="n">1</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Automations" data-adj="4" data-spread="0">
+<td class="id">U11</td><td class="cat">Automations</td><td class="it">Automated PII / secret scrubbing hooks before prompts and ticket logs</td>
+<td class="src">aaron + ruflo</td><td class="s na">—</td><td class="s na">—</td><td class="s v4">4</td>
+<td class="tot">4</td><td class="n">1</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Automations" data-adj="3" data-spread="0">
+<td class="id">U12</td><td class="cat">Automations</td><td class="it">Hook defensive engineering: global force-exit timeout, sha256 dedup lockfiles, failure-signal capture</td>
+<td class="src">ruflo</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Automations" data-adj="3" data-spread="0">
+<td class="id">U13</td><td class="cat">Automations</td><td class="it">Daemon recovery: PID/orphan snapshots, TTL, idle shutdown, resource-pressure gates, interrupted-work recovery</td>
+<td class="src">ruflo</td><td class="s na">—</td><td class="s v3">3</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Automations" data-adj="3" data-spread="0">
+<td class="id">U14</td><td class="cat">Automations</td><td class="it">Optional lifecycle hooks: pre-route, post-run, post-edit, compaction, retrieval-feedback, route-outcome</td>
+<td class="src">aaron + ruflo</td><td class="s na">—</td><td class="s v3">3</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Automations" data-adj="3" data-spread="0">
+<td class="id">U15</td><td class="cat">Automations</td><td class="it">Named background-worker catalog with priorities (testgaps, ultralearn, predict, preload)</td>
+<td class="src">ruflo</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Automations" data-adj="3" data-spread="0">
+<td class="id">U16</td><td class="cat">Automations</td><td class="it">TDD-enforcement hook blocking implementation before a failing test exists</td>
+<td class="src">tdd-guard</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Automations" data-adj="3" data-spread="0">
+<td class="id">U17</td><td class="cat">Automations</td><td class="it">Dry-run-by-default outbound mutations requiring explicit --live</td>
+<td class="src">aaron</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Automations" data-adj="3" data-spread="0">
+<td class="id">U18</td><td class="cat">Automations</td><td class="it">Hard-block dangerous git flags (git --no-verify) at hook level</td>
+<td class="src">wshobson</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Automations" data-adj="2" data-spread="0">
+<td class="id">U19</td><td class="cat">Automations</td><td class="it">Continuous autonomous loop with intelligent exit detection</td>
+<td class="src">ralph-claude-code</td><td class="s v2">2</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">2</td><td class="n">1</td>
+<td class="s v2">2</td></tr>
+<tr data-cat="Automations" data-adj="1" data-spread="0">
+<td class="id">U2</td><td class="cat">Automations</td><td class="it">Persisted retry/backoff/exhaustion escalation + isolated automation snapshots</td>
+<td class="src">GigaClaw</td><td class="s na">—</td><td class="s v1">1</td><td class="s na">—</td>
+<td class="tot">1</td><td class="n">1</td>
+<td class="s v1">1</td></tr>
+<tr data-cat="Automations" data-adj="2" data-spread="0">
+<td class="id">U20</td><td class="cat">Automations</td><td class="it">CI quality gates on agent definitions themselves</td>
+<td class="src">wshobson</td><td class="s v2">2</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">2</td><td class="n">1</td>
+<td class="s v2">2</td></tr>
+<tr data-cat="Automations" data-adj="2" data-spread="0">
+<td class="id">U21</td><td class="cat">Automations</td><td class="it">Draft archival to Obsidian vault via PowerShell action</td>
+<td class="src">GigaClaw</td><td class="s na">—</td><td class="s na">—</td><td class="s v2">2</td>
+<td class="tot">2</td><td class="n">1</td>
+<td class="s v2">2</td></tr>
+<tr data-cat="Automations" data-adj="1" data-spread="0">
+<td class="id">U3</td><td class="cat">Automations</td><td class="it">Integrated CMS / approval / decision-receipt / media / git-memory automation lifecycle</td>
+<td class="src">GigaClaw</td><td class="s na">—</td><td class="s v1">1</td><td class="s na">—</td>
+<td class="tot">1</td><td class="n">1</td>
+<td class="s v1">1</td></tr>
+<tr data-cat="Automations" data-adj="1" data-spread="0">
+<td class="id">U4</td><td class="cat">Automations</td><td class="it">Background concurrency gate + 30s lock reaper for hung subprocesses</td>
+<td class="src">GigaClaw</td><td class="s na">—</td><td class="s na">—</td><td class="s v1">1</td>
+<td class="tot">1</td><td class="n">1</td>
+<td class="s v1">1</td></tr>
+<tr data-cat="Automations" data-adj="5" data-spread="0">
+<td class="id">U5</td><td class="cat">Automations</td><td class="it">GitHub PR/issue/CI remote surface (issues -&gt; tickets, PR comments -&gt; triggers); all triggers are local today <span class="fl" title="Single-source only because awesome-claude-code appears as source for just 3 of 86 items - under-sampling, not unimportance">⚑</span></td>
+<td class="src">awesome-claude-code</td><td class="s v5">5</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">5</td><td class="n">1</td>
+<td class="s v5">5</td></tr>
+<tr data-cat="Automations" data-adj="4" data-spread="0">
+<td class="id">U6</td><td class="cat">Automations</td><td class="it">Guarded ticket -&gt; worktree -&gt; PR -&gt; CI -&gt; review -&gt; merge-queue -&gt; cleanup lane (replaces serialize-by-concurrency-group)</td>
+<td class="src">awesome + wshobson</td><td class="s v4">4</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">8</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Automations" data-adj="4" data-spread="0">
+<td class="id">U7</td><td class="cat">Automations</td><td class="it">Declarative parallel branches + joins: parallelRunAgents, max concurrency, join policy, partial-failure behavior, synthesizer</td>
+<td class="src">wshobson + aaron</td><td class="s na">—</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">4</td><td class="n">1</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Automations" data-adj="4" data-spread="0">
+<td class="id">U9</td><td class="cat">Automations</td><td class="it">Reusable parallel-review / hypothesis-debug / migration / research automation templates <span class="fl" title="Codex score from same fanned presets row">⚑</span></td>
+<td class="src">wshobson</td><td class="s na">—</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">4</td><td class="n">1</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Optimizations" data-adj="2" data-spread="0">
+<td class="id">O1</td><td class="cat">Optimizations</td><td class="it">Ticket-level accumulated token + USD cost tracking / badging</td>
+<td class="src">GigaClaw</td><td class="s na">—</td><td class="s na">—</td><td class="s v1">1</td>
+<td class="tot">1</td><td class="n">1</td>
+<td class="s v2 adjchg" title="Gemini asserts superiority over four repos whose cost tracking it never measured. Per-ticket attribution is a real lead; &#x27;ahead of all&#x27; is untested.">2*</td></tr>
+<tr data-cat="Optimizations" data-adj="4" data-spread="0">
+<td class="id">O10</td><td class="cat">Optimizations</td><td class="it">Lite / Managed / Governed execution profiles + deterministic context manifests (skill version, artifact hashes, tool policy, budget)</td>
+<td class="src">aaron</td><td class="s na">—</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">4</td><td class="n">1</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Optimizations" data-adj="3" data-spread="0">
+<td class="id">O12</td><td class="cat">Optimizations</td><td class="it">Copy-on-write memory branches per concurrent run; promote on QA pass, discard on failure</td>
+<td class="src">ruflo</td><td class="s na">—</td><td class="s v3">3</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Optimizations" data-adj="2" data-spread="0">
+<td class="id">O15</td><td class="cat">Optimizations</td><td class="it">Int8/RaBitQ quantization, consensus protocols, cross-cloud federation <span class="fl" title="Same bundled Claude row">⚑</span></td>
+<td class="src">ruflo</td><td class="s v2">2</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">2</td><td class="n">1</td>
+<td class="s v2" title="Wrong scale, and the benchmarks behind it are self-graded as fabricated.">2</td></tr>
+<tr data-cat="Optimizations" data-adj="3" data-spread="0">
+<td class="id">O2</td><td class="cat">Optimizations</td><td class="it">More visual / predictive token-cost dashboards (ccusage, codeburn)</td>
+<td class="src">awesome-claude-code</td><td class="s v3">3</td><td class="s na">—</td><td class="s na">—</td>
+<td class="tot">3</td><td class="n">1</td>
+<td class="s v3">3</td></tr>
+<tr data-cat="Optimizations" data-adj="4" data-spread="1">
+<td class="id">O3</td><td class="cat">Optimizations</td><td class="it">Outcome-grounded dynamic model/agent routing (Thompson bandit, Q-learning, SONA) fed by evaluator scores rather than exit codes</td>
+<td class="src">ruflo</td><td class="s v4">4</td><td class="s v5">5</td><td class="s v4">4</td>
+<td class="tot">13</td><td class="n">3</td>
+<td class="s v4 adjchg" title="SONA&#x27;s outcome-fed routing loop IS audit-confirmed. Gemini mischaracterizes it as prompt tuning.">4*</td></tr>
+<tr data-cat="Optimizations" data-adj="4" data-spread="0">
+<td class="id">O4</td><td class="cat">Optimizations</td><td class="it">Provider/model routing by task shape, quality, latency, price with bounded escalation</td>
+<td class="src">ruflo</td><td class="s na">—</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">4</td><td class="n">1</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Optimizations" data-adj="4" data-spread="1">
+<td class="id">O5</td><td class="cat">Optimizations</td><td class="it">Context compression before the model (headroom, claude-context-mode)</td>
+<td class="src">awesome-claude-code</td><td class="s v4">4</td><td class="s na">—</td><td class="s v3">3</td>
+<td class="tot">7</td><td class="n">2</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Optimizations" data-adj="4" data-spread="1">
+<td class="id">O6</td><td class="cat">Optimizations</td><td class="it">Agent/skill eval harness: static checks -&gt; LLM judge -&gt; Monte Carlo reliability with confidence intervals</td>
+<td class="src">wshobson</td><td class="s v4">4</td><td class="s v4">4</td><td class="s v3">3</td>
+<td class="tot">11</td><td class="n">3</td>
+<td class="s v4">4</td></tr>
+<tr data-cat="Optimizations" data-adj="2" data-spread="0">
+<td class="id">O7</td><td class="cat">Optimizations</td><td class="it">Modular installable agent packs instead of shipping all agents into every project</td>
+<td class="src">wshobson</td><td class="s na">—</td><td class="s v5">5</td><td class="s na">—</td>
+<td class="tot">5</td><td class="n">1</td>
+<td class="s v2 adjchg" title="Packaging is a solution to a catalog you shouldn&#x27;t have.">2*</td></tr>
+<tr data-cat="Optimizations" data-adj="4" data-spread="0">
+<td class="id">O9</td><td class="cat">Optimizations</td><td class="it">Structural output verification before low-cost-model output can trigger side effects (empty/refusal/truncation/repetition)</td>
+<td class="src">ruflo</td><td class="s na">—</td><td class="s v4">4</td><td class="s na">—</td>
+<td class="tot">4</td><td class="n">1</td>
+<td class="s v4">4</td></tr>
+</tbody></table></div>
+<p class="legend"><b>1</b> GigaClaw does it better · <b>2</b> about the same · <b>3</b> decent improvement · <b>4</b> big improvement · <b>5</b> covers a blind spot · <b>—</b> not covered by that analysis, never zero · <b>⚑</b> hover for a normalization or independence caveat · <b>Adj.*</b> hover for the adjudication reason. Click any header to sort.</p>
+<p class="legend"><b>Mapping reconciliation.</b> Claude: 59 ranked rows in source → 54 line items (six marketing rows merged into A8; one bundled ruflo row split across T15/T16). Codex: 52 → 57 (one team-presets row fans across T5/T6/T8/T9/U9; one "don't prioritize topologies" row fans across T15/T16/A14). Gemini: 26 → 26, exact. 22 rows carry a ⚑ caveat. Four scores I had initially double-counted from a single source row were removed on self-audit (U1·g, P8·g, P7·x, and a duplicate P24 folded into P9).</p>
+
+<h2>The seven contested items</h2>
+<div class="card">
+<div class="ct"><div class="trip">2 / 2 / 5</div><div><b>T16 Zero-trust federation.</b> Two independent code-level audits beat one documentation read. A "5" asserts a blind spot; federation on a single-owner local board is a non-requirement, not a gap. → <b>2</b></div></div>
+<div class="ct"><div class="trip">2 / 2 / 4</div><div><b>T15 Swarm consensus</b> and <b>A14 Queen agent.</b> ruflo's shipped swarms persist topology metadata; consensus lives in separate alpha libraries. → <b>2</b></div></div>
+<div class="ct"><div class="trip">1 / 5 / 1</div><div><b>T1 vs T2 — the most consequential disagreement in the set.</b> All three report the identical fact: <code>AgentTeamService</code> returns filtered member lists. Claude and Gemini scored that a win; Codex scored it a blind spot. Claude even writes "teams filter the member roster per board view" and still scores 1 — it is scoring the board's durability, not the team abstraction, and its own 4s on file-ownership and worktree parallelism concede the same gap. <b>Codex is right</b>; <code>content-writer</code> sitting in zero teams proves nothing enforces team semantics. → <b>T2 = 5</b></div></div>
+<div class="ct"><div class="trip">3 / 5 / 5</div><div><b>P16 Semantic memory.</b> Codex's hybrid-backend code read stands. Gemini's "sub-millisecond HNSW" is precisely the claim ruflo measured at 1.48x rather than the advertised 150x. → <b>4</b></div></div>
+<div class="ct"><div class="trip">3 / 4 / 5</div><div><b>T6 Competing-hypothesis debugging.</b> The one place Gemini's 5 survives — parallel hypothesis investigators against sequential debugging is a real structural gain. Caveat: both Codex scores in this cluster trace to a single presets row fanned across five line items. → <b>5</b></div></div>
+<div class="ct"><div class="trip">2 / 4 / —</div><div><b>P9 Structured handoff artifacts.</b> Claude dismissed it as "<code>contracts.json</code> is comparable." <code>contracts.json</code> declares static permissions; it carries no per-run evidence, owned files or open loops. → <b>4</b></div></div>
+<div class="ct"><div class="trip">3 / — / 1</div><div><b>O1 / O2 Cost tracking.</b> Gemini claims GigaClaw is ahead of four repos whose cost tracking it never measured; Claude benchmarks against tools known only from a curated link list. Durable per-ticket attribution is a genuine lead, the forecasting gap is real, "ahead of all" is untested. → <b>2</b></div></div>
+</div>
+
+<h2>Final ranked priority list</h2>
+<div class="card warn"><p style="margin:0">All three analyses ranked <b>coverage gap</b>, not priority — Codex says so outright. This list converts gap into priority, and the ordering is <b>dependency-driven, not score-driven</b>. The highest raw total in the table (14, the marketing cluster) lands in Tier 4 as a pattern-only adoption. The item that ranks 16th by raw score is #1 here.</p></div>
+<div class="tier"><h3 style="border-left-color:#c0392b">TIER 0 — Foundation. Nothing above this is real until these ship.</h3>
+<div class="pri"><div class="pid">P3 · U18 · U17</div><div class="pbody"><div class="pname">Enforce contracts at the runner boundary</div><div class="pwhy">GigaClaw launches Claude with permissions skipped, and enforces <code>allowedWriteGlobs</code>, <code>riskClass</code> and <code>ticketExit</code> by injecting them into the prompt. Every other governance feature in the system — approval gates, ADR receipts, typed verdicts, risk classes, the opus gatekeeper — audits a process it cannot stop. An agent that ignores its glob still produces a passing receipt. Blocking <code>git --no-verify</code> and dry-running outbound CMS calls are the same hook, same code path.</div><div class="pcost"><b>Cost / gate:</b> Build 2–4 days. Tail 1–2 weeks: those 33 glob sets have never been evaluated against reality, so most are wrong and dispatches will start failing on day one. Those failures are the real deliverable — your first honest inventory of what each agent actually touches.</div></div></div>
+<div class="pri"><div class="pid">P20</div><div class="pbody"><div class="pname">Typed catalog with CI-enforced counts</div><div class="pwhy">The three analyses produced four disagreements about GigaClaw's own inventory. You cannot trust any count — including your README's — until a generated catalog fails CI on mismatch. Replaces <code>check-automation-drift.sh</code>.</div><div class="pcost"><b>Cost / gate:</b> Days. Prerequisite for honestly measuring anything else.</div></div></div>
+<div class="pri"><div class="pid">T17 · P22</div><div class="pbody"><div class="pname">The two cheap defects</div><div class="pwhy"><code>content-writer</code> is in zero specialty teams. <code>models.json</code> covers ~12 of 33 agents with no stated criteria. Both are hours of work, and both are evidence the 33-agent moat is less bound than the analyses assume.</div><div class="pcost"><b>Cost / gate:</b> Hours.</div></div></div>
+</div>
+<div class="tier"><h3 style="border-left-color:#d68910">TIER 1 — Make governance mean something</h3>
+<div class="pri"><div class="pid">A11 · P8</div><div class="pbody"><div class="pname">Typed SHIP / FIX / BLOCK verdicts</div><div class="pwhy">Highest-consensus actionable finding in the set (4/4/5), and the one Gemini 5 both source-verified analyses corroborate. <code>blog-reviewer</code>, <code>ui-auditor</code>, <code>qa-tester</code>, <code>local-media-reviewer</code> and <code>evaluator</code> emit prose rubrics. Convert to versioned JSON verdicts with per-category scores and hard veto items, validated by <code>scripts/content_contract.py</code> — the enforcement point already exists.</div><div class="pcost"><b>Cost / gate:</b> Low. The reviewers already run; you are changing an output format, not adding a pipeline.</div></div></div>
+<div class="pri"><div class="pid">U10</div><div class="pbody"><div class="pname">Bounded repair loop</div><div class="pwhy">Auto re-dispatch on <code>FIX</code> up to N times, escalate to the owner on exhaustion. Meaningless before typed verdicts exist; nearly free after.</div><div class="pcost"><b>Cost / gate:</b> Small, strictly after A11.</div></div></div>
+<div class="pri"><div class="pid">O6</div><div class="pbody"><div class="pname">Agent eval harness</div><div class="pwhy"><code>gigaclaw eval &lt;agent&gt;</code>: static checks → LLM judge → optional Monte Carlo with confidence intervals. You have no way to benchmark an agent before trusting it with dispatches. Also the hard prerequisite for any routing work.</div><div class="pcost"><b>Cost / gate:</b> Medium.</div></div></div>
+<div class="pri"><div class="pid">A3</div><div class="pbody"><div class="pname">security-auditor — this one agent, not the DevOps catalog</div><div class="pwhy">Unanimous blind spot across both source-verified analyses. Add with a contract entry, a model assignment, a team membership and a Review-column automation. <b>A4</b>'s kubernetes / cloud-architect / terraform roster is adjudicated down from 5 to 3 — there is no deploy target.</div><div class="pcost"><b>Cost / gate:</b> Small.</div></div></div>
+</div>
+<div class="tier"><h3 style="border-left-color:#1e8449">TIER 2 — Coordination structure. Gated on Tier 0.</h3>
+<div class="pri"><div class="pid">T2</div><div class="pbody"><div class="pname">Executable TeamDefinition / TeamRun / TeamTask</div><div class="pwhy">The most consequential scoring disagreement in the set: Claude and Gemini scored GigaClaw's teams a <b>1</b>, Codex scored the same fact a <b>5</b>. All three report that <code>AgentTeamService</code> returns filtered member lists. Claude even writes "teams filter the member roster per board view" and still scores 1 — it is scoring the board's durability, not the team abstraction. Codex is right.</div><div class="pcost"><b>Cost / gate:</b> Medium-large. Implement through tickets and subtickets first.</div></div></div>
+<div class="pri"><div class="pid">P4</div><div class="pbody"><div class="pname">blockedBy / blocks dependency edges</div><div class="pwhy">Parent/subticket is not enough for critical-path scheduling. Single-source (Codex only), therefore ranked ~27th by raw score, while being a hard prerequisite for T5, T6, T11, U7 and P10. A ranking artifact, not a low-value item.</div><div class="pcost"><b>Cost / gate:</b> Small-medium.</div></div></div>
+<div class="pri"><div class="pid">T11</div><div class="pbody"><div class="pname">File-ownership enforcement for parallel workers</div><div class="pwhy">One owner per file, interface-boundary contracts, lead owns shared files. Scored 4/4/5 — but it is <b>unsafe as prompt guidance</b>. Ownership enforced by asking nicely is not ownership. Only real once P3 lands.</div><div class="pcost"><b>Cost / gate:</b> Medium. Hard-gated on P3.</div></div></div>
+<div class="pri"><div class="pid">U7 · P10</div><div class="pbody"><div class="pname">Declarative parallel branches, joins, typed workflow graph</div><div class="pwhy"><code>parallelRunAgents</code> with max concurrency, join policy, partial-failure behaviour, synthesizer agent; fan-out / join / gate / terminal-state / max-cycles as a typed graph over tickets.</div><div class="pcost"><b>Cost / gate:</b> Medium-large.</div></div></div>
+<div class="pri"><div class="pid">P9</div><div class="pbody"><div class="pname">Structured handoff artifacts</div><div class="pwhy">Inputs, outputs, evidence, assumptions, owned files, open loops, acceptance criteria, next role, artifact hashes. Claude dismissed this as "<code>contracts.json</code> is comparable" (2); Codex scored 4. Codex is closer — <code>contracts.json</code> declares static permissions, it does not carry per-run state.</div><div class="pcost"><b>Cost / gate:</b> Medium.</div></div></div>
+</div>
+<div class="tier"><h3 style="border-left-color:#2874a6">TIER 3 — Throughput and reach. Gated on Tiers 0–2.</h3>
+<div class="pri"><div class="pid">U6</div><div class="pbody"><div class="pname">Ticket → worktree → PR → CI → review → merge-queue → cleanup</div><div class="pwhy">Replaces serialize-by-concurrency-group; lets programmer, code-janitor and qa run simultaneously. Corrupts your repo if built before P3 and T11.</div><div class="pcost"><b>Cost / gate:</b> Large.</div></div></div>
+<div class="pri"><div class="pid">T5 · T6</div><div class="pbody"><div class="pname">Parallel multi-dimensional review and competing-hypothesis debug teams</div><div class="pwhy">T6 is the one place Gemini's 5 survives adjudication — parallel hypothesis investigators against sequential debugging is a real structural gain. Caveat: both Codex scores in this cluster trace to one presets row fanned across five line items.</div><div class="pcost"><b>Cost / gate:</b> Medium, after T2 and T11.</div></div></div>
+<div class="pri"><div class="pid">U5</div><div class="pbody"><div class="pname">GitHub PR / issue surface</div><div class="pwhy">Claude's only exclusive 5, single-source purely because <code>awesome-claude-code</code> is the source for 3 of 85 items. Every trigger you have is local. Issues → tickets, PR review comments → owner-feedback trigger.</div><div class="pcost"><b>Cost / gate:</b> Medium.</div></div></div>
+<div class="pri"><div class="pid">P15 · P16 · O5</div><div class="pbody"><div class="pname">Tiered memory, semantic index, context compression</div><div class="pwhy">HOT / WARM / COLD caps on <code>MEMORY.md</code> during consolidation; a vector index behind authoritative markdown; compress large tool outputs before they hit the prompt. Discount the "sub-millisecond HNSW" framing — that is precisely the claim ruflo's own audit measured at 1.48x rather than 150x. P16 adjudicated 5 → 4.</div><div class="pcost"><b>Cost / gate:</b> Medium.</div></div></div>
+<div class="pri"><div class="pid">O3 · O4</div><div class="pbody"><div class="pname">Outcome-grounded model routing</div><div class="pwhy"><b>Only after O6 exists and something actually reads <code>scores.json</code>.</b> The evaluator writes scores nobody consumes; a bandit over an unread signal is a random number generator. The learning loop in ruflo's <code>persistent-sona.ts</code> is the one intelligence claim its own audit confirms.</div><div class="pcost"><b>Cost / gate:</b> Medium. Hard-gated on O6.</div></div></div>
+</div>
+<div class="tier"><h3 style="border-left-color:#6c3483">TIER 4 — Selective, narrow additions</h3>
+<div class="pri"><div class="pid">A5 · A7</div><div class="pbody"><div class="pname">error-investigator, accessibility, performance, DB/migration specialists</div><div class="pwhy">Add narrowly, and only with a contract entry, a model assignment, a team membership and a dispatching automation each. Otherwise it is catalog padding by another name.</div><div class="pcost"><b>Cost / gate:</b> Small each.</div></div></div>
+<div class="pri"><div class="pid">P7 · P12</div><div class="pbody"><div class="pname">Append-only truth registries, sole-writer rule, canonical/evidence/knowledge separation</div><div class="pwhy">Adopt the <i>shape</i> of aaron's protocol layer. This is the defensible half of the marketing-repo findings.</div><div class="pcost"><b>Cost / gate:</b> Medium.</div></div></div>
+<div class="pri"><div class="pid">A8</div><div class="pbody"><div class="pname">Marketing disciplines — pattern only, roster rejected</div><div class="pwhy">Scored highest of all 85 items on raw total (14), which was an artifact of a double-count plus an averaged 3–5 range. Five disciplines × 16 skills is ~80 new markdown agents onto 33 — 3.4x the surface area in a system where contracts and model defaults don't cover what already exists. Adjudicated 5 → 3: take A11 and P7, reject the files.</div><div class="pcost"><b>Cost / gate:</b> Pattern adoption only.</div></div></div>
+<div class="pri"><div class="pid">P21</div><div class="pbody"><div class="pname">Progressive disclosure on the seven largest skills</div><div class="pwhy">150-line context files, 8KB skill caps, <code>references/</code> overflow.</div><div class="pcost"><b>Cost / gate:</b> Small.</div></div></div>
+</div>
+
+<h2>Do not build</h2>
+<div class="nv"><div class="nid">T16</div><div><b>Zero-trust cross-machine federation</b><div class="pwhy">Gemini 5; both source-verified analyses 2. Federating one laptop with itself.</div></div></div>
+<div class="nv"><div class="nid">T15</div><div><b>Raft / Byzantine / Gossip consensus</b><div class="pwhy">ruflo's shipped swarms persist topology metadata; consensus lives in separate alpha libraries.</div></div></div>
+<div class="nv"><div class="nid">A14</div><div><b>Queen / swarm-leader agent</b><div class="pwhy"><code>AutomationEngine</code> in a costume. ruflo's <code>agent_spawn</code> writes a coordination record — it does not spawn a worker, a fact both source-verified analyses found independently and Gemini never mentions.</div></div></div>
+<div class="nv"><div class="nid">P14</div><div><b>GOAP A* planning</b><div class="pwhy">README-only in all three analyses, zero code corroboration. Five columns and a groomer do not need A* over a formal state space you would have to invent and then maintain.</div></div></div>
+<div class="nv"><div class="nid">P13</div><div><b>Multi-harness adapter generation</b><div class="pwhy">Solves wshobson's <i>distribution</i> problem — they publish to strangers. You have one user on one machine. Codex scored it 5 anyway.</div></div></div>
+<div class="nv"><div class="nid">O7 · A12</div><div><b>Modular agent packs, business-ops agent packs</b><div class="pwhy">Packaging is a solution to a catalog you should not have.</div></div></div>
+<div class="nv"><div class="nid">P17</div><div><b>Ed25519 hash-chained tool-call receipts</b><div class="pwhy">Single owner. You are the threat model.</div></div></div>
+<div class="nv"><div class="nid">O15</div><div><b>Int8 / RaBitQ quantization, cross-cloud federation</b><div class="pwhy">Wrong scale, and the benchmarks behind it are graded fabricated by the repo's own in-tree audit.</div></div></div>
+
+<div class="card" style="margin-top:32px"><p style="margin:0;font-size:13.5px;color:var(--mut)">One convergent finding worth stating plainly. Three of the four compared repos compete on agent count — 203, 120, 100+. GigaClaw's 33 are each contract-covered, automation-reachable, team-filtered, memory-committed and cost-tracked. Most "add N agents" findings are a reviewer diffing a catalog against a runtime and calling the runtime deficient. The counter-case lands too, though: <code>models.json</code> covers ~12 of 33 and <code>content-writer</code> is in zero teams, so the binding is already partial — the moat is the C# runtime, not the roster. Which is exactly the argument for finishing Tier 0 before starting Tier 4.</p></div>
+
+</div><script>
+var T=document.getElementById('t'),B=T.tBodies[0],R=[].slice.call(B.rows),F='all',Q='';
+function ap(){R.forEach(function(r){
+ var ok=true;
+ if(F==='contested')ok=+r.dataset.spread>=2;
+ else if(F==='gigaclaw')ok=+r.dataset.adj<=2;
+ else if(F==='adj')ok=r.cells[9].textContent.indexOf('*')>-1;
+ else if(F!=='all')ok=(r.dataset.cat===F);
+ if(ok&&Q)ok=(r.cells[2].textContent+r.cells[0].textContent).toLowerCase().indexOf(Q)>-1;
+ r.style.display=ok?'':'none';});}
+[].forEach.call(document.querySelectorAll('button[data-f]'),function(b){b.onclick=function(){
+ [].forEach.call(document.querySelectorAll('button[data-f]'),function(o){o.classList.remove('on')});
+ b.classList.add('on');F=b.dataset.f;ap();};});
+document.getElementById('q').oninput=function(e){Q=e.target.value.toLowerCase();ap();};
+var dir={};
+[].forEach.call(T.tHead.rows[0].cells,function(th,i){th.onclick=function(){
+ var k=th.dataset.k,num=['c','x','g','total','n','adj'].indexOf(k)>-1;
+ dir[k]=!dir[k];var s=dir[k]?1:-1;
+ R.sort(function(a,b){var x=a.cells[i].textContent.trim(),y=b.cells[i].textContent.trim();
+  if(num){var xa=parseFloat(x),ya=parseFloat(y);if(isNaN(xa))xa=-1;if(isNaN(ya))ya=-1;return (xa-ya)*s;}
+  return x.localeCompare(y)*s;});
+ R.forEach(function(r){B.appendChild(r)});};});
+</script></body></html>

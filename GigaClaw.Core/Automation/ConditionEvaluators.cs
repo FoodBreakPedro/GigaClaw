@@ -1,3 +1,4 @@
+using GigaClaw.Core.Automation.Verdicts;
 using GigaClaw.Core.Models;
 
 namespace GigaClaw.Core.Automation;
@@ -39,6 +40,24 @@ public static class ConditionEvaluators
 
     public static bool AllSubTicketsInStatus(AllSubTicketsInStatusConditionSpec c, IReadOnlyCollection<SubTicketInfo> subs)
         => subs.Count > 0 && subs.All(s => c.Statuses.Contains(s.Status));
+
+    /// <summary>
+    /// Matches when the ticket's newest verdict resolves to one of the configured outcomes.
+    /// Unknown entries in the spec never match, so a typo blocks rather than opens the gate.
+    /// </summary>
+    public static bool VerdictIs(VerdictIsConditionSpec c, VerdictOutcome outcome)
+    {
+        var token = outcome switch
+        {
+            VerdictOutcome.Ship => "SHIP",
+            VerdictOutcome.Fix => "FIX",
+            VerdictOutcome.Block => "BLOCK",
+            VerdictOutcome.Invalid => "INVALID",
+            VerdictOutcome.Stale => "STALE",
+            _ => "MISSING",
+        };
+        return c.Verdicts.Any(v => string.Equals(v, token, StringComparison.OrdinalIgnoreCase));
+    }
 
     public static bool TicketAge(TicketAgeConditionSpec c, DateTime createdAt, DateTime updatedAt, DateTime now)
     {

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "agent": "local-media-reviewer",
+  "ticketId": 205,
+  "verdict": "SHIP",
+  "summary": "Artifact bytes match the receipt, provenance is complete, and the render meets the approved spec.",
+  "categories": [
+    { "name": "Receipt & digest match", "score": 10, "max": 10 },
+    { "name": "Provenance completeness", "score": 10, "max": 10, "notes": "Provider, model, seed, workflow and license all recorded." },
+    { "name": "Spec adherence", "score": 9, "max": 10, "notes": "Duration 12.1s against a 12s target - inside tolerance." },
+    { "name": "Visual quality & continuity", "score": 9, "max": 10 },
+    { "name": "Technical conformance", "score": 10, "max": 10, "notes": "ffprobe: 1920x1080, h264, 24fps." }
+  ],
+  "vetoItems": [],
+  "evidence": [
+    { "kind": "path", "ref": "media/reviews/205.md", "note": "review report" },
+    { "kind": "path", "ref": "media/renders/205-hero.mp4" },
+    { "kind": "hash", "ref": "sha256:d3a70b5c8e1246f9ab0c7d5e83124f60b9a7c8e5d0143f26b8c9a7e50d1364fb", "note": "render digest matches the receipt" }
+  ],
+  "reviewedAtUtc": "2026-07-30T13:27:19Z",
+  "inputDigest": "sha256:d3a70b5c8e1246f9ab0c7d5e83124f60b9a7c8e5d0143f26b8c9a7e50d1364fb",
+  "reviewCycle": { "current": 1, "max": 2 }
+}

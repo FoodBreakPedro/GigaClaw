@@ -7,7 +7,7 @@
     "EnabledAutomations": 28,
     "ExplicitModelMappings": 12,
     "Teams": 9,
-    "Scripts": 15
+    "Scripts": 20
   },
   "Agents": [
     {
@@ -1145,14 +1145,19 @@
     "scripts/cognitive_load.py",
     "scripts/content_contract.py",
     "scripts/email_contract.py",
+    "scripts/handoff.schema.json",
+    "scripts/handoff_contract.py",
     "scripts/html_contract.py",
     "scripts/lint_prose.py",
     "scripts/media_contract.py",
     "scripts/media_generate.py",
     "scripts/privacy_guard.py",
     "scripts/reddit_trends.py",
+    "scripts/schema_check.py",
     "scripts/social_contract.py",
     "scripts/source_inventory.py",
-    "scripts/translation_contract.py"
+    "scripts/translation_contract.py",
+    "scripts/verdict.schema.json",
+    "scripts/verdict_contract.py"
   ]
 }

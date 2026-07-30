@@ -53,3 +53,8 @@ Thumbs.db
 .gate-*.err
 .judge-*.out
 .judge-*.err
+
+# Python bytecode from running the agent contract validators locally. These would
+# otherwise be embedded into GigaClaw.Core and copied into every workspace.
+__pycache__/
+*.pyc

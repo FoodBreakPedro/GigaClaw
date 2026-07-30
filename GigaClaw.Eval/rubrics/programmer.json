@@ -1,0 +1,48 @@
+{
+  "Version": 1,
+  "Agent": "programmer",
+  "Description": "A programmer run is judged on whether it investigated before editing, reported the fix together with the test that pins it, and handed the ticket on without hedging.",
+  "Criteria": [
+    {
+      "Name": "Dispatch behaved as declared",
+      "Check": "replay-expectations",
+      "Max": 20,
+      "Veto": "replay-expectation-unmet",
+      "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
+    },
+    {
+      "Name": "Investigated before editing",
+      "Check": "event-kinds-present",
+      "Max": 15,
+      "Values": ["tool_use"],
+      "Statement": "The run edited code without reading any of it first."
+    },
+    {
+      "Name": "Reported the fix and its regression test",
+      "Check": "final-text-contains-all",
+      "Max": 25,
+      "Values": ["regression test", "Review"],
+      "Statement": "A fix without a stated regression test and a stated next column is not a finished handoff."
+    },
+    {
+      "Name": "No hedged handoff",
+      "Check": "final-text-omits-all",
+      "Max": 20,
+      "Values": ["I think", "probably", "TODO", "not sure", "should work"],
+      "Statement": "The closing message hedges instead of stating what was changed."
+    },
+    {
+      "Name": "Bounded tool use",
+      "Check": "tool-use-at-most",
+      "Max": 10,
+      "Threshold": 4,
+      "Statement": "A one-file fix should not require an open-ended search."
+    },
+    {
+      "Name": "Substantive handoff",
+      "Check": "final-text-min-length",
+      "Max": 10,
+      "Threshold": 120
+    }
+  ]
+}

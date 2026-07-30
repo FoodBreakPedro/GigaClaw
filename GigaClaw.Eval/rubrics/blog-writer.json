@@ -1,0 +1,49 @@
+{
+  "Version": 1,
+  "Agent": "blog-writer",
+  "Description": "A blog-writer run is judged on whether it read the house structure before writing, named the artifact it produced, handed it to review, and avoided unsourced authority claims.",
+  "Criteria": [
+    {
+      "Name": "Dispatch behaved as declared",
+      "Check": "replay-expectations",
+      "Max": 20,
+      "Veto": "replay-expectation-unmet",
+      "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
+    },
+    {
+      "Name": "Named the artifact it produced",
+      "Check": "final-text-contains-any",
+      "Max": 15,
+      "Values": ["content/drafts/", ".md"],
+      "Statement": "A draft nobody can find is not a deliverable."
+    },
+    {
+      "Name": "Read the house structure first",
+      "Check": "event-kinds-present",
+      "Max": 15,
+      "Values": ["tool_use"],
+      "Statement": "The run wrote a post without checking how existing posts are structured."
+    },
+    {
+      "Name": "Handed the draft to review",
+      "Check": "final-text-contains-all",
+      "Max": 15,
+      "Values": ["ready for review"],
+      "Statement": "A draft that does not declare review readiness stalls the pipeline."
+    },
+    {
+      "Name": "No unsourced authority claims",
+      "Check": "final-text-omits-all",
+      "Max": 20,
+      "Values": ["studies show", "it is widely known", "experts agree", "research proves"],
+      "Veto": "unsourced-claim",
+      "Statement": "The handoff asserts authority the draft cannot cite."
+    },
+    {
+      "Name": "Substantive handoff",
+      "Check": "final-text-min-length",
+      "Max": 15,
+      "Threshold": 150
+    }
+  ]
+}

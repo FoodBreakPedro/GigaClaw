@@ -16,7 +16,9 @@ public sealed class CatalogGeneratorTests
         Assert.Equal(28, catalog.Summary.EnabledAutomations);
         Assert.Equal(12, catalog.Summary.ExplicitModelMappings);
         Assert.Equal(9, catalog.Summary.Teams);
-        Assert.Equal(15, catalog.Summary.Scripts);
+        // 15 at T1 + the five contract files lane CL added (schema_check, verdict_contract,
+        // handoff_contract and the two schemas). The catalog counts them because agents call them.
+        Assert.Equal(20, catalog.Summary.Scripts);
         var contentWriter = Assert.Single(catalog.Agents, agent => agent.Slug == "content-writer");
         Assert.True(contentWriter.ContractPresent);
         Assert.Equal("content-write", contentWriter.RiskClass);
