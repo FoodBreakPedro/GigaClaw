@@ -40,6 +40,18 @@ public static class ConditionEvaluators
     public static bool AllSubTicketsInStatus(AllSubTicketsInStatusConditionSpec c, IReadOnlyCollection<SubTicketInfo> subs)
         => subs.Count > 0 && subs.All(s => c.Statuses.Contains(s.Status));
 
+    /// <summary>
+    /// True when nothing is blocking the ticket: every <c>blockedBy</c> edge points at a ticket
+    /// in one of the resolved statuses. No edges = nothing blocking = true.
+    /// </summary>
+    public static bool DependenciesResolved(
+        DependenciesResolvedConditionSpec c,
+        IReadOnlyCollection<TicketDependencyInfo> blockedBy)
+    {
+        var resolved = c.ResolvedStatuses.Count > 0 ? c.ResolvedStatuses : ["Done"];
+        return blockedBy.All(b => resolved.Contains(b.Status));
+    }
+
     public static bool TicketAge(TicketAgeConditionSpec c, DateTime createdAt, DateTime updatedAt, DateTime now)
     {
         var field = c.Field == "updatedAt" ? updatedAt : createdAt;

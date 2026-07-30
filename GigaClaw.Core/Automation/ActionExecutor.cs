@@ -91,6 +91,7 @@ internal sealed class ActionExecutor
             AllSubTicketsInStatusConditionSpec c   => EvaluateAllSubTicketsInStatusAsync(rt, c, firing),
             TicketCountInColumnConditionSpec c     => EvaluateTicketCountInColumnAsync(rt, c, firing),
             TicketAgeConditionSpec c               => EvaluateTicketAgeAsync(rt, c, firing),
+            DependenciesResolvedConditionSpec c    => EvaluateDependenciesResolvedAsync(rt, c, firing),
             _                                      => Task.FromResult(true),
         };
 
@@ -183,6 +184,16 @@ internal sealed class ActionExecutor
             count += string.IsNullOrEmpty(slug) ? list.Count : list.Count(t => t.AssignedTo == slug);
         }
         return ConditionEvaluators.CompareCount(c.Operator, count, c.Value);
+    }
+
+    // A firing without a ticket has no dependency edges to consult, so it cannot claim to be
+    // unblocked: this gate exists to hold work back, and fails closed when it cannot check.
+    private async Task<bool> EvaluateDependenciesResolvedAsync(ProjectRuntime rt, DependenciesResolvedConditionSpec c, TriggerFiring firing)
+    {
+        if (firing.TicketId is null) return false;
+        var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
+        if (ticket is null) return false;
+        return ConditionEvaluators.DependenciesResolved(c, ticket.BlockedBy);
     }
 
     private async Task<bool> EvaluateTicketAgeAsync(ProjectRuntime rt, TicketAgeConditionSpec c, TriggerFiring firing)

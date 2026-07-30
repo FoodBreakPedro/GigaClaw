@@ -629,6 +629,9 @@ else
         "ticketAge" => new TicketAgeConditionSpec(),
         "hasParent" => new HasParentConditionSpec(),
         "allSubTicketsInStatus" => new AllSubTicketsInStatusConditionSpec { Statuses = new List<string> { "Done" } },
+        "ticketCountInColumn" => new TicketCountInColumnConditionSpec {
+            Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
+        "dependenciesResolved" => new DependenciesResolvedConditionSpec { ResolvedStatuses = new List<string> { "Done" } },
         _ => new TicketInColumnConditionSpec { Columns = new List<string> { "Todo" } },
     };
 

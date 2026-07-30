@@ -127,6 +127,7 @@ public sealed class TicketCommentAddedTriggerSpec : TriggerSpec
 [JsonDerivedType(typeof(HasParentConditionSpec), "hasParent")]
 [JsonDerivedType(typeof(AllSubTicketsInStatusConditionSpec), "allSubTicketsInStatus")]
 [JsonDerivedType(typeof(TicketCountInColumnConditionSpec), "ticketCountInColumn")]
+[JsonDerivedType(typeof(DependenciesResolvedConditionSpec), "dependenciesResolved")]
 public abstract class ConditionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -210,6 +211,22 @@ public sealed class TicketCountInColumnConditionSpec : ConditionSpec
     /// <summary>One of "==", "!=", "&lt;", "&lt;=", "&gt;", "&gt;=".</summary>
     public string Operator { get; set; } = "==";
     public int Value { get; set; }
+}
+
+/// <summary>
+/// Matches when every ticket the firing ticket is <c>blockedBy</c> has reached one of
+/// <see cref="ResolvedStatuses"/>. A ticket with no dependency edges matches — nothing is
+/// blocking it. (This is the opposite default from <see cref="AllSubTicketsInStatusConditionSpec"/>,
+/// where "no sub-tickets" must not look like "all sub-tickets finished".)
+/// <para>
+/// Only direct blockers are checked. A transitive blocker cannot be an issue while the ticket
+/// between them is unresolved, and once that one is Done its own blockers are irrelevant.
+/// </para>
+/// </summary>
+public sealed class DependenciesResolvedConditionSpec : ConditionSpec
+{
+    public override string UiTypeKey => "dependenciesResolved";
+    public List<string> ResolvedStatuses { get; set; } = new() { "Done" };
 }
 
 public sealed class TicketAgeConditionSpec : ConditionSpec
