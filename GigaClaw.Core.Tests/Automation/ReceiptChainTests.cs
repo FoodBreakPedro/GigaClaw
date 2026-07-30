@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using GigaClaw.Catalog;
 using GigaClaw.Core.Tests.Helpers;
 
 namespace GigaClaw.Core.Tests.Automation;
@@ -23,17 +24,19 @@ public class ReceiptChainTests
     /// <summary>
     /// Cross-agent chains: which agents are allowed to be the source of a family that other agents
     /// consume. A family mentioned by exactly one agent owns itself and needs no entry; anything
-    /// read by a second agent must be declared here, so a new hand-off cannot appear unnoticed.
+    /// read by a second agent must be declared, so a new hand-off cannot appear unnoticed.
+    ///
+    /// <para>
+    /// This table used to be a hardcoded dictionary right here, which made this test a gate on
+    /// pack authorship: a pack shipping a new emitter of <c>GIGACLAW-VERDICT</c> failed a core test
+    /// until a human edited core's test file, and the pack's own manifest — the thing a reviewer
+    /// actually reads — said nothing about it. Each pack now declares <c>receiptEmitters</c> and
+    /// <see cref="ReceiptEmitterTable"/> takes the union across every installed pack
+    /// (doc/pack-infrastructure.md §7.3).
+    /// </para>
     /// </summary>
-    private static readonly Dictionary<string, string[]> Emitters = new(StringComparer.Ordinal)
-    {
-        ["BLOG-REVIEW"] = ["blog-reviewer"],
-        ["BLOG-SEO"] = ["blog-seo"],
-        ["CONTENT-REVIEW"] = ["blog-reviewer"],
-        ["UI-AUDIT"] = ["ui-auditor"],
-        ["GIGACLAW-VERDICT"] = ["blog-reviewer", "ui-auditor", "qa-tester", "local-media-reviewer", "evaluator"],
-        ["GIGACLAW-HANDOFF"] = ["programmer", "qa-tester", "blog-writer", "blog-reviewer", "blog-seo", "producer"],
-    };
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Emitters =
+        ReceiptEmitterTable.Compose(PythonContractRunner.RepositoryRoot);
 
     private static Dictionary<string, string> Skills() =>
         Directory.EnumerateFiles(AgentsDir, "SKILL.md", SearchOption.AllDirectories)
@@ -87,6 +90,7 @@ public class ReceiptChainTests
     {
         var families = Families(Skills());
         Assert.NotEmpty(families);
+        Assert.NotEmpty(Emitters);
 
         var undeclared = families
             .Where(f => f.Value.Count > 1 && !Emitters.ContainsKey(f.Key))
@@ -96,8 +100,23 @@ public class ReceiptChainTests
         Assert.True(
             undeclared.Count == 0,
             "These receipt families are read by more than one agent but have no declared emitter. " +
-            "Add them to ReceiptChainTests.Emitters so the chain is checked:" +
+            "Declare them in the owning pack's `receiptEmitters` so the chain is checked:" +
             Environment.NewLine + string.Join(Environment.NewLine, undeclared));
+    }
+
+    /// <summary>
+    /// The table has to reach the test as composed pack data, not as a constant someone reinstated.
+    /// If this fails, the emitter declaration has drifted out of pack data and back into the test —
+    /// and the next pack to ship an emitter will fail a core test it cannot fix from its own tree.
+    /// </summary>
+    [Fact]
+    public void The_emitter_table_comes_from_composed_pack_data()
+    {
+        var composed = ReceiptEmitterTable.Compose(PythonContractRunner.RepositoryRoot);
+
+        Assert.Equal(Emitters.Keys.Order(), composed.Keys.Order());
+        Assert.Contains("blog-reviewer", composed["GIGACLAW-VERDICT"]);
+        Assert.Contains("programmer", composed["GIGACLAW-HANDOFF"]);
     }
 
     [Fact]
