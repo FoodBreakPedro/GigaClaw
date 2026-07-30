@@ -86,6 +86,22 @@ The reasoning for making the job green rather than leaving it red: CI had been f
 
 **The install bug deserves its own session.** On Windows, `Initialize` writes 5 of 119 files and reports no error — `missing=115 added=0 changed=0`, so nothing lands at a different path and nothing differs in content; the four survivors are the merge artifacts. Two fixes were attempted by reasoning from partial evidence and **both were wrong** (a separator-normalization fix changed the result not at all). The test now emits `source.AgentRelativePaths`, `source.RootRelativePaths`, `install.Written` and `install.PreservedOwnerEdits` on failure — run it on Windows and read those first; they separate "the pack never contained it" from "the installer skipped it" from "the write was lost".
 
+**The diagnostics came back from Windows CI and they invert the investigation.** Run `30588536863`:
+
+```
+source.AgentRelativePaths=104  source.RootRelativePaths=15
+install.Written=119  install.PreservedOwnerEdits=0  install.Quarantined=0
+firstAgentPaths=[BRAND.md, VOICE.md, approval-gatekeeper/SKILL.md]
+```
+
+104 + 15 = 119. The pack enumerated everything, the installer planned everything, nothing was preserved as an owner edit, nothing was quarantined — and then `HashTree` found 4 files on disk. **Enumeration, composition and planning are all correct on Windows.** Every theory about resource names, prefixes and separators is dead, including the normalization change that shipped in this branch (which is therefore unproven hardening, not a fix — say so in review).
+
+The remaining question is narrow: the files are written and then are not there. Two candidates worth checking first, in `PackInstaller.InstallAsync`:
+- **The staging sweep.** Staging lives at `Path.Combine(workspace, StagingPrefix + installId)` — inside the workspace. `SweepStagingDirectories(workspace)` and the `finally` cleanup delete by prefix. If that prefix match behaves differently on Windows, cleanup can take the real tree with it.
+- **`WorkspaceMergeTransaction` rollback.** `Rollback()` restores pre-images, and a pre-image for a newly created file is null — i.e. delete. The `catch` rethrows, so a thrown rollback would surface, but check whether any path rolls back without throwing.
+
+Note also that `install.Written` is `plan.Select(p => p.Destination)` — it reports what was *planned*, not what was verified on disk. That is worth fixing on its own: it is why this looked like a success.
+
 There is likely **one root cause behind two symptoms**: on macOS, editing any of four `ProjectTemplate/Agents/scripts/*.py` files makes exactly those four go missing with the identical signature (`missing=4 added=0 changed=0`), reproducible in both directions via `git stash`. If file *content* can decide whether a file gets written, that explains both. Start there; it is reproducible on any machine.
 
 Still failing on Windows, both pre-existing and neither a regression from this branch:
