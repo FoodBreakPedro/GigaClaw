@@ -564,6 +564,23 @@ internal sealed class ActionExecutor
             agentName = agentName.Replace("{assignee}", assignee);
         }
 
+        // §5: a quarantined pack's agents are refused at dispatch. Checked after {assignee}
+        // resolution so a roster-driven dispatch is caught on the slug it actually resolved to,
+        // and before any run state is written so a refusal leaves no half-started run behind.
+        var quarantineProject = await _projects.GetProjectAsync(rt.Slug);
+        if (quarantineProject is not null)
+        {
+            var quarantine = PackQuarantine.ForWorkspace(_projects.ResolveWorkspacePath(quarantineProject));
+            if (quarantine.PackOfAgent(agentName) is { } quarantinedPack)
+            {
+                _logger.LogWarning(
+                    "Agent '{Agent}' belongs to pack '{Pack}', which is quarantined: it declares a " +
+                    "pack-runtime this build has moved past. Dispatch refused until the pack is updated.",
+                    agentName, quarantinedPack);
+                return (true, null, agentName, null);
+            }
+        }
+
         var skillFile = $"{agentName}/SKILL.md";
         var group = string.IsNullOrEmpty(a.ConcurrencyGroup)
             ? agentName
