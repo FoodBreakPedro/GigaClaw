@@ -121,6 +121,24 @@ Cost is not plumbed separately: the loop dispatches through the ordinary `runAge
 
 Worked examples (one per gating reviewer) and the rejection corpus live in `GigaClaw.Core.Tests/Fixtures/verdicts/`; `TemplateVerdictContractTests` runs the validator against all of them, so a schema edit that breaks a reviewer fails the build. `RepairLoopTests` covers the loop end to end over a real project, including a rebuilt executor that must resume the count rather than restart it.
 
-Neither `verdictIs` nor `repairBudget` is wired into [`automations.json`](../ProjectTemplate/Agents/automations.json) yet: until GM's reviewer rewrites land, no agent emits a verdict, so turning the gate on would read as `MISSING` and Block every ticket. The vocabulary ships first; the wiring lands per reviewer as each rewrite arrives.
+## Wiring
+
+[`automations.json`](../ProjectTemplate/Agents/automations.json) carries one gate per reviewed pipeline, all of them triggered by `ticketCommentAdded` filtered to the reviewer's slug and scoped to `ticketInColumn: ["Review"]` — the gate governs *exit from Review*, so a ticket the reviewer already routed is not re-litigated.
+
+| Pipeline | SHIP advances to | `requireFreshArtifact` |
+|---|---|---|
+| `qa-tester` → `programmer` | Done | **off** — the judgement covers a multi-file change plus an executed test run, not one hashable file |
+| `ui-auditor` → `ui-designer` | Done | on |
+| `blog-reviewer` → `blog-writer` | `blog-seo` in Todo | on |
+| `local-media-reviewer` → the three local-media agents | `pending-approval`, stays in Review for the owner | on |
+| `blog-reviewer` → `content-writer` (AD-7) | Done + `ready-for-cms` | **off** — the draft is the ticket description, and the writer deletes its scratch file before exiting |
+
+Each pipeline also has a `FIX`/`withinCap` repair arm, its `FIX`/`exhausted` twin, and an escalation arm reading `["BLOCK", "INVALID", "STALE", "MISSING"]`. Both blocking arms write a receipt before the move. Anything that closes a ticket outright also carries a negated `labels` guard on `external`/`publish`/`deploy`/`outbound`, so a SHIP verdict cannot bypass `approval-gate-on-review`: a quality judgement is not a publishing approval.
+
+The `evaluator` is deliberately absent. `evaluator-on-done` runs *after* a ticket leaves the board, so gating on its verdict would mean re-opening finished work rather than governing an exit.
+
+The four AD-7 arms ship with `enabled: false`. `blog-reviewer`'s AD-7 protocol still answers with `CONTENT-REVIEW` markers and no typed verdict, so switching them on would read as `MISSING` and Block every content-pipeline draft — the same reason the whole gate waited on G2. They turn on with one flag once that protocol emits `GIGACLAW-VERDICT`.
+
+`TemplateAutomationContractTests` pins the shape of the wiring; `TemplateVerdictGateTests` runs the shipped automations against a real project through a real `ActionExecutor`.
 
 Related: [automation engine](./automation-engine.md) · [project template](./project-template.md) · [roadmap lane CL](./roadmap/lane-claude-orchestration.md).
