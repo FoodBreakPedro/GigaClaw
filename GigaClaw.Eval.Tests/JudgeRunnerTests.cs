@@ -42,11 +42,12 @@ public sealed class JudgeRunnerTests
         Assert.Equal(RubricJudge.DeterministicReviewInstant, firstVerdict!.ReviewedAtUtc);
     }
 
-    [KnownWindowsFailureFact(
-        "The committed judge baselines do not reproduce on Windows. Undiagnosed, and pre-existing: "
-        + "it was already failing at 94971fb, before the SP-2 branch existed. Line endings are "
-        + "ruled out — CRLF-converting GigaClaw.Eval, GigaClaw.ClaudeMock, ProjectTemplate and "
-        + "Packs leaves all of these passing, so it does not share a cause with the manifest bug.")]
+    // Exempted on Windows from before 94971fb until 2026-07-31. Diagnosed via the CI
+    // interrogation step (run 30669812287): only the stream-digest fields drifted, because
+    // Normalize's exact-substring scrubbing missed Windows path forms. Fixed by the structural
+    // workspace scrub in ReplayRunner.Normalize and observed green on a Windows runner
+    // (run 30671373306) before the exemption came off.
+    [Fact]
     public void Judge_MatchesTheCommittedBaselineForEveryFixture()
     {
         var result = new JudgeRunner(RepositoryRoot).Run("all", writeReport: false);
