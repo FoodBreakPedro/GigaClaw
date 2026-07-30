@@ -3,8 +3,8 @@
   "Summary": {
     "Agents": 33,
     "Contracts": 33,
-    "Automations": 29,
-    "EnabledAutomations": 28,
+    "Automations": 43,
+    "EnabledAutomations": 38,
     "ExplicitModelMappings": 33,
     "Teams": 9,
     "Scripts": 20
@@ -131,7 +131,8 @@
       "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
-        "owner-feedback"
+        "owner-feedback",
+        "verdict-gate-repair-round"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true
@@ -231,7 +232,9 @@
         "content-writer-on-inprogress",
         "content-writer-resume"
       ],
-      "DisabledDispatchingAutomations": [],
+      "DisabledDispatchingAutomations": [
+        "content-verdict-gate-repair-round"
+      ],
       "EvalBaselinePresent": true
     },
     {
@@ -442,7 +445,8 @@
       "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
-        "owner-feedback"
+        "owner-feedback",
+        "verdict-gate-repair-round"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true
@@ -462,7 +466,8 @@
       "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
-        "owner-feedback"
+        "owner-feedback",
+        "verdict-gate-repair-round"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true
@@ -523,7 +528,8 @@
       "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
-        "owner-feedback"
+        "owner-feedback",
+        "verdict-gate-repair-round"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true
@@ -571,7 +577,8 @@
       "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
-        "owner-feedback"
+        "owner-feedback",
+        "verdict-gate-qa-repair-round"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true
@@ -676,7 +683,8 @@
       "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
-        "owner-feedback"
+        "owner-feedback",
+        "verdict-gate-repair-round"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true
@@ -1137,6 +1145,104 @@
     {
       "Id": "auto-approve-ungated",
       "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-qa-ship-to-done",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-ui-ship-to-done",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-blog-ship-to-seo",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-media-ship-to-owner",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-repair-round",
+      "Enabled": true,
+      "Agents": [
+        "blog-writer",
+        "local-image-artist",
+        "local-media-compositor",
+        "local-motion-artist",
+        "ui-designer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "verdict-gate-repair-exhausted",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-block-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-qa-repair-round",
+      "Enabled": true,
+      "Agents": [
+        "programmer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "verdict-gate-qa-repair-exhausted",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-qa-block-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "content-verdict-gate-ship-to-done",
+      "Enabled": false,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "content-verdict-gate-repair-round",
+      "Enabled": false,
+      "Agents": [
+        "content-writer"
+      ],
+      "Models": []
+    },
+    {
+      "Id": "content-verdict-gate-repair-exhausted",
+      "Enabled": false,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "content-verdict-gate-block-escalate",
+      "Enabled": false,
       "Agents": [],
       "Models": []
     }
