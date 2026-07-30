@@ -4,7 +4,10 @@ namespace GigaClaw.ClaudeMock;
 
 internal static class ScenarioReplayer
 {
-    public static async Task<int> ReplayAsync(string[] lines, string? sessionId)
+    public static async Task<int> ReplayAsync(
+        string[] lines,
+        string? sessionId,
+        Uri? policyHookEndpoint = null)
     {
         int exitCode = 0;
         foreach (var raw in lines)
@@ -19,6 +22,20 @@ internal static class ScenarioReplayer
             {
                 using var doc = JsonDocument.Parse(line);
                 var root = doc.RootElement;
+
+                // _hook line: explicitly emulate a Claude hook invocation against the
+                // generated settings endpoint. It is never emitted on stdout.
+                if (root.TryGetProperty("_hook", out var hook))
+                {
+                    if (policyHookEndpoint is null)
+                        throw new InvalidOperationException(
+                            "Scenario requested a hook but --settings was not provided.");
+                    await HookEmulator.InvokePreToolUseAsync(
+                        policyHookEndpoint,
+                        sessionId,
+                        hook);
+                    continue;
+                }
 
                 // _meta line: control envelope, do not emit on stdout
                 if (root.TryGetProperty("_meta", out var meta))
@@ -40,7 +57,7 @@ internal static class ScenarioReplayer
                         emit = line.Replace("{{session_id}}", sessionId);
                 }
             }
-            catch
+            catch (JsonException)
             {
                 // Non-JSON lines (e.g. comments) are ignored — real claude never emits these,
                 // so dropping them keeps the consumer's parser happy.

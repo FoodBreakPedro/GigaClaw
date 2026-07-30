@@ -50,6 +50,8 @@ public enum PolicyToolOperation
     GitWrite,
     TicketExit,
     Network,
+    Bash,
+    HookTransport,
 }
 
 public enum PolicyDecisionKind
@@ -78,6 +80,7 @@ public sealed record PolicyToolCall(PolicyToolOperation Operation, string? Targe
     public static PolicyToolCall GitWrite(string? command = null) => new(PolicyToolOperation.GitWrite, command);
     public static PolicyToolCall TicketExit(string status) => new(PolicyToolOperation.TicketExit, status);
     public static PolicyToolCall Network(string? target = null) => new(PolicyToolOperation.Network, target);
+    public static PolicyToolCall Bash(string? command = null) => new(PolicyToolOperation.Bash, command);
 }
 
 public sealed record PolicyDecision(PolicyDecisionKind Kind, string Reason)
@@ -201,6 +204,10 @@ public sealed class ContractPolicy
             PolicyToolOperation.GitWrite => RequireCapability(ContractCapability.GitWrite, "git write"),
             PolicyToolOperation.TicketExit => EvaluateTicketExit(toolCall.Target),
             PolicyToolOperation.Network => RequireCapability(ContractCapability.Network, "outbound network access"),
+            PolicyToolOperation.Bash => string.IsNullOrWhiteSpace(toolCall.Target)
+                ? Block("Bash tool call did not include a command.")
+                : Warn("Bash command did not map to a narrower governed capability and requires shadow review."),
+            PolicyToolOperation.HookTransport => Block("Hook transport errors are not agent capabilities."),
             _ => Block($"Unknown policy operation '{toolCall.Operation}'."),
         };
     }

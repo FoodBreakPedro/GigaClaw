@@ -17,4 +17,8 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\GigaClaw.Core\GigaClaw.Core.csproj" />
+  </ItemGroup>
+
 </Project>
