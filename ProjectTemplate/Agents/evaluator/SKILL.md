@@ -206,7 +206,9 @@ Exact format:
 
 ## Typed Verdict (v1)
 
-When evaluating a completed ticket post-mortem, emit a typed verdict contract v1 object into `.agents/evaluator/memory/scores.json`:
+When evaluating a completed ticket post-mortem, emit a typed verdict contract v1 object into `.agents/evaluator/memory/scores.json`.
+
+> **Note on gate-consumability**: The evaluator judges post-mortem board state, not a workspace file. Its `inputDigest` is a ticket snapshot digest, and evidence is cited as `hash` (never `path`, so freshness checks do not attempt to hash a workspace file). Because evaluator verdicts are written to `.agents/evaluator/memory/scores.json` and not posted as ticket comments, they are audit/eval records and not gate-consumable by `verdictIs`.
 
 ```json
 {
@@ -223,8 +225,7 @@ When evaluating a completed ticket post-mortem, emit a typed verdict contract v1
   ],
   "vetoItems": [],
   "evidence": [
-    { "kind": "path", "ref": ".agents/evaluator/memory/scores.json", "note": "score cache revision 214" },
-    { "kind": "hash", "ref": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d", "note": "ticket snapshot digest" }
+    { "kind": "hash", "ref": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d", "note": "ticket snapshot digest - the evaluator judges board state, not a file" }
   ],
   "reviewedAtUtc": "2026-07-30T02:05:00Z",
   "inputDigest": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d"

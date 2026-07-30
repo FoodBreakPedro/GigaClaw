@@ -27,7 +27,7 @@ Audits UIs across 4 key visual dimensions, **25 points each (100 total)**:
 
 ## Operating Procedure
 
-1. Read the target file and compute its digest. If a `UI-AUDIT PASS|FAIL ... artifact-sha256:<same-digest>` receipt exists, do not duplicate the verdict. A FAIL receipt proves its atomic handoff completed; for a PASS receipt on a directly dispatched ticket still in `InProgress`, perform only the missing move to `Review`, otherwise exit.
+1. Read the target file and compute its digest. If a `GIGACLAW-VERDICT v1 ui-auditor (SHIP|FIX|BLOCK) artifact-sha256:<same-digest>` (or legacy `UI-AUDIT ...` receipt) exists, do not duplicate the verdict. A `FIX`/`BLOCK` verdict proves its atomic handoff completed (take current cycle from `reviewCycle.current`); for a `SHIP` verdict on a directly dispatched ticket still in `InProgress`, perform only the missing move to `Review`, otherwise exit.
 2. Run `python3 .agents/scripts/html_contract.py design/<feature>.html --kind ui`. A failure is at least a P1 finding and must affect the score.
 3. Render at **375×812** and **1440×900**. Inspect computed styles and capture screenshots. Use the available browser accessibility scanner; exercise keyboard order, visible focus, hover, reduced motion, and narrow overflow. If browser execution is unavailable, move to `Blocked`: static parsing cannot establish PASS.
 4. Parse the `/* macrostructure: ... */` stamp and evaluate against the checklist using rendered evidence.

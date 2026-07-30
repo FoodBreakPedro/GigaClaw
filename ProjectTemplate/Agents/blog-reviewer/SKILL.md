@@ -133,7 +133,7 @@ python3 .agents/scripts/content_contract.py <filepath> --check-external
 ## Review Execution Protocol
 
 1. Read the article file — use the path from the ticket, defaulting to `content/posts/<slug>.md`. Compute its digest with `agent_ticket.py digest`; never trust a digest copied from an earlier comment.
-2. Search comments for `BLOG-REVIEW (APPROVE|REJECT) ... artifact-sha256:<current-digest>`. If a verdict already exists for this exact version, exit without adding a comment or changing state.
+2. Search comments for `GIGACLAW-VERDICT v1 blog-reviewer (SHIP|FIX|BLOCK) artifact-sha256:<current-digest>` (or legacy `BLOG-REVIEW (APPROVE|REJECT) ...` markers). If a verdict already exists for this exact version, exit without adding a comment or changing state.
 3. Run quality scripts and analyze prose metrics.
 4. Score each of the 5 categories (Total max = 100).
 5. Categorize issues (defect classes only — the score is a separate gate):
@@ -141,14 +141,15 @@ python3 .agents/scripts/content_contract.py <filepath> --check-external
    - **P1 Important**: Low burstiness, missing comparison tables, weak meta description.
    - **P2 Advisory**: Minor formatting polish.
 6. **Enforce the gate**: the article passes only with **score >= 90 AND zero P0 issues**.
-7. Count prior `BLOG-REVIEW REJECT cycle N/2` and `BLOG-SEO RETURN cycle N/2` receipts. The next correction number is one greater than the highest prior number; never infer it from memory.
+7. Read `reviewCycle.current` from the newest `GIGACLAW-VERDICT` comment (or count prior `BLOG-REVIEW REJECT cycle N/2` / `BLOG-SEO RETURN cycle N/2` receipts). The next correction cycle is `reviewCycle.current + 1`; never infer it from memory.
 
 ## Verdict Actions
 
-Post your review as a ticket comment containing the typed verdict header and fenced JSON object:
+Post your review as a ticket comment containing BOTH the legacy `BLOG-REVIEW` receipt (required by `blog-seo` and `blog-translator`) and the typed `GIGACLAW-VERDICT` header with fenced JSON object:
 
 ```text
-GIGACLAW-VERDICT v1 blog-reviewer <SHIP|FIX|BLOCK> artifact-sha256:<inputDigest>
+BLOG-REVIEW APPROVE v1 artifact-sha256:<inputDigest>
+GIGACLAW-VERDICT v1 blog-reviewer SHIP artifact-sha256:<inputDigest>
 
 ```json
 {
@@ -186,13 +187,37 @@ If issuing `FIX` or `BLOCK`, include machine-checkable veto items:
 - `quality-score-below-threshold`: Total score < 90/100 threshold (`FIX`).
 - `review-cycle-exceeded`: Two revision cycles completed without reaching 90 pts (`BLOCK`).
 
-> **POST/PATCH discipline**: Write each JSON body to a workspace file (never `/tmp`), send it with `-d @file -w "%{http_code}"`, verify the status is 2xx before continuing, and delete scratch files before exiting.
+> **POST/PATCH discipline**: Put the full report body in `./rv-verdict.md`, write each JSON payload to a workspace file (never `/tmp`), send with `-d @file -w "%{http_code}"`, verify status is 2xx before continuing, and delete scratch files before exiting.
 
-**SHIP** (verdict: `SHIP`, score >= 90, zero P0) → post typed verdict comment with `SHIP` verdict, then hand the ticket to `blog-seo` in `Todo`.
+**SHIP** (verdict: `SHIP`, score >= 90, zero P0) → post typed verdict comment with `SHIP` verdict, then hand the ticket to `blog-seo` in `Todo` using `agent_ticket.py`:
 
-**FIX** (verdict: `FIX`, cycle 1/2) → post typed verdict comment with `FIX` verdict and specific veto items, then hand off to `blog-writer` in `Todo`.
+```bash
+python3 .agents/scripts/agent_ticket.py \
+  --project {project-slug} --ticket {id} --author blog-reviewer \
+  handoff --assignee blog-seo --status Todo --expected-status Review \
+  --content-file ./rv-verdict.md \
+  --marker "BLOG-REVIEW APPROVE v1 artifact-sha256:<digest>"
+```
 
-**BLOCK** (verdict: `BLOCK`, cycle 2/2 or unreadable) → post typed verdict comment with `BLOCK` verdict, then hand the ticket to `owner` in `Blocked`.
+**FIX cycle 1/2** (verdict: `FIX`, score < 90 or P0) → post typed verdict comment with `FIX` verdict and specific veto items, then hand off to `blog-writer` in `Todo` using `agent_ticket.py`:
+
+```bash
+python3 .agents/scripts/agent_ticket.py \
+  --project {project-slug} --ticket {id} --author blog-reviewer \
+  handoff --assignee blog-writer --status Todo --expected-status Review \
+  --content-file ./rv-verdict.md \
+  --marker "BLOG-REVIEW REJECT cycle 1/2 artifact-sha256:<digest>"
+```
+
+**BLOCK cycle 2/2** (verdict: `BLOCK`, cycle limit or unreadable target) → do **not** start a third writer/reviewer loop. Post typed verdict comment with `BLOCK` verdict, then hand the ticket to `owner` in `Blocked`:
+
+```bash
+python3 .agents/scripts/agent_ticket.py \
+  --project {project-slug} --ticket {id} --author blog-reviewer \
+  handoff --assignee owner --status Blocked --expected-status Review \
+  --content-file ./rv-verdict.md \
+  --marker "BLOG-REVIEW REJECT cycle 2/2 artifact-sha256:<digest>"
+```
 
 **Never end a turn with the ticket in `InProgress`** — including runs where you were assigned the ticket directly instead of triggered by `blog-reviewer-on-review`.
 
