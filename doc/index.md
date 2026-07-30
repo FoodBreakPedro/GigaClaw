@@ -4,7 +4,7 @@ This folder documents how GigaClaw is structured, one file per feature.
 Each feature page covers its purpose, key components, entry points, and external dependencies.
 Concepts are explained in exactly one place — other pages cross-link via relative links.
 
-For a high-level overview see the root [README.md](../README.md). For repo layout and conventions see [CLAUDE.md](../CLAUDE.md).
+For a high-level overview see the root [README.md](../README.md). For repo layout and conventions see [CLAUDE.md](../CLAUDE.md). For the ecosystem-comparison improvement roadmap and parallel work lanes see [roadmap/index.md](./roadmap/index.md).
 
 ## Features
 
