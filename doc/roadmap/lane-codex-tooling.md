@@ -9,7 +9,7 @@ Verification bar: existing suite green in Release plus explicit build/test comma
 ## Validated catalog/eval definitions
 
 - An agent is a direct child directory of `ProjectTemplate/Agents/` containing `SKILL.md`; `scripts/` is not an agent.
-- Baseline truth is 33 agents, 33 contracts, 29 automations (28 enabled), 12 explicit model mappings plus project fallback, and 9 team definitions (`all` plus 8 specialty teams). “Model present” reports explicit and resolved values separately.
+- Baseline truth is 33 agents, 33 contracts, 29 automations (28 enabled), 12 explicit model mappings, 9 team definitions (`all` plus 8 specialty teams), and 15 shared scripts. “Model present” reports action/member mapping separately from “project fallback required”; a fallback is not assumed to be configured.
 - A dispatch binding includes either an explicit `runAgent.agent` or membership in the assignee placeholder's allowed set. Enabled and disabled bindings are reported separately.
 - CI gates deterministic generation, schema, and committed drift immediately. Missing binding invariants are reported in baseline mode and become hard failures with `--strict` only at SP-1 after GM/CL fixes (including `content-writer` team membership and model completion).
 - `tools/check-automation-drift.sh` compares initialized projects/ventures against the template. Catalog checks do not replace that behavior, so the script is not retired without a per-project equivalent.
@@ -23,8 +23,8 @@ Verification bar: existing suite green in Release plus explicit build/test comma
 **Description:** A generator console tool that produces a template-static typed catalog — agents × contracts × explicit/resolved models × teams × enabled/disabled automations × scripts — by parsing `ProjectTemplate/Agents/**`, `AgentTeamService.cs`, and the automation config. Output: root `catalog.json` plus generated `doc/catalog.md`. This is not a claim about the mutable member rows in any initialized project.
 
 **Acceptance criteria:**
-- [ ] Catalog reports, per agent: contract present, explicit model mapping and resolved fallback separately, ≥1 specialty-team membership, ≥1 enabled/disabled dispatching automation, eval baseline present (field added now, populated by T4)
-- [ ] Current known truths reproduce exactly: 33 agents, 33 contracts, 29 automations (28 enabled), 12 explicit model mappings, 9 team definitions, and the `content-writer` specialty-team gap
+- [ ] Catalog reports, per agent: contract present, explicit member mapping, action-level model bindings, project-fallback-required state, ≥1 specialty-team membership, enabled/disabled dispatching automations separately, and eval baseline present (field added now, populated by T4)
+- [ ] Current known truths reproduce exactly: 33 agents, 33 contracts, 29 automations (28 enabled), 12 explicit model mappings, 9 team definitions, 15 shared scripts, and the `content-writer` specialty-team gap
 - [ ] `doc/catalog.md` regenerates deterministically (stable ordering, no timestamps)
 
 **Dependencies:** none. **Size:** M.

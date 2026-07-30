@@ -23,7 +23,7 @@ Verification bar for every task: `dotnet test GigaClaw.Core.Tests -c Release` gr
 
 **Acceptance criteria:**
 - [ ] Policy loads for all 33 template agents; missing/malformed contract entries produce an explicit `Block`-by-default result with a diagnostic
-- [ ] Glob evaluation has documented gitignore-compatible positive-pattern semantics and table-driven tests for inside/outside scope, rooted paths, `**`, traversal, absolute paths, symlink escape, and explicit case mode. Negation/directory-only behavior is either implemented and tested or rejected at schema validation
+- [ ] Glob evaluation has documented gitignore-compatible semantics and table-driven tests for inside/outside scope, rooted paths, `**`, traversal, contained/outside absolute paths, symlink escape, and explicit case mode. Absolute tool inputs are canonicalized to a relative path only after containment succeeds; negation/directory-only behavior is either implemented and tested or rejected at schema validation
 - [ ] Risk-class → capability mapping covers every class present in the real contracts (including test/review/design/research/media/approval/monitoring variants); unknown classes Block with a diagnostic
 
 **Dependencies:** none. **Size:** M (3–5 files).
@@ -75,7 +75,7 @@ Verification bar for every task: `dotnet test GigaClaw.Core.Tests -c Release` gr
 
 **Acceptance criteria:**
 - [ ] Worktree created idempotently per ticket; re-dispatches reuse it; Done+merged tickets get worktree cleanup
-- [ ] Runs in worktrees satisfy leases automatically (disjoint checkouts)
+- [ ] Worktree runs still acquire logical file leases; checkout separation is not treated as proof that eventual merge scopes are disjoint
 - [ ] Dirty/failed worktrees are never silently deleted; flagged to owner instead
 
 **Dependencies:** R4 plus shared ownership contract for `AutomationConfig.cs`, `ActionExecutor.cs`, ticket persistence/API, and branch-state UI. **Size:** M.

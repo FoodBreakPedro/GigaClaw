@@ -33,12 +33,12 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 
 Validated against `origin/main` at `fe98829`. These findings are requirements, not optional implementation notes:
 
-- Template-static truth is **33 directories containing `SKILL.md`**, 33 contract entries, 29 automations (28 enabled), 12 explicit per-agent model mappings, and 9 team definitions (the `all` pseudo-team plus 8 specialty teams). `ProjectTemplate/Agents/scripts/` is not an agent. Agents without an explicit model mapping use the project fallback.
+- Template-static truth is **33 direct child directories containing `SKILL.md`**, 33 contract entries, 29 automations (28 enabled), 12 explicit per-agent model mappings, 9 team definitions (the `all` pseudo-team plus 8 specialty teams), and 15 shared scripts. `ProjectTemplate/Agents/scripts/` is not an agent. Agents without an explicit mapping resolve through an action model or a configured project fallback; the catalog must report when that fallback is still required or unavailable.
 - `content-writer` currently has no specialty-team membership. Catalog CI may report all missing bindings immediately, but the hard binding gate is enabled only after the owning GM/CL corrections land at SP-1. Deterministic generation/schema/drift checks gate from day one.
 - The current contract schema has `dispatches`, `ticketExit`, `allowedWriteGlobs`, `riskClass`, and occasional `maxReviewCycles`; it has no network-expectation or enforcement-mode field. P3 starts by versioning and typing the real schema. Unknown risk classes fail closed in enforcement, and schema extensions are coordinated with CL.
 - Claude `PreToolUse` hooks can govern Claude tool calls, but they cannot govern GigaClaw's host-side `httpRequest` automation action. U17 therefore has two boundaries: runner tool policy (CX-R) and an `ActionExecutor` preflight using trusted approval state (CL/shared merge window).
 - A generated hook file is passed with `claude --settings`; it must be schema-validated and proven loaded because invalid print-mode settings may otherwise be ignored. The hook transport/helper and its latency benchmark are part of R2. `GigaClaw.ClaudeMock` must gain explicit hook emulation, or policy integration is tested separately; canned NDJSON replay alone does not execute hooks.
-- File patterns use canonical workspace-relative paths. Absolute paths, `..` traversal, and symlink escapes are rejected before glob matching. Case behavior is an explicit matcher option informed by the repository/filesystem, not assumed solely from the OS. Bash commands are capability-checked; they are not treated as reliably reducible to a single write path.
+- File patterns match canonical workspace-relative paths. Absolute tool inputs are canonicalized only when they remain inside the workspace; outside paths, `..` escapes, and symlink escapes are rejected before glob matching. Case behavior is an explicit matcher option informed by the repository/filesystem, not assumed solely from the OS. Bash commands are capability-checked; they are not treated as reliably reducible to a single write path.
 - R4 introduces a new durable SQLite lease table and reaper; existing concurrency locks are in memory. Worktrees isolate checkouts but do not make logically overlapping file leases disjoint.
 - R5/R6 and R8 cross the original runner-only boundary: worktree flags and merge actions touch automation specs/execution and durable ticket state; harness selection touches member/config resolution. Those changes wait for the exact shared-file contracts in the lane doc.
 - P4 is split deliberately: CX-T owns edge persistence, REST, ticket summary, and badge; CL owns automation condition vocabulary/evaluation. This removes the previous single-writer conflict.
@@ -100,7 +100,7 @@ CX-R: versioned contract model + policy evaluator (R1), then the R2 hook-transpo
 
 **Phase 3 — Throughput & reach** — CX-R: U6 worktree/merge lane, then P13 adapter + Codex harness. CL: U5 GitHub surface, T5/T6 review + debug team presets (with GM authoring).
 
-**SP-4 gate:** one ticket flows worktree→PR→CI→owner merge end-to-end · second harness reaches parity on streaming/resume/cost/policy for one agent.
+**SP-4 gate:** one ticket flows worktree→PR→CI→owner merge end-to-end · second harness reaches parity on streaming/resume/policy for one agent and reports usage/cost or an explicit unsupported capability.
 
 **Phase 4 — Packs** — O7 infra first (CL design, CX-T impl), Security Assurance pack proves it, then Incident & Debug, Architecture & Data, Language specialists, P7 registries, Marketing pack. Mostly GM volume authoring with CL wiring. Then later pilots (see [packs-and-later.md](packs-and-later.md)).
 
