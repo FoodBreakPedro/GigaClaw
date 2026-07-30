@@ -14,7 +14,7 @@ public sealed class CatalogGeneratorTests
         Assert.Equal(33, catalog.Summary.Contracts);
         Assert.Equal(29, catalog.Summary.Automations);
         Assert.Equal(28, catalog.Summary.EnabledAutomations);
-        Assert.Equal(12, catalog.Summary.ExplicitModelMappings);
+        Assert.Equal(33, catalog.Summary.ExplicitModelMappings);
         Assert.Equal(9, catalog.Summary.Teams);
         // 15 at T1 + the five contract files lane CL added (schema_check, verdict_contract,
         // handoff_contract and the two schemas). The catalog counts them because agents call them.
@@ -24,7 +24,7 @@ public sealed class CatalogGeneratorTests
         Assert.Equal("content-write", contentWriter.RiskClass);
         Assert.Equal("claude-sonnet-4-6", contentWriter.ExplicitModelMapping);
         Assert.False(contentWriter.ProjectFallbackRequired);
-        Assert.Empty(contentWriter.Teams);
+        Assert.Contains("content-engine", contentWriter.Teams);
         Assert.NotEmpty(contentWriter.EnabledDispatchingAutomations);
         Assert.Contains("scripts/content_contract.py", catalog.Scripts);
         Assert.Equal(9, catalog.Teams.Count);

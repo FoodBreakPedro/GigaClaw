@@ -83,10 +83,12 @@ If you genuinely cannot find a way to break it after a real attempt, say so expl
 
 ### 4. Post the verdict report
 
+Score strictly across these 4 categories: Build (max 5), Acceptance criteria (max 10), Adversarial tests (max 10), and Regression risk (max 5).
+
 Post your report as a ticket comment containing the typed verdict header and fenced JSON object:
 
 ```text
-GIGACLAW-VERDICT v1 qa-tester <SHIP|FIX|BLOCK> artifact-sha256:<inputDigest>
+GIGACLAW-VERDICT v1 qa-tester SHIP artifact-sha256:0c92a48eb15d7f36c0d8241be5739af06c1e8d4b27950fa3e6c81d70b4925fe8
 
 ```json
 {

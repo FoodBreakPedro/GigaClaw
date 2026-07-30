@@ -37,10 +37,11 @@ Audits UIs across 4 key visual dimensions, **25 points each (100 total)**:
 
 ## Verdict & exit
 
-Post your review as a ticket comment containing the typed verdict header and fenced JSON object:
+Post your review as a ticket comment containing BOTH the legacy `UI-AUDIT` receipt (required by `ui-designer`) and the typed `GIGACLAW-VERDICT` header with fenced JSON object:
 
 ```text
-GIGACLAW-VERDICT v1 ui-auditor <SHIP|FIX|BLOCK> artifact-sha256:<inputDigest>
+UI-AUDIT FAIL cycle 1/2 artifact-sha256:b7d1e5f309a4c28d6013fb745e9c8a2d10473e6f8b9c05d2a6e134f78c0b95ad
+GIGACLAW-VERDICT v1 ui-auditor FIX artifact-sha256:b7d1e5f309a4c28d6013fb745e9c8a2d10473e6f8b9c05d2a6e134f78c0b95ad
 
 ```json
 {
@@ -48,13 +49,12 @@ GIGACLAW-VERDICT v1 ui-auditor <SHIP|FIX|BLOCK> artifact-sha256:<inputDigest>
   "agent": "ui-auditor",
   "ticketId": 913,
   "verdict": "FIX",
-  "summary": "Contrast and focus-order defects block the design contract; layout and spacing are sound.",
+  "summary": "66/100 with Color System below the 15-point floor; contrast and focus defects block the design contract.",
   "categories": [
-    { "name": "Visual hierarchy", "score": 8, "max": 10 },
-    { "name": "Spacing & alignment", "score": 10, "max": 10 },
-    { "name": "Contrast & legibility", "score": 3, "max": 10, "notes": "Secondary button text is 2.9:1 against its fill." },
-    { "name": "Interaction states", "score": 5, "max": 10, "notes": "Focus ring is removed on the icon buttons." },
-    { "name": "Design-token fidelity", "score": 9, "max": 10 }
+    { "name": "Typography & Hierarchy", "score": 21, "max": 25, "notes": "Two heading levels share a size step." },
+    { "name": "Color System & Contrast", "score": 9, "max": 25, "notes": "Below the 15-point floor: secondary button label measures 2.9:1." },
+    { "name": "Microstructure & Micro-Interactions", "score": 14, "max": 25, "notes": "Focus ring removed on the icon buttons." },
+    { "name": "Layout & Macrostructure", "score": 22, "max": 25, "notes": "Macrostructure stamp matches the rendered grid." }
   ],
   "vetoItems": [
     {
@@ -66,6 +66,11 @@ GIGACLAW-VERDICT v1 ui-auditor <SHIP|FIX|BLOCK> artifact-sha256:<inputDigest>
       "code": "focus-indicator-removed",
       "statement": "Icon buttons set outline:none with no replacement focus indicator.",
       "evidenceRefs": ["GigaClaw.Web/wwwroot/app.css"]
+    },
+    {
+      "code": "dimension-below-floor",
+      "statement": "Color System & Contrast scored 9/25; no dimension may fall below 15.",
+      "evidenceRefs": ["design/audits/board-toolbar-audit.md"]
     }
   ],
   "evidence": [
@@ -84,11 +89,12 @@ GIGACLAW-VERDICT v1 ui-auditor <SHIP|FIX|BLOCK> artifact-sha256:<inputDigest>
 If issuing `FIX` or `BLOCK`, include machine-checkable veto items:
 - `contrast-below-wcag-aa`: Contrast ratio fails WCAG AA 4.5:1 requirement (`FIX`).
 - `focus-indicator-removed`: Interactive elements set `outline:none` without focus alternative (`FIX`).
+- `dimension-below-floor`: An individual visual dimension scored below 15/25 floor (`FIX`).
 - `html-contract-failure`: `html_contract.py --kind ui` reported structural design errors (`FIX`).
 - `browser-execution-unavailable`: Unable to launch headless browser / render UI for evaluation (`BLOCK`).
 - `review-cycle-exceeded`: Two revision cycles completed without passing audit (`BLOCK`).
 
-**SHIP** (verdict: `SHIP`) → post typed verdict comment with `SHIP` verdict, leave an existing `Review` ticket untouched. If dispatched directly on `InProgress`, transition to `Review`.
+**SHIP** (verdict: `SHIP`) → post typed verdict comment with `SHIP` verdict (and `UI-AUDIT PASS v1 artifact-sha256:<inputDigest>` header), leave an existing `Review` ticket untouched. If dispatched directly on `InProgress`, transition to `Review`.
 
 **FIX** (verdict: `FIX`, cycle 1/2) → post typed verdict comment with `FIX` verdict, then hand the ticket to `ui-designer` in `Todo` using `agent_ticket.py`:
 
@@ -97,10 +103,11 @@ python3 .agents/scripts/agent_ticket.py \
   --project {project-slug} --ticket {id} --author ui-auditor \
   handoff --assignee ui-designer --status Todo --expected-status Review \
   --content-file design/audits/<slug>-audit.md \
-  --marker "GIGACLAW-VERDICT v1 ui-auditor FIX artifact-sha256:<source-digest>"
+  --marker "UI-AUDIT FAIL cycle 1/2 artifact-sha256:<source-digest>"
 ```
 
-**BLOCK** (verdict: `BLOCK`, cycle 2/2 or unreadable target) → post typed verdict comment with `BLOCK` verdict, then hand the ticket to `owner` in `Blocked`.
+**BLOCK** (verdict: `BLOCK`, cycle 2/2 or unreadable target) → post typed verdict comment with `BLOCK` verdict, then hand the ticket to `owner` in `Blocked` using `agent_ticket.py` with `--marker "UI-AUDIT FAIL cycle 2/2 artifact-sha256:<source-digest>"`.
 
 **Never end a turn with a ticket assigned to you sitting in `InProgress`.**
+
 

@@ -23,10 +23,12 @@ composition agent enters `Review`.
 
 ## Verdict & Exit
 
+Score strictly across these 5 categories: Receipt & digest match (max 10), Provenance completeness (max 10), Spec adherence (max 10), Visual quality & continuity (max 10), and Technical conformance (max 10).
+
 Post your review as a ticket comment containing the typed verdict header and fenced JSON object:
 
 ```text
-GIGACLAW-VERDICT v1 local-media-reviewer <SHIP|FIX|BLOCK> artifact-sha256:<inputDigest>
+GIGACLAW-VERDICT v1 local-media-reviewer SHIP artifact-sha256:d3a70b5c8e1246f9ab0c7d5e83124f60b9a7c8e5d0143f26b8c9a7e50d1364fb
 
 ```json
 {

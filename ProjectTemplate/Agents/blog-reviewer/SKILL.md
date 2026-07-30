@@ -148,8 +148,8 @@ python3 .agents/scripts/content_contract.py <filepath> --check-external
 Post your review as a ticket comment containing BOTH the legacy `BLOG-REVIEW` receipt (required by `blog-seo` and `blog-translator`) and the typed `GIGACLAW-VERDICT` header with fenced JSON object:
 
 ```text
-BLOG-REVIEW APPROVE v1 artifact-sha256:<inputDigest>
-GIGACLAW-VERDICT v1 blog-reviewer SHIP artifact-sha256:<inputDigest>
+BLOG-REVIEW APPROVE v1 artifact-sha256:4f1c2d9a7b3e5081c6a4d2f8e90b7135ac6e28d4f0917b3c5ea8d6142fb70cd9
+GIGACLAW-VERDICT v1 blog-reviewer SHIP artifact-sha256:4f1c2d9a7b3e5081c6a4d2f8e90b7135ac6e28d4f0917b3c5ea8d6142fb70cd9
 
 ```json
 {
