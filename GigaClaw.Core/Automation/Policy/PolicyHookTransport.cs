@@ -440,6 +440,17 @@ internal static partial class PolicyHookToolCallAdapter
             "revert", "rm", "switch", "tag",
         };
 
+    // curl writes with -o; -O derives the name from the URL and takes no argument.
+    // wget writes the document with -O and its log with -o.
+    private static readonly char[] CurlOutputFlags = ['o'];
+    private static readonly char[] WgetOutputFlags = ['O', 'o'];
+
+    private static readonly HashSet<string> LongDownloadFlags =
+        new(StringComparer.Ordinal)
+        {
+            "--output", "--output-document", "--output-file",
+        };
+
     public static IReadOnlyList<PolicyHookEvaluation> Evaluate(
         ContractPolicy policy,
         string tool,
@@ -477,27 +488,22 @@ internal static partial class PolicyHookToolCallAdapter
             return [PolicyToolCall.Bash(null)];
 
         var calls = new List<PolicyToolCall>();
+        var readOnlyBoardAccess = false;
         foreach (var segment in TokenizeSegments(command))
-            ClassifySegment(segment, command, calls);
+            ClassifySegment(segment, command, calls, ref readOnlyBoardAccess);
 
         foreach (Match match in UrlRegex().Matches(command))
         {
             var target = match.Value.TrimEnd('.', ',', ';', ')', ']', '}', '"', '\'');
-            if (IsLoopbackOrGigaClaw(target))
-            {
-                if (LooksLikeMutation(command))
-                    calls.Add(PolicyToolCall.BoardWrite(target));
-            }
-            else
-            {
-                calls.Add(PolicyToolCall.Network(target));
-            }
+            AddRemoteAccess(target, command, calls, ref readOnlyBoardAccess);
         }
 
-        if (command.Contains("GIGACLAW_API_URL", StringComparison.Ordinal) &&
-            LooksLikeMutation(command))
+        if (command.Contains("GIGACLAW_API_URL", StringComparison.Ordinal))
         {
-            calls.Add(PolicyToolCall.BoardWrite("${GIGACLAW_API_URL}"));
+            if (LooksLikeMutation(command))
+                calls.Add(PolicyToolCall.BoardWrite("${GIGACLAW_API_URL}"));
+            else
+                readOnlyBoardAccess = true;
         }
 
         foreach (Match match in RedirectRegex().Matches(command))
@@ -513,15 +519,43 @@ internal static partial class PolicyHookToolCallAdapter
                 calls.Add(PolicyToolCall.FileWrite(path));
         }
 
-        if (calls.Count == 0)
+        // A read-only GigaClaw/loopback call maps to no narrower governed capability,
+        // so it is reported as a Bash command that needs shadow review. Deriving a
+        // write from a redirect or a download flag must not consume that report: the
+        // write is an additional capability, not a substitute for the API access.
+        if (calls.Count == 0 || readOnlyBoardAccess)
             calls.Add(PolicyToolCall.Bash(command));
         return calls;
+    }
+
+    /// <summary>
+    /// Records an outbound target. GigaClaw/loopback reads carry no board-write
+    /// capability, so instead of emitting a false mutation they mark the command as
+    /// still needing the ungoverned-Bash review row.
+    /// </summary>
+    private static void AddRemoteAccess(
+        string target,
+        string command,
+        List<PolicyToolCall> calls,
+        ref bool readOnlyBoardAccess)
+    {
+        if (!IsLoopbackOrGigaClaw(target))
+        {
+            calls.Add(PolicyToolCall.Network(target));
+            return;
+        }
+
+        if (LooksLikeMutation(command))
+            calls.Add(PolicyToolCall.BoardWrite(target));
+        else
+            readOnlyBoardAccess = true;
     }
 
     private static void ClassifySegment(
         IReadOnlyList<string> tokens,
         string command,
-        List<PolicyToolCall> calls)
+        List<PolicyToolCall> calls,
+        ref bool readOnlyBoardAccess)
     {
         var index = SkipWrappersAndAssignments(tokens, 0);
         if (index >= tokens.Count)
@@ -568,16 +602,13 @@ internal static partial class PolicyHookToolCallAdapter
 
         if (executable is "curl" or "wget")
         {
+            // A download is a file write even when the fetch itself is allowed.
+            var output = FindDownloadTarget(executable, args);
+            if (output is not null && !IsNullDevice(output) && output != "-")
+                calls.Add(PolicyToolCall.FileWrite(output));
+
             var target = args.FirstOrDefault(IsNetworkTarget) ?? command;
-            if (IsLoopbackOrGigaClaw(target))
-            {
-                if (LooksLikeMutation(command))
-                    calls.Add(PolicyToolCall.BoardWrite(target));
-            }
-            else
-            {
-                calls.Add(PolicyToolCall.Network(target));
-            }
+            AddRemoteAccess(target, command, calls, ref readOnlyBoardAccess);
             return;
         }
 
@@ -657,6 +688,52 @@ internal static partial class PolicyHookToolCallAdapter
                 continue;
             return arg;
         }
+        return null;
+    }
+
+    /// <summary>
+    /// Resolves the file a download writes: curl <c>-o</c>/<c>--output</c> and wget
+    /// <c>-O</c>/<c>--output-document</c> (plus wget's <c>-o</c> log file, which is
+    /// also a real write). curl's <c>-O</c> takes no argument and is skipped rather
+    /// than guessed at. Short flags may be bundled (<c>-sSo out</c>) or carry an
+    /// attached value (<c>-oout</c>).
+    /// </summary>
+    private static string? FindDownloadTarget(
+        string executable,
+        IReadOnlyList<string> args)
+    {
+        var valueFlags = string.Equals(executable, "wget", StringComparison.Ordinal)
+            ? WgetOutputFlags
+            : CurlOutputFlags;
+
+        for (var i = 0; i < args.Count; i++)
+        {
+            var arg = args[i];
+            if (arg == "--")
+                break;
+            if (arg.Length < 2 || !arg.StartsWith('-'))
+                continue;
+
+            if (arg.StartsWith("--", StringComparison.Ordinal))
+            {
+                var separator = arg.IndexOf('=');
+                var name = separator < 0 ? arg : arg[..separator];
+                if (!LongDownloadFlags.Contains(name))
+                    continue;
+                if (separator >= 0)
+                    return arg[(separator + 1)..];
+                return i + 1 < args.Count ? args[i + 1] : null;
+            }
+
+            var cluster = arg[1..];
+            var flag = cluster.IndexOfAny(valueFlags);
+            if (flag < 0)
+                continue;
+            return flag < cluster.Length - 1
+                ? cluster[(flag + 1)..]
+                : i + 1 < args.Count ? args[i + 1] : null;
+        }
+
         return null;
     }
 
@@ -812,7 +889,12 @@ internal static partial class PolicyHookToolCallAdapter
         RegexOptions.CultureInvariant)]
     private static partial Regex RedirectRegex();
 
-    [GeneratedRegex(@"(?:^|[\s;&|])(?:touch|rm|tee)\s+(?:--\s+)?(?:""(?<double>[^""]+)""|'(?<single>[^']+)'|(?<bare>[^\s;&|]+))",
+    /// <summary>
+    /// Direct file-writing utilities. Every leading option token (including the
+    /// <c>--</c> separator) is skipped so a flag such as <c>-rf</c> or <c>-a</c> is
+    /// never mistaken for the written path.
+    /// </summary>
+    [GeneratedRegex(@"(?:^|[\s;&|])(?:touch|rm|tee)\s+(?:-[^\s;&|]*\s+)*(?:""(?<double>[^""]+)""|'(?<single>[^']+)'|(?<bare>(?!-)[^\s;&|]+))",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
     private static partial Regex DirectFileWriteRegex();
 

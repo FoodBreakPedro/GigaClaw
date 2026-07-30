@@ -252,6 +252,130 @@ public class PolicyHookTransportTests
         Assert.Equal(2, observations.Count);
     }
 
+    /// <summary>
+    /// Option flags are not write targets. Reporting <c>-rf</c> or <c>-a</c> as a
+    /// written path puts a file that never existed into the SP-1 inventory, and an
+    /// owner has to spend a review deciding it is noise before the glob set can be
+    /// flipped from warn to block.
+    /// </summary>
+    [Theory]
+    [InlineData("rm -rf outside/", "outside/")]
+    [InlineData("sudo tee -a /etc/hosts", "/etc/hosts")]
+    [InlineData("touch -- outside.txt", "outside.txt")]
+    public async Task Bash_option_flags_are_not_observed_as_write_targets(
+        string command,
+        string expectedTarget)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(client, transport.Endpoint, "Bash", new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observations = transport.SnapshotObservations();
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.FileWrite &&
+                    item.Target == expectedTarget);
+        Assert.DoesNotContain(
+            observations,
+            item => item.Operation == PolicyToolOperation.FileWrite &&
+                    item.Target is not null &&
+                    item.Target.StartsWith('-'));
+    }
+
+    /// <summary>
+    /// A download writes a file. Observing only the outbound fetch hides the write,
+    /// so a download that lands outside allowedWriteGlobs would never appear in the
+    /// inventory that gates the block flip.
+    /// </summary>
+    [Theory]
+    [InlineData("curl -sS -o outside.json https://example.test/data", "outside.json")]
+    [InlineData("curl --output outside.json https://example.test/data", "outside.json")]
+    [InlineData("curl -sSLooutside.json https://example.test/data", "outside.json")]
+    [InlineData("wget -q -O outside.tgz https://example.test/archive.tgz", "outside.tgz")]
+    [InlineData(
+        "wget --output-document=outside.tgz https://example.test/archive.tgz",
+        "outside.tgz")]
+    public async Task Bash_download_output_paths_are_observed_as_writes(
+        string command,
+        string expectedTarget)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(client, transport.Endpoint, "Bash", new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observations = transport.SnapshotObservations();
+        Assert.Contains(observations, item => item.Operation == PolicyToolOperation.Network);
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.FileWrite &&
+                    item.Target == expectedTarget);
+    }
+
+    /// <summary>
+    /// A read-only GigaClaw API call is reported as an ungoverned Bash command that
+    /// needs shadow review. Redirecting its output to a file must not swallow that:
+    /// the redirect is a second capability, not a replacement for the first one.
+    /// </summary>
+    [Theory]
+    [InlineData("curl http://127.0.0.1:5230/api/tickets")]
+    [InlineData("curl http://127.0.0.1:5230/api/tickets > outside.json")]
+    [InlineData("curl -o outside.json http://127.0.0.1:5230/api/tickets")]
+    [InlineData("curl \"$GIGACLAW_API_URL/api/tickets\" > outside.json")]
+    public async Task Bash_read_only_board_access_is_reported_even_when_redirected(
+        string command)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(client, transport.Endpoint, "Bash", new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observations = transport.SnapshotObservations();
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.Bash && item.Target == command);
+        Assert.DoesNotContain(
+            observations,
+            item => item.Operation == PolicyToolOperation.Network);
+    }
+
+    /// <summary>
+    /// The counterpart to the rule above: a redirect on a command that already maps
+    /// to a governed capability, or to no capability call at all, must not manufacture
+    /// an extra Bash review row. Otherwise every `echo … &gt; file` floods the inventory.
+    /// </summary>
+    [Theory]
+    [InlineData("echo hi > outside.txt", "outside.txt")]
+    [InlineData(
+        "curl -X POST -d '{}' http://127.0.0.1:5230/api/tickets > outside.json",
+        "outside.json")]
+    public async Task Bash_redirect_alone_does_not_manufacture_a_review_row(
+        string command,
+        string expectedTarget)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(client, transport.Endpoint, "Bash", new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observation = Assert.Single(transport.SnapshotObservations());
+        Assert.Equal(PolicyToolOperation.FileWrite, observation.Operation);
+        Assert.Equal(expectedTarget, observation.Target);
+    }
+
     [Fact]
     public async Task Malformed_hook_input_is_a_block_observation_not_a_transport_denial()
     {
