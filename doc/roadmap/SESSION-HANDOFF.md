@@ -63,6 +63,23 @@ R4 (leases) → R5 (worktrees) → R6 (merge queue) → R7 (runner interface) �
 - `models.json`'s header comment says security/reviewer agents must not use sub-Opus tiers — contradicted by owner decision Q3. The real caveat is narrower (avoid Fable).
 - Owner decision **Q3 is ambiguous**: it names `security-auditor` *and* `threat-modeler` but justifies only the auditor. Current state follows the explicit binding (auditor → Sonnet, threat-modeler → Opus). Worth a one-line confirmation.
 
+## Windows CI
+
+**CI was already red before this branch existed** — the run on `94971fb`, this session's merge base, failed with 2 tests. The branch did not break Windows; Windows was already broken.
+
+Fixed here:
+
+- **Embedded assets vanished on Windows.** `Initialize` wrote 5 of 119 files and reported no error. The survivors were exactly the four merge artifacts, which reach disk through a reader that probes both path separators; everything else goes through the enumerated set, whose *prefix comparison* ran against the raw resource name. MSBuild builds those names from a `LogicalName` template holding a literal `/` beside `%(RecursiveDir)`, and on Windows they can come back with backslashes — so every glob-sourced asset failed `StartsWith` and silently left the pack. Silently is the point: "no resources matched this prefix" is indistinguishable from "this pack ships none", so composition succeeded and `provides` verification passed against an equally empty actual set. `CorePackEnumerationTests` now pins it.
+- **A CRLF regex.** With `RegexOptions.Multiline`, .NET anchors `$` before `\n`, which on a CRLF checkout is *after* the `\r`, and `\S+` cannot consume `\r`. The verdict-marker pattern never matched on Windows.
+
+Still failing on Windows, both pre-existing and neither a regression from this branch:
+
+- **`TemplateHandoffContractTests`** — `handoff_contract.py:297` prints `→` (U+2192) and Python on Windows defaults stdout to cp1252, so the script raises `UnicodeEncodeError` *after* the validation succeeds. This is a product bug, not just a test one: the script ships into every workspace. Seven print sites across four shipped scripts have it (`→`, `·`, `—`, `é`).
+
+  **Do not fix this casually.** Adding a `sys.stdout.reconfigure(encoding="utf-8")` block to those four scripts reproducibly makes `CoreInitManifestTests` fail *on macOS* with `missing=4 added=0 changed=0` — exactly the four edited files, not written. It is reproducible in both directions (`git stash` of just those edits makes it pass). The mechanism does not fit the code: the new enumeration test confirms the scripts are still enumerated and readable, so they reach `pack.Files`, and `PlanOpaqueFiles` can only skip a file that already exists on disk, which is impossible in the fresh temp workspace the test uses. Worth attaching a debugger to `PackInstaller.InstallAsync` and inspecting `plan` rather than reasoning further.
+
+- **`JudgeRunnerTests.Judge_MatchesTheCommittedBaselineForEveryFixture`** — pre-existing, undiagnosed.
+
 ## Hard-won lessons worth not relearning
 
 **Read the tree, not the report.** Three tasks came back reported complete and were not. Every automated check was green each time.

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "programmer", "label": "Programmer Agent", "file_type": "concept", "source_file": "ProjectTemplate/Agents/programmer/SKILL.md"}], "edges": [{"source": "programmer", "target": "giga_claw_api_url", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ProjectTemplate/Agents/programmer/SKILL.md"}], "hyperedges": []}

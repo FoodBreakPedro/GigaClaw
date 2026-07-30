@@ -1,0 +1,1 @@
+{"nodes": [{"id": "doc_verdict-contract", "label": "Verdict Contract (v1)", "file_type": "document", "source_file": "doc/verdict-contract.md"}], "edges": [{"source": "doc_verdict-contract", "target": "doc_agent-dispatch", "relation": "shares_data_with", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "doc/verdict-contract.md"}], "hyperedges": []}

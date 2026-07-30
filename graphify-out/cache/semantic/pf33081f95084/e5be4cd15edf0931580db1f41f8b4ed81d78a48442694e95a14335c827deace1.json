@@ -1,0 +1,1 @@
+{"nodes": [{"id": "doc_project-template", "label": "Project Template Source", "file_type": "document", "source_file": "doc/project-template.md"}], "edges": [{"source": "doc_project-template", "target": "doc_automation-engine", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "doc/project-template.md"}], "hyperedges": []}
