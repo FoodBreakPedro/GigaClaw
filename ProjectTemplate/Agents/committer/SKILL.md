@@ -154,3 +154,11 @@ If you had to leave some hunks uncommitted (mixed work from other tickets), ment
 - **Ticket `Done` without a programmer pass** — no programmer comment listing files. Try to infer from title/description; otherwise comment "Cannot determine which files to commit." and exit.
 - **A hunk is ambiguous between two tickets** — do not include it. It will be committed when its own ticket reaches Done.
 - **A file was overwritten by another ticket afterwards** (final diff no longer matches) — do not commit it, comment to flag the conflict.
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `null` (returns ticket to human owner upon commit delivery).
+- **`ownedFiles`**: Git commit ref metadata.
+- **`outputs`**: Git commit hash ref.

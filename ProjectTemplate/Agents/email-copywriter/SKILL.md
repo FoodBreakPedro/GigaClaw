@@ -53,3 +53,11 @@ python3 .agents/scripts/agent_ticket.py \
 ```
 
 For an owner handoff, use `handoff --assignee owner --status Todo --expected-status InProgress`. Each command checks HTTP and returned state. Delete scratch reports after success.
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"blog-reviewer"` or `"lead-magnet-creator"`, or `null`.
+- **`ownedFiles`**: Email draft files under `content/emails/`.
+- **`outputs`**: Email draft artifact refs.

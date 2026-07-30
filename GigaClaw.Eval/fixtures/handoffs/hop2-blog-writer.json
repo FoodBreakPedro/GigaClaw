@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "agent": "blog-writer",
+  "ticketId": 101,
+  "runId": "run-101-2",
+  "summary": "Drafted technical blog post covering .NET 10 Blazor Server performance.",
+  "inputs": [
+    {
+      "kind": "path",
+      "ref": "doc/research/dotnet10-blazor-notes.md",
+      "note": "Research notes from blog-researcher"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "path",
+      "ref": "posts/2026-07-30-dotnet10-blazor-performance.md",
+      "note": "Full blog post draft with benchmarks"
+    }
+  ],
+  "ownedFiles": [
+    "posts/2026-07-30-dotnet10-blazor-performance.md"
+  ],
+  "assumptions": [
+    "Target audience is senior C# developers familiar with Blazor."
+  ],
+  "openLoops": [],
+  "acceptanceCriteria": [
+    {
+      "statement": "Draft complete technical blog post using research notes",
+      "met": true,
+      "evidenceRef": "posts/2026-07-30-dotnet10-blazor-performance.md"
+    }
+  ],
+  "nextRole": "blog-reviewer",
+  "producedAtUtc": "2026-07-30T20:45:00Z"
+}

@@ -78,3 +78,11 @@ http=$(curl -s -o ./pg-resp.json -w "%{http_code}" -X PATCH "$api/tickets/{id}/s
 [[ "$http" =~ ^2 ]] || { echo "status PATCH failed http=$http"; cat ./pg-resp.json; }
 # A non-2xx status PATCH means the ticket did NOT move — fix the body and retry; never assume success.
 ```
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"qa-tester"` for test verification, or `null` if returning to owner.
+- **`ownedFiles`**: Source and test file paths modified during implementation.
+- **`outputs`**: Code change artifact refs and build logs.

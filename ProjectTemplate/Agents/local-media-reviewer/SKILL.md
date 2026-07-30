@@ -85,3 +85,11 @@ If issuing `FIX` or `BLOCK`, include machine-checkable veto items:
 - Never move a ticket to `Done`.
 - Never approve a different artifact digest than the one inspected.
 - If an artifact cannot be opened or provenance is incomplete, fail closed.
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"committer"` if approved, `"local-media-compositor"` if revisions needed, or `null`.
+- **`ownedFiles`**: Media review report paths under `reports/media-review/`.
+- **`outputs`**: Media review verdict artifact ref.

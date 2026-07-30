@@ -61,3 +61,11 @@ python3 .agents/scripts/agent_ticket.py \
 ```
 
 Each command checks HTTP and returned state. Delete the scratch report after success.
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"blog-reviewer"` for copy review, or `null`.
+- **`ownedFiles`**: Growth landing page / copy files under `content/growth/`.
+- **`outputs`**: Growth copy artifact refs.

@@ -51,3 +51,11 @@ python3 .agents/scripts/agent_ticket.py \
 ```
 
 Move to `Review` only once **all** requested locales are written and the `alternates:` maps are updated; otherwise move the ticket to `Blocked` with a comment on what is missing. **Never end your turn with the ticket in `InProgress`.**
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"blog-reviewer"` for translation review, or `null`.
+- **`ownedFiles`**: Translated post file paths under `posts/<lang>/`.
+- **`outputs`**: Translation file artifact refs.

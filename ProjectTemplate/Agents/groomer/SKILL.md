@@ -148,3 +148,11 @@ You never change the status of a `Backlog` ticket. The owner prioritizes by movi
 - **Unusable title** (e.g. "Bug", "Fix", "todo"): comment to owner, reassign to `owner`, exit.
 - **Ticket with log/transcript noise**: extract the real intent, restructure cleanly, post a comment summarizing the change.
 - **Already well written but misassigned**: fix `assignedTo` + priority + labels + **reformulate the title systematically** (do not leave messy phrasing just because the body is fine).
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"programmer"` for feature implementation, or `null`.
+- **`ownedFiles`**: Refined spec/ticket documents under `doc/specs/`.
+- **`outputs`**: Refined specification artifact refs.

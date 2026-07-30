@@ -46,3 +46,11 @@ python3 .agents/scripts/agent_ticket.py \
 For the successful owner-review path, use checked `comment` followed by checked `status --to Review`; do not reassign. Delete scratch files after success.
 
 If you cannot read/parse the post or establish a matching approval chain, move the ticket to `Blocked` with a comment naming the path or digest mismatch. **Never end your turn with the ticket in `InProgress`.**
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"blog-reviewer"` for re-review, `"committer"` if finalized, or `null`.
+- **`ownedFiles`**: Updated post path and SEO metadata.
+- **`outputs`**: SEO audit report ref and modified post ref.

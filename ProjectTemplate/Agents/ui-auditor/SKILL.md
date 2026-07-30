@@ -111,3 +111,11 @@ python3 .agents/scripts/agent_ticket.py \
 **Never end a turn with a ticket assigned to you sitting in `InProgress`.**
 
 
+
+
+## Handoff Contract
+
+Emit a valid `GIGACLAW-HANDOFF v1` ticket comment following `ProjectTemplate/Agents/handoff.md`.
+- **`nextRole`**: `"ui-designer"` for fixes, `"programmer"` for implementation, or `null`.
+- **`ownedFiles`**: UI audit report files under `reports/ui-audit/`.
+- **`outputs`**: UI audit verdict artifact ref.
