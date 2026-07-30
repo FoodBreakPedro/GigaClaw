@@ -67,6 +67,7 @@ public sealed class DirectoryPackSource : IPackSource
         {
             var rel = Path.GetRelativePath(_root, file).Replace('\\', '/');
             if (rel == "pack.json") continue;
+            if (IsNoise(rel)) continue;
             if (rel.StartsWith("Agents/", StringComparison.Ordinal)) continue;
             // eval/** is build-time only — fixtures ship with the pack but never reach a workspace.
             if (rel.StartsWith("eval/", StringComparison.Ordinal)) continue;
@@ -85,11 +86,38 @@ public sealed class DirectoryPackSource : IPackSource
     private static string ToNativePath(string relativePath) =>
         relativePath.Replace('/', Path.DirectorySeparatorChar);
 
+    /// <summary>
+    /// Filesystem droppings that are gitignored but still sit in a working tree. This mirrors the
+    /// reasoning behind the <c>__pycache__</c> Exclude in <c>GigaClaw.Core.csproj</c>: a directory
+    /// source globs the <em>working directory</em>, not git, so anything the OS or an editor leaves
+    /// behind becomes an undeclared pack file and fails composition. Finder writes .DS_Store into
+    /// ProjectTemplate/ the first time anyone opens it, which is enough to redden the build on a
+    /// machine where nothing is wrong.
+    /// </summary>
+    private static readonly HashSet<string> UntrackedNoise =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".DS_Store", "Thumbs.db", "desktop.ini", ".gitkeep", ".gitignore",
+        };
+
+    private static bool IsNoise(string relativePath)
+    {
+        var segments = relativePath.Split('/');
+        return segments.Any(segment =>
+            UntrackedNoise.Contains(segment) ||
+            segment.Equals("__pycache__", StringComparison.Ordinal)) ||
+            relativePath.EndsWith(".pyc", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static List<string> Enumerate(string root, string baseDir)
     {
         var list = new List<string>();
         foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
-            list.Add(Path.GetRelativePath(baseDir, file).Replace('\\', '/'));
+        {
+            var relative = Path.GetRelativePath(baseDir, file).Replace('\\', '/');
+            if (IsNoise(relative)) continue;
+            list.Add(relative);
+        }
         list.Sort(StringComparer.Ordinal);
         return list;
     }

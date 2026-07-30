@@ -95,8 +95,13 @@
          the Agents/ subtree since those go through the AgentsTemplate prefix above, and pack.json
          because that is core's *manifest*, not workspace content: it is embedded under the Packs
          prefix below and must never be written into a workspace root. -->
+    <!-- The .DS_Store/Thumbs.db exclusions are the same class of hazard as the __pycache__ one
+         above, and for the same reason: MSBuild globs the working directory, not git. Finder
+         writes .DS_Store into ProjectTemplate/ the first time anyone opens it; it is gitignored
+         but still on disk, so without this it is embedded, written into every initialized
+         workspace, and then rejected by core's own pack composition as an undeclared root file. -->
     <EmbeddedResource Include="..\ProjectTemplate\**\*.*"
-                      Exclude="..\ProjectTemplate\Agents\**\*.*;..\ProjectTemplate\pack.json">
+                      Exclude="..\ProjectTemplate\Agents\**\*.*;..\ProjectTemplate\pack.json;..\ProjectTemplate\**\.DS_Store;..\ProjectTemplate\**\Thumbs.db;..\ProjectTemplate\**\desktop.ini">
       <LogicalName>GigaClaw.Core.AgentsTemplateRoot/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
