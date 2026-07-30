@@ -51,7 +51,11 @@
       <LogicalName>GigaClaw.Core.AgentsTemplate/VOICE.md</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\ProjectTemplate\Agents\scripts\**\*.*">
+    <!-- The Exclude is load-bearing, not tidiness: MSBuild globs the working directory, not git,
+         so running the contract validators locally leaves __pycache__ bytecode that would otherwise
+         be embedded here and written into every initialized workspace. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\scripts\**\*.*"
+                      Exclude="..\ProjectTemplate\Agents\scripts\**\__pycache__\**;..\ProjectTemplate\Agents\scripts\**\*.pyc">
       <LogicalName>GigaClaw.Core.AgentsTemplate/scripts/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
