@@ -29,6 +29,12 @@ public class MergeQueueTests
         await RunGitAsync(workspace, "init -q");
         await RunGitAsync(workspace, "config user.email test@example.com");
         await RunGitAsync(workspace, "config user.name \"GigaClaw Test\"");
+        // These repos live in a temp dir with no .gitattributes of their own, so on Windows runners
+        // (Git for Windows ships core.autocrlf=true by default) `git worktree add` and `git merge
+        // --ff-only` checkouts silently rewrite LF blobs to CRLF in the working tree — corrupting the
+        // exact byte content the assertions below compare against. Pin autocrlf off for this
+        // repo-local config (shared by every worktree of it) so checkouts round-trip bytes exactly.
+        await RunGitAsync(workspace, "config core.autocrlf false");
         await File.WriteAllTextAsync(Path.Combine(workspace, "shared.txt"), "base\n");
         await File.WriteAllTextAsync(Path.Combine(workspace, "README.md"), "hello\n");
         await RunGitAsync(workspace, "add -A");
