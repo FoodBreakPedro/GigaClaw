@@ -4,7 +4,7 @@ This folder documents how GigaClaw is structured, one file per feature.
 Each feature page covers its purpose, key components, entry points, and external dependencies.
 Concepts are explained in exactly one place — other pages cross-link via relative links.
 
-For a high-level overview see the root [README.md](../README.md). For repo layout and conventions see [CLAUDE.md](../CLAUDE.md).
+For a high-level overview see the root [README.md](../README.md). For repo layout and conventions see [CLAUDE.md](../CLAUDE.md). For the ecosystem-comparison improvement roadmap and parallel work lanes see [roadmap/index.md](./roadmap/index.md).
 
 ## Features
 
@@ -13,6 +13,8 @@ For a high-level overview see the root [README.md](../README.md). For repo layou
 - [Ticket scheduling](./ticket-scheduling.md) — park tickets with a future fire time; `ScheduledPromotionService` auto-promotes them when due.
 - [Agent dispatch](./agent-dispatch.md) — running the `claude` CLI as a subprocess and streaming its output.
 - [Project template](./project-template.md) — embedded `ProjectTemplate/` files copied into each workspace on Initialize.
+- [Verdict contract](./verdict-contract.md) — the typed `SHIP`/`FIX`/`BLOCK` judgement every reviewer, gate and eval judge shares.
+- [Handoff contract](./handoff-contract.md) — what one agent leaves the next: outputs, owned files, assumptions, open loops.
 - [REST API](./rest-api.md) — OpenAPI-driven endpoints under `/api`, with auto-generated Markdown docs.
 - [Storage](./storage.md) — SQLite registry, per-project DBs, run logs, and workspace-side agent state.
 - [Kanban UI](./kanban-ui.md) — Blazor Server board, ticket panel, agent run drawer.

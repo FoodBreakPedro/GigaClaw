@@ -127,6 +127,7 @@ public sealed class TicketCommentAddedTriggerSpec : TriggerSpec
 [JsonDerivedType(typeof(HasParentConditionSpec), "hasParent")]
 [JsonDerivedType(typeof(AllSubTicketsInStatusConditionSpec), "allSubTicketsInStatus")]
 [JsonDerivedType(typeof(TicketCountInColumnConditionSpec), "ticketCountInColumn")]
+[JsonDerivedType(typeof(VerdictIsConditionSpec), "verdictIs")]
 public abstract class ConditionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -210,6 +211,32 @@ public sealed class TicketCountInColumnConditionSpec : ConditionSpec
     /// <summary>One of "==", "!=", "&lt;", "&lt;=", "&gt;", "&gt;=".</summary>
     public string Operator { get; set; } = "==";
     public int Value { get; set; }
+}
+
+/// <summary>
+/// Gates on the newest verdict posted to the firing ticket (see <c>doc/verdict-contract.md</c>).
+/// <para>
+/// <see cref="Verdicts"/> lists the outcomes that match. Besides the three decisions
+/// (<c>SHIP</c>, <c>FIX</c>, <c>BLOCK</c>) it accepts three routing outcomes so a reviewer that
+/// answers with prose fails loudly instead of looking un-reviewed: <c>MISSING</c> (no verdict
+/// comment), <c>INVALID</c> (a verdict that violates the contract) and <c>STALE</c> (a valid
+/// verdict whose artifact changed after it was written). An escalation automation therefore reads
+/// <c>["BLOCK", "INVALID", "STALE"]</c>, a gate reads <c>["SHIP"]</c>, and the repair loop reads
+/// <c>["FIX"]</c>. Unknown entries never match — the gate fails closed.
+/// </para>
+/// </summary>
+public sealed class VerdictIsConditionSpec : ConditionSpec
+{
+    public override string UiTypeKey => "verdictIs";
+    public List<string> Verdicts { get; set; } = new() { "SHIP" };
+    /// <summary>Only consider verdicts claimed by this agent. Supports <c>{assignee}</c>. Empty = any agent.</summary>
+    public string? Agent { get; set; }
+    /// <summary>
+    /// Re-hash the artifact the verdict names in its <c>path</c> evidence and treat the verdict as
+    /// <c>STALE</c> unless one of them still matches <c>inputDigest</c>. Turn this off only for
+    /// reviewers whose input is not a workspace file.
+    /// </summary>
+    public bool RequireFreshArtifact { get; set; } = true;
 }
 
 public sealed class TicketAgeConditionSpec : ConditionSpec

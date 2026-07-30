@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "agent": "evaluator",
+  "ticketId": 388,
+  "verdict": "SHIP",
+  "summary": "Post-mortem scoring for programmer on ticket 388; no regression against the previous trend.",
+  "categories": [
+    { "name": "Outcome quality", "score": 4, "max": 5, "notes": "Acceptance criteria met; one follow-up filed." },
+    { "name": "Process discipline", "score": 5, "max": 5, "notes": "Atomic handoff, receipts present." },
+    { "name": "Efficiency", "score": 3, "max": 5, "notes": "Two resume cycles for a single-file change." },
+    { "name": "Communication", "score": 4, "max": 5 }
+  ],
+  "vetoItems": [],
+  "evidence": [
+    { "kind": "hash", "ref": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d", "note": "ticket snapshot digest - the evaluator judges board state, not a file" }
+  ],
+  "reviewedAtUtc": "2026-07-30T02:05:00Z",
+  "inputDigest": "sha256:6e0b93d17c5a428f0d6e2b8c41795330af8d2c61b93e740a5c82fd1e07b46a9d"
+}

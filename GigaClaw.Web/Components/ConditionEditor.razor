@@ -14,6 +14,7 @@
             <option value="hasParent">@L["CondTypeHasParent"]</option>
             <option value="allSubTicketsInStatus">@L["CondTypeAllSubTicketsInStatus"]</option>
             <option value="ticketCountInColumn">@L["CondTypeTicketCountInColumn"]</option>
+            <option value="verdictIs">@L["CondTypeVerdictIs"]</option>
         </select>
     </label>
 
@@ -137,6 +138,26 @@
                 <input type="number" @bind="s.Value" min="0" />
             </label>
             break;
+        case VerdictIsConditionSpec s:
+            <div class="column-picker">
+                <div class="column-picker-label">@L["VerdictOutcomes"]</div>
+                @foreach (var outcome in VerdictOutcomeKeys)
+                {
+                    var value = outcome.Key;
+                    var label = outcome.Label;
+                    <label class="column-check"><input type="checkbox" checked="@s.Verdicts.Contains(value)"
+                               @onchange="e => ToggleColumn(s.Verdicts, value, (bool)e.Value!)" /><span>@L[label]</span></label>
+                }
+            </div>
+            <label>@L["VerdictAgent"]
+                <select value="@(s.Agent ?? "")" @onchange="e => s.Agent = string.IsNullOrEmpty((string?)e.Value) ? null : (string)e.Value!">
+                    <option value="">@L["AnyMember"]</option>
+                    @foreach (var sk in Skills) { <option value="@sk">@sk</option> }
+                </select>
+            </label>
+            <label class="column-check"><input type="checkbox" checked="@s.RequireFreshArtifact"
+                       @onchange="e => s.RequireFreshArtifact = (bool)e.Value!" /><span>@L["VerdictRequireFresh"]</span></label>
+            break;
         case TicketAgeConditionSpec s:
             <label>@L["Field"]
                 <select value="@s.Field" @onchange="e => s.Field = (string)e.Value!">
@@ -168,6 +189,18 @@
     [Parameter] public EventCallback<ConditionSpec> OnReplace { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
 
+    // Verdict outcomes an automation can route on, in the order a reviewer pipeline reads them:
+    // the three decisions first, then the three failure modes that must never look like "not reviewed yet".
+    private static readonly (string Key, string Label)[] VerdictOutcomeKeys =
+    [
+        ("SHIP", "VerdictShip"),
+        ("FIX", "VerdictFix"),
+        ("BLOCK", "VerdictBlock"),
+        ("MISSING", "VerdictMissing"),
+        ("INVALID", "VerdictInvalid"),
+        ("STALE", "VerdictStale"),
+    ];
+
     private string CurrentType => Condition switch
     {
         TicketInColumnConditionSpec => "ticketInColumn",
@@ -180,6 +213,7 @@
         HasParentConditionSpec => "hasParent",
         AllSubTicketsInStatusConditionSpec => "allSubTicketsInStatus",
         TicketCountInColumnConditionSpec => "ticketCountInColumn",
+        VerdictIsConditionSpec => "verdictIs",
         _ => throw new NotSupportedException($"No UI mapping for condition type {Condition.GetType().Name}. Register it in ConditionEditor.razor."),
     };
 
@@ -196,6 +230,7 @@
             "hasParent" => new HasParentConditionSpec(),
             "allSubTicketsInStatus" => new AllSubTicketsInStatusConditionSpec { Statuses = new List<string> { "Done" } },
             "ticketCountInColumn" => new TicketCountInColumnConditionSpec { Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
+            "verdictIs" => new VerdictIsConditionSpec { Verdicts = new List<string> { "SHIP" } },
             _ => throw new NotSupportedException($"Unknown condition type key '{e.Value}'. Register it in ConditionEditor.razor."),
         };
         await OnReplace.InvokeAsync(spec);

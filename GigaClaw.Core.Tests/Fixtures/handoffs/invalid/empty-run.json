@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "agent": "programmer",
+  "ticketId": 42,
+  "runId": "9f2c1a",
+  "summary": "Added the verdict gate condition; reviewer can now run against it.",
+  "inputs": [
+    {
+      "kind": "path",
+      "ref": "doc/verdict-contract.md",
+      "note": "contract the gate implements"
+    }
+  ],
+  "outputs": [],
+  "ownedFiles": [],
+  "assumptions": [
+    "Prose reviewers are handled by the MISSING outcome, not by a new gate."
+  ],
+  "openLoops": [],
+  "acceptanceCriteria": [],
+  "nextRole": "qa-tester",
+  "producedAtUtc": "2026-07-30T12:00:00Z"
+}
