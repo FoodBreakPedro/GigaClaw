@@ -632,11 +632,8 @@ else
         "ticketCountInColumn" => new TicketCountInColumnConditionSpec {
             Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
         "verdictIs" => new VerdictIsConditionSpec { Verdicts = new List<string> { "SHIP" } },
-<<<<<<< HEAD
         "repairBudget" => new RepairBudgetConditionSpec(),
-=======
         "dependenciesResolved" => new DependenciesResolvedConditionSpec { ResolvedStatuses = new List<string> { "Done" } },
->>>>>>> claude-orch/c4-executable-teams
         _ => new TicketInColumnConditionSpec { Columns = new List<string> { "Todo" } },
     };
 

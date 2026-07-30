@@ -502,7 +502,7 @@ public class RepairLoopTests
                 new ClaudeRunner(sessions, runs, new RunConcurrencyGate(1), NullLogger<ClaudeRunner>.Instance),
                 cost, new LocalizationService(new AppSettingsService(root)), Projects,
                 new RunStateManager(runs, cost, Tickets, NullLogger.Instance),
-                FakeHttpClientFactory.Unused, NullLogger.Instance);
+                FakeHttpClientFactory.Unused, TestTeamRuns.For(Projects, Tickets), NullLogger.Instance);
         }
 
         public async Task<(ProjectRuntime Runtime, GigaClaw.Core.Models.Ticket Ticket)> SeedAsync(

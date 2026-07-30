@@ -15,11 +15,8 @@
             <option value="allSubTicketsInStatus">@L["CondTypeAllSubTicketsInStatus"]</option>
             <option value="ticketCountInColumn">@L["CondTypeTicketCountInColumn"]</option>
             <option value="verdictIs">@L["CondTypeVerdictIs"]</option>
-<<<<<<< HEAD
             <option value="repairBudget">@L["CondTypeRepairBudget"]</option>
-=======
             <option value="dependenciesResolved">@L["CondTypeDependenciesResolved"]</option>
->>>>>>> claude-orch/c4-executable-teams
         </select>
     </label>
 
@@ -163,7 +160,6 @@
             <label class="column-check"><input type="checkbox" checked="@s.RequireFreshArtifact"
                        @onchange="e => s.RequireFreshArtifact = (bool)e.Value!" /><span>@L["VerdictRequireFresh"]</span></label>
             break;
-<<<<<<< HEAD
         case RepairBudgetConditionSpec s:
             <label>@L["RepairMode"]
                 <select value="@s.Mode" @onchange="e => s.Mode = (string)e.Value!">
@@ -181,7 +177,7 @@
                 <input type="number" min="0" value="@(s.MaxCycles?.ToString() ?? "")"
                        @onchange="e => s.MaxCycles = int.TryParse((string?)e.Value, out var v) ? v : null" />
             </label>
-=======
+            break;
         case DependenciesResolvedConditionSpec s:
             <div class="column-picker">
                 <div class="column-picker-label">@L["DependencyResolvedStatuses"]</div>
@@ -192,7 +188,6 @@
                                @onchange="e => ToggleColumn(s.ResolvedStatuses, col, (bool)e.Value!)" /><span>@col</span></label>
                 }
             </div>
->>>>>>> claude-orch/c4-executable-teams
             break;
         case TicketAgeConditionSpec s:
             <label>@L["Field"]
@@ -250,11 +245,8 @@
         AllSubTicketsInStatusConditionSpec => "allSubTicketsInStatus",
         TicketCountInColumnConditionSpec => "ticketCountInColumn",
         VerdictIsConditionSpec => "verdictIs",
-<<<<<<< HEAD
         RepairBudgetConditionSpec => "repairBudget",
-=======
         DependenciesResolvedConditionSpec => "dependenciesResolved",
->>>>>>> claude-orch/c4-executable-teams
         _ => throw new NotSupportedException($"No UI mapping for condition type {Condition.GetType().Name}. Register it in ConditionEditor.razor."),
     };
 
@@ -272,11 +264,8 @@
             "allSubTicketsInStatus" => new AllSubTicketsInStatusConditionSpec { Statuses = new List<string> { "Done" } },
             "ticketCountInColumn" => new TicketCountInColumnConditionSpec { Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
             "verdictIs" => new VerdictIsConditionSpec { Verdicts = new List<string> { "SHIP" } },
-<<<<<<< HEAD
             "repairBudget" => new RepairBudgetConditionSpec(),
-=======
             "dependenciesResolved" => new DependenciesResolvedConditionSpec { ResolvedStatuses = new List<string> { "Done" } },
->>>>>>> claude-orch/c4-executable-teams
             _ => throw new NotSupportedException($"Unknown condition type key '{e.Value}'. Register it in ConditionEditor.razor."),
         };
         await OnReplace.InvokeAsync(spec);

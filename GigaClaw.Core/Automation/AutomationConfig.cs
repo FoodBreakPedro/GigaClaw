@@ -128,11 +128,8 @@ public sealed class TicketCommentAddedTriggerSpec : TriggerSpec
 [JsonDerivedType(typeof(AllSubTicketsInStatusConditionSpec), "allSubTicketsInStatus")]
 [JsonDerivedType(typeof(TicketCountInColumnConditionSpec), "ticketCountInColumn")]
 [JsonDerivedType(typeof(VerdictIsConditionSpec), "verdictIs")]
-<<<<<<< HEAD
 [JsonDerivedType(typeof(RepairBudgetConditionSpec), "repairBudget")]
-=======
 [JsonDerivedType(typeof(DependenciesResolvedConditionSpec), "dependenciesResolved")]
->>>>>>> claude-orch/c4-executable-teams
 public abstract class ConditionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -245,7 +242,6 @@ public sealed class VerdictIsConditionSpec : ConditionSpec
 }
 
 /// <summary>
-<<<<<<< HEAD
 /// The cap half of the bounded repair loop (see <c>doc/verdict-contract.md</c>). Pairs with
 /// <c>verdictIs: ["FIX"]</c>: one automation carries <c>mode: "withinCap"</c> and re-dispatches the
 /// producing agent, its twin carries <c>mode: "exhausted"</c> and escalates the ticket to the owner.
@@ -277,7 +273,9 @@ public sealed class RepairBudgetConditionSpec : ConditionSpec
     /// rather than loops.
     /// </summary>
     public int? MaxCycles { get; set; }
-=======
+}
+
+/// <summary>
 /// Matches when every ticket the firing ticket is <c>blockedBy</c> has reached one of
 /// <see cref="ResolvedStatuses"/>. A ticket with no dependency edges matches — nothing is
 /// blocking it. (This is the opposite default from <see cref="AllSubTicketsInStatusConditionSpec"/>,
@@ -291,7 +289,6 @@ public sealed class DependenciesResolvedConditionSpec : ConditionSpec
 {
     public override string UiTypeKey => "dependenciesResolved";
     public List<string> ResolvedStatuses { get; set; } = new() { "Done" };
->>>>>>> claude-orch/c4-executable-teams
 }
 
 public sealed class TicketAgeConditionSpec : ConditionSpec

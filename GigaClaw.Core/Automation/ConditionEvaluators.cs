@@ -60,7 +60,6 @@ public static class ConditionEvaluators
     }
 
     /// <summary>
-<<<<<<< HEAD
     /// Matches when the ticket's repair budget is in the configured state. A null
     /// <paramref name="state"/> means the budget could not be established (an unreadable contract
     /// manifest): that resolves to "exhausted", because escalating a ticket to a human is the safe
@@ -73,7 +72,9 @@ public static class ConditionEvaluators
         if (!exhausted && !withinCap) return false;
         if (state is null) return exhausted;
         return exhausted ? state.Exhausted : !state.Exhausted;
-=======
+    }
+
+    /// <summary>
     /// True when nothing is blocking the ticket: every <c>blockedBy</c> edge points at a ticket
     /// in one of the resolved statuses. No edges = nothing blocking = true.
     /// </summary>
@@ -83,7 +84,6 @@ public static class ConditionEvaluators
     {
         var resolved = c.ResolvedStatuses.Count > 0 ? c.ResolvedStatuses : ["Done"];
         return blockedBy.All(b => resolved.Contains(b.Status));
->>>>>>> claude-orch/c4-executable-teams
     }
 
     public static bool TicketAge(TicketAgeConditionSpec c, DateTime createdAt, DateTime updatedAt, DateTime now)

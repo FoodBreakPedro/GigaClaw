@@ -345,11 +345,8 @@ public static class OpenApiMarkdownGenerator
         sb.AppendLine("| `ticketInColumn` | `columns[]`, `assigneeSlug?`, `negate?` | Checks the ticket is in one of the given columns |");
         sb.AppendLine("| `ticketCountInColumn` | `columns[]`, `assigneeSlug?`, `sameAssignee?`, `operator`, `value` | Counts tickets in columns and compares to a threshold (e.g. `== 0` = no pending) |");
         sb.AppendLine("| `verdictIs` | `verdicts[]` (`SHIP`/`FIX`/`BLOCK`/`MISSING`/`INVALID`/`STALE`), `agent?`, `requireFreshArtifact?` | Gates on the newest reviewer verdict posted to the ticket (see doc/verdict-contract.md) |");
-<<<<<<< HEAD
         sb.AppendLine("| `repairBudget` | `mode` (`withinCap`/`exhausted`), `agent?`, `maxCycles?` | Bounds the FIX repair loop: rounds are recounted from the ticket's FIX verdicts, capped by `maxReviewCycles` (see doc/verdict-contract.md) |");
-=======
         sb.AppendLine("| `dependenciesResolved` | `resolvedStatuses[]` | Matches when every ticket the firing ticket is blocked by has reached a resolved status (no edges = matches) |");
->>>>>>> claude-orch/c4-executable-teams
         sb.AppendLine("| `minDescriptionLength` | `length` | Checks the ticket description is long enough |");
         sb.AppendLine("| `fieldLength` | `field`, `mode` (min/max), `length`, `negate?` | Checks the length of a field |");
         sb.AppendLine("| `assignedTo` | `slugs[]`, `negate?` | Checks the ticket assignment |");
