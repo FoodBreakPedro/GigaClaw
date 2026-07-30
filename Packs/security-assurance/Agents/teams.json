@@ -1,0 +1,17 @@
+[
+  {
+    "slug": "security-review",
+    "name": "Security Review",
+    "description": "Four-lane adversarial review: code audit, threat model, supply chain, secrets. Filter-only at 1.0.0; the executable four-lane preset (parallel task graph, quorum join, security-auditor as synthesizer) lands additively under this same slug once the join and synthesizer half of executable teams is merged.",
+    "icon": "🔐",
+    "agentSlugs": [
+      "security-auditor",
+      "threat-modeler",
+      "supply-chain-reviewer",
+      "secrets-reviewer",
+      "producer",
+      "evaluator",
+      "documentalist"
+    ]
+  }
+]
