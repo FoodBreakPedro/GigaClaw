@@ -19,7 +19,7 @@
 else
 {
     <div class="page-header">
-        <a class="back-link" href="/board/@Slug">&larr; @L["Board"]</a>
+        <a class="back-link" href="@ReturnTarget">&larr; @ReturnLabel</a>
         <h1>@_project.Name — @L["SettingsTitle"]</h1>
     </div>
 
@@ -260,7 +260,7 @@ else
         </section>
 
         <section class="settings-section">
-            <a class="settings-primary" href="/board/@Slug/automations">@L["OpenAutomationsEditor"]</a>
+            <a class="settings-primary" href="@ReturnFrom($"/board/{Slug}/automations")">@L["OpenAutomationsEditor"]</a>
         </section>
 
         <section class="settings-section danger-zone">
@@ -325,6 +325,17 @@ else
 
 @code {
     [Parameter] public string Slug { get; set; } = "";
+    [SupplyParameterFromQuery(Name = "returnTo")]
+    [Parameter] public string? ReturnTo { get; set; }
+
+    private string ReturnTarget => NavigationReturn.Resolve(ReturnTo, $"/board/{Slug}");
+    private string ReturnLabel => ReturnTarget == "/" ? L["AllBoardsNavLabel"] : L["Board"];
+    private string CurrentSettingsPath =>
+        NavigationReturn.IsSafeLocalPath(ReturnTo)
+            ? NavigationReturn.WithReturnTo($"/board/{Slug}/settings", ReturnTarget)
+            : $"/board/{Slug}/settings";
+    private string ReturnFrom(string target) =>
+        NavigationReturn.WithReturnTo(target, CurrentSettingsPath);
 
     private Project? _project;
     private string _workspacePath = "";

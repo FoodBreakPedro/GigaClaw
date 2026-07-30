@@ -30,16 +30,16 @@
 else
 {
     <div class="page-header">
-        <a href="/" class="back-link">&larr; @L["BackToProjects"]</a>
+        <a href="@ReturnTarget" class="back-link">&larr; @ReturnLabel</a>
         <h1>@_project.Name</h1>
         <div class="view-toggle">
-            <a class="view-toggle-btn" href="/board/@Slug">@L["KanbanView"]</a>
+            <a class="view-toggle-btn" href="@ReturnTarget">@L["KanbanView"]</a>
             <span class="view-toggle-btn view-toggle-btn--active">@L["Dashboard"]</span>
         </div>
         <div class="header-right">
             <button class="header-action-btn" @onclick="OpenTileChat">@L["AddTile"]</button>
-            <a class="header-action-btn" href="/board/@Slug/automations">&#9881; @L["Automations"]</a>
-            <a class="header-action-btn" href="/board/@Slug/settings">&#9881;&#65039; @L["ProjectSettings"]</a>
+            <a class="header-action-btn" href="@ReturnFrom($"/board/{Slug}/automations")">&#9881; @L["Automations"]</a>
+            <a class="header-action-btn" href="@ReturnFrom($"/board/{Slug}/settings")">&#9881;&#65039; @L["ProjectSettings"]</a>
         </div>
     </div>
 
@@ -297,6 +297,17 @@ else
 
 @code {
     [Parameter] public string Slug { get; set; } = "";
+    [SupplyParameterFromQuery(Name = "returnTo")]
+    [Parameter] public string? ReturnTo { get; set; }
+
+    private string ReturnTarget => NavigationReturn.Resolve(ReturnTo, $"/board/{Slug}");
+    private string ReturnLabel => ReturnTarget == "/" ? L["AllBoardsNavLabel"] : L["Board"];
+    private string CurrentDashboardPath =>
+        NavigationReturn.IsSafeLocalPath(ReturnTo)
+            ? NavigationReturn.WithReturnTo($"/board/{Slug}/dashboard", ReturnTarget)
+            : $"/board/{Slug}/dashboard";
+    private string ReturnFrom(string target) =>
+        NavigationReturn.WithReturnTo(target, CurrentDashboardPath);
 
     private Project? _project;
     private string _workspace = "";
