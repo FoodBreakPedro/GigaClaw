@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "agent": "programmer",
+  "ticketId": 42,
+  "runId": "9f2c1a",
+  "summary": "Added the verdict gate condition; reviewer can now run against it.",
+  "inputs": [
+    { "kind": "path", "ref": "doc/verdict-contract.md", "note": "contract the gate implements" }
+  ],
+  "outputs": [
+    { "kind": "path", "ref": "GigaClaw.Core/Automation/ConditionEvaluators.cs", "note": "new condition" }
+  ],
+  "ownedFiles": ["GigaClaw.Core/Automation/ConditionEvaluators.cs"],
+  "assumptions": ["Prose reviewers are handled by the MISSING outcome, not by a new gate."],
+  "openLoops": [{ "statement": "automations.json wiring waits on the reviewer rewrites", "blocking": false }],
+  "acceptanceCriteria": [
+    { "statement": "Condition gates ticket exit", "met": true, "evidenceRef": "GigaClaw.Core/Automation/ConditionEvaluators.cs" },
+    { "statement": "Repair loop returns FIX to the producer", "met": false }
+  ],
+  "nextRole": "qa-tester",
+  "producedAtUtc": "2026-07-30T12:00:00Z"
+}
