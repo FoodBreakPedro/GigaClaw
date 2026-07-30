@@ -1,42 +1,28 @@
-# Brand Identity & Content Guidelines — Karalun
+# Karalun — Brand & Creator Persona File
 
-This file defines the brand context, voice, and creator principles for **Karalun**, Pedro's personal gaming, content creator, and influencer persona.
+> **Status: ACTIVE.** Pedro's personal gaming, content creator, and influencer persona.
 
-## Core Brand Identity
+## Core Identity
 
-- **Persona Name**: Karalun (Pedro's personal gaming handle, content creator, and influencer persona)
-- **Concept**: A multi-faceted gaming and nerd-culture creator persona spanning gaming, fandom, convention culture, strategy tools, and entertainment.
-- **Target Audience**: Gamers, pop-culture fans, chess players, tabletop/board game enthusiasts, cosplayers, and Comic-Con attendees.
-- **Default Niche**: `gaming & nerd culture` (broad gaming, fandom, streaming, cosplay, conventions, chess, and creator tools)
+- **Persona Name:** Karalun (Pedro's personal gaming handle, content creator, and influencer persona).
+- **One-liner:** *Gamer, creator, and nerd culture enthusiast.*
+- **Concept:** An authentic content creator persona spanning all gaming (mobile, console, PC, board games, chess), cosplay, Comic-Con conventions, fandoms, and gamer utility tools (such as Karalun's Era Planner).
 
 ## Content Pillars
 
-1. **Gaming Content & Strategy**: Gameplay, theorycrafting, streams, and guides for mobile (SWGOH), console, PC titles, and chess.
-2. **Nerd Culture & Conventions**: Comic-Con coverage, cosplay spotlights, fandom deep dives, and pop-culture discussions.
-3. **Board Games & Tabletop**: Reviews, session highlights, and tabletop strategy.
-4. **Creator Tools & Utility**: Building and sharing free gamer utility tools (such as Karalun's Era Planner for SWGOH).
+1. **Gaming & Strategy:** Gameplay, guides, theorycrafting, and streams across mobile (SWGOH), console, PC, and chess.
+2. **Nerd Culture & Fandom:** Comic-Con event coverage, cosplay spotlights, pop culture, and fandom discussions.
+3. **Board Games & Tabletop:** Tabletop sessions, reviews, and board game strategy.
+4. **Creator Tools & Utility:** Free web tools for gamers (e.g. Karalun's Era Planner).
 
-## Positioning & Vibe
+## Positioning & Tone
 
-> *Gamer, creator, and nerd culture enthusiast.*
-
-Karalun is an authentic content creator and influencer persona. It is not an agency brand or corporate product — it is Pedro's personal gaming persona sharing passion, math, tools, gameplay, and nerd culture with the community.
-
-## Voice & Tone
-
-- **Authentic & Passionate**: Real gamer and creator perspective.
-- **Community-First**: Generous, engaging, and value-focused.
-- **Engaging & Entertaining**: Enthusiastic about lore, gameplay mechanics, cosplay art, and convention culture.
-- **Zero Drama**: Positive, constructive, and drama-free.
+- **Voice:** Authentic, passionate, community-driven, and engaging.
+- **Vibe:** The gamer & creator friend who loves the lore, builds the tools, plays the games, and celebrates nerd culture.
+- **No Artificial Boundaries:** As a personal creator persona, Karalun naturally spans gaming, conventions, cosplay, chess, and pop culture.
 
 ## Channels
 
-1. **Social & Community**: Reddit, Discord, Twitter/X, Instagram, TikTok
-2. **Streaming & Video**: YouTube, Twitch, Shorts/Reels
-3. **Web Tools & Hub**: Karalun tools (e.g., Era Planner) and creator hub
-
-## Guidelines
-
-- **No Artificial Boundaries**: Karalun covers all gaming, fandom, cosplay, conventions, board games, and chess naturally as part of the creator persona.
-- **Authentic Creator Voice**: All content represents Pedro's genuine interest and creator voice.
-- **Tools Stay Free**: Any created tools (like the Era Planner) remain free community resources.
+- **Hub & Tools:** Creator site / web tools (e.g., Era Planner)
+- **Social & Community:** Discord, Reddit, Twitter/X, Instagram, TikTok
+- **Video & Streams:** YouTube, Twitch, Shorts/Reels

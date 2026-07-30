@@ -1945,8 +1945,8 @@
     "semantic_hash": ""
   },
   "tasks/venture-prep/karalungaming/BRAND.md": {
-    "mtime": 1785452839.6640751,
-    "ast_hash": "d69d9a2714b19c5fe6e9db61a1e7dcbc",
+    "mtime": 1785452841.4955363,
+    "ast_hash": "295230a24b164f58f2dcdd6ad1ffd4b8",
     "semantic_hash": ""
   },
   "tasks/venture-prep/karalungaming/ROLLOUT.md": {
@@ -3422,6 +3422,101 @@
   "wiki/Welcome to Karpathy LLM Wiki.md": {
     "mtime": 1785451880.5191813,
     "ast_hash": "daebc7f29c4171669bd76596ce7bafda",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/README.md": {
+    "mtime": 1785453389.8217666,
+    "ast_hash": "6e1178f3260e47ae043c23d209266eba",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamelifteat/BRAND.md": {
+    "mtime": 1784373498.6158488,
+    "ast_hash": "4c8e03279c881c83b4d56ee40f1cbf3d",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamelifteat/content-engine.md": {
+    "mtime": 1783104962.1235135,
+    "ast_hash": "bb5621eac39554114c513d184552bb03",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamelifteat/intel-watchlist.md": {
+    "mtime": 1784719968.8331769,
+    "ast_hash": "50578f4897469bfd6ee09e5099ae81fd",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamelifteat/trend-profile.md": {
+    "mtime": 1784371327.2527251,
+    "ast_hash": "2564bfd4d522bf3d72bda20da210c57f",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamepowergym/BRAND.md": {
+    "mtime": 1781727751.7450395,
+    "ast_hash": "55a498b886e97d679f5c4c6cff2ab231",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamepowergym/intel-watchlist.md": {
+    "mtime": 1784719968.8332684,
+    "ast_hash": "fcc753c3ecafaed17a12c92d22379d76",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/gamepowergym/trend-profile.md": {
+    "mtime": 1784371341.886029,
+    "ast_hash": "91db3692e5289550906d76b8d318b63f",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/hyperlanetravels/BRAND.md": {
+    "mtime": 1781727751.7451477,
+    "ast_hash": "52b154bfb90ee19494d60c9ac1f1c2b7",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/hyperlanetravels/content-engine.md": {
+    "mtime": 1783104962.123778,
+    "ast_hash": "a1d24a1115df257d92417d5358c04c42",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/hyperlanetravels/intel-watchlist.md": {
+    "mtime": 1784719968.8333542,
+    "ast_hash": "33a1ef51b79a9fae8b96ebf32132533a",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/hyperlanetravels/trend-profile.md": {
+    "mtime": 1783104962.1238804,
+    "ast_hash": "c4a7933b9965a019a89bb7fcb0dce537",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/karalungaming/activation-kit.md": {
+    "mtime": 1783104962.124047,
+    "ast_hash": "a400e9a46c01779a9ff39808359da87b",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/pedrorzabala/BRAND.md": {
+    "mtime": 1783104962.1244938,
+    "ast_hash": "07a24b5acd4670cf31f527ad466da22b",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/pedrorzabala/activation-kit.md": {
+    "mtime": 1783104962.124385,
+    "ast_hash": "d45e8cabf88e85ac9d823c2d8213eb06",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/zabsconsulting/BRAND.md": {
+    "mtime": 1783104962.1246681,
+    "ast_hash": "3529d66d226e98318e880fea50aa4615",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/zabsconsulting/intel-watchlist.md": {
+    "mtime": 1784719968.83344,
+    "ast_hash": "f2cdbdcd05edc01588ee10594e0ad740",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/zabsconsulting/offer-ai-visibility-audit.md": {
+    "mtime": 1783104962.1247895,
+    "ast_hash": "f2d621fb38ce14e312ac8ca9a11a4ce5",
+    "semantic_hash": ""
+  },
+  "tasks/venture-prep/zabsconsulting/trend-profile.md": {
+    "mtime": 1784371359.1866984,
+    "ast_hash": "8cd38d02b3e8b9a9453531e681e8f725",
     "semantic_hash": ""
   }
 }
