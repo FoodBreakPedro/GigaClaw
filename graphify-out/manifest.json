@@ -2800,8 +2800,8 @@
     "semantic_hash": ""
   },
   "doc/roadmap/index.md": {
-    "mtime": 1785437052.7400331,
-    "ast_hash": "8ca2db50f34214d1934596c08ad3d22e",
+    "mtime": 1785448784.5969214,
+    "ast_hash": "d7ea134b80b66816f38fbac72cdfee5a",
     "semantic_hash": ""
   },
   "doc/roadmap/lane-claude-orchestration.md": {
@@ -3357,6 +3357,11 @@
   "Packs/security-assurance/SECURITY-REVIEW.md": {
     "mtime": 1785447898.8179288,
     "ast_hash": "a381625cfbf5bba0dff006cf59bf0658",
+    "semantic_hash": ""
+  },
+  "doc/roadmap/SESSION-HANDOFF.md": {
+    "mtime": 1785448774.690039,
+    "ast_hash": "260aad081337c142a2bf6a16a0b5a514",
     "semantic_hash": ""
   }
 }
