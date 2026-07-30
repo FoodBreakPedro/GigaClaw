@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gigaclaw.dev/schemas/verdict/v1.json",
+  "title": "GigaClaw agent verdict (v1)",
+  "description": "The single machine-readable judgement shape shared by every reviewer, quality gate and eval judge. Frozen at v1: additive changes only. Consumers treat an invalid verdict as BLOCK.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "agent",
+    "ticketId",
+    "verdict",
+    "categories",
+    "vetoItems",
+    "evidence",
+    "reviewedAtUtc",
+    "inputDigest"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "description": "Verdict contract version. Bumped only for breaking changes.",
+      "const": 1
+    },
+    "agent": {
+      "description": "Slug of the reviewing agent, matching its ProjectTemplate directory name.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "ticketId": {
+      "description": "Board ticket the verdict judges.",
+      "type": ["integer", "string"],
+      "minimum": 1,
+      "pattern": "^[0-9]+$"
+    },
+    "verdict": {
+      "description": "SHIP = advance. FIX = return to the producing agent (bounded repair loop). BLOCK = stop and escalate to the owner.",
+      "enum": ["SHIP", "FIX", "BLOCK"]
+    },
+    "summary": {
+      "description": "One-line human-readable justification. Never the machine-readable reason - that is vetoItems and categories.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "categories": {
+      "description": "The agent's own rubric, one entry per scored category. Totals are derived, never stored.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/category" }
+    },
+    "vetoItems": {
+      "description": "Hard failures. Any veto item forbids SHIP regardless of score. Empty array when there are none.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/vetoItem" }
+    },
+    "evidence": {
+      "description": "What the verdict was derived from: artifacts read, digests computed, links checked.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence" }
+    },
+    "reviewedAtUtc": {
+      "description": "ISO-8601 UTC instant the review completed (must end with Z).",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+    },
+    "inputDigest": {
+      "description": "sha256 of the exact artifact reviewed. Binds the verdict to its input so a stale verdict can be rejected.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "reviewCycle": {
+      "description": "1-based repair-loop cycle this verdict belongs to, and the cap in force. Informational: the durable counter lives on the ticket.",
+      "$ref": "#/$defs/reviewCycle"
+    }
+  },
+  "$defs": {
+    "category": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "score", "max"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max": {
+          "type": "number",
+          "minimum": 1
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "vetoItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "statement"],
+      "properties": {
+        "code": {
+          "description": "Stable machine-checkable identifier for the failure class, e.g. failing-e2e-scenario.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "statement": {
+          "description": "What is wrong, stated as a checkable fact rather than an opinion.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "evidenceRefs": {
+          "description": "Refs of evidence entries backing this veto item. Every value must appear as an evidence ref.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {
+          "enum": ["path", "hash", "link"]
+        },
+        "ref": {
+          "description": "path = workspace-relative file path (no absolute paths, no traversal). hash = sha256:<64 hex>. link = absolute https URL.",
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "reviewCycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current", "max"],
+      "properties": {
+        "current": { "type": "integer", "minimum": 1 },
+        "max": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
