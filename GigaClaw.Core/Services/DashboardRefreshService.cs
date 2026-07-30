@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
 using GigaClaw.Core.Automation;
+using GigaClaw.Core.Automation.Runners;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -16,7 +17,7 @@ public sealed class DashboardRefreshService : BackgroundService
 {
     private readonly ProjectService _projects;
     private readonly DashboardService _dashboard;
-    private readonly ClaudeRunner _runner;
+    private readonly IAgentRunner _runner;
     private readonly DashboardTileGate _gate;
     private readonly DashboardScriptRunner _scriptRunner;
     private readonly ILogger<DashboardRefreshService> _logger;
@@ -27,7 +28,7 @@ public sealed class DashboardRefreshService : BackgroundService
     public DashboardRefreshService(
         ProjectService projects,
         DashboardService dashboard,
-        ClaudeRunner runner,
+        IAgentRunner runner,
         DashboardTileGate gate,
         DashboardScriptRunner scriptRunner,
         ILogger<DashboardRefreshService> logger)

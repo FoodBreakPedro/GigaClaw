@@ -2,6 +2,7 @@ using System.Net.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using GigaClaw.Core.Automation.Policy;
+using GigaClaw.Core.Automation.Runners;
 using GigaClaw.Core.Automation.Triggers;
 using GigaClaw.Core.Services;
 
@@ -23,7 +24,7 @@ public sealed class AutomationEngine : BackgroundService
         TriggerStateStore triggerState,
         SessionRegistry sessions,
         AgentRunRegistry runs,
-        ClaudeRunner runner,
+        IAgentRunner runner,
         CostTracker cost,
         LocalizationService loc,
         TeamRunService teamRuns,

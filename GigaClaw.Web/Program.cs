@@ -72,6 +72,9 @@ builder.Services.AddSingleton<AgentRunRegistry>(sp => new AgentRunRegistry(sp.Ge
 var maxConcurrent = int.TryParse(Environment.GetEnvironmentVariable("GIGACLAW_MAX_CONCURRENT_AGENTS"), out var mc) && mc > 0 ? mc : 3;
 builder.Services.AddSingleton(new RunConcurrencyGate(maxConcurrent));
 builder.Services.AddSingleton<ClaudeRunner>();
+// R7: host-neutral adapter boundary (doc/roadmap/lane-codex-runtime.md). ClaudeRunner is the
+// first IAgentRunner implementation; consumers resolve the interface, not the concrete type.
+builder.Services.AddSingleton<GigaClaw.Core.Automation.Runners.IAgentRunner>(sp => sp.GetRequiredService<ClaudeRunner>());
 builder.Services.AddSingleton<CostTracker>();
 // R4: durable per-project file-ownership leases (doc/roadmap/lane-codex-runtime.md).
 builder.Services.AddSingleton<GigaClaw.Core.Automation.Policy.FileLeaseStore>();

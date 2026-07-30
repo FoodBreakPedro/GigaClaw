@@ -1,5 +1,6 @@
 using System.Text;
 using GigaClaw.Core.Automation;
+using GigaClaw.Core.Automation.Runners;
 using GigaClaw.Core.Services;
 using GigaClaw.Web.Services;
 
@@ -71,7 +72,7 @@ public static partial class Endpoints
             MemberService ms,
             ChatService cs,
             TicketService ts,
-            ClaudeRunner runner,
+            IAgentRunner runner,
             HermesAgentService hermes,
             SessionRegistry sessions,
             AgentRunRegistry runReg,

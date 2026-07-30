@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using GigaClaw.Core.Automation.Policy;
+using GigaClaw.Core.Automation.Runners;
 using Microsoft.Extensions.Logging;
 
 namespace GigaClaw.Core.Automation;
@@ -103,7 +104,11 @@ public sealed class ClaudeRunContext
     public int? LockTimeoutMinutes { get; init; }
 }
 
-public sealed class ClaudeRunner
+/// <summary>The Claude CLI implementation of <see cref="IAgentRunner"/> (doc/roadmap/lane-codex-runtime.md,
+/// Task R7). All dispatch, streaming, resume, steering, usage, policy-hook, and process-containment
+/// behavior described on <see cref="IAgentRunner"/> lives here; nothing changed by extracting the
+/// interface.</summary>
+public sealed class ClaudeRunner : IAgentRunner
 {
     private readonly SessionRegistry _sessions;
     private readonly AgentRunRegistry _runs;

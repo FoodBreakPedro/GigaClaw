@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using GigaClaw.Core.Automation;
+using GigaClaw.Core.Automation.Runners;
 using GigaClaw.Core.Services;
 using GigaClaw.Web.Services;
 
@@ -163,7 +164,7 @@ public static partial class Endpoints
         }).WithTags("Runs");
 
         api.MapPost("/projects/{slug}/runs/{runId}/retry", async (string slug, string runId,
-            AgentRunRegistry reg, ProjectService ps, TicketService ts, ClaudeRunner runner) =>
+            AgentRunRegistry reg, ProjectService ps, TicketService ts, IAgentRunner runner) =>
         {
             var run = reg.Get(runId);
             if (run is null || run.ProjectSlug != slug) return Results.NotFound();

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using GigaClaw.Core.Automation.Triggers;
 using GigaClaw.Core.Automation.Handoffs;
 using GigaClaw.Core.Automation.Policy;
+using GigaClaw.Core.Automation.Runners;
 using GigaClaw.Core.Automation.Verdicts;
 using GigaClaw.Core.Services;
 
@@ -21,7 +22,7 @@ internal sealed class ActionExecutor
     private readonly LabelService _labels;
     private readonly SessionRegistry _sessions;
     private readonly AgentRunRegistry _runs;
-    private readonly ClaudeRunner _runner;
+    private readonly IAgentRunner _runner;
     private readonly CostTracker _cost;
     private readonly LocalizationService _loc;
     private readonly ProjectService _projects;
@@ -56,7 +57,7 @@ internal sealed class ActionExecutor
         LabelService labels,
         SessionRegistry sessions,
         AgentRunRegistry runs,
-        ClaudeRunner runner,
+        IAgentRunner runner,
         CostTracker cost,
         LocalizationService loc,
         ProjectService projects,

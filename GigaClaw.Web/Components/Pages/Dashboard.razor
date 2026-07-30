@@ -5,13 +5,14 @@
 @using Markdig
 @using System.Net.Http.Json
 @using GigaClaw.Core.Automation
+@using GigaClaw.Core.Automation.Runners
 @using GigaClaw.Core.Models
 @using GigaClaw.Core.Services
 @using GigaClaw.Web.Services
 @inject ProjectService ProjectService
 @inject IHttpClientFactory HttpFactory
 @inject DashboardService DashboardService
-@inject ClaudeRunner ClaudeRunner
+@inject IAgentRunner ClaudeRunner
 @inject DashboardTileGate TileGate
 @inject DashboardScriptRunner ScriptRunner
 @inject AgentRunsState RunsState
