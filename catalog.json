@@ -1,126 +1,168 @@
 {
-  "Version": 1,
+  "Version": 2,
   "Summary": {
     "Agents": 33,
+    "Contracts": 33,
     "Automations": 29,
     "EnabledAutomations": 28,
-    "ModelDefaults": 12
+    "ExplicitModelMappings": 12,
+    "Teams": 9,
+    "Scripts": 15
   },
   "Agents": [
     {
       "Slug": "approval-gatekeeper",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "approval",
+      "ExplicitModelMapping": "claude-opus-4-8",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "governance-ops",
         "local-media-creation"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "approval-gate-on-review",
         "assignee-dispatch",
         "assignee-resume",
         "growth-approval-on-review",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "blog-researcher",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "content-write",
+      "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "blog-reviewer",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "content-review",
+      "ExplicitModelMapping": "claude-opus-4-8",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "blog-reviewer-on-review",
         "content-reviewer-on-review",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "blog-seo",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "content-write",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "blog-translator",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "content-write",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "blog-writer",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "content-write",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine",
         "health-performance"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "code-janitor",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "code-write",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "software-engineering"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "code-janitor-nightly"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "committer",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "git-write",
+      "ExplicitModelMapping": "claude-haiku-4-5",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine",
         "governance-ops",
@@ -129,104 +171,137 @@
         "software-engineering",
         "ux-design"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "committer-on-done"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "competitive-analyst",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "research",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "data-intelligence"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "content-series-planner",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "board-write",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "health-performance"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "content-writer",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "content-write",
+      "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ActionModels": [],
+      "ProjectFallbackRequired": false,
       "Teams": [],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "content-writer-on-inprogress",
         "content-writer-resume"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "data-analyst",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "read-only-data",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "data-intelligence"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "decision-engine",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "docs-git-write",
+      "ExplicitModelMapping": "claude-opus-4-8",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "governance-ops"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "decision-receipt-on-done",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "design-researcher",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "research",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "ux-design"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "documentalist",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "docs-git-write",
+      "ExplicitModelMapping": "claude-haiku-4-5",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine",
         "data-intelligence",
@@ -237,31 +312,41 @@
         "software-engineering",
         "ux-design"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "documentalist-on-commit"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "email-copywriter",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "outbound-content",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "growth-marketing"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "evaluator",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "memory-write",
+      "ExplicitModelMapping": "claude-opus-4-8",
+      "ActionModels": [
+        "claude-haiku-4-5"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine",
         "data-intelligence",
@@ -272,138 +357,184 @@
         "software-engineering",
         "ux-design"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "evaluator-on-done"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "groomer",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "board-write",
+      "ExplicitModelMapping": "claude-haiku-4-5",
+      "ActionModels": [
+        "claude-haiku-4-5",
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "software-engineering"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "groomer",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "growth-writer",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "outbound-content",
+      "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "growth-marketing"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "lead-magnet-creator",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "outbound-content",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "growth-marketing"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "local-image-artist",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "local-media-execution",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "local-media-creation"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "local-media-compositor",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "local-media-composition",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "local-media-creation"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "local-media-director",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "media-direction",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "local-media-creation"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "local-media-reviewer",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "local-media-review",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "local-media-creation"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "local-media-reviewer-on-review",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "local-motion-artist",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "local-media-execution",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "local-media-creation"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "producer",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "board-write",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine",
         "data-intelligence",
@@ -414,122 +545,614 @@
         "software-engineering",
         "ux-design"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "owner-feedback",
         "producer-on-subtick"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "programmer",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "code-write",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "software-engineering",
         "ux-design"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "qa-tester",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "test-write",
+      "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "software-engineering"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback",
         "qa-on-review"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "system-watchdog",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "monitoring",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-haiku-4-5",
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "governance-ops",
         "local-media-creation"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback",
         "system-watchdog-hourly"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "trend-researcher",
       "ContractPresent": true,
-      "ModelDefaultPresent": true,
-      "ResolvedModelPresent": true,
+      "RiskClass": "research",
+      "ExplicitModelMapping": "claude-haiku-4-5",
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "growth-marketing"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "ui-auditor",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "design-review",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "ux-design"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback",
         "ui-audit-on-review"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "ui-designer",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "design-write",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "ux-design"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     },
     {
       "Slug": "wellness-coach",
       "ContractPresent": true,
-      "ModelDefaultPresent": false,
-      "ResolvedModelPresent": true,
+      "RiskClass": "health-content",
+      "ExplicitModelMapping": null,
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
+      "ProjectFallbackRequired": false,
       "Teams": [
         "health-performance"
       ],
-      "DispatchingAutomations": [
+      "EnabledDispatchingAutomations": [
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback"
       ],
+      "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": false
     }
+  ],
+  "Teams": [
+    {
+      "Slug": "all",
+      "Agents": []
+    },
+    {
+      "Slug": "content-engine",
+      "Agents": [
+        "blog-researcher",
+        "blog-reviewer",
+        "blog-seo",
+        "blog-translator",
+        "blog-writer",
+        "committer",
+        "documentalist",
+        "evaluator",
+        "producer"
+      ]
+    },
+    {
+      "Slug": "data-intelligence",
+      "Agents": [
+        "competitive-analyst",
+        "data-analyst",
+        "documentalist",
+        "evaluator",
+        "producer"
+      ]
+    },
+    {
+      "Slug": "governance-ops",
+      "Agents": [
+        "approval-gatekeeper",
+        "committer",
+        "decision-engine",
+        "documentalist",
+        "evaluator",
+        "producer",
+        "system-watchdog"
+      ]
+    },
+    {
+      "Slug": "growth-marketing",
+      "Agents": [
+        "committer",
+        "documentalist",
+        "email-copywriter",
+        "evaluator",
+        "growth-writer",
+        "lead-magnet-creator",
+        "producer",
+        "trend-researcher"
+      ]
+    },
+    {
+      "Slug": "health-performance",
+      "Agents": [
+        "blog-writer",
+        "content-series-planner",
+        "documentalist",
+        "evaluator",
+        "producer",
+        "wellness-coach"
+      ]
+    },
+    {
+      "Slug": "local-media-creation",
+      "Agents": [
+        "approval-gatekeeper",
+        "committer",
+        "documentalist",
+        "evaluator",
+        "local-image-artist",
+        "local-media-compositor",
+        "local-media-director",
+        "local-media-reviewer",
+        "local-motion-artist",
+        "producer",
+        "system-watchdog"
+      ]
+    },
+    {
+      "Slug": "software-engineering",
+      "Agents": [
+        "code-janitor",
+        "committer",
+        "documentalist",
+        "evaluator",
+        "groomer",
+        "producer",
+        "programmer",
+        "qa-tester"
+      ]
+    },
+    {
+      "Slug": "ux-design",
+      "Agents": [
+        "committer",
+        "design-researcher",
+        "documentalist",
+        "evaluator",
+        "producer",
+        "programmer",
+        "ui-auditor",
+        "ui-designer"
+      ]
+    }
+  ],
+  "Automations": [
+    {
+      "Id": "assignee-dispatch",
+      "Enabled": true,
+      "Agents": [
+        "approval-gatekeeper",
+        "blog-researcher",
+        "blog-reviewer",
+        "blog-seo",
+        "blog-translator",
+        "blog-writer",
+        "competitive-analyst",
+        "content-series-planner",
+        "data-analyst",
+        "decision-engine",
+        "design-researcher",
+        "email-copywriter",
+        "groomer",
+        "growth-writer",
+        "lead-magnet-creator",
+        "local-image-artist",
+        "local-media-compositor",
+        "local-media-director",
+        "local-media-reviewer",
+        "local-motion-artist",
+        "producer",
+        "programmer",
+        "qa-tester",
+        "system-watchdog",
+        "trend-researcher",
+        "ui-auditor",
+        "ui-designer",
+        "wellness-coach"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "groomer",
+      "Enabled": true,
+      "Agents": [
+        "groomer"
+      ],
+      "Models": [
+        "claude-haiku-4-5"
+      ]
+    },
+    {
+      "Id": "committer-on-done",
+      "Enabled": true,
+      "Agents": [
+        "committer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "producer-on-subtick",
+      "Enabled": true,
+      "Agents": [
+        "producer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "evaluator-on-done",
+      "Enabled": true,
+      "Agents": [
+        "evaluator"
+      ],
+      "Models": [
+        "claude-haiku-4-5"
+      ]
+    },
+    {
+      "Id": "code-janitor-nightly",
+      "Enabled": true,
+      "Agents": [
+        "code-janitor"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "auto-review-on-all-subs-done",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "assignee-resume",
+      "Enabled": true,
+      "Agents": [
+        "approval-gatekeeper",
+        "blog-researcher",
+        "blog-reviewer",
+        "blog-seo",
+        "blog-translator",
+        "blog-writer",
+        "competitive-analyst",
+        "content-series-planner",
+        "data-analyst",
+        "decision-engine",
+        "design-researcher",
+        "email-copywriter",
+        "groomer",
+        "growth-writer",
+        "lead-magnet-creator",
+        "local-image-artist",
+        "local-media-compositor",
+        "local-media-director",
+        "local-media-reviewer",
+        "local-motion-artist",
+        "programmer",
+        "qa-tester",
+        "system-watchdog",
+        "trend-researcher",
+        "ui-auditor",
+        "ui-designer",
+        "wellness-coach"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "qa-on-review",
+      "Enabled": true,
+      "Agents": [
+        "qa-tester"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "weekly-ticket-example",
+      "Enabled": false,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "documentalist-on-commit",
+      "Enabled": true,
+      "Agents": [
+        "documentalist"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "owner-feedback",
+      "Enabled": true,
+      "Agents": [
+        "approval-gatekeeper",
+        "blog-researcher",
+        "blog-reviewer",
+        "blog-seo",
+        "blog-translator",
+        "blog-writer",
+        "competitive-analyst",
+        "content-series-planner",
+        "data-analyst",
+        "decision-engine",
+        "design-researcher",
+        "email-copywriter",
+        "groomer",
+        "growth-writer",
+        "lead-magnet-creator",
+        "local-image-artist",
+        "local-media-compositor",
+        "local-media-director",
+        "local-media-reviewer",
+        "local-motion-artist",
+        "producer",
+        "programmer",
+        "qa-tester",
+        "system-watchdog",
+        "trend-researcher",
+        "ui-auditor",
+        "ui-designer",
+        "wellness-coach"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "blog-reviewer-on-review",
+      "Enabled": true,
+      "Agents": [
+        "blog-reviewer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "ui-audit-on-review",
+      "Enabled": true,
+      "Agents": [
+        "ui-auditor"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "blog-translation-on-seo-review",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "growth-approval-on-review",
+      "Enabled": true,
+      "Agents": [
+        "approval-gatekeeper"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "approval-gate-on-review",
+      "Enabled": true,
+      "Agents": [
+        "approval-gatekeeper"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "approval-clear-on-revision",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "approval-mark-on-done",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "system-watchdog-hourly",
+      "Enabled": true,
+      "Agents": [
+        "system-watchdog"
+      ],
+      "Models": [
+        "claude-haiku-4-5"
+      ]
+    },
+    {
+      "Id": "trend-brief-weekly",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "decision-receipt-on-done",
+      "Enabled": true,
+      "Agents": [
+        "decision-engine"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "local-media-reviewer-on-review",
+      "Enabled": true,
+      "Agents": [
+        "local-media-reviewer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "stale-blocked-nudge",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "cms-dispatch-on-done",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "content-writer-on-inprogress",
+      "Enabled": true,
+      "Agents": [
+        "content-writer"
+      ],
+      "Models": []
+    },
+    {
+      "Id": "content-writer-resume",
+      "Enabled": true,
+      "Agents": [
+        "content-writer"
+      ],
+      "Models": []
+    },
+    {
+      "Id": "content-reviewer-on-review",
+      "Enabled": true,
+      "Agents": [
+        "blog-reviewer"
+      ],
+      "Models": []
+    },
+    {
+      "Id": "auto-approve-ungated",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    }
+  ],
+  "Scripts": [
+    "scripts/agent_ticket.py",
+    "scripts/ai_citation_score.py",
+    "scripts/archive-draft.ps1",
+    "scripts/cognitive_load.py",
+    "scripts/content_contract.py",
+    "scripts/email_contract.py",
+    "scripts/html_contract.py",
+    "scripts/lint_prose.py",
+    "scripts/media_contract.py",
+    "scripts/media_generate.py",
+    "scripts/privacy_guard.py",
+    "scripts/reddit_trends.py",
+    "scripts/social_contract.py",
+    "scripts/source_inventory.py",
+    "scripts/translation_contract.py"
   ]
 }

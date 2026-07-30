@@ -34,8 +34,7 @@ internal static class Program
         var errors = new List<string>();
         CheckFile(Path.Combine(root, "catalog.json"), expectedJson, errors);
         CheckFile(Path.Combine(root, "doc", "catalog.md"), expectedMarkdown, errors);
-        var bindingGaps = catalog.Agents.Where(agent => !agent.ContractPresent || !agent.ResolvedModelPresent || agent.Teams.Count == 0 || agent.DispatchingAutomations.Count == 0)
-            .Select(agent => $"{agent.Slug}: missing " + string.Join(", ", new[] { !agent.ContractPresent ? "contract" : null, !agent.ResolvedModelPresent ? "dispatch model" : null, agent.Teams.Count == 0 ? "team" : null, agent.DispatchingAutomations.Count == 0 ? "dispatching automation" : null }.Where(value => value is not null))).ToArray();
+        var bindingGaps = CatalogGenerator.FindBindingGaps(catalog);
         if (strict) errors.AddRange(bindingGaps);
         else foreach (var gap in bindingGaps) Console.Error.WriteLine($"catalog known binding gap: {gap}");
         CheckReadmeCounts(root, catalog, errors);
