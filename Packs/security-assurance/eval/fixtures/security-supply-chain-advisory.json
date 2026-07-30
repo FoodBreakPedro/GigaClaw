@@ -1,0 +1,34 @@
+{
+  "Version": 1,
+  "Id": "security-supply-chain-advisory",
+  "Family": "security",
+  "Agent": "supply-chain-reviewer",
+  "Scenario": "security-supply-chain-advisory",
+  "MaxTurns": 8,
+  "Ticket": {
+    "Id": 731,
+    "Title": "Dependency audit — 2026-07-27",
+    "Status": "InProgress",
+    "Assignee": "supply-chain-reviewer",
+    "Description": "Weekly supply-chain audit. Inventory the dependency set, query the declared advisory feeds for every direct dependency and every changed transitive, triage exploitability, and propose remediation as a ticket. Do not modify manifests or lockfiles.",
+    "Comments": [
+      {
+        "Author": "producer",
+        "Body": "The import feature landed last week and pulled in a new serializer. Pay attention to the delta."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "known-exploited-vulnerability"
+  }
+}
