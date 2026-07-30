@@ -47,6 +47,9 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 | C2 verdict gate | CL | Vocabulary landed; per-reviewer wiring waits on G2 merging | `lane/claude-orch` |
 | P4 CL half | CL | Landed | `claude-orch/p4-dependencies-resolved` |
 | C6 handoff artifacts | CL | Landed — schema v1 frozen, dispatch injection wired, `ownedFiles` is the interface R4 leases consume | `lane/claude-orch` |
+| C3 repair loop | CL | Landed | `claude-orch/c3-repair-loop` |
+| C4 executable teams | CL | Parts 1–2 landed, part 3 (join + synthesizer) in flight | `claude-orch/c4-executable-teams` |
+| T5 judge | CX-T | In flight on an integration branch that merges the verdict contract into lane CX-T | `cx-tooling/t5-judge` |
 | G1 cheap defects | GM | Landed | `lane/gemini-vol` |
 | G2 reviewer rewrites | GM | Under CL review — receipt-chain, cycle-counter and evaluator-transport findings fixed; two rubric findings outstanding | `lane/gemini-vol` |
 | G3 handoff templates | GM | Unblocked by C6 — per-agent guidance for producing and consuming handoffs | — |
