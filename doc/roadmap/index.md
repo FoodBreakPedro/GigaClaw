@@ -35,7 +35,7 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 
 ## Lane status (living — updated by CL as the merge-queue owner)
 
-**Last updated 2026-07-30.** All Phase 0 foundation gates passed and approved: `lane/claude-orch` (C1, C2, C3, C4 parts 1-3, C6, C9 spec), `lane/cx-tooling` (T1–T5 judge & Monte Carlo), `lane/cx-runtime` (R1, R2, SP-1 inventory), and `lane/gemini-vol` (G1, G2 reviewer rewrites & UI-AUDIT chain). All branches pushed to origin.
+**Last updated 2026-07-31.** The runtime lane R3–R7 landed in full this session (owner unparked R4–R7; every task merged to `main` individually — see [`SESSION-HANDOFF.md`](SESSION-HANDOFF.md) for the commit map, verification numbers, and the closure of the Windows exemption list). R8 remains gated on the Codex usage cap. Earlier Phase-0 status below is kept for history. All Phase 0 foundation gates passed and approved: `lane/claude-orch` (C1, C2, C3, C4 parts 1-3, C6, C9 spec), `lane/cx-tooling` (T1–T5 judge & Monte Carlo), `lane/cx-runtime` (R1, R2, SP-1 inventory), and `lane/gemini-vol` (G1, G2 reviewer rewrites & UI-AUDIT chain). All branches pushed to origin.
 
 **Owner Sign-offs Completed (2026-07-30):**
 - **SP-1 Approved**: SP-1 policy inventory reviewed & approved (unlocks R3 → R4 → R5/R6 → C5, C7).
@@ -47,7 +47,11 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 |---|---|---|---|
 | R1 policy chokepoint | CX-R | Landed | `lane/cx-runtime` `cfbe9ab` |
 | R2 shadow enforcement | CX-R | Landed — drain-lifecycle and Bash-boundary regressions covered, both proven load-bearing; 712 tests | `lane/cx-runtime` `1cf6a7a` |
-| R3 block mode | CX-R | Gated — needs the SP-1 inventory to hold real dispatches (all 33 rows read `not-exercised`) and owner sign-off | — |
+| R3 block mode | CX-R | **Landed** — outbound gate wired `2dc9c4b`; per-agent enforcement live since SP-1 sign-off | `main` |
+| R4 file leases | CX-R | **Landed** `eea24db` — durable lease table + reaper, handoff `ownedFiles` scope | `main` |
+| R5 worktrees | CX-R | **Landed** `d902ec5` — `isolation: worktree`, durable ticket state, fail-closed non-git | `main` |
+| R6 merge queue | CX-R | **Landed** `cd4317e` — opt-in vocabulary; default-on waits on SP-3 | `main` |
+| R7 runner interface | CX-R | **Landed** `607e821` — `IAgentRunner`, zero behavior change | `main` |
 | T1 typed catalog | CX-T | Landed | `lane/cx-tooling` `4c404d1` |
 | T2 catalog CI | CX-T | Drift + baseline checks running; strict binding gate still red on the `content-writer` gap until GM's G1 merges; drift script retires after a green week | `lane/cx-tooling` `4c404d1`, `5cbe6f5` |
 | T3 dependency edges | CX-T | Landed | `lane/cx-tooling` `84e98ae` |
@@ -68,7 +72,7 @@ Open cross-lane items:
 
 - Bash capability classification in R2 over-reports option flags as write targets and drops a capability when a read is redirected to a file; fixes are in flight in lane CX-R.
 - R2's acceptance asks for durable ticket-comment receipts. That crosses the `ActionExecutor` boundary CL owns, so the branch records queryable run-log receipts instead and the criterion stays explicitly unmet until a shared merge window.
-- `lane/cx-tooling` and branches based on it cannot be pushed to GitHub with the current credentials: they touch `.github/workflows/ci.yml` and the token lacks the `workflow` scope.
+- ~~`lane/cx-tooling` and branches based on it cannot be pushed to GitHub with the current credentials: they touch `.github/workflows/ci.yml` and the token lacks the `workflow` scope.~~ Resolved 2026-07-31: current credentials carry `workflow` scope (`ci.yml` edits pushed directly in `e32f872` and `118496e`).
 
 ## Codebase validation (2026-07-30)
 

@@ -1,4 +1,4 @@
-# Session handoff — 2026-07-30
+# Session handoff — 2026-07-31
 
 Written for whoever picks this up next. Everything below was read from the tree, not from a report.
 
@@ -6,139 +6,58 @@ Written for whoever picks this up next. Everything below was read from the tree,
 
 | | |
 |---|---|
-| **PR** | [#9 — SP-2 close-out](https://github.com/FoodBreakPedro/GigaClaw/pull/9) |
-| **Branch** | `lane/sp2-sp3-consolidation` (pushed), 40 commits off `94971fb` |
-| **Local `main`** | points at the same commit as the branch; `origin/main` is still at `94971fb` until #9 merges |
-| **Roadmap artifact** | https://claude.ai/code/artifact/b0c190ed-cd5d-4fd4-8114-fe20c256a78c — the live board (lane meters, per-task acceptance criteria, sync gates, dependency graph). Update it by republishing to that same URL, or it mints a new one. |
+| **Branch** | `main`, pushed through `4082184`. No open lane branches — every task this session merged to `main` immediately after its own verification (owner's directive, after the multi-branch debugging of 2026-07-30). |
+| **Prior state** | PR #9 (SP-2 close-out) and PR #10 (Windows install "bug", Spanish locale) both merged before this session started. |
+| **Roadmap artifact** | https://claude.ai/code/artifact/b0c190ed-cd5d-4fd4-8114-fe20c256a78c — republish to that same URL or it mints a new one. |
 
-### Verification on the branch head
+### Verification on `4082184`
 
-`GigaClaw.Core.Tests` **1050 / 0** · `GigaClaw.Eval.Tests` **27 / 0** · `catalog check --strict` **0** · `catalog check --strict-packs` **0** · `Eval -- all` **0** (37 agents, 0 errors, 0 warnings).
+`GigaClaw.Core.Tests` **1131 / 0** · `GigaClaw.Eval.Tests` **39 / 0** · `catalog check --strict` **0, zero gap lines** · `catalog check --strict-packs` **0** · `Eval -- all` **0** (37 agents) · `Eval -- replay all` **38 fixtures / 38 pass** · `Eval -- judge all` **38 / 38, zero drift**.
 
-Re-run all of it with:
+Re-run with the same commands as always (test both projects in `-c Release`; catalog `check --strict` and `--strict-packs`; eval `all`, `replay all`, `judge all`). In this sandbox, clean `bin`/`obj` before trusting incremental builds — clock skew makes MSBuild's up-to-date check lie, and it produced two false "green" runs this session.
 
-```
-dotnet test GigaClaw.Core.Tests -c Release
-dotnet test GigaClaw.Eval.Tests -c Release
-dotnet run --project GigaClaw.Catalog -- check --strict
-dotnet run --project GigaClaw.Catalog -- check --strict-packs
-dotnet run --project GigaClaw.Eval -c Release -- all
-```
+## What landed this session (2026-07-31, owner away, per-task merges)
 
-## Working docs, in reading order
+1. **Q3 confirmed + `models.json` header narrowed** (`d7bc965`) — auditor → Sonnet, threat-modeler → Opus; the blanket no-sub-Opus rule replaced by the real one (no security agent on Fable).
+2. **`Eval -- all` summary honesty** (`90c7dfb`) — baseline errors now appear in the printed summary that drives exit 1.
+3. **`{assignee}` single implementation** (`309b5ae`) — the contract test consumes `CatalogGenerator.ReadAutomations`; structural assertions preserved and drift between typed model and reader pinned.
+4. **G6 baseline review recorded** (`d024ce8`) — three pass, threat-modeler was NEEDS-WORK; review at `GigaClaw.Eval/baselines/REVIEW-security-assurance-2026-07-31.md`.
+5. **threat-modeler worked example fixed to BLOCK** (`fd39acb`) — SKILL, scenario, and fixture now pin the verdict token.
+6. **R3 completed** (`2dc9c4b`) — `OutboundApprovalGate` wired into `ActionExecutor`; trust anchor `ApprovedOutboundHosts` in the owner's `settings.json`, read per-execution; dry-run + `outbound-denial/v1` receipts without it; CMS regression pair runs the real shipped automation.
+7. **Pack replay fixtures execute** (`7fe6a45`) — `Replay.FixtureRoots` plural; pack agents resolve their Agents dir via `catalog.json`; first-ever run of the four security fixtures (all passed); first SHIP-path fixture (secrets-reviewer) so always-BLOCK can no longer pass.
+8. **R4 landed** (`eea24db`) — durable `file_leases` table, transactional acquire-with-inline-reap, `FileLeaseReaper`, conservative glob-intersection, block/warn semantics, handoff `ownedFiles` as the leased scope.
+9. **Core eval-fixture backlog closed** (`f7c0295`) — 27 new fixtures + scenarios, `design` family added, 27 judge baselines, catalog gap list now empty and the empty state pinned by test.
+10. **R5 landed** (`d902ec5`) — `isolation: "worktree"` per runAgent action; `<workspace>.worktrees/ticket-<id>` on branch `ticket/<id>`; durable worktree state on the ticket; fail-closed on non-git workspaces; dirty/unmerged worktrees flagged, never deleted; leases provably not bypassed.
+11. **Windows judge drift diagnosed AND fixed** (`e32f872`, `aed9f74`, `118496e`+`a12e113`) — see below.
+12. **R6 landed** (`cd4317e`) — `enqueueMerge` action, durable `merge_queue`, `MergeQueueProcessor` (claim transaction doubles as restart recovery), rebase → integration command → ff-merge pipeline, `merge-bounced/held/completed/v1` receipts, `ApprovedMergeProjects` trust anchor. Opt-in vocabulary only until SP-3.
+13. **R7 landed** (`607e821`) — `IAgentRunner` (one member: `RunAsync`), `ClaudeRunner` first implementation, all consumers on the interface, zero test edits.
+14. **PolicyHookTransport shutdown race fixed** (`32ccd24`) — the Windows CI flake was an `ObjectDisposedException` escaping the accept loop during dispose; classifier tests pin the exact CI exception shapes.
+15. **MergeQueueTests CRLF fix** (`4082184`) — test temp repos pin `core.autocrlf=false`; Git for Windows' default was rewriting merged checkouts.
 
-1. [`doc/roadmap/index.md`](index.md) — lane model, decision log, living lane status.
-2. [`doc/roadmap/lane-*.md`](.) — per-lane task specs with acceptance criteria. **The lane docs are authoritative on scope boundaries** and were right twice this session where the summary view was wrong.
-3. [`doc/pack-infrastructure.md`](../pack-infrastructure.md) — the C9 spec, owner-approved. §2 layout, §3 manifest, §6 the extraction invariant, §7 the five-binding gate, §10 the four owner decisions.
-4. [`doc/verdict-contract.md`](../verdict-contract.md) · [`doc/handoff-contract.md`](../handoff-contract.md) · [`doc/executable-teams.md`](../executable-teams.md).
-5. [`GigaClaw.Core/Automation/Policy/SP1-REVIEW.md`](../../GigaClaw.Core/Automation/Policy/SP1-REVIEW.md) — per-agent enforcement sign-off, now updated to record that R3 enforces it.
+## The Windows exemption is gone
 
-**Treat the specs as fallible.** Three §-level claims were stale or wrong this session and are now corrected in place: §6's `__pycache__` hazard (fixed long before), §6's "exactly two new paths" (only one is possible), and §8's `teams.json` shape (bare array; D8 ships the object form).
+The `KnownWindowsFailureFact` debt list is **empty**. Sequence, because the method matters: a non-blocking CI interrogation step ran the exempted judge test on Windows with the field-by-field drift output → the output showed 29/38 fixtures drifting with **only** `evidence[].ref`/`inputDigest` moving (scored text identical to the character) → that convicted `ReplayRunner.Normalize`'s exact-substring workspace scrub (8.3 names, JSON-escaped backslashes, case variants all defeat it) → structural scrub keyed on the unique `gigaclaw-replay-<hex>` leaf landed with failing-then-passing tests for each form → interrogation step observed green on a real Windows runner → only then did the exemption and the step come off. The test now runs blocking on all three platforms.
 
 ## Gate state
 
-- **SP-1** — signed off *and enforced*. 31 agents in `block`; `programmer` and `code-janitor` held in `warn` because both declare `**` write globs, so there is no out-of-glob write for a flip to block.
-- **SP-2** — **closed.** All six gated pipelines enforce typed verdicts. Five reviewers, six pipelines: `blog-reviewer` serves both a file-based and an AD-7 path, and only the first was converted originally.
-- **SP-3 / SP-4** — frozen. Every task feeding them is in the parked runtime lane.
+- **SP-1** — enforced; 31 agents block, `programmer`/`code-janitor` warn (both declare `**`).
+- **SP-2** — closed.
+- **SP-3** — R4 leases, R5 worktrees, and P4/T2 prerequisites all exist now. What remains before the gate: integration-test the combined semantics (cycle detection, lease expiry, join semantics, ownership conflicts failing closed *together*) and the owner's call to enable `enqueueMerge`/worktree isolation by default. This is the natural next session.
+- **SP-4** — needs the U6 end-to-end demo (worktree→PR→CI→owner merge) and R8.
 
-## Outstanding work
+## Outstanding
 
-### Unparked
+- **R8 Codex harness** — now unblocked by R7, still gated on Codex CLI usage cap and real `codex exec --json` fixtures.
+- **C5 / C7 / C8** — unparked by R4/R5 landing; not started tonight (owner unparked R4–R7 explicitly; the C-lane items were not named).
+- **Judge baselines for the 31 new fixtures were recorded, not reviewed** — same §9 posture the security four were in before G6. A G6-style review pass over the core judge baselines is cheap and closes the loop.
+- **Manual Board drags to Done skip worktree cleanup** — R5 cleanup triggers only through `ActionExecutor`'s `moveTicketStatus`; a UI-path drag bypasses it. Small, known, documented in the R5 commit.
+- **CI on `4082184`** — in flight at handoff time; it is the Windows confirmation for the MergeQueueTests CRLF fix. If its windows leg is green, the whole board is green on all three platforms with zero exemptions.
 
-| Item | Notes |
-|---|---|
-| **Wire `OutboundApprovalGate` into `ActionExecutor`** | R3's last criterion. The gate is built and tested (`GigaClaw.Core/Automation/Policy/OutboundApprovalGate.cs`, 16 tests) but deliberately unwired: both the lane doc and `doc/roadmap/index.md:76` designate this preflight a **CL/shared merge window**. The lane doc also warns "an agent-mutable label alone is insufficient" — agents hold board-write and can set labels, which is why the trust anchor is the owner's `settings.json`, outside every workspace. Needs the runner integration tests and the CMS-dispatch regression too. |
-| **`R8` Codex harness** | Blocked on R7, which is parked. Codex hit its weekly usage cap on 2026-07-30 — part of why the runtime lane is the one deferred. |
-| **`G6` pack baselines review** | The four security agents' baselines were generated and all checks pass, but §9 calls a baseline a *reviewed* snapshot. Nobody has reviewed them yet. |
+## Hard-won lessons, appended
 
-### Parked by owner call — R3 is done, R4–R7 are not
+Previous sessions' lessons stand (read the tree; conservation checks; check what a subagent branched from; a clean textual merge is not a clean merge; stage explicitly; a diagnostic that misattributes is worse than none). New this session:
 
-R4 (leases) → R5 (worktrees) → R6 (merge queue) → R7 (runner interface) → R8. **R4 is now unblocked**: its dependencies R3 and C6 are both landed. Parking these also holds C5 (needs R4's leases and nothing else), C7 (needs R3+R5) and C8 (needs C5).
-
-### Smaller carried-forward items
-
-- Core is exempt from the eval-fixture binding — 27 agents reported, never gated (owner Q2). Closing it means writing 27 replay fixtures, not changing code.
-- `Eval -- all` prints `0 error(s)` while exiting 1: the summary counts *checks*, and `baseline.missing` is not a check. This nearly hid a real failure.
-- `{assignee}` expansion is still duplicated between `CatalogGenerator.ReadAutomations` and `TemplateAutomationContractTests`. The former is now public and pack-aware and ready to be the single implementation; the latter walks the typed model and would lose a structural assertion in a naive swap.
-- `models.json`'s header comment says security/reviewer agents must not use sub-Opus tiers — contradicted by owner decision Q3. The real caveat is narrower (avoid Fable).
-- Owner decision **Q3 is ambiguous**: it names `security-auditor` *and* `threat-modeler` but justifies only the auditor. Current state follows the explicit binding (auditor → Sonnet, threat-modeler → Opus). Worth a one-line confirmation.
-
-## Windows CI
-
-**CI was already red before this branch existed** — the run on `94971fb`, this session's merge base, failed with 2 tests. The branch did not break Windows; Windows was already broken.
-
-Fixed here:
-
-- **Separator normalization in `EmbeddedPackSource`.** `%(RecursiveDir)` yields backslashes on Windows, so a resource name could differ from the `LogicalName` template's literal `/` and fail the prefix comparison. This was believed at the time to be the cause of assets vanishing on Windows. **It was not** — assets never vanished; see below. Windows CI later reported `AgentRelativePaths=104`, i.e. enumeration was already complete. Keep it as hardening, and describe it as hardening: it is defensible on its own terms and pinned by `CorePackEnumerationTests`, but it fixed no observed failure.
-- **A CRLF regex.** With `RegexOptions.Multiline`, .NET anchors `$` before `\n`, which on a CRLF checkout is *after* the `\r`, and `\S+` cannot consume `\r`. The verdict-marker pattern never matched on Windows.
-
-### The "install drops 114 files" bug: resolved, and it was never an install bug
-
-**Nothing was ever dropped.** The installer wrote all 119 files on Windows, correctly, every time. What was broken was the assertion message that reported the failure.
-
-`CoreInitManifestTests` printed its content-drift failure through this call:
-
-```csharp
-Assert.True(changed.All(MergeArtifacts.Contains),
-    Describe(changed.Where(c => !MergeArtifacts.Contains(c)).ToList(), [], []));
-```
-
-`Describe(missing, added, changed)` — so the **changed** list was passed in the **missing** slot, with the other two counts hardcoded to zero and printed under the heading "Missing (in manifest, not written)". A pure content drift across all 115 non-merge-artifact files therefore rendered as, exactly, `missing=115 added=0 changed=0` with "the four survivors are the merge artifacts". Every subsequent inference — files vanishing, staging sweeps eating the tree, rollback deleting pre-images, content deciding whether a write lands — was drawn from that one mislabeled string. Two fixes were attempted against it and both were wrong because the symptom they were aimed at did not exist.
-
-Once the message told the truth, the real signature was `missing=0 added=1 changed=115`: everything landed, and every text file differed in bytes.
-
-**The cause was the checkout, not the code.** Git for Windows defaults to `core.autocrlf=true`, and the repo had no `.gitattributes` governing content. Verified with a real clone: `git -c core.autocrlf=true clone` produced **120 of 120 `ProjectTemplate` text files with CRLF**; with the new `.gitattributes` in place, the same clone produces **0**. Since `ProjectTemplate/**` is embedded verbatim into `GigaClaw.Core.dll` and written byte-for-byte into workspaces, a Windows build shipped different content than the same commit produced anywhere else — and shipped `.py` content is executed, so this was a real product defect, just not the one it looked like.
-
-The macOS "reproduction" was the same illusion: editing four scripts changes their bytes, so their hashes stop matching the golden manifest. That is the test working. It printed as "missing".
-
-Fixed here:
-
-- **`.gitattributes` pins `* text=auto eol=lf`**, with `*.bat`/`*.cmd` kept CRLF. Thirteen files committed with CRLF (none shipped in a pack) were normalized in the same pass so the index and the attribute agree. *Existing Windows clones need `git add --renormalize .` or a fresh clone.*
-- **The assertion message reports each category in its own slot**, and now counts installed files containing CRLF, naming that cause in the failure text rather than leaving it to be re-derived.
-- **`PackInstaller` verifies before it commits.** `VerifyEverythingPlannedReachedDisk` checks every planned destination exists on disk before the lockfile is written; a violation rolls the install back instead of committing a workspace that quietly does less. `install.Written` was only ever `plan.Select(…)` — what was *planned*, never what was *verified* — which is why a hypothetical drop would have looked like a success.
-- **The four shipped scripts pin their streams to UTF-8.** `handoff_contract.py:297` prints `→`, and Python on Windows defaults stdout to cp1252, so the script raised `UnicodeEncodeError` *after* validating successfully — exit 2, a valid handoff read as rejected. Seven print sites across four scripts (`→`, `·`, `—`, `é`). The host already decodes these streams as UTF-8 (`ProcessLifecycleManager`, `DashboardScriptRunner`), so the streams are pinned rather than the output degraded to ASCII. Reproduced on macOS with `PYTHONIOENCODING=cp1252` (exit 2, `'charmap' codec can't encode '→'`) and confirmed fixed (exit 0).
-- **`TemplateScriptEncodingTests`** makes that Windows-only defect assertable everywhere: it runs the validators under a pinned cp1252 stream, checks the characters survive the round trip, and fails if any shipped script prints non-ASCII without pinning. Verified to fail when the fix is removed.
-
-Two of the three exemptions are gone. `CoreInitManifestTests` and `TemplateHandoffContractTests` now run on Windows.
-
-### CI now builds on three platforms
-
-The job ran only on `windows-latest` for its entire life, on a project developed on macOS. That is the condition that made all of the above possible: a platform-shaped defect was either invisible or the only thing visible, and neither state gets read correctly. It is now a `fail-fast: false` matrix over `ubuntu-latest`, `windows-latest` and `macos-latest`, so a divergence shows up as *which platforms disagreed* in a single run. All gates were verified green on macOS locally before the matrix landed.
-
-A step ahead of everything else asserts the checkout itself: `git ls-files --eol -- ProjectTemplate Packs` must report no `crlf`/`mixed` working-tree entries. The bytes Git hands the build **are** the product for those trees, so that is checked before anything downstream compares a hash and reports the mismatch as something more exotic.
-
-### One test is still exempted on Windows
-
-| Test | Status |
-|---|---|
-| `JudgeRunnerTests.Judge_MatchesTheCommittedBaselineForEveryFixture` | Undiagnosed, pre-existing since before `94971fb`. |
-
-`grep -rn KnownWindowsFailureFact` remains the debt list — now exactly one entry. The reasoning for keeping the job green with a named exemption rather than leaving it red: CI had been failing on `windows-latest` since before 2026-07-30, and because red was the normal state, two real defects sat in it unnoticed.
-
-**CRLF is ruled out for it.** Converting `GigaClaw.Eval/**`, `GigaClaw.Eval.Tests/**`, `GigaClaw.ClaudeMock/**`, `ProjectTemplate/**` and `Packs/**` to CRLF and re-running left all 27 eval tests passing, so it does not share a cause with the manifest failure.
-
-**It is now interrogable instead of merely silenced**, which is the actual reason it survived this long — a skipped test emits no diagnostics, so CI could never say anything about it:
-
-- `GIGACLAW_RUN_KNOWN_WINDOWS_FAILURES=1` runs the exempted tests anyway. One Windows run with that set should answer the question.
-- On drift the test now prints the committed verdict beside the produced one, field by field, plus `OSDescription` and `Path.GetTempPath()`. Verified to render by corrupting a baseline locally.
-- It names the two live hypotheses so the reader does not start from zero: if only `evidence[].ref`/`inputDigest` moved, the normalized replay stream differs and `ReplayRunner.Normalize`'s workspace scrubbing is the suspect (a plain string `Replace` is defeated by both Windows 8.3 short paths — GitHub runners expose `RUNNER~1`-style temp dirs — and symlinked temp dirs); if a `notes` character count moved, the scored text itself differs and the mock CLI's output is the place to look.
-
-**No speculative fix was applied.** Hardening was written for the 8.3 theory and deliberately discarded: it could not be verified without a Windows machine, and this session already paid for shipping exactly that (the separator normalization, declared a fix, which fixed nothing). Diagnose it first.
-
-## Hard-won lessons worth not relearning
-
-**A diagnostic that misattributes is worse than none.** The "installer silently drops 114 files" bug did not exist. One assertion passed its `changed` list in the `missing` parameter and hardcoded the other counts to zero, and that single mislabeled string cost two wrong fixes, a Windows CI round-trip, and a written-up theory that file *content* decides whether a file gets written. Nobody re-read the `Describe` call, because the message was specific enough to be believed. When evidence forces an implausible mechanism, suspect the instrument before the machine — and check that a diagnostic's arguments are in the order its signature expects.
-
-**Read the tree, not the report.** Three tasks came back reported complete and were not. Every automated check was green each time.
-
-- **G2** covered five reviewers but there were six pipelines.
-- **G4** hit its size target by *deleting* three agents' operating procedures rather than moving them. The audit listed which sections moved, which is not the same as verifying nothing was dropped. Assert conservation mechanically — non-whitespace character counts survive reformatting; heading counts don't.
-- A new fixture was parked in a subdirectory no test enumerates, so it validated only by hand. Test counts that don't move are evidence.
-
-**Watch for globbing the working directory instead of git.** Three separate defects this session, all the same shape: `__pycache__` (fixed earlier), ten template files committed but never embedded, and `.DS_Store` embedded and shipped. That last one failed *only* on machines where someone had opened the folder in Finder — green in a fresh worktree, red locally.
-
-**Check what a subagent branched from.** Two of three agents were cut from a stale `main` and reported "the spec is wrong" findings that were accurate about their own tree and misattributed. `git merge-base main <branch>` before trusting a baseline number.
-
-**A clean textual merge is not a clean merge.** Two T6 lanes each branched on whether `ProjectTemplate/pack.json` exists; neither could see the other's half. Zero conflicts, four failing tests, both gates red.
-
-**Beware `git add -A`.** It swept 576 files / 32 MB of `graphify-out/` into a commit. That output is now deliberately tracked (owner's call), but the lesson stands: stage explicitly.
+- **Instrument before you fix, then fix without ceremony.** The judge drift sat exempted for months; one non-blocking CI step with honest diagnostics turned it into a 3-commit fix within the same evening. The interrogation-step pattern (run the skipped thing, `continue-on-error`, print the diff) is reusable for any long-lived exemption.
+- **Every new green-path test that touches git checkouts on Windows will meet `core.autocrlf`.** Twice now (PR #10's install "bug", tonight's MergeQueueTests). Any test that bare-inits a repo must pin `core.autocrlf=false` or ship `.gitattributes`.
+- **Piped verification is unverified.** A `dotnet test | tail` chain let a broken build reach `main` (`118496e`) because tail's exit code masked the failure; fixed one commit later, but the pattern to keep is: assert on the test output, not the pipe's exit.
+- **This sandbox's clock skew defeats incremental builds.** Two subagents independently hit stale-binary false greens. Clean `bin`/`obj` before any verification that matters.
