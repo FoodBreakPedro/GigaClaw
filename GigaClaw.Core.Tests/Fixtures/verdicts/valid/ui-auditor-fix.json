@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "agent": "ui-auditor",
+  "ticketId": 913,
+  "verdict": "FIX",
+  "summary": "Contrast and focus-order defects block the design contract; layout and spacing are sound.",
+  "categories": [
+    { "name": "Visual hierarchy", "score": 8, "max": 10 },
+    { "name": "Spacing & alignment", "score": 10, "max": 10 },
+    { "name": "Contrast & legibility", "score": 3, "max": 10, "notes": "Secondary button text is 2.9:1 against its fill." },
+    { "name": "Interaction states", "score": 5, "max": 10, "notes": "Focus ring is removed on the icon buttons." },
+    { "name": "Design-token fidelity", "score": 9, "max": 10 }
+  ],
+  "vetoItems": [
+    {
+      "code": "contrast-below-wcag-aa",
+      "statement": "Secondary button label measures 2.9:1 contrast; WCAG AA requires 4.5:1.",
+      "evidenceRefs": ["design/audits/board-toolbar-audit.md"]
+    },
+    {
+      "code": "focus-indicator-removed",
+      "statement": "Icon buttons set outline:none with no replacement focus indicator.",
+      "evidenceRefs": ["GigaClaw.Web/wwwroot/app.css"]
+    }
+  ],
+  "evidence": [
+    { "kind": "path", "ref": "design/audits/board-toolbar-audit.md", "note": "full audit report" },
+    { "kind": "path", "ref": "GigaClaw.Web/wwwroot/app.css", "note": "source inspected" },
+    { "kind": "hash", "ref": "sha256:b7d1e5f309a4c28d6013fb745e9c8a2d10473e6f8b9c05d2a6e134f78c0b95ad" }
+  ],
+  "reviewedAtUtc": "2026-07-30T10:02:48Z",
+  "inputDigest": "sha256:b7d1e5f309a4c28d6013fb745e9c8a2d10473e6f8b9c05d2a6e134f78c0b95ad",
+  "reviewCycle": { "current": 1, "max": 2 }
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 2,
+  "agent": "blog-reviewer",
+  "ticketId": 812,
+  "verdict": "SHIP",
+  "summary": "Worked example mutated to violate exactly one rule.",
+  "categories": [
+    {
+      "name": "Content quality & pacing",
+      "score": 28,
+      "max": 30
+    },
+    {
+      "name": "SEO & navigation",
+      "score": 24,
+      "max": 25
+    }
+  ],
+  "vetoItems": [],
+  "evidence": [
+    {
+      "kind": "path",
+      "ref": "content/blog/agent-orchestration.md"
+    }
+  ],
+  "reviewedAtUtc": "2026-07-30T09:14:22Z",
+  "inputDigest": "sha256:4f1c2d9a7b3e5081c6a4d2f8e90b7135ac6e28d4f0917b3c5ea8d6142fb70cd9"
+}
