@@ -5,7 +5,7 @@
     "Contracts": 33,
     "Automations": 29,
     "EnabledAutomations": 28,
-    "ExplicitModelMappings": 12,
+    "ExplicitModelMappings": 33,
     "Teams": 9,
     "Scripts": 20
   },
@@ -79,7 +79,7 @@
       "Slug": "blog-seo",
       "ContractPresent": true,
       "RiskClass": "content-write",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -99,7 +99,7 @@
       "Slug": "blog-translator",
       "ContractPresent": true,
       "RiskClass": "content-write",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -119,7 +119,7 @@
       "Slug": "blog-writer",
       "ContractPresent": true,
       "RiskClass": "content-write",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -140,7 +140,7 @@
       "Slug": "code-janitor",
       "ContractPresent": true,
       "RiskClass": "code-write",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-haiku-4-5",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -181,7 +181,7 @@
       "Slug": "competitive-analyst",
       "ContractPresent": true,
       "RiskClass": "research",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -201,7 +201,7 @@
       "Slug": "content-series-planner",
       "ContractPresent": true,
       "RiskClass": "board-write",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -224,7 +224,9 @@
       "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [],
       "ProjectFallbackRequired": false,
-      "Teams": [],
+      "Teams": [
+        "content-engine"
+      ],
       "EnabledDispatchingAutomations": [
         "content-writer-on-inprogress",
         "content-writer-resume"
@@ -236,7 +238,7 @@
       "Slug": "data-analyst",
       "ContractPresent": true,
       "RiskClass": "read-only-data",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -277,7 +279,7 @@
       "Slug": "design-researcher",
       "ContractPresent": true,
       "RiskClass": "research",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -322,7 +324,7 @@
       "Slug": "email-copywriter",
       "ContractPresent": true,
       "RiskClass": "outbound-content",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -409,7 +411,7 @@
       "Slug": "lead-magnet-creator",
       "ContractPresent": true,
       "RiskClass": "outbound-content",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -429,7 +431,7 @@
       "Slug": "local-image-artist",
       "ContractPresent": true,
       "RiskClass": "local-media-execution",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -449,7 +451,7 @@
       "Slug": "local-media-compositor",
       "ContractPresent": true,
       "RiskClass": "local-media-composition",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -469,7 +471,7 @@
       "Slug": "local-media-director",
       "ContractPresent": true,
       "RiskClass": "media-direction",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-opus-4-8",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -489,7 +491,7 @@
       "Slug": "local-media-reviewer",
       "ContractPresent": true,
       "RiskClass": "local-media-review",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-opus-4-8",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -510,7 +512,7 @@
       "Slug": "local-motion-artist",
       "ContractPresent": true,
       "RiskClass": "local-media-execution",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -530,7 +532,7 @@
       "Slug": "producer",
       "ContractPresent": true,
       "RiskClass": "board-write",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -557,7 +559,7 @@
       "Slug": "programmer",
       "ContractPresent": true,
       "RiskClass": "code-write",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -599,7 +601,7 @@
       "Slug": "system-watchdog",
       "ContractPresent": true,
       "RiskClass": "monitoring",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-opus-4-8",
       "ActionModels": [
         "claude-haiku-4-5",
         "claude-sonnet-4-6"
@@ -642,7 +644,7 @@
       "Slug": "ui-auditor",
       "ContractPresent": true,
       "RiskClass": "design-review",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-opus-4-8",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -663,7 +665,7 @@
       "Slug": "ui-designer",
       "ContractPresent": true,
       "RiskClass": "design-write",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -683,7 +685,7 @@
       "Slug": "wellness-coach",
       "ContractPresent": true,
       "RiskClass": "health-content",
-      "ExplicitModelMapping": null,
+      "ExplicitModelMapping": "claude-sonnet-4-6",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -714,6 +716,7 @@
         "blog-translator",
         "blog-writer",
         "committer",
+        "content-writer",
         "documentalist",
         "evaluator",
         "producer"
