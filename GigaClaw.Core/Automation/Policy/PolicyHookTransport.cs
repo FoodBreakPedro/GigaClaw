@@ -120,6 +120,34 @@ public sealed class PolicyHookTransport : IAsyncDisposable
         _acceptShutdown.Dispose();
     }
 
+    /// <summary>
+    /// Classifies an exception thrown out of a pending <c>AcceptTcpClientAsync</c> as an
+    /// expected consequence of <see cref="DisposeAsync"/>'s shutdown sequence (cancel the
+    /// token, then <see cref="TcpListener.Stop"/>) rather than a real accept failure.
+    /// <see cref="OperationCanceledException"/> is always expected: it is exactly the
+    /// cancellation-token contract. <see cref="SocketException"/> and
+    /// <see cref="ObjectDisposedException"/> are expected only once shutdown has already
+    /// been requested, because <c>Stop()</c> disposes the listener's underlying socket and
+    /// can race the pending accept's own cancellation delivery: the accept can observe the
+    /// socket as disposed before it observes the token as cancelled and surface
+    /// <see cref="ObjectDisposedException"/> instead of <see cref="OperationCanceledException"/>.
+    /// This is a documented .NET Socket race (dotnet/runtime), and on Windows/IOCP it was
+    /// concretely observed escaping uncaught from here, through <see cref="DisposeAsync"/>'s
+    /// unguarded <c>await _acceptLoop</c>, and out of whatever test happened to be mid-teardown
+    /// — not the test whose Bash command was actually being classified — which is why CI failures
+    /// landed on a different parameterized case each time on unchanged code (GitHub Actions runs
+    /// 30669778451 and 30670677260: both failed with
+    /// <c>System.ObjectDisposedException : System.Net.Sockets.Socket</c> at this exact call site).
+    /// </summary>
+    internal static bool IsExpectedShutdownException(Exception exception, bool shutdownRequested) =>
+        exception switch
+        {
+            OperationCanceledException => true,
+            SocketException => shutdownRequested,
+            ObjectDisposedException => shutdownRequested,
+            _ => false,
+        };
+
     private async Task AcceptLoopAsync()
     {
         while (!_acceptShutdown.IsCancellationRequested)
@@ -129,11 +157,8 @@ public sealed class PolicyHookTransport : IAsyncDisposable
             {
                 client = await _listener.AcceptTcpClientAsync(_acceptShutdown.Token);
             }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (SocketException) when (_acceptShutdown.IsCancellationRequested)
+            catch (Exception ex) when (
+                IsExpectedShutdownException(ex, _acceptShutdown.IsCancellationRequested))
             {
                 break;
             }

@@ -487,6 +487,108 @@ public class PolicyHookTransportTests
 }
 
 /// <summary>
+/// Regression coverage for a Windows-only CI flake (GitHub Actions runs 30669778451 and
+/// 30670677260) where <c>PolicyHookTransportTests.Bash_adapter_conservatively_classifies_…</c>
+/// and sibling theories failed intermittently with
+/// <c>System.ObjectDisposedException : System.Net.Sockets.Socket</c>, thrown from
+/// <c>TcpListener.AcceptTcpClientAsync</c> inside <c>AcceptLoopAsync</c> and left uncaught
+/// through <c>PolicyHookTransport.DisposeAsync</c>'s <c>await _acceptLoop</c>. Both CI logs
+/// showed the identical stack trace regardless of which parameterized Bash command was under
+/// test — proof the failure was never in the classifier, only in transport teardown racing
+/// <c>TcpListener.Stop()</c> against a still-pending, still-cancelling accept.
+/// </summary>
+public class PolicyHookTransportShutdownRaceTests
+{
+    /// <summary>
+    /// Pins the exact classification the fix relies on, using the exact exception shape
+    /// (<c>ObjectDisposedException("Socket")</c>) both CI failures reported. Deterministic and
+    /// platform-independent: it does not require reproducing the underlying OS-level
+    /// accept/dispose race, only that once shutdown has been requested, this exception is
+    /// treated as an expected consequence of it rather than an accept failure.
+    /// </summary>
+    [Fact]
+    public void Disposed_socket_during_shutdown_is_an_expected_accept_outcome()
+    {
+        Assert.True(PolicyHookTransport.IsExpectedShutdownException(
+            new ObjectDisposedException(nameof(Socket)), shutdownRequested: true));
+    }
+
+    /// <summary>
+    /// The same exception before shutdown was ever requested is still a real failure: the
+    /// classifier must not blanket-suppress <see cref="ObjectDisposedException"/>.
+    /// </summary>
+    [Fact]
+    public void Disposed_socket_outside_shutdown_is_not_suppressed()
+    {
+        Assert.False(PolicyHookTransport.IsExpectedShutdownException(
+            new ObjectDisposedException(nameof(Socket)), shutdownRequested: false));
+    }
+
+    [Fact]
+    public void Socket_exception_during_shutdown_is_an_expected_accept_outcome()
+    {
+        Assert.True(PolicyHookTransport.IsExpectedShutdownException(
+            new SocketException((int)SocketError.OperationAborted), shutdownRequested: true));
+    }
+
+    [Fact]
+    public void Socket_exception_outside_shutdown_is_not_suppressed()
+    {
+        Assert.False(PolicyHookTransport.IsExpectedShutdownException(
+            new SocketException((int)SocketError.OperationAborted), shutdownRequested: false));
+    }
+
+    /// <summary>
+    /// Cancellation is always an expected accept outcome, shutdown-requested or not: it is the
+    /// direct, documented contract of the token passed into <c>AcceptTcpClientAsync</c>.
+    /// </summary>
+    [Fact]
+    public void Operation_canceled_is_always_an_expected_accept_outcome()
+    {
+        Assert.True(
+            PolicyHookTransport.IsExpectedShutdownException(
+                new OperationCanceledException(), shutdownRequested: false));
+        Assert.True(
+            PolicyHookTransport.IsExpectedShutdownException(
+                new OperationCanceledException(), shutdownRequested: true));
+    }
+
+    /// <summary>
+    /// Any other exception type is a real accept failure regardless of shutdown state, e.g. it
+    /// must not silently swallow a genuine transport bug.
+    /// </summary>
+    [Fact]
+    public void Unrelated_exception_is_never_suppressed()
+    {
+        Assert.False(PolicyHookTransport.IsExpectedShutdownException(
+            new InvalidOperationException("boom"), shutdownRequested: true));
+    }
+
+    /// <summary>
+    /// Best-effort dynamic reproduction: repeatedly starts a transport and immediately disposes
+    /// it while <c>AcceptLoopAsync</c> is necessarily still parked in
+    /// <c>AcceptTcpClientAsync</c> (no connection has been made), which is exactly the
+    /// cancel-then-Stop() interleaving the CI failures hit. This maximizes the chance of
+    /// reproducing the real accept/dispose race on whatever platform runs it, but the race is
+    /// timing- and socket-implementation-dependent (IOCP on Windows vs kqueue/epoll elsewhere),
+    /// so it is not guaranteed to trip on macOS even without the fix above. The deterministic
+    /// coverage is the classifier tests; this is defense-in-depth, not the proof.
+    /// </summary>
+    [Fact]
+    public async Task Repeated_start_and_dispose_never_throws()
+    {
+        using var tmp = new TempDir();
+        var policy = await PolicyHookTransportTests.LoadPolicyAsync(tmp.Path, ["src/**"]);
+
+        for (var i = 0; i < 200; i++)
+        {
+            var transport = PolicyHookTransport.Start(policy);
+            await transport.DisposeAsync();
+        }
+    }
+}
+
+/// <summary>
 /// Drain lifecycle of the run-scoped session. <c>ClaudeRunner</c> calls
 /// <see cref="PolicyHookRunSession.StopAndDrainAsync"/> before it publishes
 /// <c>policy-violation/v1</c> events and completes the run, so anything the stop
