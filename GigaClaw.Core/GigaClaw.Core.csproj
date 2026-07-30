@@ -43,6 +43,14 @@
       <LogicalName>GigaClaw.Core.AgentsTemplate/models.json</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
+    <!-- Team roster. The nine built-in teams are data, not C# constants: AgentTeamService reads
+         this file, Initialize writes it to <workspace>/.agents/teams.json, and anything that
+         composes into that file (a pack, or the owner) adds a team or a membership without
+         recompiling GigaClaw.Core. See doc/executable-teams.md. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\teams.json">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/teams.json</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\ProjectTemplate\Agents\BRAND.md">
       <LogicalName>GigaClaw.Core.AgentsTemplate/BRAND.md</LogicalName>
       <WithCulture>false</WithCulture>

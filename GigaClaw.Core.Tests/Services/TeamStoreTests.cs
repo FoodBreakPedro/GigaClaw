@@ -78,7 +78,9 @@ public sealed class TeamStoreTests
         Assert.Equal(["security-lane", "performance-lane"], dedup.DependsOn);
         Assert.Equal("Audit the diff.", loaded.FindTask("security-lane")!.Prompt);
 
-        var listed = Assert.Single(await teams.ListDefinitionsAsync(slug));
+        // The list also carries the seeded built-in roster (see TeamSeedStoreTests), so the
+        // project's own definition is selected by slug rather than by being the only row.
+        var listed = Assert.Single(await teams.ListDefinitionsAsync(slug), team => team.Slug == definition.Slug);
         Assert.Equal(definition.Slug, listed.Slug);
         Assert.True(await teams.DeleteDefinitionAsync(slug, definition.Slug));
         Assert.Null(await teams.GetDefinitionAsync(slug, definition.Slug));
@@ -152,7 +154,11 @@ public sealed class TeamStoreTests
         Assert.Equal("Keep me", keptTicket.Title);
         Assert.Equal("Review", keptTicket.Status);
         Assert.Equal(1, await migrated.Comments.CountAsync());
-        Assert.Equal(1, await migrated.TeamDefinitions.CountAsync());
+        // The recreated table is re-seeded with the built-in roster, plus this project's own one.
+        Assert.Equal(1, await migrated.TeamDefinitions.CountAsync(row => row.SeedHash == null));
+        Assert.Equal(
+            new AgentTeamService().GetDefinitions().Count + 1,
+            await migrated.TeamDefinitions.CountAsync());
         Assert.Equal(1, await migrated.TeamRuns.CountAsync());
         Assert.Equal(0, await migrated.TeamTasks.CountAsync());
 

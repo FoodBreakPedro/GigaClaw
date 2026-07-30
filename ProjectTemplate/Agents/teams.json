@@ -1,0 +1,141 @@
+{
+  "_comment": "Team roster for this workspace. Each entry is a team the member filter offers; 'agentSlugs' is its membership. A team with no task graph is a pure member filter. Add a team by appending an entry; add a member to an existing team by listing it under 'teamMembership' (additive, never removes). Nothing here requires recompiling the host.",
+  "schemaVersion": 1,
+  "teams": [
+    {
+      "slug": "all",
+      "name": "All Teams",
+      "description": "Show all available members and agents across all specialties.",
+      "icon": "👥",
+      "agentSlugs": []
+    },
+    {
+      "slug": "software-engineering",
+      "name": "Software Engineering",
+      "description": "Core software development, code refactoring, QA testing, and git operations.",
+      "icon": "💻",
+      "agentSlugs": [
+        "programmer",
+        "groomer",
+        "producer",
+        "qa-tester",
+        "committer",
+        "code-janitor",
+        "evaluator",
+        "documentalist"
+      ]
+    },
+    {
+      "slug": "content-engine",
+      "name": "Content Engine",
+      "description": "Blog writing, quality review, topic research, SEO & GEO auditing, and translation.",
+      "icon": "✍️",
+      "agentSlugs": [
+        "blog-writer",
+        "blog-reviewer",
+        "blog-researcher",
+        "blog-seo",
+        "blog-translator",
+        "content-writer",
+        "producer",
+        "committer",
+        "evaluator",
+        "documentalist"
+      ]
+    },
+    {
+      "slug": "growth-marketing",
+      "name": "Growth Marketing",
+      "description": "LinkedIn & social ghostwriting, lead magnets, trend listening, and cold email copy.",
+      "icon": "📢",
+      "agentSlugs": [
+        "growth-writer",
+        "lead-magnet-creator",
+        "trend-researcher",
+        "email-copywriter",
+        "producer",
+        "committer",
+        "evaluator",
+        "documentalist"
+      ]
+    },
+    {
+      "slug": "ux-design",
+      "name": "UX & Product Design",
+      "description": "Anti-slop web application UI design, multi-gate design audits, and design DNA research.",
+      "icon": "🎨",
+      "agentSlugs": [
+        "ui-designer",
+        "ui-auditor",
+        "design-researcher",
+        "programmer",
+        "producer",
+        "committer",
+        "evaluator",
+        "documentalist"
+      ]
+    },
+    {
+      "slug": "data-intelligence",
+      "name": "Data & Intelligence",
+      "description": "SQL query building, dataset analysis, Mermaid data charts, and competitive market research.",
+      "icon": "📊",
+      "agentSlugs": [
+        "data-analyst",
+        "competitive-analyst",
+        "producer",
+        "evaluator",
+        "documentalist"
+      ]
+    },
+    {
+      "slug": "governance-ops",
+      "name": "Governance & Ops",
+      "description": "Human-in-the-loop approval gates, runtime health probes, and decision receipts.",
+      "icon": "🛡️",
+      "agentSlugs": [
+        "approval-gatekeeper",
+        "system-watchdog",
+        "decision-engine",
+        "producer",
+        "committer",
+        "evaluator",
+        "documentalist"
+      ]
+    },
+    {
+      "slug": "health-performance",
+      "name": "Health & Performance",
+      "description": "Health & fitness content vertical: sourced wellness guides, training and ergonomics articles, and multi-part content series planning.",
+      "icon": "🏋️",
+      "agentSlugs": [
+        "wellness-coach",
+        "content-series-planner",
+        "blog-writer",
+        "producer",
+        "evaluator",
+        "documentalist"
+      ]
+    },
+    {
+      "slug": "local-media-creation",
+      "name": "Local Media Creation",
+      "description": "Governed local image candidates, generated motion assets, OpenMontage composition, and independent media review.",
+      "icon": "🎬",
+      "agentSlugs": [
+        "local-media-director",
+        "local-image-artist",
+        "local-motion-artist",
+        "local-media-compositor",
+        "local-media-reviewer",
+        "producer",
+        "approval-gatekeeper",
+        "system-watchdog",
+        "committer",
+        "evaluator",
+        "documentalist"
+      ]
+    }
+  ],
+  "teamMembership": {}
+}
