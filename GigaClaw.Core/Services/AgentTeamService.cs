@@ -14,65 +14,69 @@ public sealed class AgentTeamService
     public const string HealthPerformanceSlug = "health-performance";
     public const string LocalMediaCreationSlug = "local-media-creation";
 
-    private static readonly IReadOnlyList<AgentTeam> DefaultTeams = new List<AgentTeam>
+    // The built-in teams are TeamDefinitions with an empty task graph — "pure member filter" in the
+    // C4 model. They carry roles (one seat per agent), no entry conditions, no synthesizer and the
+    // default join policy, so nothing about filtering changes; the executable machinery simply has
+    // nothing to run for them. Executable presets arrive with C8.
+    private static readonly IReadOnlyList<TeamDefinition> DefaultDefinitions = new List<TeamDefinition>
     {
-        new(
+        TeamDefinition.FilterOnly(
             AllTeamsSlug,
             "All Teams",
             "Show all available members and agents across all specialties.",
             "👥",
             Array.Empty<string>()
         ),
-        new(
+        TeamDefinition.FilterOnly(
             SoftwareEngineeringSlug,
             "Software Engineering",
             "Core software development, code refactoring, QA testing, and git operations.",
             "💻",
             new[] { "programmer", "groomer", "producer", "qa-tester", "committer", "code-janitor", "evaluator", "documentalist" }
         ),
-        new(
+        TeamDefinition.FilterOnly(
             ContentEngineSlug,
             "Content Engine",
             "Blog writing, quality review, topic research, SEO & GEO auditing, and translation.",
             "✍️",
             new[] { "blog-writer", "blog-reviewer", "blog-researcher", "blog-seo", "blog-translator", "producer", "committer", "evaluator", "documentalist" }
         ),
-        new(
+        TeamDefinition.FilterOnly(
             GrowthMarketingSlug,
             "Growth Marketing",
             "LinkedIn & social ghostwriting, lead magnets, trend listening, and cold email copy.",
             "📢",
             new[] { "growth-writer", "lead-magnet-creator", "trend-researcher", "email-copywriter", "producer", "committer", "evaluator", "documentalist" }
         ),
-        new(
+        TeamDefinition.FilterOnly(
             UxDesignSlug,
             "UX & Product Design",
             "Anti-slop web application UI design, multi-gate design audits, and design DNA research.",
             "🎨",
             new[] { "ui-designer", "ui-auditor", "design-researcher", "programmer", "producer", "committer", "evaluator", "documentalist" }
         ),
-        new(
+        TeamDefinition.FilterOnly(
             DataIntelligenceSlug,
             "Data & Intelligence",
             "SQL query building, dataset analysis, Mermaid data charts, and competitive market research.",
             "📊",
             new[] { "data-analyst", "competitive-analyst", "producer", "evaluator", "documentalist" }
         ),
-        new(
+        TeamDefinition.FilterOnly(
             GovernanceOpsSlug,
             "Governance & Ops",
             "Human-in-the-loop approval gates, runtime health probes, and decision receipts.",
             "🛡️",
             new[] { "approval-gatekeeper", "system-watchdog", "decision-engine", "producer", "committer", "evaluator", "documentalist" }
         ),
-        new(
+        TeamDefinition.FilterOnly(
             HealthPerformanceSlug,
             "Health & Performance",
             "Health & fitness content vertical: sourced wellness guides, training and ergonomics articles, and multi-part content series planning.",
             "🏋️",
             new[] { "wellness-coach", "content-series-planner", "blog-writer", "producer", "evaluator", "documentalist" }
         ),
-        new(
+        TeamDefinition.FilterOnly(
             LocalMediaCreationSlug,
             "Local Media Creation",
             "Governed local image candidates, generated motion assets, OpenMontage composition, and independent media review.",
@@ -86,7 +90,20 @@ public sealed class AgentTeamService
         )
     };
 
+    private static readonly IReadOnlyList<AgentTeam> DefaultTeams =
+        DefaultDefinitions.Select(definition => definition.ToAgentTeam()).ToList();
+
     public IReadOnlyList<AgentTeam> GetTeams() => DefaultTeams;
+
+    /// <summary>The built-in teams in their executable form. All nine have an empty task graph.</summary>
+    public IReadOnlyList<TeamDefinition> GetDefinitions() => DefaultDefinitions;
+
+    /// <summary>Built-in definition for a slug, or null. Unlike <see cref="GetTeamBySlug"/> there is no fallback.</summary>
+    public TeamDefinition? GetDefinitionBySlug(string? slug) =>
+        string.IsNullOrEmpty(slug)
+            ? null
+            : DefaultDefinitions.FirstOrDefault(definition =>
+                definition.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase));
 
     public AgentTeam? GetTeamBySlug(string? slug)
     {
