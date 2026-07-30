@@ -277,6 +277,7 @@ public sealed class TicketAgeConditionSpec : ConditionSpec
 [JsonDerivedType(typeof(ExecutePowerShellActionSpec), "executePowerShell")]
 [JsonDerivedType(typeof(CreateTicketActionSpec), "createTicket")]
 [JsonDerivedType(typeof(HttpRequestActionSpec), "httpRequest")]
+[JsonDerivedType(typeof(StartTeamRunActionSpec), "startTeamRun")]
 public abstract class ActionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -379,6 +380,30 @@ public sealed class CreateTicketActionSpec : ActionSpec
     public string CreatedBy { get; set; } = "automation";
     /// <summary>Skip creation if an open ticket with the same resolved title already exists.</summary>
     public bool SkipIfExists { get; set; } = true;
+}
+
+/// <summary>
+/// Starts a <c>TeamRun</c> of the named team definition against the firing ticket, which becomes
+/// the run's parent. The run fans out one sub-ticket per task template, assigned to the role's
+/// agent, with the template's <c>dependsOn</c> materialized as ordinary ticket dependency edges —
+/// see <c>doc/executable-teams.md</c>.
+/// <para>
+/// The action is <b>idempotent per (ticket, team)</b>: firing again while the run is still open
+/// re-attaches to it instead of fanning out a second set of sub-tickets, so it is safe under a
+/// repeating <c>ticketInColumn</c> trigger. A filter-only team (empty task graph) is refused —
+/// there is nothing to execute.
+/// </para>
+/// The action only <i>starts</i> the run. Ordering, release and cancellation are then driven from
+/// the board by <c>TeamRunService</c>; dispatch itself stays the job of the ordinary per-agent
+/// automations that watch the dispatch column.
+/// </summary>
+public sealed class StartTeamRunActionSpec : ActionSpec
+{
+    public override string UiTypeKey => "startTeamRun";
+
+    /// <summary>Slug of the team definition to run. A project-scoped definition wins over the
+    /// built-in team of the same slug.</summary>
+    public required string Team { get; set; }
 }
 
 /// <summary>

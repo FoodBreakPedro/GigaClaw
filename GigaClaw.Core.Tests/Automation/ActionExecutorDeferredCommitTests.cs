@@ -44,7 +44,7 @@ public class ActionExecutorDeferredCommitTests
 
         var executor = new ActionExecutor(
             tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState,
-            FakeHttpClientFactory.Unused, NullLogger.Instance);
+            FakeHttpClientFactory.Unused, TestTeamRuns.For(projects, tickets), NullLogger.Instance);
 
         var ticket = await tickets.CreateTicketAsync(project.Slug, "Test ticket", "", "owner");
         await tickets.MoveTicketAsync(project.Slug, ticket.Id, "Done", "automation");

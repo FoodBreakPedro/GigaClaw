@@ -52,6 +52,7 @@ builder.Services.AddSingleton<DashboardService>();
 builder.Services.AddSingleton<AgentsTemplateService>();
 builder.Services.AddSingleton<AgentTeamService>();
 builder.Services.AddSingleton<TeamStore>();
+builder.Services.AddSingleton<TeamRunService>();
 builder.Services.AddScoped<GigaClaw.Web.Services.BoardFilterState>();
 builder.Services.AddScoped<GigaClaw.Web.Services.BoardSortState>();
 builder.Services.AddSingleton<GigaClaw.Web.Services.BoardUpdateNotifier>();

@@ -25,6 +25,7 @@ public sealed class AutomationEngine : BackgroundService
         ClaudeRunner runner,
         CostTracker cost,
         LocalizationService loc,
+        TeamRunService teamRuns,
         IHttpClientFactory httpClientFactory,
         ILogger<AutomationEngine> logger)
     {
@@ -33,8 +34,8 @@ public sealed class AutomationEngine : BackgroundService
 
         _runtimeManager = new ProjectRuntimeManager(store, triggerState, projects, logger);
         var runState = new RunStateManager(runs, cost, tickets, logger);
-        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, logger);
-        _triggerHandler = new TriggerHandler(projects, _runtimeManager, executor, tickets, members, sessions, runs, logger);
+        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger);
+        _triggerHandler = new TriggerHandler(projects, _runtimeManager, executor, tickets, members, sessions, runs, teamRuns, logger);
 
         store.OnConfigChangedOnDisk += slug =>
         {

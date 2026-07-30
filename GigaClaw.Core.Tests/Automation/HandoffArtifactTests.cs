@@ -178,7 +178,7 @@ public class HandoffArtifactTests
                 new ClaudeRunner(sessions, runs, new RunConcurrencyGate(1), NullLogger<ClaudeRunner>.Instance),
                 cost, new LocalizationService(new AppSettingsService(Tmp.Path)), Projects,
                 new RunStateManager(runs, cost, Tickets, NullLogger.Instance),
-                FakeHttpClientFactory.Unused, NullLogger.Instance);
+                FakeHttpClientFactory.Unused, TestTeamRuns.For(Projects, Tickets), NullLogger.Instance);
         }
 
         public void Dispose() => Tmp.Dispose();

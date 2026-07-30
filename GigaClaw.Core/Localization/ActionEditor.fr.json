@@ -62,5 +62,8 @@
   "HrSecretRefPlaceholder": "CMS_API_TOKEN",
   "HrCaptureHint": "Seul le nom de la variable est enregistré — jamais le jeton. La réponse est capturée pour les actions suivantes de la chaîne via {http.status}, {http.body} et {http.body.champ} pour chaque champ JSON de premier niveau.",
   "HrTimeout": "Timeout (secondes)",
-  "HrAbortOnFailure": "Abandonner les actions suivantes si la requête échoue"
+  "HrAbortOnFailure": "Abandonner les actions suivantes si la requête échoue",
+  "StrTeam": "Équipe",
+  "StrTeamPlaceholder": "parallel-review",
+  "StrHint": "Démarre une exécution de cette équipe sur le ticket déclencheur : un sous-ticket par tâche, assigné à l\u2019agent du rôle, les tickets bloqués attendant leurs dépendances. Un nouveau déclenchement pendant que l\u2019exécution est ouverte s\u2019y rattache au lieu de créer une seconde arborescence."
 }

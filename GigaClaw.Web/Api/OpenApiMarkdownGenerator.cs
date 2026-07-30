@@ -358,6 +358,7 @@ public static class OpenApiMarkdownGenerator
         sb.AppendLine("|------|--------|-------------|");
         sb.AppendLine("| `runAgent` | `agent`, `maxTurns?`, `concurrencyGroup?`, `mutuallyExclusiveWith[]`, `context?`, `env?`, `model?` | Launches the named agent; its skill is resolved by convention to `.agents/{agent}/SKILL.md` |");
         sb.AppendLine("| `moveTicketStatus` | `to` | Moves the ticket to the given column |");
+        sb.AppendLine("| `startTeamRun` | `team` | Starts a run of the named team definition on the firing ticket: one sub-ticket per task template, assigned to the role's agent, ordered by ticket dependency edges (see doc/executable-teams.md). Idempotent per (ticket, team) |");
         sb.AppendLine();
         sb.AppendLine("### Concurrency");
         sb.AppendLine();
