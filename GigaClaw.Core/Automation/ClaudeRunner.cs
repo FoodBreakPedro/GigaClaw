@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using GigaClaw.Core.Automation.Policy;
 using Microsoft.Extensions.Logging;
 
 namespace GigaClaw.Core.Automation;
@@ -167,6 +168,16 @@ public sealed class ClaudeRunner
         // so the host doesn't OOM under heavy automation. Chats bypass entirely.
         var isChat = ctx.SessionScope == "chat";
         IDisposable slot;
+        PolicyHookRunSession? policyHooks = null;
+        var policyObservationsPublished = false;
+        async Task PublishPendingPolicyObservationsAsync()
+        {
+            if (policyHooks is null || policyObservationsPublished)
+                return;
+            await policyHooks.StopAndDrainAsync();
+            PublishPolicyObservations(run, policyHooks);
+            policyObservationsPublished = true;
+        }
         var snap = _gate.Snapshot();
         if (!isChat && snap.Active >= snap.Max)
         {
@@ -185,8 +196,27 @@ public sealed class ClaudeRunner
 
         try
         {
-            var attempt = await SpawnAndWaitAsync(ctx, run, skillContent, sessionId, isResume, modelOverride: null, ct);
-            if (attempt.Cancelled) return run;
+            var policy = await ContractPolicyLoader.LoadAsync(
+                ctx.WorkspacePath,
+                ctx.AgentName,
+                ct);
+            policyHooks = await PolicyHookRunSession.StartAsync(policy, run.RunId, ct);
+
+            var attempt = await SpawnAndWaitAsync(
+                ctx,
+                run,
+                skillContent,
+                sessionId,
+                isResume,
+                modelOverride: null,
+                policyHooks,
+                ct);
+            if (attempt.Cancelled)
+            {
+                await PublishPendingPolicyObservationsAsync();
+                _runs.Complete(run.RunId, AgentRunStatus.Stopped, null);
+                return run;
+            }
 
             // If the agent invoked AskUserQuestion, wait for the user's answer via the SteeringQueue.
             if (run.IsAwaitingUserAnswer)
@@ -214,8 +244,21 @@ public sealed class ClaudeRunner
                 run.SessionId = sessionId;
                 _sessions.SetSessionId(ctx.WorkspacePath, scopedAgent, ctx.TicketId, sessionId);
 
-                attempt = await SpawnAndWaitAsync(ctx, run, skillContent, sessionId, isResume: false, modelOverride: null, ct);
-                if (attempt.Cancelled) return run;
+                attempt = await SpawnAndWaitAsync(
+                    ctx,
+                    run,
+                    skillContent,
+                    sessionId,
+                    isResume: false,
+                    modelOverride: null,
+                    policyHooks,
+                    ct);
+                if (attempt.Cancelled)
+                {
+                    await PublishPendingPolicyObservationsAsync();
+                    _runs.Complete(run.RunId, AgentRunStatus.Stopped, null);
+                    return run;
+                }
             }
 
             // Quota / usage-limit fallback: if the CLI signalled a rate-limit or weekly quota
@@ -236,8 +279,21 @@ public sealed class ClaudeRunner
                 run.SessionId = sessionId;
                 if (ctx.PersistSession)
                     _sessions.SetSessionId(ctx.WorkspacePath, scopedAgent, ctx.TicketId, sessionId);
-                attempt = await SpawnAndWaitAsync(ctx, run, skillContent, sessionId, isResume: false, modelOverride: ctx.FallbackModel, ct);
-                if (attempt.Cancelled) return run;
+                attempt = await SpawnAndWaitAsync(
+                    ctx,
+                    run,
+                    skillContent,
+                    sessionId,
+                    isResume: false,
+                    modelOverride: ctx.FallbackModel,
+                    policyHooks,
+                    ct);
+                if (attempt.Cancelled)
+                {
+                    await PublishPendingPolicyObservationsAsync();
+                    _runs.Complete(run.RunId, AgentRunStatus.Stopped, null);
+                    return run;
+                }
             }
 
             // Auto-replay steer messages that arrived while stdin was closed (--print mode).
@@ -249,11 +305,29 @@ public sealed class ClaudeRunner
                 run.Push(new StreamEvent(DateTime.UtcNow, "steer_replay",
                     $"Replaying {steers.Count} injected message(s) from previous turn"));
                 var replayCtx = ctx.WithChatReplay(steerText);
-                attempt = await SpawnAndWaitAsync(replayCtx, run, skillContent, sessionId, isResume: true, modelOverride: null, ct);
-                if (attempt.Cancelled) return run;
+                attempt = await SpawnAndWaitAsync(
+                    replayCtx,
+                    run,
+                    skillContent,
+                    sessionId,
+                    isResume: true,
+                    modelOverride: null,
+                    policyHooks,
+                    ct);
+                if (attempt.Cancelled)
+                {
+                    await PublishPendingPolicyObservationsAsync();
+                    _runs.Complete(run.RunId, AgentRunStatus.Stopped, null);
+                    return run;
+                }
             }
 
-            _runs.Complete(run.RunId, attempt.Exit == 0 ? AgentRunStatus.Completed : AgentRunStatus.Failed, attempt.Exit);
+            await PublishPendingPolicyObservationsAsync();
+
+            _runs.Complete(
+                run.RunId,
+                attempt.Exit == 0 ? AgentRunStatus.Completed : AgentRunStatus.Failed,
+                attempt.Exit);
             AppendDebugLog(ctx, $"FINISHED {ctx.AgentName} run={run.RunId} exit={attempt.Exit}");
 
             // Auto-continue: when a chat run ends with undelivered steer messages, fire a
@@ -293,8 +367,9 @@ public sealed class ClaudeRunner
         }
         catch (OperationCanceledException)
         {
-            // Cancellation is handled inside SpawnAndWaitAsync; if it bubbles here the run
-            // was already completed as Stopped — Complete is idempotent, so this is safe.
+            // Publish observations before terminal persistence so failed/stopped run
+            // snapshots remain queryable.
+            await PublishPendingPolicyObservationsAsync();
             _runs.Complete(run.RunId, AgentRunStatus.Stopped, null);
             throw;
         }
@@ -302,11 +377,28 @@ public sealed class ClaudeRunner
         {
             _logger.LogError(ex, "Unhandled exception in ClaudeRunner for {Agent} run={RunId}", ctx.AgentName, run.RunId);
             try { run.Push(new StreamEvent(DateTime.UtcNow, "error", $"Internal runner error: {ex.Message}")); } catch { /* subscriber may throw */ }
+            await PublishPendingPolicyObservationsAsync();
             _runs.Complete(run.RunId, AgentRunStatus.Failed, -1);
             return run;
         }
         finally
         {
+            if (policyHooks is not null)
+            {
+                await PublishPendingPolicyObservationsAsync();
+                try
+                {
+                    await policyHooks.DisposeAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Policy hook cleanup failed for {Agent} run={RunId}",
+                        ctx.AgentName,
+                        run.RunId);
+                }
+            }
             // Safety net (feature #1): guarantee the concurrency lock is released however RunAsync
             // exits. Complete is idempotent — a run that already reached a terminal status on the
             // nominal/catch paths is untouched. This only rescues a path that returned or threw
@@ -321,6 +413,43 @@ public sealed class ClaudeRunner
     }
 
     private readonly record struct SpawnResult(int? Exit, int AssistantEventCount, bool Cancelled, bool HitQuota);
+
+    private void PublishPolicyObservations(
+        AgentRun run,
+        PolicyHookRunSession policyHooks)
+    {
+        foreach (var observation in policyHooks.SnapshotObservations())
+        {
+            var detail = JsonSerializer.Serialize(new
+            {
+                schema = "policy-violation/v1",
+                runId = run.RunId,
+                agent = observation.Agent,
+                tool = observation.Tool,
+                toolUseId = observation.ToolUseId,
+                operation = observation.Operation.ToString(),
+                target = observation.Target,
+                decision = observation.Decision.ToString(),
+                reason = observation.Reason,
+                enforcementMode = "warn",
+                persistence = "run-log",
+            });
+            run.Push(new StreamEvent(
+                observation.ObservedAt,
+                "policy-violation",
+                $"{observation.Agent} {observation.Tool}: {observation.Reason}",
+                detail));
+            _logger.LogWarning(
+                "POLICY VIOLATION run={RunId} agent={Agent} tool={Tool} operation={Operation} target={Target} decision={Decision} reason={Reason}",
+                run.RunId,
+                observation.Agent,
+                observation.Tool,
+                observation.Operation,
+                observation.Target,
+                observation.Decision,
+                observation.Reason);
+        }
+    }
 
     // Heuristic patterns matching quota / usage-limit / rate-limit messages emitted by the
     // claude CLI (via stream-json result events or stderr). Kept broad on purpose — false
@@ -378,8 +507,10 @@ public sealed class ClaudeRunner
 
     private async Task<SpawnResult> SpawnAndWaitAsync(
         ClaudeRunContext ctx, AgentRun run, string skillContent,
-        string sessionId, bool isResume, string? modelOverride, CancellationToken ct)
+        string sessionId, bool isResume, string? modelOverride,
+        PolicyHookRunSession policyHooks, CancellationToken ct)
     {
+        var acknowledgementBefore = policyHooks.AcknowledgementCount;
         var prompt = await BuildPromptAsync(ctx, skillContent, isResume, ct);
         var sessionName = ctx.TicketId is not null ? $"{ctx.AgentName} #{ctx.TicketId}" : ctx.AgentName;
 
@@ -389,6 +520,7 @@ public sealed class ClaudeRunner
             "--output-format", "stream-json",
             "--dangerously-skip-permissions",
             "--max-turns", ctx.MaxTurns.ToString(),
+            "--settings", policyHooks.SettingsPath,
         };
         // GigaClaw owns the agent memory layer (.agents/{agent}/memory.md committed to
         // the workspace repo). We previously passed `--disallowed-tools Memory` to keep
@@ -544,7 +676,6 @@ public sealed class ClaudeRunner
                     // Genuine stop / external cancellation.
                     try { proc.Kill(entireProcessTree: true); } catch { /* cleanup on cancellation */ }
                     job?.Dispose(); // also terminate any descendant the agent backgrounded
-                    _runs.Complete(run.RunId, AgentRunStatus.Stopped, null);
                     AppendDebugLog(ctx, $"STOPPED {ctx.AgentName} run={run.RunId}");
                     run.OnEvent -= counter;
                     run.OnEvent -= resultWatch;
@@ -592,6 +723,14 @@ public sealed class ClaudeRunner
                     run.AddPendingSteerMessage(queuedMsg);
             }
             run.OnEvent -= counter;
+            if (policyHooks.AcknowledgementCount <= acknowledgementBefore)
+            {
+                run.Push(new StreamEvent(
+                    DateTime.UtcNow,
+                    "error",
+                    "Claude did not acknowledge or invoke the generated policy hook settings for this subprocess attempt; the attempt is failed because HTTP hook errors otherwise fail open."));
+                exit = -1;
+            }
             return new SpawnResult(exit, assistantCount, false, hitQuota == 1);
         }
         finally

@@ -1,4 +1,5 @@
 using GigaClaw.ClaudeMock;
+using GigaClaw.Core.Automation.Policy;
 
 // Mock `claude` CLI: parses (and ignores) the flags GigaClaw sends, drains stdin,
 // picks a scenario, replays its NDJSON on stdout. Exits with the scenario's code.
@@ -11,6 +12,65 @@ using GigaClaw.ClaudeMock;
 
 var sessionId = ArgParser.Get(args, "--session-id");
 _ = ArgParser.Get(args, "--model");
+var settingsPath = ArgParser.Get(args, "--settings");
+
+Uri? policyHookEndpoint = null;
+if (settingsPath is not null)
+{
+    try
+    {
+        policyHookEndpoint = await ClaudeHookSettings.ReadAndValidateAsync(settingsPath);
+    }
+    catch (Exception ex)
+    {
+        await Console.Error.WriteLineAsync(
+            $"mock-claude: invalid --settings '{settingsPath}': {ex.Message}");
+        return 2;
+    }
+
+    var ignorePolicySettings = string.Equals(
+        Environment.GetEnvironmentVariable("GIGACLAW_MOCK_IGNORE_POLICY_SETTINGS"),
+        "1",
+        StringComparison.Ordinal);
+    var acknowledgeOnceFile =
+        Environment.GetEnvironmentVariable("GIGACLAW_MOCK_ACKNOWLEDGE_POLICY_ONCE_FILE");
+    if (!ignorePolicySettings && !string.IsNullOrWhiteSpace(acknowledgeOnceFile))
+    {
+        try
+        {
+            using var marker = new FileStream(
+                acknowledgeOnceFile,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None);
+        }
+        catch (IOException) when (File.Exists(acknowledgeOnceFile))
+        {
+            ignorePolicySettings = true;
+        }
+    }
+
+    if (!ignorePolicySettings)
+    {
+        try
+        {
+            await HookEmulator.AcknowledgePromptAsync(policyHookEndpoint, sessionId);
+        }
+        catch (Exception ex)
+        {
+            await Console.Error.WriteLineAsync(
+                $"mock-claude: policy hook error (continuing fail-open): {ex.Message}");
+        }
+    }
+}
+else if (string.Equals(
+             Environment.GetEnvironmentVariable("GIGACLAW_MOCK_REQUIRE_POLICY_SETTINGS"),
+             "1",
+             StringComparison.Ordinal))
+{
+    await Console.Error.WriteLineAsync("mock-claude: required --settings was not provided");
+    return 2;
+}
 
 var prompt = await Console.In.ReadToEndAsync();
 
@@ -28,4 +88,4 @@ if (scenario is null)
     return 2;
 }
 
-return await ScenarioReplayer.ReplayAsync(scenario, sessionId);
+return await ScenarioReplayer.ReplayAsync(scenario, sessionId, policyHookEndpoint);

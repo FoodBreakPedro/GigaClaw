@@ -1,0 +1,709 @@
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Json;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
+using GigaClaw.Core.Automation.Policy;
+using GigaClaw.Core.Tests.Helpers;
+using Xunit.Abstractions;
+
+namespace GigaClaw.Core.Tests.Automation;
+
+public class ClaudeHookSettingsTests
+{
+    [Fact]
+    public void Generated_settings_round_trip_through_strict_schema()
+    {
+        var endpoint = new Uri("http://127.0.0.1:43123/policy/token");
+        var json = ClaudeHookSettings.Serialize(endpoint);
+        using var document = JsonDocument.Parse(json);
+
+        var parsed = ClaudeHookSettings.Validate(document.RootElement);
+
+        Assert.Equal(endpoint, parsed);
+        Assert.Contains("\"UserPromptSubmit\"", json);
+        Assert.Contains(ClaudeHookSettings.PreToolUseMatcher, json);
+        Assert.Contains("\"type\":\"http\"", json);
+        Assert.Contains("\"timeout\":5", json);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidSettings))]
+    public void Validator_rejects_malformed_or_expanded_settings(
+        string json,
+        string diagnostic)
+    {
+        using var document = JsonDocument.Parse(json);
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => ClaudeHookSettings.Validate(document.RootElement));
+
+        Assert.Contains(diagnostic, error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static TheoryData<string, string> InvalidSettings => new()
+    {
+        { """{}""", "hooks" },
+        {
+            """{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":5}]}],"PreToolUse":[]}}""",
+            "exactly 1"
+        },
+        {
+            """{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":5}]}],"PreToolUse":[{"matcher":"Write","hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":5}]}]}}""",
+            "matcher"
+        },
+        {
+            """{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":5}]}],"PreToolUse":[{"matcher":"Write|Edit|NotebookEdit|Bash|WebFetch|WebSearch","hooks":[{"type":"command","url":"http://127.0.0.1:1234/p","timeout":5}]}]}}""",
+            "type"
+        },
+        {
+            """{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"http","url":"https://example.test/p","timeout":5}]}],"PreToolUse":[{"matcher":"Write|Edit|NotebookEdit|Bash|WebFetch|WebSearch","hooks":[{"type":"http","url":"https://example.test/p","timeout":5}]}]}}""",
+            "loopback"
+        },
+        {
+            """{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":0}]}],"PreToolUse":[{"matcher":"Write|Edit|NotebookEdit|Bash|WebFetch|WebSearch","hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":0}]}]}}""",
+            "timeout"
+        },
+        {
+            """{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":5}]}],"PreToolUse":[{"matcher":"Write|Edit|NotebookEdit|Bash|WebFetch|WebSearch","hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":5,"extra":true}]}]}}""",
+            "extra"
+        },
+        {
+            """{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":5}]}],"PreToolUse":[{"matcher":"Write|Edit|NotebookEdit|Bash|WebFetch|WebSearch","hooks":[{"type":"http","url":"http://127.0.0.1:1234/p","timeout":5}]}]},"permissions":{}}""",
+            "permissions"
+        },
+    };
+}
+
+public class PolicyHookTransportTests
+{
+    [Fact]
+    public async Task Probe_acknowledges_settings_without_creating_noise()
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+
+        using var client = NewClient();
+        var response = await PostAcknowledgementAsync(client, transport.Endpoint);
+
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.Equal("{}", await response.Content.ReadAsStringAsync());
+        Assert.True(transport.WasAcknowledged);
+        Assert.Empty(transport.SnapshotObservations());
+    }
+
+    [Fact]
+    public async Task File_write_violation_is_observed_but_http_response_always_allows()
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+
+        using var client = NewClient();
+        var response = await PostHookAsync(
+            client,
+            transport.Endpoint,
+            "Write",
+            new { file_path = "doc/outside.md" },
+            "toolu_write");
+
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.Equal("{}", await response.Content.ReadAsStringAsync());
+        var violation = Assert.Single(transport.SnapshotObservations());
+        Assert.Equal("programmer", violation.Agent);
+        Assert.Equal("Write", violation.Tool);
+        Assert.Equal("toolu_write", violation.ToolUseId);
+        Assert.Equal(PolicyToolOperation.FileWrite, violation.Operation);
+        Assert.Equal("doc/outside.md", violation.Target);
+        Assert.Equal(PolicyDecisionKind.Warn, violation.Decision);
+        Assert.Contains("outside allowedWriteGlobs", violation.Reason);
+    }
+
+    [Fact]
+    public async Task Allowed_write_acknowledges_without_empty_violation_observation()
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+
+        using var client = NewClient();
+        var response = await PostHookAsync(
+            client,
+            transport.Endpoint,
+            "Edit",
+            new { file_path = "src/Program.cs" });
+
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.True(transport.WasAcknowledged);
+        Assert.Empty(transport.SnapshotObservations());
+    }
+
+    [Fact]
+    public async Task Bash_capability_adapter_observes_git_network_and_file_violations()
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+
+        using var client = NewClient();
+        var response = await PostHookAsync(
+            client,
+            transport.Endpoint,
+            "Bash",
+            new
+            {
+                command =
+                    "git commit -m test; curl https://example.test/data; echo hi > outside.txt",
+            });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observations = transport.SnapshotObservations();
+        Assert.Equal(3, observations.Count);
+        Assert.Contains(observations, item => item.Operation == PolicyToolOperation.GitWrite);
+        Assert.Contains(observations, item => item.Operation == PolicyToolOperation.Network);
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.FileWrite &&
+                    item.Target == "outside.txt");
+    }
+
+    [Theory]
+    [MemberData(nameof(ConservativeBashCases))]
+    public async Task Bash_adapter_conservatively_classifies_wrapped_and_indirect_capabilities(
+        string command,
+        PolicyToolOperation expectedOperation)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(
+            client,
+            transport.Endpoint,
+            "Bash",
+            new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.Contains(
+            transport.SnapshotObservations(),
+            observation => observation.Operation == expectedOperation);
+    }
+
+    public static TheoryData<string, PolicyToolOperation> ConservativeBashCases => new()
+    {
+        { "cp src/a.cs outside.cs", PolicyToolOperation.FileWrite },
+        { "mv src/a.cs outside.cs", PolicyToolOperation.FileWrite },
+        { "install src/tool outside-tool", PolicyToolOperation.FileWrite },
+        { "sed -i 's/a/b/' outside.txt", PolicyToolOperation.FileWrite },
+        { "wget https://example.test/archive.tgz", PolicyToolOperation.Network },
+        { "ssh deploy@example.test uptime", PolicyToolOperation.Network },
+        { "npm install package", PolicyToolOperation.Network },
+        { "pnpm add package", PolicyToolOperation.Network },
+        { "pip install package", PolicyToolOperation.Network },
+        { "dotnet restore", PolicyToolOperation.Network },
+        { "curl \"$REMOTE_URL\"", PolicyToolOperation.Network },
+        {
+            "env CI=1 sudo /usr/bin/git -c user.name=test commit -m test",
+            PolicyToolOperation.GitWrite
+        },
+        { "sudo /opt/homebrew/bin/git add src/a.cs", PolicyToolOperation.GitWrite },
+        { "PATH=/usr/bin /usr/bin/git commit -m test", PolicyToolOperation.GitWrite },
+        { "echo inspection-required", PolicyToolOperation.Bash },
+    };
+
+    /// <summary>
+    /// Boundary case for the conservative Bash adapter: a command that pipes or
+    /// redirects a capability call into a write target must still be reported as
+    /// that capability call. Collapsing the command to the single write path it
+    /// ends with would silently drop the outbound network access.
+    /// </summary>
+    [Theory]
+    [InlineData("curl -sS https://example.test/payload | tee outside.txt")]
+    [InlineData("curl -sS https://example.test/payload > outside.txt")]
+    public async Task Bash_write_target_does_not_absorb_the_capability_call_feeding_it(
+        string command)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(
+            client,
+            transport.Endpoint,
+            "Bash",
+            new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observations = transport.SnapshotObservations();
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.Network &&
+                    item.Target == "https://example.test/payload");
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.FileWrite &&
+                    item.Target == "outside.txt");
+        // Both capabilities are reported exactly once: the adapter de-duplicates the
+        // segment-derived and pattern-derived calls instead of dropping either one.
+        Assert.Equal(2, observations.Count);
+    }
+
+    /// <summary>
+    /// Option flags are not write targets. Reporting <c>-rf</c> or <c>-a</c> as a
+    /// written path puts a file that never existed into the SP-1 inventory, and an
+    /// owner has to spend a review deciding it is noise before the glob set can be
+    /// flipped from warn to block.
+    /// </summary>
+    [Theory]
+    [InlineData("rm -rf outside/", "outside/")]
+    [InlineData("sudo tee -a /etc/hosts", "/etc/hosts")]
+    [InlineData("touch -- outside.txt", "outside.txt")]
+    public async Task Bash_option_flags_are_not_observed_as_write_targets(
+        string command,
+        string expectedTarget)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(client, transport.Endpoint, "Bash", new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observations = transport.SnapshotObservations();
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.FileWrite &&
+                    item.Target == expectedTarget);
+        Assert.DoesNotContain(
+            observations,
+            item => item.Operation == PolicyToolOperation.FileWrite &&
+                    item.Target is not null &&
+                    item.Target.StartsWith('-'));
+    }
+
+    /// <summary>
+    /// A download writes a file. Observing only the outbound fetch hides the write,
+    /// so a download that lands outside allowedWriteGlobs would never appear in the
+    /// inventory that gates the block flip.
+    /// </summary>
+    [Theory]
+    [InlineData("curl -sS -o outside.json https://example.test/data", "outside.json")]
+    [InlineData("curl --output outside.json https://example.test/data", "outside.json")]
+    [InlineData("curl -sSLooutside.json https://example.test/data", "outside.json")]
+    [InlineData("wget -q -O outside.tgz https://example.test/archive.tgz", "outside.tgz")]
+    [InlineData(
+        "wget --output-document=outside.tgz https://example.test/archive.tgz",
+        "outside.tgz")]
+    public async Task Bash_download_output_paths_are_observed_as_writes(
+        string command,
+        string expectedTarget)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(client, transport.Endpoint, "Bash", new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observations = transport.SnapshotObservations();
+        Assert.Contains(observations, item => item.Operation == PolicyToolOperation.Network);
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.FileWrite &&
+                    item.Target == expectedTarget);
+    }
+
+    /// <summary>
+    /// A read-only GigaClaw API call is reported as an ungoverned Bash command that
+    /// needs shadow review. Redirecting its output to a file must not swallow that:
+    /// the redirect is a second capability, not a replacement for the first one.
+    /// </summary>
+    [Theory]
+    [InlineData("curl http://127.0.0.1:5230/api/tickets")]
+    [InlineData("curl http://127.0.0.1:5230/api/tickets > outside.json")]
+    [InlineData("curl -o outside.json http://127.0.0.1:5230/api/tickets")]
+    [InlineData("curl \"$GIGACLAW_API_URL/api/tickets\" > outside.json")]
+    public async Task Bash_read_only_board_access_is_reported_even_when_redirected(
+        string command)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(client, transport.Endpoint, "Bash", new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observations = transport.SnapshotObservations();
+        Assert.Contains(
+            observations,
+            item => item.Operation == PolicyToolOperation.Bash && item.Target == command);
+        Assert.DoesNotContain(
+            observations,
+            item => item.Operation == PolicyToolOperation.Network);
+    }
+
+    /// <summary>
+    /// The counterpart to the rule above: a redirect on a command that already maps
+    /// to a governed capability, or to no capability call at all, must not manufacture
+    /// an extra Bash review row. Otherwise every `echo … &gt; file` floods the inventory.
+    /// </summary>
+    [Theory]
+    [InlineData("echo hi > outside.txt", "outside.txt")]
+    [InlineData(
+        "curl -X POST -d '{}' http://127.0.0.1:5230/api/tickets > outside.json",
+        "outside.json")]
+    public async Task Bash_redirect_alone_does_not_manufacture_a_review_row(
+        string command,
+        string expectedTarget)
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+
+        var response = await PostHookAsync(client, transport.Endpoint, "Bash", new { command });
+
+        Assert.True(response.IsSuccessStatusCode);
+        var observation = Assert.Single(transport.SnapshotObservations());
+        Assert.Equal(PolicyToolOperation.FileWrite, observation.Operation);
+        Assert.Equal(expectedTarget, observation.Target);
+    }
+
+    [Fact]
+    public async Task Malformed_hook_input_is_a_block_observation_not_a_transport_denial()
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+        using var content = new StringContent(
+            """{"hook_event_name":"PreToolUse","tool_name":"Write"}""",
+            Encoding.UTF8,
+            "application/json");
+
+        var response = await client.PostAsync(transport.Endpoint, content);
+
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.Equal("{}", await response.Content.ReadAsStringAsync());
+        var violation = Assert.Single(transport.SnapshotObservations());
+        Assert.Equal(PolicyDecisionKind.Block, violation.Decision);
+        Assert.Equal(PolicyToolOperation.HookTransport, violation.Operation);
+        Assert.Contains("Malformed policy hook", violation.Reason);
+    }
+
+    [Fact]
+    public async Task Random_path_rejects_unauthenticated_requests()
+    {
+        using var tmp = new TempDir();
+        var policy = await LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = NewClient();
+        var wrong = new UriBuilder(transport.Endpoint) { Path = "/wrong" }.Uri;
+
+        var response = await PostHookAsync(client, wrong, "PolicyProbe", new { });
+
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+        Assert.False(transport.WasAcknowledged);
+        Assert.Empty(transport.SnapshotObservations());
+    }
+
+    internal static HttpClient NewClient() => new()
+    {
+        Timeout = TimeSpan.FromSeconds(5),
+    };
+
+    internal static async Task<HttpResponseMessage> PostHookAsync(
+        HttpClient client,
+        Uri endpoint,
+        string toolName,
+        object toolInput,
+        string toolUseId = "toolu_test")
+    {
+        return await client.PostAsJsonAsync(endpoint, new
+        {
+            session_id = "session-test",
+            cwd = "/workspace",
+            hook_event_name = "PreToolUse",
+            tool_name = toolName,
+            tool_input = toolInput,
+            tool_use_id = toolUseId,
+        });
+    }
+
+    internal static async Task<HttpResponseMessage> PostAcknowledgementAsync(
+        HttpClient client,
+        Uri endpoint)
+    {
+        return await client.PostAsJsonAsync(endpoint, new
+        {
+            session_id = "session-test",
+            cwd = "/workspace",
+            hook_event_name = "UserPromptSubmit",
+            prompt = "test",
+        });
+    }
+
+    internal static async Task<ContractPolicy> LoadPolicyAsync(
+        string workspacePath,
+        string[] globs)
+    {
+        var manifest = Path.Combine(workspacePath, "contracts.json");
+        await File.WriteAllTextAsync(
+            manifest,
+            $$"""
+              {
+                "version": 1,
+                "defaults": {
+                  "maxDispatchAttempts": 3,
+                  "retryBackoffSeconds": 300,
+                  "requireAtomicHandoff": true,
+                  "requireAuthorOnBoardWrites": true
+                },
+                "agents": {
+                  "programmer": {
+                    "dispatches": ["assignment"],
+                    "riskClass": "code-write",
+                    "allowedWriteGlobs": {{JsonSerializer.Serialize(globs)}},
+                    "ticketExit": ["Review", "Blocked"]
+                  }
+                }
+              }
+              """);
+        var policy = await ContractPolicyLoader.LoadManifestAsync(
+            manifest,
+            workspacePath,
+            "programmer",
+            caseSensitivity: PathCaseSensitivity.Sensitive);
+        Assert.True(policy.IsValid, policy.Diagnostic);
+        return policy;
+    }
+}
+
+/// <summary>
+/// Drain lifecycle of the run-scoped session. <c>ClaudeRunner</c> calls
+/// <see cref="PolicyHookRunSession.StopAndDrainAsync"/> before it publishes
+/// <c>policy-violation/v1</c> events and completes the run, so anything the stop
+/// does not wait for is a violation that never reaches the persisted run log.
+/// </summary>
+public class PolicyHookRunSessionLifecycleTests
+{
+    [Fact]
+    public async Task Observation_in_flight_at_stop_is_drained_before_the_snapshot_is_read()
+    {
+        using var tmp = new TempDir();
+        var policy = await PolicyHookTransportTests.LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var session = await PolicyHookRunSession.StartAsync(policy, "run-drain");
+        var endpoint = await ClaudeHookSettings.ReadAndValidateAsync(session.SettingsPath);
+        var body = Encoding.UTF8.GetBytes(
+            """{"session_id":"session-drain","cwd":"/workspace","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"doc/late.md"},"tool_use_id":"toolu_late"}""");
+
+        // A hook exchange that the agent started but has not finished sending when the
+        // run ends: headers and all but the final body byte are on the wire.
+        using var inFlight = new TcpClient();
+        await inFlight.ConnectAsync(IPAddress.Loopback, endpoint.Port);
+        var stream = inFlight.GetStream();
+        await stream.WriteAsync(Encoding.ASCII.GetBytes(
+            $"POST {endpoint.AbsolutePath} HTTP/1.1\r\n" +
+            $"Host: 127.0.0.1:{endpoint.Port}\r\n" +
+            "Content-Type: application/json\r\n" +
+            $"Content-Length: {body.Length}\r\n" +
+            "Connection: close\r\n\r\n"));
+        await stream.WriteAsync(body.AsMemory(0, body.Length - 1));
+        await stream.FlushAsync();
+
+        // The listener accepts connections in order, so a later request that completes
+        // proves the partial one above is already accepted and parked in the transport.
+        using var client = PolicyHookTransportTests.NewClient();
+        using var acknowledgement = await PolicyHookTransportTests.PostAcknowledgementAsync(
+            client,
+            endpoint);
+        Assert.True(acknowledgement.IsSuccessStatusCode);
+        Assert.True(session.WasAcknowledged);
+        Assert.Empty(session.SnapshotObservations());
+
+        // The exchange only finishes after the stop has begun. A stop that does not
+        // drain returns first and the observation is lost.
+        var release = Task.Run(async () =>
+        {
+            await Task.Delay(300);
+            await stream.WriteAsync(body.AsMemory(body.Length - 1));
+            await stream.FlushAsync();
+        });
+
+        await session.StopAndDrainAsync().WaitAsync(TimeSpan.FromSeconds(15));
+
+        var violation = Assert.Single(session.SnapshotObservations());
+        Assert.Equal("programmer", violation.Agent);
+        Assert.Equal("Write", violation.Tool);
+        Assert.Equal("toolu_late", violation.ToolUseId);
+        Assert.Equal(PolicyToolOperation.FileWrite, violation.Operation);
+        Assert.Equal("doc/late.md", violation.Target);
+        Assert.Equal(PolicyDecisionKind.Warn, violation.Decision);
+        await release;
+
+        // Stopping again is a no-op rather than a second drain or a throw.
+        await session.StopAndDrainAsync();
+        Assert.Single(session.SnapshotObservations());
+    }
+
+    [Fact]
+    public async Task Stopping_a_session_with_no_observations_is_idempotent_and_removes_its_settings()
+    {
+        using var tmp = new TempDir();
+        var policy = await PolicyHookTransportTests.LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var session = await PolicyHookRunSession.StartAsync(policy, "run-clean");
+        Assert.True(File.Exists(session.SettingsPath));
+
+        await session.StopAndDrainAsync();
+        await session.StopAndDrainAsync();
+
+        Assert.Empty(session.SnapshotObservations());
+        Assert.False(session.WasAcknowledged);
+        Assert.Equal(0, session.AcknowledgementCount);
+
+        await session.DisposeAsync();
+        Assert.False(File.Exists(session.SettingsPath));
+    }
+}
+
+/// <summary>
+/// Reproducible transport benchmark. Run with:
+/// dotnet test GigaClaw.Core.Tests/GigaClaw.Core.Tests.csproj -c Release
+///   --filter FullyQualifiedName~PolicyHookTransportBenchmarkTests
+///   --logger "console;verbosity=detailed"
+/// </summary>
+public class PolicyHookTransportBenchmarkTests
+{
+    private readonly ITestOutputHelper _output;
+
+    public PolicyHookTransportBenchmarkTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
+
+    [Fact]
+    public async Task Warm_loopback_transport_p95_is_within_shadow_target()
+    {
+        const int warmupSamples = 50;
+        const int measuredSamples = 500;
+        using var tmp = new TempDir();
+        var policy = await PolicyHookTransportTests.LoadPolicyAsync(tmp.Path, ["src/**"]);
+        await using var transport = PolicyHookTransport.Start(policy);
+        using var client = PolicyHookTransportTests.NewClient();
+
+        for (var i = 0; i < warmupSamples; i++)
+        {
+            using var response = await PolicyHookTransportTests.PostHookAsync(
+                client,
+                transport.Endpoint,
+                "Edit",
+                new { file_path = "src/Program.cs" });
+            response.EnsureSuccessStatusCode();
+            _ = await response.Content.ReadAsStringAsync();
+        }
+
+        var samples = new double[measuredSamples];
+        for (var i = 0; i < measuredSamples; i++)
+        {
+            var started = Stopwatch.GetTimestamp();
+            using var response = await PolicyHookTransportTests.PostHookAsync(
+                client,
+                transport.Endpoint,
+                "Edit",
+                new { file_path = "src/Program.cs" });
+            response.EnsureSuccessStatusCode();
+            _ = await response.Content.ReadAsStringAsync();
+            samples[i] = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        }
+
+        Array.Sort(samples);
+        var p50 = Percentile(samples, 0.50);
+        var p95 = Percentile(samples, 0.95);
+        _output.WriteLine(
+            $"transport=loopback-http warmup={warmupSamples} samples={measuredSamples} " +
+            $"p50_ms={p50:F3} p95_ms={p95:F3} target_p95_ms=50.000");
+
+        Assert.True(
+            p95 <= 50,
+            $"Warm policy-hook p95 {p95:F3} ms exceeded the 50 ms shadow target.");
+        Assert.Empty(transport.SnapshotObservations());
+    }
+
+    private static double Percentile(double[] sorted, double percentile)
+    {
+        var index = (int)Math.Ceiling(percentile * sorted.Length) - 1;
+        return sorted[Math.Clamp(index, 0, sorted.Length - 1)];
+    }
+}
+
+public class PolicyInventoryArtifactTests
+{
+    [Fact]
+    public void Sp1_inventory_has_one_sorted_exercised_row_per_template_agent()
+    {
+        var root = FindRepositoryRoot();
+        var agentsDirectory = Path.Combine(root, "ProjectTemplate", "Agents");
+        var inventoryPath = Path.Combine(
+            root,
+            "GigaClaw.Core",
+            "Automation",
+            "Policy",
+            "sp1-glob-failure-inventory.jsonl");
+        var lines = File.ReadAllLines(inventoryPath);
+        using var contracts = JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(agentsDirectory, "contracts.json")));
+        var contractAgents = contracts.RootElement
+            .GetProperty("agents")
+            .EnumerateObject()
+            .OrderBy(item => item.Name, StringComparer.Ordinal)
+            .ToArray();
+        var skillAgents = Directory
+            .EnumerateDirectories(agentsDirectory)
+            .Where(directory => File.Exists(Path.Combine(directory, "SKILL.md")))
+            .Select(directory => new DirectoryInfo(directory).Name)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(33, lines.Length);
+        Assert.Equal(skillAgents, contractAgents.Select(item => item.Name));
+        for (var i = 0; i < lines.Length; i++)
+        {
+            using var row = JsonDocument.Parse(lines[i]);
+            var value = row.RootElement;
+            Assert.Equal(contractAgents[i].Name, value.GetProperty("agent").GetString());
+            Assert.Equal(
+                "exercised",
+                value.GetProperty("exerciseState").GetString());
+            Assert.Equal(
+                JsonValueKind.Number,
+                value.GetProperty("observedViolationCount").ValueKind);
+            Assert.Equal(
+                contractAgents[i].Value
+                    .GetProperty("allowedWriteGlobs")
+                    .EnumerateArray()
+                    .Select(item => item.GetString()),
+                value.GetProperty("allowedWriteGlobs")
+                    .EnumerateArray()
+                    .Select(item => item.GetString()));
+        }
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "GigaClaw.slnx")))
+                return directory.FullName;
+            directory = directory.Parent;
+        }
+        throw new DirectoryNotFoundException("Could not locate GigaClaw repository root.");
+    }
+}
