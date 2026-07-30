@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using GigaClaw.Core.Models;
 
@@ -12,6 +13,7 @@ public class TodoDbContext : DbContext
     public DbSet<BoardColumn> BoardColumns => Set<BoardColumn>();
     public DbSet<Member> Members => Set<Member>();
     public DbSet<ChatMessageRow> ChatMessages => Set<ChatMessageRow>();
+    public DbSet<TicketDependency> TicketDependencies => Set<TicketDependency>();
 
     private readonly string _dbPath;
 
@@ -25,7 +27,11 @@ public class TodoDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
-        options.UseSqlite($"Data Source={_dbPath}");
+        options.UseSqlite(new SqliteConnectionStringBuilder
+        {
+            DataSource = _dbPath,
+            ForeignKeys = true
+        }.ToString());
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -36,6 +42,24 @@ public class TodoDbContext : DbContext
             e.HasMany(t => t.Comments).WithOne(c => c.Ticket).HasForeignKey(c => c.TicketId);
             e.HasMany(t => t.Activities).WithOne(a => a.Ticket).HasForeignKey(a => a.TicketId);
             e.HasMany(t => t.Labels).WithMany(l => l.Tickets).UsingEntity("TicketLabels");
+        });
+
+        modelBuilder.Entity<TicketDependency>(e =>
+        {
+            e.ToTable("TicketDependencies", table =>
+                table.HasCheckConstraint(
+                    "CK_TicketDependencies_NotSelf",
+                    "BlockedTicketId <> BlockingTicketId"));
+            e.HasKey(d => new { d.BlockedTicketId, d.BlockingTicketId });
+            e.HasIndex(d => d.BlockingTicketId);
+            e.HasOne(d => d.BlockedTicket)
+                .WithMany(t => t.BlockedByEdges)
+                .HasForeignKey(d => d.BlockedTicketId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(d => d.BlockingTicket)
+                .WithMany(t => t.BlocksEdges)
+                .HasForeignKey(d => d.BlockingTicketId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Comment>(e =>

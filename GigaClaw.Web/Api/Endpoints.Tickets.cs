@@ -56,6 +56,53 @@ public static partial class Endpoints
         .Produces<Ticket>()
         .ProducesProblem(StatusCodes.Status404NotFound);
 
+        api.MapGet("/projects/{slug}/tickets/{id:int}/dependencies", async (string slug, int id, TicketService ts) =>
+        {
+            var dependencies = await ts.GetTicketDependenciesAsync(slug, id);
+            return dependencies is null ? Results.NotFound() : Results.Ok(dependencies);
+        }).WithTags("Tickets")
+        .Produces<TicketDependencies>()
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        api.MapPost("/projects/{slug}/tickets/{id:int}/dependencies", async (
+            string slug,
+            int id,
+            AddTicketDependencyRequest req,
+            TicketService ts,
+            BoardUpdateNotifier notifier) =>
+        {
+            try
+            {
+                var blocker = await ts.AddTicketDependencyAsync(slug, id, req.BlockingTicketId);
+                notifier.NotifyProjectUpdated(slug);
+                return Results.Created(
+                    $"/api/projects/{slug}/tickets/{id}/dependencies",
+                    blocker);
+            }
+            catch (TicketDependencyException ex)
+            {
+                return DependencyError(ex);
+            }
+        }).WithTags("Tickets")
+        .Produces<TicketDependencyInfo>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict);
+
+        api.MapDelete("/projects/{slug}/tickets/{id:int}/dependencies/{blockingTicketId:int}", async (
+            string slug,
+            int id,
+            int blockingTicketId,
+            TicketService ts,
+            BoardUpdateNotifier notifier) =>
+        {
+            var deleted = await ts.RemoveTicketDependencyAsync(slug, id, blockingTicketId);
+            if (deleted) notifier.NotifyProjectUpdated(slug);
+            return deleted ? Results.NoContent() : Results.NotFound();
+        }).WithTags("Tickets")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
         api.MapPatch("/projects/{slug}/tickets/{id:int}/status", async (string slug, int id, MoveTicketRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
         {
             try
@@ -192,6 +239,19 @@ public static partial class Endpoints
                 .OrderBy(x => ((dynamic)x).at);
             return Results.Ok(timeline);
         }).WithTags("Activity");
+    }
+
+    private static IResult DependencyError(TicketDependencyException exception)
+    {
+        var statusCode = exception.Code switch
+        {
+            "ticket_not_found" or "blocking_ticket_not_found" => StatusCodes.Status404NotFound,
+            "dependency_duplicate" or "dependency_cycle" => StatusCodes.Status409Conflict,
+            _ => StatusCodes.Status400BadRequest
+        };
+        return Results.Json(
+            new { code = exception.Code, error = exception.Message },
+            statusCode: statusCode);
     }
 
     private static void MapTicketReorder(RouteGroupBuilder api)

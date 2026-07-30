@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using GigaClaw.Core.Data;
 using GigaClaw.Core.Models;
@@ -6,7 +7,23 @@ namespace GigaClaw.Core.Services;
 
 public sealed class TicketTransitionConflictException(string message) : InvalidOperationException(message);
 
-public class TicketService
+public sealed class TicketDependencyException(string code, string message) : InvalidOperationException(message)
+{
+    public string Code { get; } = code;
+}
+
+/// <summary>
+/// Read-only dependency edge contract consumed by automation without coupling the
+/// persistence layer to any particular condition vocabulary.
+/// </summary>
+public interface ITicketDependencyQuery
+{
+    Task<IReadOnlyList<TicketDependencyInfo>?> ListBlockingTicketsAsync(
+        string projectSlug,
+        int ticketId);
+}
+
+public class TicketService : ITicketDependencyQuery
 {
     private readonly ProjectService _projectService;
     private readonly MemberService _memberService;
@@ -93,6 +110,29 @@ public class TicketService
             await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN AgentCostUsd REAL NOT NULL DEFAULT 0");
         });
 
+    // Normalized dependency edges for databases created before P4. CREATE TABLE IF NOT
+    // EXISTS is the table equivalent of the existing ALTER TABLE try/catch migrations:
+    // it is idempotent and preserves every pre-existing ticket row.
+    private static Task EnsureTicketDependenciesTableAsync(TodoDbContext db) =>
+        MigrationGate.RunOnceAsync(db, "ticket-dependencies", static async d =>
+        {
+            await d.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS TicketDependencies (
+                    BlockedTicketId INTEGER NOT NULL,
+                    BlockingTicketId INTEGER NOT NULL,
+                    CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT PK_TicketDependencies PRIMARY KEY (BlockedTicketId, BlockingTicketId),
+                    CONSTRAINT CK_TicketDependencies_NotSelf CHECK (BlockedTicketId <> BlockingTicketId),
+                    CONSTRAINT FK_TicketDependencies_BlockedTicket
+                        FOREIGN KEY (BlockedTicketId) REFERENCES Tickets (Id) ON DELETE CASCADE,
+                    CONSTRAINT FK_TicketDependencies_BlockingTicket
+                        FOREIGN KEY (BlockingTicketId) REFERENCES Tickets (Id) ON DELETE CASCADE
+                )
+            """);
+            await d.Database.ExecuteSqlRawAsync(
+                "CREATE INDEX IF NOT EXISTS IX_TicketDependencies_BlockingTicketId ON TicketDependencies(BlockingTicketId)");
+        });
+
     // Hot-path indexes: status/parent filters run on every board render, and the activity
     // subquery in ListTicketsAsync scans per ticket. Must run after the column migrations.
     private static Task EnsureTicketIndexesAsync(TodoDbContext db) =>
@@ -114,6 +154,7 @@ public class TicketService
         await EnsureScheduleColumnsAsync(db);
         await EnsureAgentUsageColumnsAsync(db);
         await EnsureTicketIndexesAsync(db);
+        await EnsureTicketDependenciesTableAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
         var query = db.Tickets.Include(t => t.Labels).AsQueryable();
         if (statusFilter is not null)
@@ -160,9 +201,37 @@ public class TicketService
             .GroupBy(x => x.ParentId!.Value)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Info).ToList());
 
-        return allTickets.Select(t => subsByParent.TryGetValue(t.Id, out var subs)
-            ? t with { SubTickets = subs }
-            : t).ToList();
+        var ticketIds = allTickets.Select(t => t.Id).ToList();
+        var dependencyRows = ticketIds.Count > 0
+            ? await (
+                from edge in db.TicketDependencies.AsNoTracking()
+                join blocked in db.Tickets.AsNoTracking() on edge.BlockedTicketId equals blocked.Id
+                join blocking in db.Tickets.AsNoTracking() on edge.BlockingTicketId equals blocking.Id
+                where ticketIds.Contains(edge.BlockedTicketId) || ticketIds.Contains(edge.BlockingTicketId)
+                select new
+                {
+                    edge.BlockedTicketId,
+                    edge.BlockingTicketId,
+                    Blocked = new TicketDependencyInfo(blocked.Id, blocked.Title, blocked.Status, blocked.AssignedTo),
+                    Blocking = new TicketDependencyInfo(blocking.Id, blocking.Title, blocking.Status, blocking.AssignedTo)
+                })
+                .ToListAsync()
+            : [];
+
+        return allTickets.Select(t => t with
+        {
+            SubTickets = subsByParent.GetValueOrDefault(t.Id) ?? [],
+            BlockedBy = dependencyRows
+                .Where(edge => edge.BlockedTicketId == t.Id)
+                .Select(edge => edge.Blocking)
+                .OrderBy(edge => edge.Id)
+                .ToList(),
+            Blocks = dependencyRows
+                .Where(edge => edge.BlockingTicketId == t.Id)
+                .Select(edge => edge.Blocked)
+                .OrderBy(edge => edge.Id)
+                .ToList()
+        }).ToList();
     }
 
     public async Task<Ticket?> GetTicketAsync(string projectSlug, int ticketId)
@@ -174,6 +243,7 @@ public class TicketService
         await EnsureAssignedToColumnAsync(db);
         await EnsureScheduleColumnsAsync(db);
         await EnsureAgentUsageColumnsAsync(db);
+        await EnsureTicketDependenciesTableAsync(db);
         var ticket = await db.Tickets
             .Include(t => t.Comments.OrderBy(c => c.CreatedAt))
             .Include(t => t.Activities.OrderBy(a => a.CreatedAt))
@@ -185,7 +255,238 @@ public class TicketService
             .OrderBy(t => t.SortOrder).ThenBy(t => t.CreatedAt)
             .Select(t => new SubTicketInfo(t.Id, t.Title, t.Status, t.AssignedTo))
             .ToListAsync();
+        var dependencies = await LoadTicketDependenciesAsync(db, ticketId);
+        ticket.BlockedBy = dependencies.BlockedBy.ToList();
+        ticket.Blocks = dependencies.Blocks.ToList();
         return ticket;
+    }
+
+    public async Task<TicketDependencies?> GetTicketDependenciesAsync(string projectSlug, int ticketId)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureAssignedToColumnAsync(db);
+        await EnsureTicketDependenciesTableAsync(db);
+        if (!await db.Tickets.AsNoTracking().AnyAsync(ticket => ticket.Id == ticketId))
+            return null;
+        return await LoadTicketDependenciesAsync(db, ticketId);
+    }
+
+    public async Task<IReadOnlyList<TicketDependencyInfo>?> ListBlockingTicketsAsync(
+        string projectSlug,
+        int ticketId)
+    {
+        var dependencies = await GetTicketDependenciesAsync(projectSlug, ticketId);
+        return dependencies?.BlockedBy;
+    }
+
+    /// <summary>
+    /// Adds a "blocked by" edge. The immediate SQLite transaction acquires the writer
+    /// reservation before validation, serializing the recursive cycle check with every
+    /// competing edge insert. This prevents a check/write race from admitting opposite edges.
+    /// </summary>
+    public async Task<TicketDependencyInfo> AddTicketDependencyAsync(
+        string projectSlug,
+        int blockedTicketId,
+        int blockingTicketId)
+    {
+        if (blockedTicketId == blockingTicketId)
+            throw new TicketDependencyException(
+                "dependency_self",
+                "A ticket cannot depend on itself.");
+
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureAssignedToColumnAsync(db);
+        await EnsureTicketDependenciesTableAsync(db);
+        await db.Database.OpenConnectionAsync();
+        var connection = (SqliteConnection)db.Database.GetDbConnection();
+        await using var transaction = connection.BeginTransaction(deferred: false);
+
+        try
+        {
+            var existingIds = new HashSet<int>();
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = "SELECT Id FROM Tickets WHERE Id IN ($blocked, $blocking)";
+                command.Parameters.AddWithValue("$blocked", blockedTicketId);
+                command.Parameters.AddWithValue("$blocking", blockingTicketId);
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    existingIds.Add(reader.GetInt32(0));
+            }
+
+            if (!existingIds.Contains(blockedTicketId))
+                throw new TicketDependencyException(
+                    "ticket_not_found",
+                    $"Ticket #{blockedTicketId} does not exist.");
+            if (!existingIds.Contains(blockingTicketId))
+                throw new TicketDependencyException(
+                    "blocking_ticket_not_found",
+                    $"Blocking ticket #{blockingTicketId} does not exist.");
+
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM TicketDependencies
+                        WHERE BlockedTicketId = $blocked AND BlockingTicketId = $blocking
+                    )
+                    """;
+                command.Parameters.AddWithValue("$blocked", blockedTicketId);
+                command.Parameters.AddWithValue("$blocking", blockingTicketId);
+                if (Convert.ToInt32(await command.ExecuteScalarAsync()) != 0)
+                    throw new TicketDependencyException(
+                        "dependency_duplicate",
+                        $"Ticket #{blockedTicketId} is already blocked by ticket #{blockingTicketId}.");
+            }
+
+            // An edge X -> Y means "X is blocked by Y". Adding it is cyclic when Y can
+            // already reach X by following existing blocked -> blocker edges.
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = """
+                    WITH RECURSIVE blockers(TicketId) AS (
+                        SELECT BlockingTicketId
+                        FROM TicketDependencies
+                        WHERE BlockedTicketId = $blocking
+                        UNION
+                        SELECT edge.BlockingTicketId
+                        FROM TicketDependencies AS edge
+                        JOIN blockers ON edge.BlockedTicketId = blockers.TicketId
+                    )
+                    SELECT EXISTS (
+                        SELECT 1 FROM blockers WHERE TicketId = $blocked
+                    )
+                    """;
+                command.Parameters.AddWithValue("$blocked", blockedTicketId);
+                command.Parameters.AddWithValue("$blocking", blockingTicketId);
+                if (Convert.ToInt32(await command.ExecuteScalarAsync()) != 0)
+                    throw new TicketDependencyException(
+                        "dependency_cycle",
+                        $"Adding ticket #{blockingTicketId} as a blocker of ticket #{blockedTicketId} would create a dependency cycle.");
+            }
+
+            TicketDependencyInfo blocker;
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = """
+                    SELECT Id, Title, Status, AssignedTo
+                    FROM Tickets
+                    WHERE Id = $blocking
+                    """;
+                command.Parameters.AddWithValue("$blocking", blockingTicketId);
+                await using var reader = await command.ExecuteReaderAsync();
+                await reader.ReadAsync();
+                blocker = new TicketDependencyInfo(
+                    reader.GetInt32(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.IsDBNull(3) ? null : reader.GetString(3));
+            }
+
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = """
+                    INSERT INTO TicketDependencies (BlockedTicketId, BlockingTicketId, CreatedAt)
+                    VALUES ($blocked, $blocking, $createdAt);
+                    UPDATE Tickets SET UpdatedAt = $createdAt WHERE Id = $blocked;
+                    """;
+                command.Parameters.AddWithValue("$blocked", blockedTicketId);
+                command.Parameters.AddWithValue("$blocking", blockingTicketId);
+                command.Parameters.AddWithValue("$createdAt", DateTime.UtcNow);
+                await command.ExecuteNonQueryAsync();
+            }
+
+            await transaction.CommitAsync();
+            return blocker;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<bool> RemoveTicketDependencyAsync(
+        string projectSlug,
+        int blockedTicketId,
+        int blockingTicketId)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureTicketDependenciesTableAsync(db);
+        await db.Database.OpenConnectionAsync();
+        var connection = (SqliteConnection)db.Database.GetDbConnection();
+        await using var transaction = connection.BeginTransaction(deferred: false);
+
+        try
+        {
+            int affected;
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = """
+                    DELETE FROM TicketDependencies
+                    WHERE BlockedTicketId = $blocked AND BlockingTicketId = $blocking
+                    """;
+                command.Parameters.AddWithValue("$blocked", blockedTicketId);
+                command.Parameters.AddWithValue("$blocking", blockingTicketId);
+                affected = await command.ExecuteNonQueryAsync();
+            }
+
+            if (affected > 0)
+            {
+                await using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = "UPDATE Tickets SET UpdatedAt = $updatedAt WHERE Id = $blocked";
+                command.Parameters.AddWithValue("$blocked", blockedTicketId);
+                command.Parameters.AddWithValue("$updatedAt", DateTime.UtcNow);
+                await command.ExecuteNonQueryAsync();
+            }
+
+            await transaction.CommitAsync();
+            return affected > 0;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private static async Task<TicketDependencies> LoadTicketDependenciesAsync(
+        TodoDbContext db,
+        int ticketId)
+    {
+        var blockedBy = await (
+            from edge in db.TicketDependencies.AsNoTracking()
+            join blocking in db.Tickets.AsNoTracking() on edge.BlockingTicketId equals blocking.Id
+            where edge.BlockedTicketId == ticketId
+            orderby blocking.Id
+            select new TicketDependencyInfo(
+                blocking.Id,
+                blocking.Title,
+                blocking.Status,
+                blocking.AssignedTo))
+            .ToListAsync();
+
+        var blocks = await (
+            from edge in db.TicketDependencies.AsNoTracking()
+            join blocked in db.Tickets.AsNoTracking() on edge.BlockedTicketId equals blocked.Id
+            where edge.BlockingTicketId == ticketId
+            orderby blocked.Id
+            select new TicketDependencyInfo(
+                blocked.Id,
+                blocked.Title,
+                blocked.Status,
+                blocked.AssignedTo))
+            .ToListAsync();
+
+        return new TicketDependencies(blockedBy, blocks);
     }
 
     /// <summary>
@@ -510,9 +811,12 @@ public class TicketService
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         await EnsureParentIdColumnAsync(db);
+        await EnsureTicketDependenciesTableAsync(db);
         var ticket = await db.Tickets
             .Include(t => t.Comments)
             .Include(t => t.Activities)
+            .Include(t => t.BlockedByEdges)
+            .Include(t => t.BlocksEdges)
             .FirstOrDefaultAsync(t => t.Id == ticketId);
         if (ticket is null) return false;
         // Unparent any children before deleting
@@ -521,6 +825,8 @@ public class TicketService
             child.ParentId = null;
         db.Comments.RemoveRange(ticket.Comments);
         db.ActivityEntries.RemoveRange(ticket.Activities);
+        db.TicketDependencies.RemoveRange(ticket.BlockedByEdges);
+        db.TicketDependencies.RemoveRange(ticket.BlocksEdges);
         db.Tickets.Remove(ticket);
         await db.SaveChangesAsync();
         return true;
