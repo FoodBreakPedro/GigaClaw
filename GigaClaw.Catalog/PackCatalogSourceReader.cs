@@ -41,7 +41,15 @@ public static class PackCatalogSourceReader
 
         var coreManifest = Path.Combine(repositoryRoot, "ProjectTemplate", ManifestFile);
         sources.Add(File.Exists(coreManifest)
-            ? Read(coreManifest, Path.Combine(repositoryRoot, "ProjectTemplate"))
+            // Core's replay fixtures do not live under its pack root. §9 keeps them flat in
+            // GigaClaw.Eval so the reviewed snapshot stays a core-owned review artifact rather than
+            // being sharded per pack, so core is the one source whose fixture directory is not
+            // <packRoot>/eval/fixtures. Without this override core reads as having zero fixtures
+            // the moment it gains a manifest, and all 33 agents become binding gaps.
+            ? Read(
+                coreManifest,
+                Path.Combine(repositoryRoot, "ProjectTemplate"),
+                Path.Combine(repositoryRoot, "GigaClaw.Eval", "fixtures"))
             : PackCatalogSource.HostTemplate(repositoryRoot));
 
         var packsRoot = Path.Combine(repositoryRoot, PacksDirectory);
@@ -58,12 +66,15 @@ public static class PackCatalogSourceReader
     }
 
     /// <summary>Projects one <c>pack.json</c> into the gate's view of its pack.</summary>
-    public static PackCatalogSource Read(string manifestPath, string packRoot)
+    public static PackCatalogSource Read(
+        string manifestPath,
+        string packRoot,
+        string? fixtureDirectoryOverride = null)
     {
         using var document = JsonDocument.Parse(File.ReadAllText(manifestPath));
         var root = document.RootElement;
         var id = String(root, "id") ?? Path.GetFileName(packRoot);
-        var fixtures = Path.Combine(packRoot, "eval", "fixtures");
+        var fixtures = fixtureDirectoryOverride ?? Path.Combine(packRoot, "eval", "fixtures");
 
         return new PackCatalogSource(
             id,

@@ -30,6 +30,22 @@ public sealed record ComposedPack(
     IReadOnlyDictionary<string, JsonObject> Teams)
 {
     public string Id => Manifest.Id;
+
+    /// <summary>
+    /// Non-slug (<c>_</c>-prefixed) keys from the pack's <c>models.json</c> — the file's own
+    /// documentation. Carried separately so it is neither mistaken for an agent mapping by
+    /// ownership and collision checks nor lost on the way into the workspace. Core-only when
+    /// applied, for the same reason <see cref="ContractDefaults"/> is.
+    /// </summary>
+    public IReadOnlyDictionary<string, JsonNode> ModelsPreamble { get; init; } =
+        new Dictionary<string, JsonNode>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// <see cref="Teams"/> in the order the pack's <c>teams.json</c> declares them. Team order is
+    /// user-visible — it is the order of the board's team filter — so it is carried explicitly
+    /// rather than left to dictionary enumeration or re-derived by sorting the slugs.
+    /// </summary>
+    public IReadOnlyList<string> TeamOrder { get; init; } = [];
 }
 
 /// <summary>The whole selection, validated and ordered: core first, then topological by

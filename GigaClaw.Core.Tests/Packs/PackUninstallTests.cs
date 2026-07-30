@@ -299,7 +299,7 @@ public sealed class PackUninstallTests
         var result = await installer.UninstallAsync(workspace, "security-assurance");
 
         Assert.Equal(new[] { "security-review" }, result.RemovedTeams);
-        var teams = JsonNode.Parse(Read(workspace, ".agents/teams.json"))!.AsArray();
+        var teams = PackComposer.TeamsArrayOf(JsonNode.Parse(Read(workspace, ".agents/teams.json")))!;
         var engineering = Assert.Single(teams.OfType<JsonObject>());
         Assert.Equal("software-engineering", engineering["slug"]!.GetValue<string>());
         // teamMembership reversed as a set subtraction; the core member is untouched.
