@@ -36,22 +36,24 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 | Task | Lane | State | Where |
 |---|---|---|---|
 | R1 policy chokepoint | CX-R | Landed | `lane/cx-runtime` `cfbe9ab` |
-| R2 shadow enforcement | CX-R | Checkpointed, verified green (708 tests), regression tests outstanding | `lane/cx-runtime` `1931c72` |
+| R2 shadow enforcement | CX-R | Landed — drain-lifecycle and Bash-boundary regressions covered, both proven load-bearing; 712 tests | `lane/cx-runtime` `1cf6a7a` |
 | R3 block mode | CX-R | Gated — needs the SP-1 inventory to hold real dispatches (all 33 rows read `not-exercised`) and owner sign-off | — |
 | T1 typed catalog | CX-T | Landed | `lane/cx-tooling` `4c404d1` |
 | T2 catalog CI | CX-T | Drift + baseline checks running; strict binding gate still red on the `content-writer` gap until GM's G1 merges; drift script retires after a green week | `lane/cx-tooling` `4c404d1`, `5cbe6f5` |
 | T3 dependency edges | CX-T | Landed | `lane/cx-tooling` `84e98ae` |
 | T4 eval static layer | CX-T | Landed — 33 agents evaluated, `documentalist` flagged at 14,696 bytes | `lane/cx-tooling` `6a104da` |
-| T5 eval replay | CX-T | In progress (replay slice; judge and Monte Carlo deferred) | `lane/cx-tooling` |
+| T5 eval replay | CX-T | In progress — replay slice; judge and Monte Carlo deferred to later slices | `lane/cx-tooling` |
 | C1 verdict schema v1 | CL | Landed, frozen | `lane/claude-orch` |
 | C2 verdict gate | CL | Vocabulary landed; per-reviewer wiring waits on G2 merging | `lane/claude-orch` |
 | P4 CL half | CL | Landed | `claude-orch/p4-dependencies-resolved` |
-| C6 handoff artifacts | CL | In progress — CX-R's R4 leases wait on its `ownedFiles` interface | — |
+| C6 handoff artifacts | CL | Landed — schema v1 frozen, dispatch injection wired, `ownedFiles` is the interface R4 leases consume | `lane/claude-orch` |
 | G1 cheap defects | GM | Landed | `lane/gemini-vol` |
 | G2 reviewer rewrites | GM | Under CL review — receipt-chain, cycle-counter and evaluator-transport findings fixed; two rubric findings outstanding | `lane/gemini-vol` |
+| G3 handoff templates | GM | Unblocked by C6 — per-agent guidance for producing and consuming handoffs | — |
 
 Open cross-lane items:
 
+- Bash capability classification in R2 over-reports option flags as write targets and drops a capability when a read is redirected to a file; fixes are in flight in lane CX-R.
 - R2's acceptance asks for durable ticket-comment receipts. That crosses the `ActionExecutor` boundary CL owns, so the branch records queryable run-log receipts instead and the criterion stays explicitly unmet until a shared merge window.
 - `lane/cx-tooling` and branches based on it cannot be pushed to GitHub with the current credentials: they touch `.github/workflows/ci.yml` and the token lacks the `workflow` scope.
 
