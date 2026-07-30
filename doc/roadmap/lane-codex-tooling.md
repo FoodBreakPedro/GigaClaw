@@ -77,7 +77,7 @@ Verification bar: existing suite green in Release plus explicit build/test comma
 **Acceptance criteria:**
 - [x] ≥1 fixture ticket per pipeline family (dev, blog, growth, media, governance); fixtures live in `GigaClaw.Eval/fixtures/`
 - [x] Both judges emit schema-valid verdicts; same fixture + mock + deterministic judge is byte-identical, while LLM-judge variance is measured rather than asserted away
-- [ ] Monte Carlo mode caps cost and prints per-run + aggregate cost
+- [x] Monte Carlo mode caps cost and prints per-run + aggregate cost
 
 **Dependencies:** T4, A11 schema frozen (CL, SP-1→SP-2 window). **Size:** L → split: replay runner, then judge, then Monte Carlo.
 

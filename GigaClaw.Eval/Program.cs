@@ -1,10 +1,13 @@
+using System.Globalization;
+
 namespace GigaClaw.Eval;
 
 internal static class Program
 {
     // Options that consume the following argument; anything else that is not "--" prefixed is a
     // positional (the verb, then the target).
-    private static readonly string[] ValueOptions = ["--root"];
+    private static readonly string[] ValueOptions =
+        ["--root", "--runs", "--max-runs", "--max-spend-usd"];
 
     private static int Main(string[] args)
     {
@@ -16,10 +19,11 @@ internal static class Program
         {
             "replay" => "replay",
             "judge" => "judge",
+            "montecarlo" or "monte-carlo" => "montecarlo",
             "static" => "static",
             _ => "static"
         };
-        var target = positionals.FirstOrDefault() is "replay" or "judge" or "static"
+        var target = positionals.FirstOrDefault() is "replay" or "judge" or "static" or "montecarlo" or "monte-carlo"
             ? positionals.Skip(1).FirstOrDefault()
             : positionals.FirstOrDefault();
         if (target is null)
@@ -35,6 +39,7 @@ internal static class Program
             {
                 "replay" => RunReplay(root, target, args, writeReport),
                 "judge" => RunJudge(root, target, args, writeReport),
+                "montecarlo" => RunMonteCarlo(root, target, args, writeReport),
                 _ => RunStatic(root, target, args, writeReport),
             };
         }
@@ -78,6 +83,30 @@ internal static class Program
             args.Contains("--llm", StringComparer.Ordinal),
             args.Contains("--update-baselines", StringComparer.Ordinal),
             writeReport);
+        Print(result);
+        return result.ExitCode;
+    }
+
+    private static int RunMonteCarlo(string root, string target, string[] args, bool writeReport)
+    {
+        // Refused rather than quietly accepted: Monte Carlo samples the agent run, and the judge is
+        // the fixed instrument measuring it. Letting the non-reproducible LLM judge in would put
+        // variance in the instrument too, and the resulting spread would be uninterpretable.
+        if (args.Contains("--llm", StringComparer.Ordinal))
+        {
+            throw new ArgumentException(
+                "montecarlo does not accept --llm: it samples the agent run and holds the judge fixed. " +
+                "Use `judge --llm` to measure the judge instead.");
+        }
+
+        var runner = new MonteCarloRunner(root);
+        var options = runner.DefaultOptions(
+            IntOption(args, "--runs"),
+            IntOption(args, "--max-runs"),
+            DecimalOption(args, "--max-spend-usd"),
+            args.Contains("--real-cli", StringComparer.Ordinal));
+
+        var result = runner.Run(target, options, writeReport);
         Print(result);
         return result.ExitCode;
     }
@@ -144,6 +173,39 @@ internal static class Program
         Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
     }
 
+    private static void Print(MonteCarloRunResult result)
+    {
+        var fixtures = result.Reports.SelectMany(report => report.Fixtures).ToArray();
+        foreach (var fixture in fixtures)
+        {
+            Console.WriteLine(
+                $"{fixture.Agent}/{fixture.Fixture}: {fixture.DispatchedRuns} of {fixture.RequestedRuns} " +
+                $"run(s) dispatched (cap {fixture.Cost.CapStatus}).");
+            foreach (var run in fixture.Runs)
+                Console.WriteLine(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"  run {run.Run}: {run.Decision} {run.Percent}% · ${run.CostUsd}" +
+                    $"{(run.CostReported ? "" : " (no cost reported)")} · {run.TotalTokens} token(s)"));
+            // montecarlo.cost and montecarlo.statistics are printed in full below, so they are not
+            // repeated here even when they carry a warning.
+            foreach (var check in fixture.Checks.Where(check =>
+                         check.Status != "pass" &&
+                         check.Id is not ("montecarlo.cost" or "montecarlo.statistics")))
+                Console.WriteLine($"  {check.Category}/{check.Status}: {check.Id}: {check.Message}");
+            Console.WriteLine($"  cost: {fixture.Checks.Single(check => check.Id == "montecarlo.cost").Message}");
+            Console.WriteLine($"  score: {fixture.Statistics.IntervalNote}");
+        }
+
+        var mode = result.Reports.FirstOrDefault()?.Mode ?? "mock+deterministic";
+        var dispatched = fixtures.Sum(fixture => fixture.DispatchedRuns);
+        var spent = fixtures.Sum(fixture => fixture.Cost.TotalUsd);
+        Console.WriteLine(string.Create(
+            CultureInfo.InvariantCulture,
+            $"Sampled {fixtures.Length} fixture(s) across {result.Reports.Count} agent(s) in {mode} mode: " +
+            $"{dispatched} run(s) dispatched, ${spent} spent in total."));
+        Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
+    }
+
     private static string[] Positionals(string[] args)
     {
         var positionals = new List<string>();
@@ -167,6 +229,24 @@ internal static class Program
         if (index + 1 >= args.Length)
             throw new ArgumentException($"{option} requires a value.");
         return args[index + 1];
+    }
+
+    private static int? IntOption(string[] args, string option)
+    {
+        var value = OptionValue(args, option);
+        if (value is null) return null;
+        if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+            throw new ArgumentException($"{option} expects a whole number, got '{value}'.");
+        return parsed;
+    }
+
+    private static decimal? DecimalOption(string[] args, string option)
+    {
+        var value = OptionValue(args, option);
+        if (value is null) return null;
+        if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
+            throw new ArgumentException($"{option} expects a number of US dollars, got '{value}'.");
+        return parsed;
     }
 
     private static string FindRepositoryRoot(string start)
@@ -193,6 +273,9 @@ internal static class Program
             "       GigaClaw.Eval replay <fixture|family|agent|all> [--real-cli] [--no-report] [--root PATH]");
         Console.Error.WriteLine(
             "       GigaClaw.Eval judge  <fixture|family|agent|all> [--llm] [--update-baselines] [--no-report] [--root PATH]");
+        Console.Error.WriteLine(
+            "       GigaClaw.Eval montecarlo <fixture|family|agent|all> [--runs N] [--max-runs N] " +
+            "[--max-spend-usd USD] [--real-cli] [--no-report] [--root PATH]");
         return 2;
     }
 }

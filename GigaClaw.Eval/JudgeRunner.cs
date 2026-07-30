@@ -20,7 +20,8 @@ namespace GigaClaw.Eval;
 ///   never baselined, because an LLM verdict is not reproducible and this harness does not pretend
 ///   it is.
 ///
-/// Sampling variance across repeated real-model runs (Monte Carlo) remains a later slice.
+/// Sampling variance across repeated runs belongs to <see cref="MonteCarloRunner"/>, which reuses
+/// <see cref="ScoreReplayed"/> as its fixed measuring instrument.
 /// </summary>
 public sealed class JudgeRunner
 {
@@ -102,6 +103,15 @@ public sealed class JudgeRunner
     {
         var replayed = _replay.ReplaySingle(fixture);
         return Score(fixture, replayed, rubric, rubric.Agent, compareBaseline: false, llm: false);
+    }
+
+    /// <summary>Scores a stream that has already been replayed, with the agent's committed rubric
+    /// and without any baseline comparison. The Monte Carlo layer needs a fixed measuring
+    /// instrument, not a golden: one sample of a distribution is data, never a baseline.</summary>
+    public JudgeFixtureResult ScoreReplayed(ReplayFixture fixture, ReplayFixtureResult replayed)
+    {
+        var (rubric, source) = LoadRubric(fixture.Agent);
+        return Score(fixture, replayed, rubric, source, compareBaseline: false, llm: false);
     }
 
     private JudgeFixtureResult JudgeOne(ReplayFixture fixture, ReplayFixtureResult replayed, bool llm)

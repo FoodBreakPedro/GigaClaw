@@ -1,6 +1,6 @@
 # GigaClaw agent eval
 
-Three layers share one CLI:
+Four layers share one CLI:
 
 - `static` (default verb) — reads the committed catalog and `ProjectTemplate/` and never
   runs an agent.
@@ -8,6 +8,8 @@ Three layers share one CLI:
   captures the stream it produced.
 - `judge` — replays, then **scores** the captured stream against the agent's rubric and emits
   a [v1 verdict](../doc/verdict-contract.md).
+- `montecarlo` — runs one fixture N times under a hard cost cap and reports what the sample
+  does and does not support.
 
 ## Static eval
 
@@ -131,8 +133,7 @@ asserts the two written reports are byte-identical.
 ### Not in this layer
 
 Replay only captures the stream and checks it mechanically. Scoring what the reply *says* is
-the `judge` layer below; sampling variance across repeated non-deterministic runs (Monte
-Carlo) is still a separate slice.
+the `judge` layer below; sampling variance across repeated runs is the `montecarlo` layer.
 
 ## Judge
 
@@ -232,8 +233,96 @@ An LLM verdict **is not reproducible and is not treated as if it were**:
   is **reported, never asserted** — its checks are `informational` and never set the exit code;
 - it is never written to a baseline.
 
-### Still out of scope
+## Monte Carlo
 
-Monte Carlo mode — N repeated real-model runs with variance, a confidence interval and a hard cost
-cap — remains its own slice. Nothing here samples a distribution: the deterministic judge has none,
-and `--llm` runs exactly once per fixture.
+```bash
+dotnet build GigaClaw.ClaudeMock -c Release
+dotnet run --project GigaClaw.Eval -- montecarlo dev-fix-login-timeout --runs 5
+```
+
+N runs of one target (same target vocabulary as `replay` and `judge`), summarized with a spend
+ceiling that is checked **before** each dispatch. Exit codes match the other layers: `0` the sample
+was taken, `1` nothing was measured or a run could not be scored, `2` a usage or configuration
+error. One JSON report per agent is written to `artifacts/eval/montecarlo/<agent>.json`. Nothing
+here is baselined — the deterministic verdict recorded by `judge` remains the only baseline,
+because one draw from a distribution is data, never a golden.
+
+### Where variance can and cannot exist
+
+The mode samples **the agent run**, with the deterministic judge held fixed as the measuring
+instrument. `--llm` is therefore refused rather than quietly accepted: an LLM judge would put
+variance in the instrument as well as in the sample, and the resulting spread would not be
+attributable to either.
+
+That leaves exactly one honest configuration and one degenerate one:
+
+| Mode | Variance | What the report does |
+| --- | --- | --- |
+| `--real-cli` | real — the stream is redrawn every run | reports mean, range, sample sd, and an interval when the sample supports one |
+| default (mock) | **none, by construction** | reports zero variance, refuses an interval, and says why |
+
+Mock replay reads a committed NDJSON scenario and `RubricJudge.Score` is a pure function of it, so
+N runs of the mock pipeline are *one observation repeated N times*, not a sample of size N. The
+report says so in `Sampling.Note` and raises a `montecarlo.sampling` warning. The runs are not
+wasted: they are used for the one thing they can honestly prove, that the pipeline really is
+deterministic N ways, and a mock run that produces more than one distinct stream digest is a
+`montecarlo.determinism` **error**.
+
+### Statistics, and the four cases where none is reported
+
+Every figure is printed next to its sample size. A confidence interval is reported only when the
+sample can carry one, and the method is named when it is:
+
+| Sample | Reported |
+| --- | --- |
+| n = 0 | nothing was dispatched; nothing is summarized |
+| n = 1 | the single value; one observation has no spread and no interval |
+| sample sd = 0 | mean, range and `sd 0`; **no** interval — a ±0 interval would claim a precision N identical draws do not establish |
+| n < `MinimumSampleForInterval` (5) | mean, range, sample sd — and a statement that n is below the minimum |
+| otherwise | the above **plus** a 95% confidence interval for the mean, Student t, two-sided, df = n−1 |
+
+The standard deviation is the Bessel-corrected sample sd. Student-t critical values are tabulated
+for df 1–30 and fall back to the normal approximation (1.960) beyond that.
+
+### The cost cap
+
+Two ceilings, both enforced before the next dispatch:
+
+- `--max-runs N` clamps the requested `--runs` (config default 20). The clamp is reported as a
+  `montecarlo.maxruns` warning, and the surplus runs are never started.
+- `--max-spend-usd USD` (config default 5.00) is checked against **spent-so-far + the worst run
+  observed so far**. Since the next run's cost cannot be known before it is spent, the worst
+  observation is the estimate, which errs toward stopping early. With no observation yet, the only
+  pre-flight test possible is whether the ceiling permits spending anything at all, so a ceiling of
+  `$0` dispatches nothing.
+
+```bash
+dotnet run --project GigaClaw.Eval -- montecarlo dev-fix-login-timeout --runs 5 --max-spend-usd 0.20
+# → 2 of 5 run(s) dispatched (cap spend).
+#   Run 3 was not dispatched: $0.1624 already spent plus an estimated $0.0812 … would exceed $0.20.
+```
+
+Per-run and aggregate cost are printed either way. `Cost.Basis` distinguishes `reported-by-real-cli`
+dollars from `canned-by-mock` — a mock scenario replays a fixed `total_cost_usd`, so the cap
+mechanism is exercisable hermetically, but those are not real dollars and the report does not
+pretend they are.
+
+Dispatching zero runs is an **error**, not a pass: the caller asked for a measurement and got none.
+
+### Costed sampling
+
+```bash
+GIGACLAW_EVAL_ALLOW_REAL_CLI=1 \
+  dotnet run --project GigaClaw.Eval -- montecarlo dev-fix-login-timeout --runs 8 --real-cli --max-spend-usd 2.00
+```
+
+`--real-cli` is gated by the same environment variable the replay layer uses, so a plain CI
+invocation can never reach it. This is the configuration the mode exists for.
+
+### Tests
+
+`MonteCarloRunnerTests` covers both halves. The cap and statistics tests inject a dispatcher —
+proving a run was stopped *before* it started means proving the dispatch never happened, which only
+the dispatcher can witness — while `IdenticalDeterministicRuns_AreReportedAsZeroVariance_NotAsAnInterval`
+dispatches three times for real through the mock and asserts the report carries zero variance and
+no interval bounds.

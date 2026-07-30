@@ -15,9 +15,9 @@ namespace GigaClaw.Eval;
 /// throwaway workspace under the system temp folder, and the mock replays a committed NDJSON
 /// scenario, so the same fixture produces the same events every time.
 ///
-/// Grading the *content* of those events (the LLM judge) and sampling variance across repeated
-/// runs (Monte Carlo) are separate, later slices — this layer only captures and mechanically
-/// asserts what came back.
+/// Grading the *content* of those events belongs to <see cref="JudgeRunner"/> and sampling
+/// variance across repeated runs to <see cref="MonteCarloRunner"/> — this layer only captures and
+/// mechanically asserts what came back.
 /// </summary>
 public sealed partial class ReplayRunner
 {
@@ -96,6 +96,22 @@ public sealed partial class ReplayRunner
         return Replay(fixture, realCli).Result;
     }
 
+    /// <summary>Replays one fixture and additionally reports what the dispatch consumed. The usage
+    /// is returned beside the result rather than inside it precisely so it stays out of the
+    /// reproducible report — see <see cref="ReplayUsage"/>.</summary>
+    public (ReplayFixtureResult Result, ReplayUsage Usage) ReplayObserved(
+        ReplayFixture fixture,
+        bool realCli = false)
+    {
+        Environment.SetEnvironmentVariable("GIGACLAW_CLAUDE_BIN", ResolveClaudeBinary(realCli));
+        var replayed = Replay(fixture, realCli);
+        return (replayed.Result, replayed.Usage);
+    }
+
+    /// <summary>Resolves the same target vocabulary <see cref="Run"/> accepts, so a layer built on
+    /// top of replay selects fixtures by exactly the same rules.</summary>
+    public IReadOnlyList<ReplayFixture> ResolveTarget(string target) => ResolveFixtures(target);
+
     public IReadOnlyList<ReplayFixture> LoadFixtures() =>
         Directory
             .EnumerateFiles(ResolveConfiguredPath(_replay.FixtureRoot), "*.json")
@@ -142,7 +158,9 @@ public sealed partial class ReplayRunner
         return matches;
     }
 
-    private (ReplayFixture Fixture, ReplayFixtureResult Result) Replay(ReplayFixture fixture, bool realCli)
+    private (ReplayFixture Fixture, ReplayFixtureResult Result, ReplayUsage Usage) Replay(
+        ReplayFixture fixture,
+        bool realCli)
     {
         var workspace = Path.Combine(
             Path.GetTempPath(),
@@ -164,7 +182,8 @@ public sealed partial class ReplayRunner
                 run.Status.ToString(),
                 Digest(events),
                 events,
-                checks));
+                checks),
+                new ReplayUsage(run.TotalCostUsd ?? 0m, run.TotalTokens, run.TotalCostUsd is not null));
         }
         finally
         {
