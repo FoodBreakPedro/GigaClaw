@@ -29,6 +29,8 @@ Per owner direction: **Codex** takes the most complex surgical code changes (str
 
 Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/cx-tooling`, `lane/claude-orch`, `lane/gemini-vol`). A lane never edits another lane's files outside a documented merge window; cross-lane needs are raised as notes in the lane doc and resolved at sync points. Lane CL runs the merge queue: every lane branch is reviewed (five-axis) before merging to main. Existing tests must pass with `dotnet test GigaClaw.Core.Tests -c Release`; new projects must also be built and have their own tests invoked explicitly by CI.
 
+> **Session handoff:** [`SESSION-HANDOFF.md`](SESSION-HANDOFF.md) — current gate state, outstanding work, and the roadmap artifact link. Start there.
+
 ## Lane status (living — updated by CL as the merge-queue owner)
 
 **Last updated 2026-07-30.** All Phase 0 foundation gates passed and approved: `lane/claude-orch` (C1, C2, C3, C4 parts 1-3, C6, C9 spec), `lane/cx-tooling` (T1–T5 judge & Monte Carlo), `lane/cx-runtime` (R1, R2, SP-1 inventory), and `lane/gemini-vol` (G1, G2 reviewer rewrites & UI-AUDIT chain). All branches pushed to origin.
