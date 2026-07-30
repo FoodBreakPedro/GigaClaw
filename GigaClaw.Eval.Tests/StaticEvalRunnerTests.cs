@@ -175,15 +175,18 @@ public sealed class StaticEvalRunnerTests
             _riskClasses[slug] = "test";
             _agents.Add(new AgentCatalogEntry(
                 slug,
+                Pack: PackCatalogSource.CoreId,
                 ContractPresent: true,
                 RiskClass: "test",
                 ExplicitModelMapping: "test-model",
+                ModelCriterion: "test criterion",
                 ActionModels: [],
                 ProjectFallbackRequired: false,
                 Teams: ["test-team"],
                 EnabledDispatchingAutomations: ["test-dispatch"],
                 DisabledDispatchingAutomations: [],
-                EvalBaselinePresent: false));
+                EvalBaselinePresent: false,
+                EvalFixturePresent: false));
         }
 
         public void AddUncataloguedAgent(string slug)
@@ -212,7 +215,7 @@ public sealed class StaticEvalRunnerTests
                 JsonSerializer.Serialize(contracts));
 
             var catalog = new SystemCatalog(
-                Version: 2,
+                Version: CatalogGenerator.SchemaVersion,
                 Summary: new CatalogSummary(
                     _agents.Count,
                     _agents.Count,
@@ -221,6 +224,7 @@ public sealed class StaticEvalRunnerTests
                     _agents.Count,
                     1,
                     1),
+                Packs: [new PackCatalogEntry(PackCatalogSource.CoreId, "1.0.0", PackCatalogSource.CoreKind, [], _agents.Count)],
                 Agents: _agents.OrderBy(agent => agent.Slug, StringComparer.Ordinal).ToArray(),
                 Teams: [new TeamCatalogEntry("test-team", _agents.Select(agent => agent.Slug).ToArray())],
                 Automations: [new AutomationCatalogEntry("test-dispatch", true, _agents.Select(agent => agent.Slug).ToArray(), ["test-model"])],

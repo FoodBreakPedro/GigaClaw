@@ -1,39 +1,138 @@
 {
-  "_comment": "AD-9 model seeding: agent-slug -> default Claude model id. Consumed once at member-creation time by AgentsTemplateService.DefaultModels() (see GigaClaw.Core/Services/AgentsTemplateService.cs). Editing this file after a project already has members has no effect on those members — change the member's DefaultModel directly (PATCH /api/projects/{slug}/members/{memberId}) instead. Model ids must match GigaClaw.Core/Models/ClaudeModelCatalog.cs. Tier criteria: haiku = mechanical/high-volume/low-ambiguity (git ops, formatting, doc updates); sonnet = drafting/coding/analysis/research (bulk output, unit tests, copy); opus = judgment/gates/auditing/watchdog (governance, security, reviews, final approvals). Per wshobson caveat, security and reviewer agents must not use sub-Opus tiers.",
+  "_comment": "AD-9 model seeding: agent-slug -> default Claude model. A value is either a bare model id string or an object { \"model\": \"<id>\", \"criterion\": \"<why this agent is on this tier>\" }. The object form is the one the five-binding rule requires (doc/pack-infrastructure.md §7): a mapping without a stated criterion is a binding gap, because 'sonnet' on its own records a decision nobody can review. Consumed at member-creation time by AgentsTemplateService.DefaultModels() (GigaClaw.Core/Services/AgentsTemplateService.cs) and by GigaClaw.Catalog. Editing this file after a project already has members has no effect on those members — change the member's DefaultModel directly (PATCH /api/projects/{slug}/members/{memberId}) instead. Model ids must match GigaClaw.Core/Models/ClaudeModelCatalog.cs. Tier shorthand: haiku = mechanical/high-volume/low-ambiguity; sonnet = drafting/coding/analysis/research; opus = judgment/gates/auditing/watchdog. Per wshobson caveat, security and reviewer agents must not use sub-Opus tiers. The criterion states why *this* agent sits on *this* tier — not what the tier means.",
 
-  "code-janitor": "claude-haiku-4-5",
-  "committer": "claude-haiku-4-5",
-  "documentalist": "claude-haiku-4-5",
-  "groomer": "claude-haiku-4-5",
-  "trend-researcher": "claude-haiku-4-5",
+  "code-janitor": {
+    "model": "claude-haiku-4-5",
+    "criterion": "Applies formatting and dead-code removal a linter has already located; the diff is mechanical and fully reviewable."
+  },
+  "committer": {
+    "model": "claude-haiku-4-5",
+    "criterion": "Stages an already-final diff and writes its message; no decision it makes changes what ships."
+  },
+  "documentalist": {
+    "model": "claude-haiku-4-5",
+    "criterion": "Transcribes decisions that were already made elsewhere; the source text constrains the output almost completely."
+  },
+  "groomer": {
+    "model": "claude-haiku-4-5",
+    "criterion": "Normalizes ticket titles, labels and descriptions against a checklist stated in full in its SKILL."
+  },
+  "trend-researcher": {
+    "model": "claude-haiku-4-5",
+    "criterion": "Collects and tabulates search results; ranking and interpretation are handed to writer agents downstream."
+  },
 
-  "blog-researcher": "claude-sonnet-4-6",
-  "blog-seo": "claude-sonnet-4-6",
-  "blog-translator": "claude-sonnet-4-6",
-  "blog-writer": "claude-sonnet-4-6",
-  "competitive-analyst": "claude-sonnet-4-6",
-  "content-series-planner": "claude-sonnet-4-6",
-  "content-writer": "claude-sonnet-4-6",
-  "data-analyst": "claude-sonnet-4-6",
-  "design-researcher": "claude-sonnet-4-6",
-  "email-copywriter": "claude-sonnet-4-6",
-  "growth-writer": "claude-sonnet-4-6",
-  "lead-magnet-creator": "claude-sonnet-4-6",
-  "local-image-artist": "claude-sonnet-4-6",
-  "local-media-compositor": "claude-sonnet-4-6",
-  "local-motion-artist": "claude-sonnet-4-6",
-  "producer": "claude-sonnet-4-6",
-  "programmer": "claude-sonnet-4-6",
-  "qa-tester": "claude-sonnet-4-6",
-  "ui-designer": "claude-sonnet-4-6",
-  "wellness-coach": "claude-sonnet-4-6",
+  "blog-researcher": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Fetches and verifies many sources per run; volume dominates and every claim is checked against a fetched page rather than recalled."
+  },
+  "blog-seo": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Applies an enumerated on-page checklist to a finished draft; each check is stated, but needs the whole article in context."
+  },
+  "blog-translator": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Whole-article translation with format preservation; long-context fidelity matters more than open-ended reasoning."
+  },
+  "blog-writer": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Bulk long-form drafting against a brief that already fixes structure and evidence; a miss costs a revision, not a shipped defect."
+  },
+  "competitive-analyst": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Structured comparison of named competitors along stated dimensions; broad reading, bounded conclusions."
+  },
+  "content-series-planner": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Sequences an already-approved topic set; the planning space is bounded by that list."
+  },
+  "content-writer": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Bulk drafting from a brief, with a reviewer gate downstream that catches quality misses before publication."
+  },
+  "data-analyst": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Computes and explains metrics from supplied data; correctness is checkable against that same data."
+  },
+  "design-researcher": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Gathers and summarizes design precedent; the output is evidence for a designer, never itself a decision."
+  },
+  "email-copywriter": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Short-form drafting against a stated offer and audience; output length bounds the failure."
+  },
+  "growth-writer": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "High-volume campaign drafting; every piece passes a reviewer before it reaches an audience."
+  },
+  "lead-magnet-creator": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Assembles an asset from an approved outline and existing research; the outline does the structural work."
+  },
+  "local-image-artist": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Writes prompts and drives the local image pipeline; the pipeline, not the model, determines the rendered result."
+  },
+  "local-media-compositor": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Assembles rendered clips against a storyboard that already fixes the cut."
+  },
+  "local-motion-artist": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Drives the motion pipeline from a storyboard; parameters are bounded and every render is reviewable."
+  },
+  "producer": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Routes and coordinates tickets against stated rules; dispatched constantly, and every routing decision is visible on the board."
+  },
+  "programmer": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Implements against an accepted ticket with the test suite as the oracle; a wrong answer fails the suite instead of shipping."
+  },
+  "qa-tester": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Runs the suite and reports what failed; the failing test is the evidence, so the judgement stays bounded by observable output."
+  },
+  "ui-designer": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Produces component markup and styles inside an existing design system that constrains the answer."
+  },
+  "wellness-coach": {
+    "model": "claude-sonnet-4-6",
+    "criterion": "Conversational guidance from stated routines; no gate and no shipped artifact depends on it."
+  },
 
-  "approval-gatekeeper": "claude-opus-4-8",
-  "blog-reviewer": "claude-opus-4-8",
-  "decision-engine": "claude-opus-4-8",
-  "evaluator": "claude-opus-4-8",
-  "local-media-director": "claude-opus-4-8",
-  "local-media-reviewer": "claude-opus-4-8",
-  "system-watchdog": "claude-opus-4-8",
-  "ui-auditor": "claude-opus-4-8"
+  "approval-gatekeeper": {
+    "model": "claude-opus-4-8",
+    "criterion": "Final human-substitute approval; the ticket ships on its word, with no downstream check to catch a wrong yes."
+  },
+  "blog-reviewer": {
+    "model": "claude-opus-4-8",
+    "criterion": "Emits the gating BLOG-REVIEW receipt that blog-seo refuses to run without; the verdict carries veto power over publication."
+  },
+  "decision-engine": {
+    "model": "claude-opus-4-8",
+    "criterion": "Chooses between options with no checklist to fall back on, and its choice redirects the whole board."
+  },
+  "evaluator": {
+    "model": "claude-opus-4-8",
+    "criterion": "Scores other agents' work and writes the scores later automations read; it is the measurement, so nothing cheaper can measure it."
+  },
+  "local-media-director": {
+    "model": "claude-opus-4-8",
+    "criterion": "Open-ended creative direction with no oracle downstream; the storyboard it emits constrains every later media agent."
+  },
+  "local-media-reviewer": {
+    "model": "claude-opus-4-8",
+    "criterion": "Gating verdict on rendered media — the only check standing between a bad render and publication."
+  },
+  "system-watchdog": {
+    "model": "claude-opus-4-8",
+    "criterion": "Adversarial reasoning over runtime anomalies nobody told it to look for; the failure mode is not noticing."
+  },
+  "ui-auditor": {
+    "model": "claude-opus-4-8",
+    "criterion": "Emits the gating UI-AUDIT verdict and counts its own review cycles; an accepted regression reaches users."
+  }
 }

@@ -1,5 +1,5 @@
 {
-  "Version": 2,
+  "Version": 3,
   "Summary": {
     "Agents": 33,
     "Contracts": 33,
@@ -9,12 +9,23 @@
     "Teams": 9,
     "Scripts": 20
   },
+  "Packs": [
+    {
+      "Id": "core",
+      "Version": "0.0.0",
+      "Kind": "core",
+      "DependsOn": [],
+      "AgentCount": 33
+    }
+  ],
   "Agents": [
     {
       "Slug": "approval-gatekeeper",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "approval",
       "ExplicitModelMapping": "claude-opus-4-8",
+      "ModelCriterion": "Final human-substitute approval; the ticket ships on its word, with no downstream check to catch a wrong yes.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -31,13 +42,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
     },
     {
       "Slug": "blog-researcher",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "content-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Fetches and verifies many sources per run; volume dominates and every claim is checked against a fetched page rather than recalled.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -51,13 +65,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "blog-reviewer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "content-review",
       "ExplicitModelMapping": "claude-opus-4-8",
+      "ModelCriterion": "Emits the gating BLOG-REVIEW receipt that blog-seo refuses to run without; the verdict carries veto power over publication.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -73,13 +90,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "blog-seo",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "content-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Applies an enumerated on-page checklist to a finished draft; each check is stated, but needs the whole article in context.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -93,13 +113,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "blog-translator",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "content-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Whole-article translation with format preservation; long-context fidelity matters more than open-ended reasoning.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -113,13 +136,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "blog-writer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "content-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Bulk long-form drafting against a brief that already fixes structure and evidence; a miss costs a revision, not a shipped defect.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -134,13 +160,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
     },
     {
       "Slug": "code-janitor",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "code-write",
       "ExplicitModelMapping": "claude-haiku-4-5",
+      "ModelCriterion": "Applies formatting and dead-code removal a linter has already located; the diff is mechanical and fully reviewable.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -152,13 +181,16 @@
         "code-janitor-nightly"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "committer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "git-write",
       "ExplicitModelMapping": "claude-haiku-4-5",
+      "ModelCriterion": "Stages an already-final diff and writes its message; no decision it makes changes what ships.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -175,13 +207,16 @@
         "committer-on-done"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "competitive-analyst",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "research",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Structured comparison of named competitors along stated dimensions; broad reading, bounded conclusions.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -195,13 +230,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "content-series-planner",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "board-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Sequences an already-approved topic set; the planning space is bounded by that list.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -215,13 +253,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "content-writer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "content-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Bulk drafting from a brief, with a reviewer gate downstream that catches quality misses before publication.",
       "ActionModels": [],
       "ProjectFallbackRequired": false,
       "Teams": [
@@ -232,13 +273,16 @@
         "content-writer-resume"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "data-analyst",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "read-only-data",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Computes and explains metrics from supplied data; correctness is checkable against that same data.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -252,13 +296,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "decision-engine",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "docs-git-write",
       "ExplicitModelMapping": "claude-opus-4-8",
+      "ModelCriterion": "Chooses between options with no checklist to fall back on, and its choice redirects the whole board.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -273,13 +320,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "design-researcher",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "research",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Gathers and summarizes design precedent; the output is evidence for a designer, never itself a decision.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -293,13 +343,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "documentalist",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "docs-git-write",
       "ExplicitModelMapping": "claude-haiku-4-5",
+      "ModelCriterion": "Transcribes decisions that were already made elsewhere; the source text constrains the output almost completely.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -318,13 +371,16 @@
         "documentalist-on-commit"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "email-copywriter",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "outbound-content",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Short-form drafting against a stated offer and audience; output length bounds the failure.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -338,13 +394,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "evaluator",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "memory-write",
       "ExplicitModelMapping": "claude-opus-4-8",
+      "ModelCriterion": "Scores other agents\u0027 work and writes the scores later automations read; it is the measurement, so nothing cheaper can measure it.",
       "ActionModels": [
         "claude-haiku-4-5"
       ],
@@ -363,13 +422,16 @@
         "evaluator-on-done"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "groomer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "board-write",
       "ExplicitModelMapping": "claude-haiku-4-5",
+      "ModelCriterion": "Normalizes ticket titles, labels and descriptions against a checklist stated in full in its SKILL.",
       "ActionModels": [
         "claude-haiku-4-5",
         "claude-sonnet-4-6"
@@ -385,13 +447,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "growth-writer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "outbound-content",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "High-volume campaign drafting; every piece passes a reviewer before it reaches an audience.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -405,13 +470,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
     },
     {
       "Slug": "lead-magnet-creator",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "outbound-content",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Assembles an asset from an approved outline and existing research; the outline does the structural work.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -425,13 +493,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "local-image-artist",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "local-media-execution",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Writes prompts and drives the local image pipeline; the pipeline, not the model, determines the rendered result.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -445,13 +516,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "local-media-compositor",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "local-media-composition",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Assembles rendered clips against a storyboard that already fixes the cut.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -465,13 +539,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "local-media-director",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "media-direction",
       "ExplicitModelMapping": "claude-opus-4-8",
+      "ModelCriterion": "Open-ended creative direction with no oracle downstream; the storyboard it emits constrains every later media agent.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -485,13 +562,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
     },
     {
       "Slug": "local-media-reviewer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "local-media-review",
       "ExplicitModelMapping": "claude-opus-4-8",
+      "ModelCriterion": "Gating verdict on rendered media \u2014 the only check standing between a bad render and publication.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -506,13 +586,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "local-motion-artist",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "local-media-execution",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Drives the motion pipeline from a storyboard; parameters are bounded and every render is reviewable.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -526,13 +609,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "producer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "board-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Routes and coordinates tickets against stated rules; dispatched constantly, and every routing decision is visible on the board.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -553,13 +639,16 @@
         "producer-on-subtick"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "programmer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "code-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Implements against an accepted ticket with the test suite as the oracle; a wrong answer fails the suite instead of shipping.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -574,13 +663,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
     },
     {
       "Slug": "qa-tester",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "test-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Runs the suite and reports what failed; the failing test is the evidence, so the judgement stays bounded by observable output.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -595,13 +687,16 @@
         "qa-on-review"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": true
     },
     {
       "Slug": "system-watchdog",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "monitoring",
       "ExplicitModelMapping": "claude-opus-4-8",
+      "ModelCriterion": "Adversarial reasoning over runtime anomalies nobody told it to look for; the failure mode is not noticing.",
       "ActionModels": [
         "claude-haiku-4-5",
         "claude-sonnet-4-6"
@@ -618,13 +713,16 @@
         "system-watchdog-hourly"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "trend-researcher",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "research",
       "ExplicitModelMapping": "claude-haiku-4-5",
+      "ModelCriterion": "Collects and tabulates search results; ranking and interpretation are handed to writer agents downstream.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -638,13 +736,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "ui-auditor",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "design-review",
       "ExplicitModelMapping": "claude-opus-4-8",
+      "ModelCriterion": "Emits the gating UI-AUDIT verdict and counts its own review cycles; an accepted regression reaches users.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -659,13 +760,16 @@
         "ui-audit-on-review"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "ui-designer",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "design-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Produces component markup and styles inside an existing design system that constrains the answer.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -679,13 +783,16 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     },
     {
       "Slug": "wellness-coach",
+      "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "health-content",
       "ExplicitModelMapping": "claude-sonnet-4-6",
+      "ModelCriterion": "Conversational guidance from stated routines; no gate and no shipped artifact depends on it.",
       "ActionModels": [
         "claude-sonnet-4-6"
       ],
@@ -699,7 +806,8 @@
         "owner-feedback"
       ],
       "DisabledDispatchingAutomations": [],
-      "EvalBaselinePresent": true
+      "EvalBaselinePresent": true,
+      "EvalFixturePresent": false
     }
   ],
   "Teams": [
