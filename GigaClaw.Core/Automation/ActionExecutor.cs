@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using GigaClaw.Core.Automation.Triggers;
+using GigaClaw.Core.Automation.Verdicts;
 using GigaClaw.Core.Services;
 
 namespace GigaClaw.Core.Automation;
@@ -91,6 +92,7 @@ internal sealed class ActionExecutor
             AllSubTicketsInStatusConditionSpec c   => EvaluateAllSubTicketsInStatusAsync(rt, c, firing),
             TicketCountInColumnConditionSpec c     => EvaluateTicketCountInColumnAsync(rt, c, firing),
             TicketAgeConditionSpec c               => EvaluateTicketAgeAsync(rt, c, firing),
+            VerdictIsConditionSpec c               => EvaluateVerdictIsAsync(rt, c, firing),
             _                                      => Task.FromResult(true),
         };
 
@@ -183,6 +185,42 @@ internal sealed class ActionExecutor
             count += string.IsNullOrEmpty(slug) ? list.Count : list.Count(t => t.AssignedTo == slug);
         }
         return ConditionEvaluators.CompareCount(c.Operator, count, c.Value);
+    }
+
+    // The verdict gate never passes on missing data: no ticket, no comments and an unreadable
+    // workspace all resolve to MISSING/STALE rather than to a silent "condition satisfied".
+    private async Task<bool> EvaluateVerdictIsAsync(ProjectRuntime rt, VerdictIsConditionSpec c, TriggerFiring firing)
+    {
+        if (firing.TicketId is null) return false;
+        var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
+        if (ticket is null) return false;
+
+        var agent = string.IsNullOrWhiteSpace(c.Agent)
+            ? null
+            : ConditionEvaluators.ResolveAgentPlaceholder(c.Agent, ticket.AssignedTo);
+        if (c.Agent is not null && c.Agent.Contains("{assignee}") && agent is null)
+            return false; // Placeholder with nothing to resolve to: fail closed.
+
+        var comments = ticket.Comments
+            .OrderBy(x => x.CreatedAt)
+            .Select(x => new VerdictComment(x.Content, x.Author, x.CreatedAt))
+            .ToList();
+
+        var resolution = VerdictScanner.Resolve(
+            comments,
+            agent,
+            c.RequireFreshArtifact
+                ? verdict => (VerdictReader.IsFresh(verdict, rt.Workspace, out var reason), reason)
+                : null);
+
+        if (resolution.Outcome is VerdictOutcome.Invalid or VerdictOutcome.Stale)
+        {
+            _logger.LogWarning(
+                "[{Slug}] ticket #{TicketId}: {Outcome} verdict — {Diagnostic}",
+                rt.Slug, ticket.Id, resolution.Outcome, resolution.Diagnostic);
+        }
+
+        return ConditionEvaluators.VerdictIs(c, resolution.Outcome);
     }
 
     private async Task<bool> EvaluateTicketAgeAsync(ProjectRuntime rt, TicketAgeConditionSpec c, TriggerFiring firing)

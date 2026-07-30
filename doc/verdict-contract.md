@@ -63,9 +63,23 @@ Exit codes: `0` valid · `1` contract violation · `2` unreadable input or bad u
 
 `--expect-digest` is how stale approvals die: a verdict whose `inputDigest` no longer matches the current artifact is rejected as stale rather than honored.
 
+## Gating with `verdictIs`
+
+The automation condition `verdictIs` reads the newest verdict on the firing ticket and resolves it to one outcome: `SHIP`, `FIX`, `BLOCK`, or one of three failure modes — `MISSING` (no verdict comment), `INVALID` (breaks the contract) and `STALE` (valid, but the artifact changed after review). The failure modes are separate outcomes on purpose: a reviewer that answers in prose reads as `MISSING`, not as "not reviewed yet", so the pipeline stalls visibly instead of advancing.
+
+```json
+{ "type": "verdictIs", "verdicts": ["SHIP"], "agent": "blog-reviewer" }
+{ "type": "verdictIs", "verdicts": ["FIX"] }
+{ "type": "verdictIs", "verdicts": ["BLOCK", "INVALID", "STALE", "MISSING"] }
+```
+
+Three automations on the same Review column therefore express advance, repair and escalate. `agent` (which accepts `{assignee}`) restricts the scan to one reviewer, so a second reviewer's older verdict never shadows the one being gated on. Entries the condition doesn't recognize match nothing — a typo blocks rather than opens the gate.
+
+`requireFreshArtifact` (default on) re-hashes the files listed as `path` evidence; unless one still matches `inputDigest`, the outcome is `STALE`. Freshness that cannot be verified — no path evidence, missing file, unreadable workspace — is stale too. Turn it off only for reviewers whose input is not a workspace file.
+
 ## Consumers
 
-- **Gate** — the `verdictIs` automation condition gates ticket exit on a valid verdict instead of prose. Invalid or stale ⇒ Blocked with a receipt.
+- **Gate** — `verdictIs` gates ticket exit on a valid verdict instead of prose. Invalid or stale ⇒ Blocked with a receipt.
 - **Repair loop** — a `FIX` verdict re-dispatches the producing agent with the failed categories and veto items injected, capped by `maxReviewCycles` from [`contracts.json`](../ProjectTemplate/Agents/contracts.json).
 - **Eval judge** — the eval harness scores agents with the same shape, so an eval verdict and a review verdict are comparable objects.
 

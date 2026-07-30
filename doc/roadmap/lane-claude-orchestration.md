@@ -5,6 +5,13 @@
 **Standing duty:** merge-queue owner — five-axis review of every lane branch before main; runs the sync-point checkpoints with the owner.
 **Out of scope:** runner internals (CX-R), catalog/eval projects (CX-T), `ProjectTemplate/**` SKILL.md prose (GM — CL provides schemas/specs, GM writes the volume).
 
+## Progress log
+
+| Task | State | Evidence |
+|---|---|---|
+| C1 | **Landed** — branch `claude-orch/c1-verdict-schema` | `verdict.schema.json`, `verdict_contract.py`, worked example per gating reviewer + rejection corpus, `TemplateVerdictContractTests`, [`doc/verdict-contract.md`](../verdict-contract.md). Schema v1 is **frozen**: additive only until SP-2 |
+| C2 | **Vocabulary landed** — branch `claude-orch/c2-verdict-gate`; per-reviewer wiring waits on GM G2 | `verdictIs` condition + host-side reader/freshness (`GigaClaw.Core/Automation/Verdicts/`), automation editor + palette + API docs, `VerdictGateTests`. Wiring the five reviewers into `automations.json` today would Block every ticket, since no reviewer emits verdicts yet — that edit lands per agent as G2 rewrites arrive |
+
 ---
 
 ## Task C1: Verdict schema v1 (A11/P8, part 1) — freeze early
