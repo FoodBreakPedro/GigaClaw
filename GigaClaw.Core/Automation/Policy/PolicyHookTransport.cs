@@ -494,6 +494,66 @@ internal static partial class PolicyHookToolCallAdapter
             "revert", "rm", "switch", "tag",
         };
 
+    /// <summary>
+    /// Git verbs whose destructive form is a flag rather than the verb itself, mapped to the flags
+    /// that make them destructive. Long and short forms are both listed because a policy that only
+    /// catches <c>--force</c> is bypassed by <c>-f</c>.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string[]> DestructiveGitFlags =
+        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            // --force-with-lease is deliberately absent: it refuses when the remote moved, which
+            // is the check a bare --force removes.
+            ["push"] = ["--force", "-f", "--delete", "--mirror", "--prune"],
+            ["reset"] = ["--hard"],
+            ["clean"] = ["-f", "-fd", "-fdx", "-fx", "-df", "--force"],
+            ["checkout"] = ["--force", "-f"],
+            ["branch"] = ["-D", "--delete", "-d"],
+            ["tag"] = ["-d", "--delete"],
+            ["rm"] = ["-r", "-rf", "-fr", "--force", "-f"],
+            ["stash"] = ["drop", "clear"],
+            ["restore"] = ["--staged", "--worktree", "--source"],
+        };
+
+    /// <summary>Git verbs that are destructive whatever flags they carry.</summary>
+    private static readonly HashSet<string> AlwaysDestructiveGitVerbs =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "filter-branch", "filter-repo", "gc", "prune", "reflog",
+        };
+
+    /// <summary>
+    /// Flags that skip the repository's own gates. These are verb-independent: <c>--no-verify</c>
+    /// means the same thing on commit, push and merge, and skipping a pre-commit hook is exactly
+    /// the move a policy layer exists to notice.
+    /// </summary>
+    private static readonly HashSet<string> GateSkippingGitFlags =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "--no-verify", "-n", "--no-gpg-sign", "--no-post-rewrite",
+        };
+
+    private static bool IsDestructiveGit(string? verb, IReadOnlyList<string> args)
+    {
+        if (verb is null)
+            return false;
+
+        if (AlwaysDestructiveGitVerbs.Contains(verb))
+            return true;
+
+        // `-n` means --dry-run on push and --no-verify on commit. Treating it as gate-skipping
+        // everywhere would flag the safest command git has, so it only counts where it is unsafe.
+        var gateSkipping = args.Any(arg =>
+            GateSkippingGitFlags.Contains(arg) &&
+            !(string.Equals(arg, "-n", StringComparison.Ordinal) &&
+              !string.Equals(verb, "commit", StringComparison.OrdinalIgnoreCase)));
+        if (gateSkipping)
+            return true;
+
+        return DestructiveGitFlags.TryGetValue(verb, out var flags) &&
+               args.Any(arg => flags.Contains(arg, StringComparer.OrdinalIgnoreCase));
+    }
+
     // curl writes with -o; -O derives the name from the URL and takes no argument.
     // wget writes the document with -O and its log with -o.
     private static readonly char[] CurlOutputFlags = ['o'];
@@ -624,6 +684,10 @@ internal static partial class PolicyHookToolCallAdapter
         if (string.Equals(executable, "git", StringComparison.OrdinalIgnoreCase))
         {
             var verb = FindGitVerb(args);
+            // Reported alongside the git-write, not instead of it: the command is still a git write,
+            // and collapsing the two would lose the ordinary capability row from the inventory.
+            if (IsDestructiveGit(verb, args))
+                calls.Add(PolicyToolCall.GitDestructive(command));
             if (verb is not null && GitWriteCommands.Contains(verb))
                 calls.Add(PolicyToolCall.GitWrite(command));
             return;

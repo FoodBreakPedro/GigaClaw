@@ -48,6 +48,13 @@ public enum PolicyToolOperation
     FileWrite,
     BoardWrite,
     GitWrite,
+    /// <summary>
+    /// A git invocation that rewrites or discards history, or that skips the repository's own
+    /// gates. Separate from <see cref="GitWrite"/> because the git-write capability is what lets
+    /// committer commit and push at all — it is not a licence to force-push over a branch or to
+    /// run with --no-verify, and a shared reason string would make the receipt unreadable.
+    /// </summary>
+    GitDestructive,
     TicketExit,
     Network,
     Bash,
@@ -97,6 +104,7 @@ public sealed record PolicyToolCall(PolicyToolOperation Operation, string? Targe
     public static PolicyToolCall FileWrite(string path) => new(PolicyToolOperation.FileWrite, path);
     public static PolicyToolCall BoardWrite(string? target = null) => new(PolicyToolOperation.BoardWrite, target);
     public static PolicyToolCall GitWrite(string? command = null) => new(PolicyToolOperation.GitWrite, command);
+    public static PolicyToolCall GitDestructive(string? command = null) => new(PolicyToolOperation.GitDestructive, command);
     public static PolicyToolCall TicketExit(string status) => new(PolicyToolOperation.TicketExit, status);
     public static PolicyToolCall Network(string? target = null) => new(PolicyToolOperation.Network, target);
     public static PolicyToolCall Bash(string? command = null) => new(PolicyToolOperation.Bash, command);
@@ -245,6 +253,11 @@ public sealed class ContractPolicy
             PolicyToolOperation.FileWrite => EvaluateFileWrite(toolCall.Target),
             PolicyToolOperation.BoardWrite => RequireCapability(ContractCapability.BoardWrite, "board write"),
             PolicyToolOperation.GitWrite => RequireCapability(ContractCapability.GitWrite, "git write"),
+            // Not RequireCapability: git-write is what lets committer commit and push at all, and
+            // no risk class grants permission to rewrite history or skip the repo's own gates.
+            PolicyToolOperation.GitDestructive => Warn(
+                $"Destructive or gate-skipping git command is not permitted for agent '{AgentName}': " +
+                $"{toolCall.Target ?? "(no command)"}"),
             PolicyToolOperation.TicketExit => EvaluateTicketExit(toolCall.Target),
             PolicyToolOperation.Network => RequireCapability(ContractCapability.Network, "outbound network access"),
             PolicyToolOperation.Bash => string.IsNullOrWhiteSpace(toolCall.Target)
