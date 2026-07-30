@@ -10,9 +10,11 @@ internal static class ScenarioReplayer
         Uri? policyHookEndpoint = null)
     {
         int exitCode = 0;
-        foreach (var raw in lines)
+        // Indexed rather than foreach: a denied PreToolUse has to be able to consume the scenario
+        // lines that the denied tool call would have produced (see skip_on_deny below).
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
-            var line = raw.Trim();
+            var line = lines[lineIndex].Trim();
             if (line.Length == 0) continue;
 
             // Look for our extension fields without disturbing real-claude-compatible JSON.
@@ -30,10 +32,36 @@ internal static class ScenarioReplayer
                     if (policyHookEndpoint is null)
                         throw new InvalidOperationException(
                             "Scenario requested a hook but --settings was not provided.");
-                    await HookEmulator.InvokePreToolUseAsync(
+                    var denial = await HookEmulator.InvokePreToolUseAsync(
                         policyHookEndpoint,
                         sessionId,
                         hook);
+
+                    if (denial is not null)
+                    {
+                        // A denied PreToolUse means the real subprocess never runs the tool, so the
+                        // scenario's next `skip_on_deny` lines — the events that call would have
+                        // produced — must not be emitted either. Without this the mock would report
+                        // a blocked write as having happened anyway, and the block would look
+                        // enforced while proving nothing.
+                        await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new
+                        {
+                            type = "policy_denied",
+                            tool_name = hook.TryGetProperty("tool_name", out var t) &&
+                                        t.ValueKind == JsonValueKind.String
+                                ? t.GetString()
+                                : null,
+                            reason = denial,
+                        }));
+
+                        var skip = hook.TryGetProperty("skip_on_deny", out var skipElement) &&
+                                   skipElement.ValueKind == JsonValueKind.Number &&
+                                   skipElement.TryGetInt32(out var n) && n > 0
+                            ? n
+                            : 0;
+                        for (var i = 0; i < skip && lineIndex + 1 < lines.Length; i++)
+                            lineIndex++;
+                    }
                     continue;
                 }
 
