@@ -646,7 +646,7 @@ public class PolicyHookTransportBenchmarkTests
 public class PolicyInventoryArtifactTests
 {
     [Fact]
-    public void Sp1_inventory_has_one_sorted_not_exercised_row_per_template_agent()
+    public void Sp1_inventory_has_one_sorted_exercised_row_per_template_agent()
     {
         var root = FindRepositoryRoot();
         var agentsDirectory = Path.Combine(root, "ProjectTemplate", "Agents");
@@ -679,10 +679,10 @@ public class PolicyInventoryArtifactTests
             var value = row.RootElement;
             Assert.Equal(contractAgents[i].Name, value.GetProperty("agent").GetString());
             Assert.Equal(
-                "not-exercised",
+                "exercised",
                 value.GetProperty("exerciseState").GetString());
             Assert.Equal(
-                JsonValueKind.Null,
+                JsonValueKind.Number,
                 value.GetProperty("observedViolationCount").ValueKind);
             Assert.Equal(
                 contractAgents[i].Value
