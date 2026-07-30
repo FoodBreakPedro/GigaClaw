@@ -11,6 +11,7 @@
 |---|---|---|
 | C1 | **Landed** — branch `claude-orch/c1-verdict-schema` | `verdict.schema.json`, `verdict_contract.py`, worked example per gating reviewer + rejection corpus, `TemplateVerdictContractTests`, [`doc/verdict-contract.md`](../verdict-contract.md). Schema v1 is **frozen**: additive only until SP-2 |
 | C2 | **Vocabulary landed** — branch `claude-orch/c2-verdict-gate`; per-reviewer wiring waits on GM G2 | `verdictIs` condition + host-side reader/freshness (`GigaClaw.Core/Automation/Verdicts/`), automation editor + palette + API docs, `VerdictGateTests`. Wiring the five reviewers into `automations.json` today would Block every ticket, since no reviewer emits verdicts yet — that edit lands per agent as G2 rewrites arrive |
+| P4 (CL half) | **Landed** — branch `claude-orch/p4-dependencies-resolved`, based on `lane/cx-tooling` | `dependenciesResolved` condition over CX-T's edges: holds a ticket until every blocker reaches a resolved status; no edges = not blocked; ticketless firing fails closed. Integration test blocks then unblocks a real ticket. 645 tests green |
 
 ---
 
