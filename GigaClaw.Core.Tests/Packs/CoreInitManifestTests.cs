@@ -1,6 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using GigaClaw.Core.Automation;
+using GigaClaw.Core.Models;
+using GigaClaw.Core.Packs;
 using GigaClaw.Core.Services;
 using GigaClaw.Core.Tests.Helpers;
 using Xunit;
@@ -54,9 +58,97 @@ public sealed class CoreInitManifestTests
             .Order(StringComparer.Ordinal)
             .ToList();
 
+        // Nothing the pre-T6 writer produced may disappear, and nothing may appear beyond the
+        // lockfile. The four merge artifacts are the only paths allowed to differ in bytes, because
+        // the installer merges and re-serializes them rather than copying them; that they are still
+        // the *same content* is asserted separately below, which is the half that has teeth.
+        Assert.True(missing.Count == 0, Describe(missing, added, changed));
+        Assert.Equal(new[] { ".agents/" + PackLockFile.FileName }, added);
         Assert.True(
-            missing.Count == 0 && added.Count == 0 && changed.Count == 0,
-            Describe(missing, added, changed));
+            changed.All(MergeArtifacts.Contains),
+            Describe(changed.Where(c => !MergeArtifacts.Contains(c)).ToList(), [], []));
+    }
+
+    /// <summary>Workspace paths the installer merges in memory and writes back, so byte-identity
+    /// with the template source is neither expected nor desirable — several packs contribute to
+    /// each of these files.</summary>
+    private static readonly IReadOnlySet<string> MergeArtifacts = new HashSet<string>(StringComparer.Ordinal)
+    {
+        ".agents/" + PackComposer.AutomationsFile,
+        ".agents/" + PackComposer.ContractsFile,
+        ".agents/" + PackComposer.ModelsFile,
+        ".agents/" + PackComposer.TeamsFile,
+    };
+
+    /// <summary>
+    /// The other half of §6's invariant. A core-only install re-serializes the four merge artifacts,
+    /// so their bytes move; what must not move is their meaning. Each is compared against the
+    /// template source through the model that actually reads it at runtime, so a dropped automation,
+    /// a lost contract key or a silently reshaped team fails here rather than in a workspace.
+    /// </summary>
+    [Fact]
+    public async Task Merge_artifacts_keep_the_template_content_they_had_before_the_extraction()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), "gigaclaw-core-merge-" + Guid.NewGuid().ToString("n"));
+        try
+        {
+            Directory.CreateDirectory(workspace);
+            await new AgentsTemplateService().InitializeAsync(workspace, overwriteConflicts: true);
+
+            var template = Path.Combine(PythonContractRunner.RepositoryRoot, "ProjectTemplate", "Agents");
+            var installed = Path.Combine(workspace, ".agents");
+
+            // contracts.json and models.json are plain data: order-insensitive deep equality.
+            AssertJsonEqual(
+                Path.Combine(template, PackComposer.ContractsFile),
+                Path.Combine(installed, PackComposer.ContractsFile));
+            AssertJsonEqual(
+                Path.Combine(template, PackComposer.ModelsFile),
+                Path.Combine(installed, PackComposer.ModelsFile));
+
+            // automations.json round-trips through the automation model, so both sides are
+            // normalized through it before comparison rather than compared as raw text.
+            Assert.Equal(
+                Normalize(Path.Combine(template, PackComposer.AutomationsFile)),
+                Normalize(Path.Combine(installed, PackComposer.AutomationsFile)));
+
+            // teams.json: compare the composed definitions, which is what AgentTeamService serves.
+            // Projected to strings because TeamDefinition is a record holding collections, so its
+            // generated equality compares those by reference and would pass on nothing.
+            Assert.Equal(
+                Describe(Path.Combine(template, PackComposer.TeamsFile)),
+                Describe(Path.Combine(installed, PackComposer.TeamsFile)));
+        }
+        finally
+        {
+            TryDelete(workspace);
+        }
+    }
+
+    private static void AssertJsonEqual(string expectedPath, string actualPath)
+    {
+        var expected = JsonNode.Parse(File.ReadAllBytes(expectedPath));
+        var actual = JsonNode.Parse(File.ReadAllBytes(actualPath));
+        Assert.True(JsonNode.DeepEquals(expected, actual),
+            $"{Path.GetFileName(actualPath)} is not the content the template ships.");
+    }
+
+    /// <summary>The composed team roster as comparable text: slug, labels and seat order.</summary>
+    private static List<string> Describe(string teamsPath)
+    {
+        var composed = TeamSeed.Compose(TeamSeed.Parse(File.ReadAllText(teamsPath), teamsPath));
+        return composed
+            .Select(t => string.Join('|',
+                t.Slug, t.Name, t.Description, t.Icon,
+                string.Join(',', t.Roles.Select(r => r.RoleId + ":" + r.AgentSlug))))
+            .ToList();
+    }
+
+    private static string Normalize(string automationsPath)
+    {
+        var config = JsonSerializer.Deserialize<AutomationConfig>(
+            File.ReadAllBytes(automationsPath), AutomationStore.JsonOptions);
+        return JsonSerializer.Serialize(config, AutomationStore.JsonOptions);
     }
 
     /// <summary>

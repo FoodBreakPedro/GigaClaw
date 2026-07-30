@@ -352,7 +352,7 @@ public sealed class PackInstallerTests
     }
 
     [Fact]
-    public async Task Install_defers_a_teamMembership_whose_target_team_is_not_data_yet()
+    public async Task Install_refuses_a_teamMembership_whose_target_team_no_roster_defines()
     {
         using var tmp = new TempDir();
         var workspace = Path.Combine(tmp.Path, "ws");
@@ -366,14 +366,15 @@ public sealed class PackInstallerTests
             .TeamMembership("software-engineering", "security-auditor")
             .Build();
 
-        var result = await new PackInstaller().InstallAsync(workspace, new[] { pack });
+        // Core ships teams.json now, so the nine built-ins are data and an unresolvable target is a
+        // packaging bug rather than a gap in the host. Dropping it silently would ship a pack whose
+        // agents are invisible in the team filter while every other binding reads as satisfied.
+        var error = await Assert.ThrowsAsync<PackValidationException>(
+            () => new PackInstaller().InstallAsync(workspace, new[] { pack }));
 
-        // The nine built-in teams are still C# constants, so the membership cannot be applied to
-        // data. Reported, never silently dropped; it becomes a hard error once core ships teams.json.
-        Assert.Contains(result.DeferredTeamMemberships, m => m.Contains("software-engineering"));
-
-        var teams = JsonNode.Parse(Read(workspace, ".agents/teams.json"))!.AsArray();
-        Assert.Equal("security-review", teams[0]!["slug"]!.GetValue<string>());
+        Assert.Contains(error.Errors, e => e.Contains("software-engineering"));
+        Assert.False(Directory.Exists(Path.Combine(workspace, ".agents")),
+            "a refused install must leave the disk untouched (§4 D5 step 1)");
     }
 
     [Fact]
@@ -396,10 +397,10 @@ public sealed class PackInstallerTests
             .TeamMembership("software-engineering", "security-auditor")
             .Build();
 
-        var result = await new PackInstaller().InstallAsync(workspace, new[] { pack, core });
+        await new PackInstaller().InstallAsync(workspace, new[] { pack, core });
 
-        Assert.Empty(result.DeferredTeamMemberships);
-        var teams = JsonNode.Parse(Read(workspace, ".agents/teams.json"))!.AsArray();
+        // A fresh workspace is written in the object form core ships and TeamSeed reads.
+        var teams = PackComposer.TeamsArrayOf(JsonNode.Parse(Read(workspace, ".agents/teams.json")))!;
         var engineering = Assert.Single(teams.OfType<JsonObject>(),
             t => t["slug"]!.GetValue<string>() == "software-engineering");
         Assert.Equal(

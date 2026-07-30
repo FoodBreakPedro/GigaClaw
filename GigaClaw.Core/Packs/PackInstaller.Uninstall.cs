@@ -194,7 +194,11 @@ public sealed partial class PackInstaller
         CancellationToken ct)
     {
         var path = Path.Combine(agentsDir, PackComposer.TeamsFile);
-        if (LoadArray(path) is not { } array) return;
+        if (!File.Exists(path)) return;
+        // Whichever shape the workspace file is in — core ships the object form — the document
+        // wrapper is preserved so uninstall never rewrites it out from under the owner.
+        var document = JsonNode.Parse(File.ReadAllBytes(path));
+        if (PackComposer.TeamsArrayOf(document) is not { } array) return;
 
         var installed = Hashes(entry, PackComposer.TeamsFile);
         var teams = array.OfType<JsonObject>().Select(t => (JsonObject)t.DeepClone()).ToList();
@@ -235,7 +239,7 @@ public sealed partial class PackInstaller
         {
             await transaction.WriteAsync(
                 agentsRelative + "/" + PackComposer.TeamsFile,
-                Serialize(new JsonArray(teams.Select(t => (JsonNode)t).ToArray())),
+                Serialize(WriteTeamsDocument(document!, teams)),
                 ct);
         }
     }

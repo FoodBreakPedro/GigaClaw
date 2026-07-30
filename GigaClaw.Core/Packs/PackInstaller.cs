@@ -51,9 +51,10 @@ public sealed partial class PackInstaller
         var previous = ReadLock(Path.Combine(workspace, lockRelative));
 
         // Step 1 — compose and validate entirely in memory. Throws before anything is written.
-        var composition = PackComposer.Compose(
-            sources,
-            new PackComposeOptions(opts.RuntimeVersion, HostProvidedAgents(agentsDir, previous)));
+        // HostProvidedAgents is deliberately not passed: core is a pack now, so every agent in a
+        // workspace belongs to some manifest and D4's reference resolution needs no host-side
+        // escape hatch.
+        var composition = PackComposer.Compose(sources, new PackComposeOptions(opts.RuntimeVersion));
 
         var plan = new List<(string Destination, byte[] Content)>();
         var fileHashes = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
@@ -69,8 +70,7 @@ public sealed partial class PackInstaller
         var preserved = new List<string>();
         PlanOpaqueFiles(workspace, composition, previous, opts, plan, fileHashes, preserved);
 
-        var deferredMemberships = new List<string>();
-        PlanMergeArtifacts(agentsDir, agentsRelative, composition, previous, plan, mergeHashes, deferredMemberships);
+        PlanMergeArtifacts(agentsDir, agentsRelative, composition, previous, plan, mergeHashes);
 
         var stale = PlanRemovalsFromPreviousVersion(workspace, composition, previous, fileHashes);
 
@@ -115,33 +115,12 @@ public sealed partial class PackInstaller
                 plan.Select(p => p.Destination).ToList(),
                 preserved,
                 composition.Quarantined.Select(p => p.Id).ToList(),
-                deferredMemberships,
                 lockFile);
         }
         finally
         {
             TryDeleteDirectory(stagingDir);
         }
-    }
-
-    /// <summary>
-    /// Agent slugs already in this workspace that no installed pack owns — today, the
-    /// <c>ProjectTemplate</c> agents <c>AgentsTemplateService</c> wrote. They satisfy D4's
-    /// reference resolution while core is not yet a pack (see <see cref="PackComposeOptions"/>);
-    /// once the core-pack extraction lands, every slug here belongs to the <c>core</c> manifest
-    /// instead and this set is empty.
-    /// </summary>
-    private static IReadOnlySet<string> HostProvidedAgents(string agentsDir, PackLockFile? previous)
-    {
-        var slugs = new HashSet<string>(StringComparer.Ordinal);
-        if (!Directory.Exists(agentsDir)) return slugs;
-        foreach (var dir in Directory.EnumerateDirectories(agentsDir))
-        {
-            if (File.Exists(Path.Combine(dir, "SKILL.md"))) slugs.Add(new DirectoryInfo(dir).Name);
-        }
-        foreach (var entry in previous?.Packs ?? Array.Empty<PackLockEntry>())
-            slugs.ExceptWith(entry.Agents);
-        return slugs;
     }
 
     /// <summary>
@@ -165,6 +144,12 @@ public sealed partial class PackInstaller
         var errors = new List<string>();
         foreach (var pack in composition.Packs)
         {
+            // The core pack adopts what it finds. This check exists to catch *two packs* claiming
+            // one slug; core's slugs pre-exist in every workspace initialized before core had a
+            // manifest, and those files are core's own earlier output, not a competing claim.
+            // Refusing them would make the extraction un-installable on every existing workspace.
+            if (pack.Manifest.Kind == PackKind.Core) continue;
+
             foreach (var slug in pack.Manifest.Provides.Agents)
             {
                 if (packOwned.Contains(slug)) continue;
@@ -258,12 +243,11 @@ public sealed partial class PackInstaller
         PackComposition composition,
         PackLockFile? previous,
         List<(string Destination, byte[] Content)> plan,
-        Dictionary<string, Dictionary<string, Dictionary<string, string>>> mergeHashes,
-        List<string> deferredMemberships)
+        Dictionary<string, Dictionary<string, Dictionary<string, string>>> mergeHashes)
     {
         PlanContracts(agentsDir, agentsRelative, composition, plan, mergeHashes);
         PlanModels(agentsDir, agentsRelative, composition, plan, mergeHashes);
-        PlanTeams(agentsDir, agentsRelative, composition, previous, plan, mergeHashes, deferredMemberships);
+        PlanTeams(agentsDir, agentsRelative, composition, previous, plan, mergeHashes);
         PlanAutomations(agentsDir, agentsRelative, composition, previous, plan, mergeHashes);
     }
 
@@ -316,6 +300,14 @@ public sealed partial class PackInstaller
         var root = LoadObject(Path.Combine(agentsDir, PackComposer.ModelsFile)) ?? new JsonObject();
         foreach (var pack in composition.Packs)
         {
+            // The file's own documentation, core-only for the same reason contracts.json
+            // `defaults` is: it describes the whole file, not one pack's slice of it.
+            if (pack.Manifest.Kind == PackKind.Core)
+            {
+                foreach (var (key, node) in pack.ModelsPreamble.OrderBy(e => e.Key, StringComparer.Ordinal))
+                    root[key] = node.DeepClone();
+            }
+
             var hashes = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var (key, node) in pack.Models.OrderBy(e => e.Key, StringComparer.Ordinal))
             {
@@ -335,13 +327,16 @@ public sealed partial class PackInstaller
         PackComposition composition,
         PackLockFile? previous,
         List<(string Destination, byte[] Content)> plan,
-        Dictionary<string, Dictionary<string, Dictionary<string, string>>> mergeHashes,
-        List<string> deferredMemberships)
+        Dictionary<string, Dictionary<string, Dictionary<string, string>>> mergeHashes)
     {
         var contributes = composition.Packs.Any(p => p.Teams.Count > 0 || p.Manifest.TeamMembership.Count > 0);
         if (!contributes) return;
 
-        var existing = LoadArray(Path.Combine(agentsDir, PackComposer.TeamsFile)) ?? new JsonArray();
+        // The workspace file is the object form core ships; a pack fragment may be a bare array.
+        // Whichever it is, the document wrapper is preserved so `_comment`, `schemaVersion` and any
+        // owner-added top-level key survive the merge.
+        var document = LoadTeamsDocument(Path.Combine(agentsDir, PackComposer.TeamsFile));
+        var existing = PackComposer.TeamsArrayOf(document) ?? new JsonArray();
         var ordered = new List<JsonObject>();
         var index = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
         foreach (var item in existing.OfType<JsonObject>())
@@ -358,12 +353,15 @@ public sealed partial class PackInstaller
         {
             var previouslyOwned = previous?.Find(pack.Id)?.Teams.ToHashSet(StringComparer.Ordinal)
                 ?? new HashSet<string>(StringComparer.Ordinal);
-            foreach (var (slug, team) in pack.Teams.OrderBy(e => e.Key, StringComparer.Ordinal))
+            // Declaration order, not slug order: this list is the board's team filter.
+            foreach (var slug in pack.TeamOrder)
             {
-                var clone = (JsonObject)team.DeepClone();
+                var clone = (JsonObject)pack.Teams[slug].DeepClone();
                 if (index.TryGetValue(slug, out var current))
                 {
-                    if (!previouslyOwned.Contains(slug))
+                    // Core adopts, for the same reason it adopts agent slugs: a workspace
+                    // initialized before core had a manifest already carries core's nine teams.
+                    if (!previouslyOwned.Contains(slug) && pack.Manifest.Kind != PackKind.Core)
                     {
                         errors.Add(
                             $"pack '{pack.Id}' defines team '{slug}', which this workspace already has " +
@@ -387,10 +385,13 @@ public sealed partial class PackInstaller
             {
                 if (!index.TryGetValue(team, out var target))
                 {
-                    // The nine built-in teams are still C# constants in AgentTeamService, so a
-                    // membership targeting one cannot be applied to data yet. Reported, not fatal —
-                    // it becomes a hard error once core ships Agents/teams.json (D8).
-                    deferredMemberships.Add($"{pack.Id}: {team} ← {string.Join(", ", slugs)}");
+                    // Core ships Agents/teams.json (D8), so every built-in team is data and a
+                    // membership target that does not resolve is a genuine packaging bug, not a
+                    // gap in the host. Fail closed: silently dropping it would ship a pack whose
+                    // agents are invisible in the team filter while every other binding passes.
+                    errors.Add(
+                        $"pack '{pack.Id}': teamMembership targets team '{team}', which is defined " +
+                        "by neither this selection nor the workspace's teams.json.");
                     continue;
                 }
                 if (target["agentSlugs"] is not JsonArray members)
@@ -407,6 +408,7 @@ public sealed partial class PackInstaller
                 }
             }
         }
+        if (errors.Count > 0) throw new PackValidationException(errors);
 
         // Hashed only after every mutation, so a team's recorded hash matches what is written.
         foreach (var pack in composition.Packs)
@@ -419,7 +421,34 @@ public sealed partial class PackInstaller
         }
 
         plan.Add((agentsRelative + "/" + PackComposer.TeamsFile,
-            Serialize(new JsonArray(ordered.Select(t => (JsonNode)t).ToArray()))));
+            Serialize(WriteTeamsDocument(document, ordered))));
+    }
+
+    /// <summary>
+    /// Reads <c>.agents/teams.json</c> in whichever shape it is on disk. Missing file becomes the
+    /// object form core ships, so a fresh workspace is written in the shape
+    /// <see cref="Models.TeamSeed"/> and the automation editor already expect.
+    /// </summary>
+    private static JsonNode LoadTeamsDocument(string path)
+    {
+        if (!File.Exists(path))
+            return new JsonObject { ["schemaVersion"] = Models.TeamSeed.SupportedSchemaVersion, ["teams"] = new JsonArray() };
+        return JsonNode.Parse(File.ReadAllBytes(path))
+            ?? new JsonObject { ["schemaVersion"] = Models.TeamSeed.SupportedSchemaVersion, ["teams"] = new JsonArray() };
+    }
+
+    /// <summary>
+    /// Puts the merged team list back into the document it came from, so <c>_comment</c>,
+    /// <c>schemaVersion</c> and any owner-added top-level key survive. A bare-array document stays a
+    /// bare array; the shape on disk is never rewritten out from under the owner.
+    /// </summary>
+    private static JsonNode WriteTeamsDocument(JsonNode document, List<JsonObject> teams)
+    {
+        var array = new JsonArray(teams.Select(t => (JsonNode)t).ToArray());
+        if (document is not JsonObject obj) return array;
+        var clone = (JsonObject)obj.DeepClone();
+        clone["teams"] = array;
+        return clone;
     }
 
     private static void PlanAutomations(
@@ -447,7 +476,10 @@ public sealed partial class PackInstaller
             {
                 if (byId.TryGetValue(automation.Id, out var current))
                 {
-                    if (!previouslyOwned.Contains(automation.Id))
+                    // Core adopts (see RefuseSlugsAlreadyInWorkspace). Note this replaces the
+                    // workspace copy, so an owner's edit to a *core* automation is reset by a
+                    // re-Initialize — exactly what overwriteConflicts: true has always meant.
+                    if (!previouslyOwned.Contains(automation.Id) && pack.Manifest.Kind != PackKind.Core)
                     {
                         errors.Add(
                             $"pack '{pack.Id}' defines automation '{automation.Id}', which this workspace " +

@@ -78,9 +78,22 @@
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
     <!-- Files copied to the workspace root on Initialize (e.g. CLAUDE.md). The glob excludes
-         the Agents/ subtree since those go through the AgentsTemplate prefix above. -->
-    <EmbeddedResource Include="..\ProjectTemplate\**\*.*" Exclude="..\ProjectTemplate\Agents\**\*.*">
+         the Agents/ subtree since those go through the AgentsTemplate prefix above, and pack.json
+         because that is core's *manifest*, not workspace content: it is embedded under the Packs
+         prefix below and must never be written into a workspace root. -->
+    <EmbeddedResource Include="..\ProjectTemplate\**\*.*"
+                      Exclude="..\ProjectTemplate\Agents\**\*.*;..\ProjectTemplate\pack.json">
       <LogicalName>GigaClaw.Core.AgentsTemplateRoot/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+    <!-- Pack manifests (doc/pack-infrastructure.md §2), prefix GigaClaw.Core.Packs/<pack-id>/…
+         `core` is the one pack whose content is *not* also under this prefix: ProjectTemplate/
+         stays in place (§2 D1), so its Agents/ and root files keep the two AgentsTemplate prefixes
+         above and CorePackSource maps all three onto one IPackSource. That asymmetry is what lets
+         CatalogGenerator, StaticEvalRunner, evalconfig.json and the template contract tests keep
+         pointing at the literal path `ProjectTemplate/Agents`. -->
+    <EmbeddedResource Include="..\ProjectTemplate\pack.json">
+      <LogicalName>GigaClaw.Core.Packs/core/pack.json</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
   </ItemGroup>

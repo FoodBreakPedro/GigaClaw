@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
+using GigaClaw.Core.Packs;
 
 namespace GigaClaw.Core.Services;
 
@@ -125,44 +126,27 @@ public sealed class AgentsTemplateService
         return conflicts;
     }
 
-    public async Task<InitializeResult> InitializeAsync(string workspacePath, bool overwriteConflicts)
+    /// <summary>
+    /// Composes the selected packs into a workspace. Since T6 this is a pack install
+    /// (doc/pack-infrastructure.md §6): the bytes come from the <c>core</c> pack rather than from a
+    /// bare loop over embedded resources, so the same staged transaction, the same owner-edit
+    /// protection and the same <c>.agents/packs.lock.json</c> record apply to core as to any other
+    /// pack. The one path a workspace gains relative to the pre-T6 writer is that lockfile.
+    /// </summary>
+    public async Task<InitializeResult> InitializeAsync(
+        string workspacePath,
+        bool overwriteConflicts,
+        IReadOnlyList<IPackSource>? packs = null)
     {
-        var written = new List<string>();
-        var skipped = new List<string>();
-
         Directory.CreateDirectory(workspacePath);
 
-        foreach (var rel in RelativePaths())
-        {
-            var dest = Path.Combine(workspacePath, ".agents", rel.Replace('/', Path.DirectorySeparatorChar));
-            var exists = File.Exists(dest);
-            if (exists && !overwriteConflicts)
-            {
-                skipped.Add(".agents/" + rel);
-                continue;
-            }
+        var install = await new PackInstaller().InstallAsync(
+            workspacePath,
+            packs ?? [CorePack.Source(_assembly)],
+            new PackInstallOptions(overwriteConflicts));
 
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            var bytes = ReadAsset(AgentsPrefix, rel);
-            await File.WriteAllBytesAsync(dest, bytes);
-            written.Add(".agents/" + rel);
-        }
-
-        foreach (var rel in RootRelativePaths())
-        {
-            var dest = Path.Combine(workspacePath, rel.Replace('/', Path.DirectorySeparatorChar));
-            var exists = File.Exists(dest);
-            if (exists && !overwriteConflicts)
-            {
-                skipped.Add(rel);
-                continue;
-            }
-
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            var bytes = ReadAsset(RootPrefix, rel);
-            await File.WriteAllBytesAsync(dest, bytes);
-            written.Add(rel);
-        }
+        var written = install.Written.ToList();
+        var skipped = install.PreservedOwnerEdits.ToList();
 
         var gitInitResult = GitInitResult.NotAttempted;
         var gitDir = Path.Combine(workspacePath, ".git");

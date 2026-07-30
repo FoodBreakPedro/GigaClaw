@@ -177,7 +177,9 @@ public static class PackComposer
         JsonNode? contractDefaults = null;
         var contractAgents = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
         var models = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
+        var modelsPreamble = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
         var teams = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+        var teamOrder = new List<string>();
         var automations = new List<AutomationRule>();
 
         foreach (var rel in source.AgentRelativePaths())
@@ -220,9 +222,9 @@ public static class PackComposer
         if (agentPathSet.Contains(ContractsFile))
             ReadContracts(manifest, source, ref contractDefaults, contractAgents, errors);
         if (agentPathSet.Contains(ModelsFile))
-            ReadModels(manifest, source, models, errors);
+            ReadModels(manifest, source, models, modelsPreamble, errors);
         if (agentPathSet.Contains(TeamsFile))
-            ReadTeams(manifest, source, teams, errors);
+            ReadTeams(manifest, source, teams, teamOrder, errors);
         if (agentPathSet.Contains(AutomationsFile))
             ReadAutomations(manifest, source, automations, errors);
 
@@ -247,7 +249,8 @@ public static class PackComposer
             contractDefaults,
             contractAgents,
             models,
-            teams);
+            teams)
+        { ModelsPreamble = modelsPreamble, TeamOrder = teamOrder };
     }
 
     private static void VerifySet(
@@ -303,22 +306,32 @@ public static class PackComposer
     }
 
     private static void ReadModels(
-        PackManifest manifest, IPackSource source, Dictionary<string, JsonNode> models, List<string> errors)
+        PackManifest manifest,
+        IPackSource source,
+        Dictionary<string, JsonNode> models,
+        Dictionary<string, JsonNode> preamble,
+        List<string> errors)
     {
         var label = $"pack '{manifest.Id}'";
         var root = ParseObject(source.ReadAgentAsset(ModelsFile), label, ModelsFile, errors);
         if (root is null) return;
         foreach (var entry in root)
         {
+            if (entry.Value is null) continue;
             // "_comment" is documentation, not a pseudo-agent slug — the same convention
-            // AgentsTemplateService.DefaultModels() already honours.
-            if (entry.Key.StartsWith('_') || entry.Value is null) continue;
-            models[entry.Key] = entry.Value.DeepClone();
+            // AgentsTemplateService.DefaultModels() already honours. Kept aside rather than
+            // dropped, so the file the owner opens still explains itself.
+            if (entry.Key.StartsWith('_')) preamble[entry.Key] = entry.Value.DeepClone();
+            else models[entry.Key] = entry.Value.DeepClone();
         }
     }
 
     private static void ReadTeams(
-        PackManifest manifest, IPackSource source, Dictionary<string, JsonObject> teams, List<string> errors)
+        PackManifest manifest,
+        IPackSource source,
+        Dictionary<string, JsonObject> teams,
+        List<string> teamOrder,
+        List<string> errors)
     {
         var label = $"pack '{manifest.Id}'";
         JsonNode? root;
@@ -332,9 +345,12 @@ public static class PackComposer
             return;
         }
 
-        if (root is not JsonArray array)
+        var array = TeamsArrayOf(root);
+        if (array is null)
         {
-            errors.Add($"{label}: {TeamsFile} must be a JSON array of team objects.");
+            errors.Add(
+                $"{label}: {TeamsFile} must be a JSON array of team objects, or the object form " +
+                "{{ \"schemaVersion\": 1, \"teams\": [...] }}.");
             return;
         }
 
@@ -347,6 +363,7 @@ public static class PackComposer
             }
             if (!teams.TryAdd(slug, (JsonObject)team.DeepClone()))
                 errors.Add($"{label}: {TeamsFile} defines team '{slug}' more than once.");
+            else teamOrder.Add(slug);
         }
     }
 
@@ -376,6 +393,22 @@ public static class PackComposer
             errors.Add($"{label}: {AutomationsFile} uses an automation type this runtime does not know — {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// The teams array of either <c>teams.json</c> shape, or null if the node is neither.
+    ///
+    /// <para>Both shapes are real and both must work here. Core ships the object form —
+    /// <c>{ "_comment": …, "schemaVersion": 1, "teams": [...], "teamMembership": {…} }</c> — which is
+    /// what <see cref="Models.TeamSeed.Parse"/> reads and what Initialize writes to
+    /// <c>.agents/teams.json</c>; a pack fragment may ship the bare array. Accepting only the array
+    /// (as this did before the core-pack extraction) would reject core's own roster.</para>
+    /// </summary>
+    internal static JsonArray? TeamsArrayOf(JsonNode? root) => root switch
+    {
+        JsonArray array => array,
+        JsonObject obj => obj["teams"] as JsonArray,
+        _ => null,
+    };
 
     private static JsonObject? ParseObject(byte[] bytes, string label, string file, List<string> errors)
     {

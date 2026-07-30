@@ -19,13 +19,6 @@ public sealed record PackInstallResult(
     /// board must surface them as "needs update" and their agents refused at dispatch (§5).</summary>
     IReadOnlyList<string> QuarantinedPacks,
 
-    /// <summary>
-    /// <c>teamMembership</c> entries whose target team is not in the composed <c>teams.json</c>.
-    /// Deferred rather than fatal only while the built-in teams are still C# constants; once D8
-    /// lands and core ships <c>Agents/teams.json</c>, an unresolvable target becomes a hard error.
-    /// </summary>
-    IReadOnlyList<string> DeferredTeamMemberships,
-
     PackLockFile Lock);
 
 public sealed record PackUninstallResult(
