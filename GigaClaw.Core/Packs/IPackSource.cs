@@ -172,13 +172,28 @@ public sealed class EmbeddedPackSource : IPackSource
 
     public byte[] ReadRootAsset(string relativePath) => Read(_rootPrefix, relativePath);
 
+    /// <summary>
+    /// Resource names are matched with separators normalized on <em>both</em> sides.
+    /// <para>
+    /// The stripped remainder was already normalized, but the prefix comparison was not, and that
+    /// asymmetry is a real Windows failure rather than a theoretical one: MSBuild builds these
+    /// names from a <c>LogicalName</c> template containing a literal <c>/</c> plus
+    /// <c>%(RecursiveDir)</c>, and on Windows the resulting name can carry backslashes where the
+    /// template had a forward slash. Every glob-sourced asset then failed <c>StartsWith(prefix)</c>
+    /// and silently vanished from the pack — an install that wrote only the four merge artifacts,
+    /// with no error anywhere, because "no resources matched" is indistinguishable from
+    /// "this pack ships none".
+    /// </para>
+    /// </summary>
     private IReadOnlyList<string> Enumerate(string prefix)
     {
+        var normalizedPrefix = prefix.Replace('\\', '/');
         var list = new List<string>();
         foreach (var name in _assembly.GetManifestResourceNames())
         {
-            if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
-            list.Add(name[prefix.Length..].Replace('\\', '/'));
+            var normalized = name.Replace('\\', '/');
+            if (!normalized.StartsWith(normalizedPrefix, StringComparison.Ordinal)) continue;
+            list.Add(normalized[normalizedPrefix.Length..]);
         }
         list.Sort(StringComparer.Ordinal);
         return list;
@@ -189,6 +204,14 @@ public sealed class EmbeddedPackSource : IPackSource
         var names = _assembly.GetManifestResourceNames();
         var name = prefix + relativePath.Replace('/', '\\');
         if (!names.Contains(name)) name = prefix + relativePath.Replace('\\', '/');
+        if (!names.Contains(name))
+        {
+            // Last resort: match on the fully normalized name. The two probes above assume the
+            // prefix itself survived verbatim, which is exactly what Enumerate can no longer take
+            // for granted.
+            var wanted = (prefix + relativePath).Replace('\\', '/');
+            name = names.FirstOrDefault(n => n.Replace('\\', '/') == wanted) ?? name;
+        }
         using var stream = _assembly.GetManifestResourceStream(name)
             ?? throw new PackValidationException($"pack '{Id}': embedded asset not found: {name}");
         using var buffer = new MemoryStream();

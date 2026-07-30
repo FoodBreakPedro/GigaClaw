@@ -219,3 +219,52 @@ public sealed class CoreInitManifestTests
         catch { /* temp dir; a leftover is harmless */ }
     }
 }
+
+/// <summary>
+/// The core pack's embedded asset enumeration. These assertions look trivially true on Linux and
+/// macOS and were false on Windows for an entire release: MSBuild can emit resource names whose
+/// separators differ from the <c>LogicalName</c> template, every glob-sourced asset then failed the
+/// prefix match, and the pack composed down to just its four merge artifacts — with no error, since
+/// "no resources matched this prefix" looks exactly like "this pack ships none".
+/// </summary>
+public class CorePackEnumerationTests
+{
+    [Fact]
+    public void The_core_pack_enumerates_every_agent_it_declares()
+    {
+        var source = CorePack.Source(typeof(AgentsTemplateService).Assembly);
+
+        var paths = source.AgentRelativePaths();
+        var skills = paths.Where(p => p.EndsWith("/SKILL.md", StringComparison.Ordinal)).ToArray();
+
+        Assert.Equal(33, skills.Length);
+        Assert.Contains("programmer/SKILL.md", paths);
+        Assert.Contains("blog-reviewer/references/ad7-protocol.md", paths);
+        Assert.Contains("scripts/verdict_contract.py", paths);
+        Assert.Contains("handoff.md", paths);
+    }
+
+    [Fact]
+    public void Every_enumerated_path_uses_forward_slashes_and_is_readable()
+    {
+        var source = CorePack.Source(typeof(AgentsTemplateService).Assembly);
+
+        foreach (var path in source.AgentRelativePaths())
+        {
+            Assert.DoesNotContain('\\', path);
+            // Enumerate and Read must agree: a path the source lists must be one it can fetch.
+            Assert.NotEmpty(source.ReadAgentAsset(path));
+        }
+    }
+
+    [Fact]
+    public void The_root_prefix_enumerates_the_workspace_files_too()
+    {
+        var source = CorePack.Source(typeof(AgentsTemplateService).Assembly);
+
+        var root = source.RootRelativePaths();
+
+        Assert.Contains("CLAUDE.md", root);
+        Assert.All(root, p => Assert.DoesNotContain('\\', p));
+    }
+}
