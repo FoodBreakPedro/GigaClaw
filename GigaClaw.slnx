@@ -3,6 +3,8 @@
   <Project Path="GigaClaw.Catalog/GigaClaw.Catalog.csproj" />
   <Project Path="GigaClaw.Core/GigaClaw.Core.csproj" />
   <Project Path="GigaClaw.Core.Tests/GigaClaw.Core.Tests.csproj" />
+  <Project Path="GigaClaw.Eval/GigaClaw.Eval.csproj" />
+  <Project Path="GigaClaw.Eval.Tests/GigaClaw.Eval.Tests.csproj" />
   <Project Path="GigaClaw.QaRunner/GigaClaw.QaRunner.csproj" />
   <Project Path="GigaClaw.Web/GigaClaw.Web.csproj" />
 </Solution>

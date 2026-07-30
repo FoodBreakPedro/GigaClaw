@@ -1,0 +1,41 @@
+{
+  "Version": 1,
+  "Agent": "blog-reviewer",
+  "ExpectedChecks": [
+    {
+      "Id": "contract.catalog",
+      "Category": "integrity",
+      "Status": "pass"
+    },
+    {
+      "Id": "frontmatter.parse",
+      "Category": "integrity",
+      "Status": "pass"
+    },
+    {
+      "Id": "memory.stub",
+      "Category": "integrity",
+      "Status": "pass"
+    },
+    {
+      "Id": "model.resolve",
+      "Category": "integrity",
+      "Status": "pass"
+    },
+    {
+      "Id": "prompt.budget",
+      "Category": "integrity",
+      "Status": "pass"
+    },
+    {
+      "Id": "scripts.resolve",
+      "Category": "integrity",
+      "Status": "pass"
+    },
+    {
+      "Id": "skill.parse",
+      "Category": "integrity",
+      "Status": "pass"
+    }
+  ]
+}

@@ -74,6 +74,7 @@ public sealed class CatalogGenerator
                 StringComparer.Ordinal);
         using var automationsDocument = JsonDocument.Parse(File.ReadAllText(Path.Combine(agentsDirectory, "automations.json")));
         var automations = ReadAutomations(automationsDocument.RootElement);
+        var evalBaselineDirectory = Path.Combine(repositoryRoot, "GigaClaw.Eval", "baselines");
         var teams = new AgentTeamService().GetTeams()
             .OrderBy(team => team.Slug, StringComparer.Ordinal)
             .Select(team => new TeamCatalogEntry(
@@ -122,7 +123,8 @@ public sealed class CatalogGenerator
                     .Distinct(StringComparer.Ordinal)
                     .OrderBy(id => id, StringComparer.Ordinal)
                     .ToArray(),
-                EvalBaselinePresent: false);
+                EvalBaselinePresent: File.Exists(
+                    Path.Combine(evalBaselineDirectory, $"{slug}.json")));
         }).ToArray();
         var scripts = Directory.EnumerateFiles(
                 Path.Combine(agentsDirectory, "scripts"),
