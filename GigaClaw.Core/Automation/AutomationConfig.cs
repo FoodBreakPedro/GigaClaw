@@ -128,6 +128,7 @@ public sealed class TicketCommentAddedTriggerSpec : TriggerSpec
 [JsonDerivedType(typeof(AllSubTicketsInStatusConditionSpec), "allSubTicketsInStatus")]
 [JsonDerivedType(typeof(TicketCountInColumnConditionSpec), "ticketCountInColumn")]
 [JsonDerivedType(typeof(VerdictIsConditionSpec), "verdictIs")]
+[JsonDerivedType(typeof(RepairBudgetConditionSpec), "repairBudget")]
 public abstract class ConditionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -237,6 +238,40 @@ public sealed class VerdictIsConditionSpec : ConditionSpec
     /// reviewers whose input is not a workspace file.
     /// </summary>
     public bool RequireFreshArtifact { get; set; } = true;
+}
+
+/// <summary>
+/// The cap half of the bounded repair loop (see <c>doc/verdict-contract.md</c>). Pairs with
+/// <c>verdictIs: ["FIX"]</c>: one automation carries <c>mode: "withinCap"</c> and re-dispatches the
+/// producing agent, its twin carries <c>mode: "exhausted"</c> and escalates the ticket to the owner.
+/// <para>
+/// The number of rounds already spent is recounted from the ticket's comment trail on every
+/// evaluation — one per FIX verdict since the last SHIP, BLOCK or escalation receipt — so it
+/// survives an engine restart and a resumed run cannot restart it. On its own this condition says
+/// nothing about whether a repair is outstanding (a fresh ticket is trivially "within cap"); it is
+/// meaningful only next to <c>verdictIs</c>.
+/// </para>
+/// </summary>
+public sealed class RepairBudgetConditionSpec : ConditionSpec
+{
+    public override string UiTypeKey => "repairBudget";
+
+    /// <summary><c>withinCap</c> (another round is allowed) or <c>exhausted</c> (escalate).
+    /// Anything else matches nothing, so a typo stalls the ticket instead of looping it.</summary>
+    public string Mode { get; set; } = "withinCap";
+
+    /// <summary>Only count verdicts from this reviewer. Supports <c>{assignee}</c>. Empty = any reviewer.</summary>
+    public string? Agent { get; set; }
+
+    /// <summary>
+    /// Explicit cap. Null (default) reads <c>maxReviewCycles</c> from the workspace's
+    /// <c>.agents/contracts.json</c> — the ticket's assignee first, then the reviewer named in
+    /// <see cref="Agent"/>, then the manifest defaults — and falls back to
+    /// <see cref="Verdicts.RepairLoop.DefaultMaxCycles"/> when the manifest is silent. A manifest
+    /// that is present but unreadable resolves to "exhausted": an unknowable budget escalates
+    /// rather than loops.
+    /// </summary>
+    public int? MaxCycles { get; set; }
 }
 
 public sealed class TicketAgeConditionSpec : ConditionSpec

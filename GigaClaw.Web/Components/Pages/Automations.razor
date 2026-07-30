@@ -627,6 +627,7 @@ else
         "ticketCountInColumn" => new TicketCountInColumnConditionSpec {
             Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
         "verdictIs" => new VerdictIsConditionSpec { Verdicts = new List<string> { "SHIP" } },
+        "repairBudget" => new RepairBudgetConditionSpec(),
         _ => new TicketInColumnConditionSpec { Columns = new List<string> { "Todo" } },
     };
 

@@ -15,6 +15,7 @@
             <option value="allSubTicketsInStatus">@L["CondTypeAllSubTicketsInStatus"]</option>
             <option value="ticketCountInColumn">@L["CondTypeTicketCountInColumn"]</option>
             <option value="verdictIs">@L["CondTypeVerdictIs"]</option>
+            <option value="repairBudget">@L["CondTypeRepairBudget"]</option>
         </select>
     </label>
 
@@ -158,6 +159,24 @@
             <label class="column-check"><input type="checkbox" checked="@s.RequireFreshArtifact"
                        @onchange="e => s.RequireFreshArtifact = (bool)e.Value!" /><span>@L["VerdictRequireFresh"]</span></label>
             break;
+        case RepairBudgetConditionSpec s:
+            <label>@L["RepairMode"]
+                <select value="@s.Mode" @onchange="e => s.Mode = (string)e.Value!">
+                    <option value="withinCap">@L["RepairModeWithinCap"]</option>
+                    <option value="exhausted">@L["RepairModeExhausted"]</option>
+                </select>
+            </label>
+            <label>@L["RepairReviewer"]
+                <select value="@(s.Agent ?? "")" @onchange="e => s.Agent = string.IsNullOrEmpty((string?)e.Value) ? null : (string)e.Value!">
+                    <option value="">@L["AnyMember"]</option>
+                    @foreach (var sk in Skills) { <option value="@sk">@sk</option> }
+                </select>
+            </label>
+            <label>@L["RepairMaxCycles"]
+                <input type="number" min="0" value="@(s.MaxCycles?.ToString() ?? "")"
+                       @onchange="e => s.MaxCycles = int.TryParse((string?)e.Value, out var v) ? v : null" />
+            </label>
+            break;
         case TicketAgeConditionSpec s:
             <label>@L["Field"]
                 <select value="@s.Field" @onchange="e => s.Field = (string)e.Value!">
@@ -214,6 +233,7 @@
         AllSubTicketsInStatusConditionSpec => "allSubTicketsInStatus",
         TicketCountInColumnConditionSpec => "ticketCountInColumn",
         VerdictIsConditionSpec => "verdictIs",
+        RepairBudgetConditionSpec => "repairBudget",
         _ => throw new NotSupportedException($"No UI mapping for condition type {Condition.GetType().Name}. Register it in ConditionEditor.razor."),
     };
 
@@ -231,6 +251,7 @@
             "allSubTicketsInStatus" => new AllSubTicketsInStatusConditionSpec { Statuses = new List<string> { "Done" } },
             "ticketCountInColumn" => new TicketCountInColumnConditionSpec { Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
             "verdictIs" => new VerdictIsConditionSpec { Verdicts = new List<string> { "SHIP" } },
+            "repairBudget" => new RepairBudgetConditionSpec(),
             _ => throw new NotSupportedException($"Unknown condition type key '{e.Value}'. Register it in ConditionEditor.razor."),
         };
         await OnReplace.InvokeAsync(spec);

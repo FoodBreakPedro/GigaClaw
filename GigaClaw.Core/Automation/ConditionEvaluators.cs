@@ -59,6 +59,21 @@ public static class ConditionEvaluators
         return c.Verdicts.Any(v => string.Equals(v, token, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// Matches when the ticket's repair budget is in the configured state. A null
+    /// <paramref name="state"/> means the budget could not be established (an unreadable contract
+    /// manifest): that resolves to "exhausted", because escalating a ticket to a human is the safe
+    /// failure and re-dispatching it forever is not.
+    /// </summary>
+    public static bool RepairBudget(RepairBudgetConditionSpec c, RepairLoopState? state)
+    {
+        var exhausted = string.Equals(c.Mode, "exhausted", StringComparison.OrdinalIgnoreCase);
+        var withinCap = string.Equals(c.Mode, "withinCap", StringComparison.OrdinalIgnoreCase);
+        if (!exhausted && !withinCap) return false;
+        if (state is null) return exhausted;
+        return exhausted ? state.Exhausted : !state.Exhausted;
+    }
+
     public static bool TicketAge(TicketAgeConditionSpec c, DateTime createdAt, DateTime updatedAt, DateTime now)
     {
         var field = c.Field == "updatedAt" ? updatedAt : createdAt;

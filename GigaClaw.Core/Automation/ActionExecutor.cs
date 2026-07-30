@@ -94,6 +94,7 @@ internal sealed class ActionExecutor
             TicketCountInColumnConditionSpec c     => EvaluateTicketCountInColumnAsync(rt, c, firing),
             TicketAgeConditionSpec c               => EvaluateTicketAgeAsync(rt, c, firing),
             VerdictIsConditionSpec c               => EvaluateVerdictIsAsync(rt, c, firing),
+            RepairBudgetConditionSpec c            => EvaluateRepairBudgetAsync(rt, c, firing),
             _                                      => Task.FromResult(true),
         };
 
@@ -202,13 +203,8 @@ internal sealed class ActionExecutor
         if (c.Agent is not null && c.Agent.Contains("{assignee}") && agent is null)
             return false; // Placeholder with nothing to resolve to: fail closed.
 
-        var comments = ticket.Comments
-            .OrderBy(x => x.CreatedAt)
-            .Select(x => new VerdictComment(x.Content, x.Author, x.CreatedAt))
-            .ToList();
-
         var resolution = VerdictScanner.Resolve(
-            comments,
+            VerdictCommentsOf(ticket),
             agent,
             c.RequireFreshArtifact
                 ? verdict => (VerdictReader.IsFresh(verdict, rt.Workspace, out var reason), reason)
@@ -224,6 +220,93 @@ internal sealed class ActionExecutor
         return ConditionEvaluators.VerdictIs(c, resolution.Outcome);
     }
 
+    // ── Repair loop (C3) ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Decides whether the repair loop still has a round left. The count is recounted from the
+    /// ticket's comments on every evaluation rather than remembered, which is what makes a resumed
+    /// or re-triggered run respect the cap instead of restarting it.
+    /// </summary>
+    private async Task<bool> EvaluateRepairBudgetAsync(ProjectRuntime rt, RepairBudgetConditionSpec c, TriggerFiring firing)
+    {
+        if (firing.TicketId is null) return false;
+        var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
+        if (ticket is null) return false;
+
+        var agent = string.IsNullOrWhiteSpace(c.Agent)
+            ? null
+            : ConditionEvaluators.ResolveAgentPlaceholder(c.Agent, ticket.AssignedTo);
+        if (c.Agent is not null && c.Agent.Contains("{assignee}") && agent is null)
+            return false; // Placeholder with nothing to resolve to: fail closed.
+
+        var state = await ResolveRepairStateAsync(rt, ticket, agent, c.MaxCycles);
+        if (state is not null && state.Exhausted)
+        {
+            _logger.LogInformation(
+                "[{Slug}] ticket #{TicketId}: repair budget spent ({Used}/{Max} FIX verdicts)",
+                rt.Slug, ticket.Id, state.CyclesUsed, state.MaxCycles);
+        }
+
+        return ConditionEvaluators.RepairBudget(c, state);
+    }
+
+    /// <summary>
+    /// Recounts the ticket's repair budget. Null means the budget could not be established
+    /// (a contract manifest that exists but cannot be read) — callers treat that as exhausted.
+    /// </summary>
+    private async Task<RepairLoopState?> ResolveRepairStateAsync(
+        ProjectRuntime rt,
+        Models.Ticket ticket,
+        string? agent,
+        int? maxOverride)
+    {
+        var max = maxOverride ?? await ResolveMaxReviewCyclesAsync(rt, ticket.AssignedTo, agent);
+        return max is null ? null : RepairLoop.Resolve(VerdictCommentsOf(ticket), max.Value, agent);
+    }
+
+    /// <summary>
+    /// Resolves <c>maxReviewCycles</c> from the workspace contract manifest: the first of the given
+    /// agents that declares one, then the manifest defaults, then
+    /// <see cref="RepairLoop.DefaultMaxCycles"/>. A workspace with no manifest is not an error —
+    /// most projects ship none — but a manifest that cannot be parsed returns null so the loop
+    /// escalates rather than running on a guessed budget.
+    /// </summary>
+    private async Task<int?> ResolveMaxReviewCyclesAsync(ProjectRuntime rt, params string?[] agents)
+    {
+        if (string.IsNullOrWhiteSpace(rt.Workspace))
+            return RepairLoop.DefaultMaxCycles;
+
+        var manifestPath = Path.Combine(rt.Workspace, ".agents", "contracts.json");
+        if (!File.Exists(manifestPath))
+            return RepairLoop.DefaultMaxCycles;
+
+        string manifest;
+        try
+        {
+            manifest = await File.ReadAllTextAsync(manifestPath);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "[{Slug}] could not read {Path} — the repair loop escalates instead of looping", rt.Slug, manifestPath);
+            return null;
+        }
+
+        if (!RepairLoop.TryReadMaxCycles(manifest, agents, out var cycles))
+        {
+            _logger.LogWarning(
+                "[{Slug}] {Path} is malformed — the repair loop escalates instead of looping", rt.Slug, manifestPath);
+            return null;
+        }
+
+        return cycles ?? RepairLoop.DefaultMaxCycles;
+    }
+
+    private static List<VerdictComment> VerdictCommentsOf(Models.Ticket ticket)
+        => ticket.Comments
+            .OrderBy(x => x.CreatedAt)
+            .Select(x => new VerdictComment(x.Content, x.Author, x.CreatedAt))
+            .ToList();
+
     private async Task<bool> EvaluateTicketAgeAsync(ProjectRuntime rt, TicketAgeConditionSpec c, TriggerFiring firing)
     {
         if (firing.TicketId is null) return true;
@@ -233,10 +316,11 @@ internal sealed class ActionExecutor
     }
 
     /// <summary>
-    /// Prepends the previous run's handoff to the action's own context, so the next agent starts
-    /// from what the last one actually left behind instead of re-deriving it from the ticket.
-    /// An unreadable handoff is skipped rather than injected half-parsed, and a ticket without one
-    /// dispatches exactly as before.
+    /// Prepends what the ticket already knows to the action's own context, so the next agent starts
+    /// from what happened instead of re-deriving it: the outstanding <c>FIX</c> verdict's findings
+    /// first (that is the reason this dispatch exists), then the previous run's handoff.
+    /// An unreadable handoff or verdict is skipped rather than injected half-parsed, and a ticket
+    /// with neither dispatches exactly as before.
     /// </summary>
     internal async Task<string?> ComposeDispatchContextAsync(ProjectRuntime rt, int? ticketId, string? actionContext)
     {
@@ -244,6 +328,7 @@ internal sealed class ActionExecutor
             return actionContext;
 
         RunHandoff? handoff = null;
+        string? repairBrief = null;
         try
         {
             var ticket = await _tickets.GetTicketAsync(rt.Slug, ticketId.Value);
@@ -251,19 +336,28 @@ internal sealed class ActionExecutor
             {
                 handoff = HandoffReader.Latest(
                     ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList());
+
+                // A FIX with no SHIP or escalation after it means a repair is outstanding: whoever
+                // is dispatched next must see the categories and veto items that were refused.
+                var repair = await ResolveRepairStateAsync(rt, ticket, agent: null, maxOverride: null);
+                if (repair?.Newest is not null)
+                    repairBrief = RepairLoop.RenderBrief(repair, $"ticket #{ticket.Id}");
             }
         }
         catch (Exception exception)
         {
             // Context enrichment must never be the reason a dispatch fails.
-            _logger.LogWarning(exception, "[{Slug}] could not read the handoff for ticket #{TicketId}", rt.Slug, ticketId);
+            _logger.LogWarning(exception, "[{Slug}] could not read the ticket context for #{TicketId}", rt.Slug, ticketId);
         }
 
-        if (handoff is null)
+        if (handoff is null && string.IsNullOrWhiteSpace(repairBrief))
             return actionContext;
 
-        var rendered = HandoffReader.Render(handoff);
-        return string.IsNullOrWhiteSpace(actionContext) ? rendered : $"{rendered}\n\n{actionContext}";
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(repairBrief)) parts.Add(repairBrief);
+        if (handoff is not null) parts.Add(HandoffReader.Render(handoff));
+        if (!string.IsNullOrWhiteSpace(actionContext)) parts.Add(actionContext);
+        return string.Join("\n\n", parts);
     }
 
     // ── Action execution ────────────────────────────────────────────────────
@@ -785,11 +879,24 @@ internal sealed class ActionExecutor
             // Renders {ticketId}/{ticketTitle} plus any chain values (e.g. {http.body.adminUrl})
             // captured by an earlier httpRequest — this is how a CMS receipt lands on the ticket.
             var content = ActionTemplate.Render(ac.Content, state, firing);
-            if (content.Contains("{assignee}"))
+            var needsAssignee = content.Contains("{verdictHistory}", StringComparison.Ordinal)
+                || content.Contains("{assignee}", StringComparison.Ordinal);
+            if (needsAssignee)
             {
                 var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId!.Value);
                 content = ActionTemplate.Render(content, ActionTemplate.Values(
                     null, ("assignee", ticket?.AssignedTo ?? "")));
+
+                // {verdictHistory} is what makes the escalation comment self-contained: every
+                // repair round's veto items and below-max categories, plus the receipt marker that
+                // closes the episode, so the owner never has to open a run log to see the argument.
+                if (content.Contains("{verdictHistory}", StringComparison.Ordinal) && ticket is not null)
+                {
+                    var repair = await ResolveRepairStateAsync(rt, ticket, agent: null, maxOverride: null)
+                        ?? RepairLoop.Resolve(VerdictCommentsOf(ticket), RepairLoop.DefaultMaxCycles);
+                    content = content.Replace(
+                        "{verdictHistory}", RepairLoop.RenderEscalation(repair, ticket.Id), StringComparison.Ordinal);
+                }
             }
             await _tickets.AddCommentAsync(rt.Slug, firing.TicketId!.Value, content, ac.Author);
         }
