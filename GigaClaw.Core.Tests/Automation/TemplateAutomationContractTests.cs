@@ -1,4 +1,5 @@
 using System.Text.Json;
+using GigaClaw.Catalog;
 using GigaClaw.Core.Automation;
 
 namespace GigaClaw.Core.Tests.Automation;
@@ -28,26 +29,57 @@ public class TemplateAutomationContractTests
             config.Automations.Count,
             config.Automations.Select(a => a.Id).Distinct(StringComparer.Ordinal).Count());
 
+        // {assignee} expansion has a single implementation — CatalogGenerator.ReadAutomations.
+        // This test consumes its output instead of re-deriving the slug set from conditions.
+        var expanded = CatalogGenerator.ReadAutomations(AgentsDir, "template")
+            .ToDictionary(info => info.Id, StringComparer.Ordinal);
+
+        // Round-trip: the typed model and the raw-JSON reader agree on the automation set,
+        // so neither representation can silently drop an automation.
+        Assert.Equal(
+            config.Automations.Select(a => a.Id).Order(StringComparer.Ordinal),
+            expanded.Keys.Order(StringComparer.Ordinal));
+
         foreach (var automation in config.Automations)
         {
-            foreach (var run in automation.Actions.OfType<RunAgentActionSpec>())
-            {
-                if (!run.Agent.Contains("{assignee}", StringComparison.Ordinal))
-                {
-                    Assert.True(
-                        File.Exists(Path.Combine(AgentsDir, run.Agent, "SKILL.md")),
-                        $"Automation '{automation.Id}' references missing agent '{run.Agent}'.");
-                    continue;
-                }
+            var runs = automation.Actions.OfType<RunAgentActionSpec>().ToList();
+            var info = expanded[automation.Id];
+            Assert.Equal(automation.Enabled, info.Enabled);
 
-                var assigneeCondition = Assert.Single(
-                    automation.Conditions.OfType<AssignedToConditionSpec>());
-                foreach (var slug in assigneeCondition.Slugs)
+            foreach (var run in runs)
+            {
+                if (run.Agent == "{assignee}")
                 {
-                    Assert.True(
-                        File.Exists(Path.Combine(AgentsDir, slug, "SKILL.md")),
-                        $"Automation '{automation.Id}' can resolve {{assignee}} to missing agent '{slug}'.");
+                    // Structural: expansion is only well-defined against exactly one
+                    // assignedTo condition, and it must never expand to nothing.
+                    var assigneeCondition = Assert.Single(
+                        automation.Conditions.OfType<AssignedToConditionSpec>());
+                    Assert.NotEmpty(assigneeCondition.Slugs);
+
+                    // The expansion covers every member the condition names.
+                    foreach (var slug in assigneeCondition.Slugs)
+                    {
+                        Assert.Contains(info.Bindings, binding => binding.Agent == slug);
+                    }
                 }
+                else
+                {
+                    // The placeholder appears whole or not at all: a partial "{assignee}"
+                    // would be dispatched literally instead of expanded.
+                    Assert.DoesNotContain("{assignee}", run.Agent, StringComparison.Ordinal);
+                }
+            }
+
+            // Typed model and expansion agree on whether this automation dispatches agents.
+            Assert.Equal(runs.Count > 0, info.Bindings.Count > 0);
+
+            // Every expanded binding resolves to a real template agent.
+            foreach (var binding in info.Bindings)
+            {
+                Assert.DoesNotContain("{assignee}", binding.Agent, StringComparison.Ordinal);
+                Assert.True(
+                    File.Exists(Path.Combine(AgentsDir, binding.Agent, "SKILL.md")),
+                    $"Automation '{automation.Id}' dispatches missing agent '{binding.Agent}'.");
             }
         }
     }
