@@ -15,6 +15,26 @@ public enum TeamJoinMode
 }
 
 /// <summary>
+/// What a run does when the join fires <b>without</b> every lane having reported — one branch
+/// failed, was cancelled, or the quorum went out of reach.
+/// </summary>
+public enum TeamPartialFailure
+{
+    /// <summary>
+    /// Hand the synthesizer what did report, plus a named list of every gap and its reason
+    /// (synthesize-with-gaps). The C4 behaviour and the default: a partial answer with its holes
+    /// stated is worth more than none.
+    /// </summary>
+    Synthesize,
+
+    /// <summary>
+    /// Skip the synthesizer entirely and close the run as failed, the gaps in its receipt. For
+    /// branches whose results are worthless unless all of them arrived.
+    /// </summary>
+    FailFast
+}
+
+/// <summary>
 /// Join semantics of a team definition. <see cref="Quorum"/> is only meaningful for
 /// <see cref="TeamJoinMode.Quorum"/> and must then name at least one task.
 /// </summary>
@@ -67,6 +87,25 @@ public sealed record TeamDefinition(string Slug, string Name, string Description
 
     /// <summary>Role that receives the join result. Null for filter-only definitions.</summary>
     public string? SynthesizerRole { get; init; }
+
+    /// <summary>
+    /// What the join does when it fires without every lane reporting. Defaults to
+    /// <see cref="TeamPartialFailure.Synthesize"/>, which is what every C4 team already did.
+    /// </summary>
+    public TeamPartialFailure PartialFailure { get; init; } = TeamPartialFailure.Synthesize;
+
+    /// <summary>
+    /// Most tasks of this run that may sit in the dispatch column at the same time. <c>0</c> (the
+    /// default) means unlimited — the run releases every task whose blockers resolved and lets the
+    /// host-wide <c>RunConcurrencyGate</c> be the only limit.
+    /// <para>
+    /// This is a <i>second</i>, per-run ceiling, not a replacement for the gate: a task is still
+    /// dispatched by the ordinary <c>ticketInColumn</c> automation and still queues behind the gate
+    /// and the file leases. Capping it here only decides how many sub-tickets are offered to that
+    /// path at once.
+    /// </para>
+    /// </summary>
+    public int MaxConcurrency { get; init; }
 
     /// <summary>True when the definition can fan out; false for the pure member filters.</summary>
     [JsonIgnore]
@@ -143,6 +182,9 @@ public sealed record TeamDefinition(string Slug, string Name, string Description
 
         if (SynthesizerRole is not null && FindRole(SynthesizerRole) is null)
             problems.Add($"Synthesizer role '{SynthesizerRole}' is not one of the team roles.");
+
+        if (MaxConcurrency < 0)
+            problems.Add($"Max concurrency {MaxConcurrency} is negative; use 0 for unlimited.");
 
         if (JoinPolicy.Mode == TeamJoinMode.Quorum)
         {

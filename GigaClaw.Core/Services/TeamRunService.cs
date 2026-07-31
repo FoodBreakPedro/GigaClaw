@@ -94,7 +94,25 @@ public sealed class TeamRunService
     {
         var definition = await ResolveDefinitionAsync(projectSlug, teamSlug)
             ?? throw new TeamStoreException("team_not_found", $"No team definition '{teamSlug}' in project '{projectSlug}'.");
+        return await StartRunAsync(projectSlug, definition, parentTicketId);
+    }
 
+    /// <summary>
+    /// Starts (or re-attaches to) a run of a definition handed in directly, rather than looked up by
+    /// slug. This is the entry point the <c>parallelRunAgents</c> action uses: the branches it
+    /// declares are materialized into an <b>ad-hoc</b> definition that is never stored as a
+    /// <c>TeamDefinition</c> row.
+    /// <para>
+    /// That works because a run already carries its own definition snapshot for restart-safe resume
+    /// (see <see cref="TeamRun"/>) — the snapshot, not a definition row, is what every later
+    /// reconcile reads. An ad-hoc run is therefore resumable on exactly the same terms as a named
+    /// one, and inherits fan-out, join policy, cancellation and synthesize-with-gaps unchanged.
+    /// </para>
+    /// Idempotency is still per (parent ticket, team slug), so an ad-hoc definition needs a stable
+    /// slug — see <c>ParallelRunAgentsActionSpec.RunSlug</c>.
+    /// </summary>
+    public async Task<TeamRun> StartRunAsync(string projectSlug, TeamDefinition definition, int parentTicketId)
+    {
         var existing = (await _teams.ListRunsAsync(projectSlug, parentTicketId, openOnly: true))
             .FirstOrDefault(run => string.Equals(run.TeamSlug, definition.Slug, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
@@ -155,11 +173,19 @@ public sealed class TeamRunService
     /// is finished by the next call rather than leaving a run with a truncated graph, and a run whose
     /// graph is already complete costs one query.
     /// </para>
+    /// <para>
+    /// <see cref="TeamDefinition.MaxConcurrency"/> is enforced here and in the release loop by the
+    /// same rule: an unblocked task is only born into the dispatch column while fewer than the cap
+    /// are already there. Over the cap it waits in the hold column like a blocked task and is
+    /// released by a later reconcile — the ceiling is expressed on the board, so it survives a
+    /// restart with everything else.
+    /// </para>
     /// </summary>
     private async Task<TeamRun> FanOutAsync(string projectSlug, TeamRun run)
     {
         var definition = run.Definition;
         var tasks = await _teams.ListTasksAsync(projectSlug, run.Id);
+        var inFlight = tasks.Count(task => task.Status == TeamTaskStatus.Dispatched);
         var done = new HashSet<string>(tasks.Select(task => task.TemplateKey), StringComparer.OrdinalIgnoreCase);
         foreach (var template in TopologicalOrder(definition))
         {
@@ -177,7 +203,11 @@ public sealed class TeamRunService
 
             // A task with blockers is born in the hold column: creating it in the dispatch column
             // would let the ordinary ticketInColumn automation start it before its blockers resolve.
-            var status = template.DependsOn.Count == 0 ? ReadyStatus : HoldStatus;
+            // A task over the concurrency ceiling is held for the same reason — the board is what
+            // starts agents, so "not yet" has to be a column, not a flag.
+            var status = template.DependsOn.Count == 0 && HasSlot(definition, inFlight)
+                ? ReadyStatus
+                : HoldStatus;
             var ticket = await _tickets.CreateTicketAsync(
                 projectSlug,
                 template.Title,
@@ -196,7 +226,10 @@ public sealed class TeamRunService
                 });
 
             if (status == ReadyStatus)
+            {
                 await _teams.UpdateTaskStatusAsync(projectSlug, task.Id, TeamTaskStatus.Dispatched);
+                inFlight++;
+            }
 
             done.Add(template.Key);
         }
@@ -237,7 +270,9 @@ public sealed class TeamRunService
 
         run = await FanOutAsync(projectSlug, run);
 
-        foreach (var task in await _teams.ListTasksAsync(projectSlug, run.Id))
+        var current = await _teams.ListTasksAsync(projectSlug, run.Id);
+        var inFlight = current.Count(task => task.Status == TeamTaskStatus.Dispatched);
+        foreach (var task in current)
         {
             if (!task.IsOpen) continue;
 
@@ -258,6 +293,9 @@ public sealed class TeamRunService
                 await _teams.UpdateTaskStatusAsync(
                     projectSlug, task.Id, TeamTaskStatus.Done,
                     resultHandoffRef: HandoffRefOf(ticket));
+                // A lane that just reported gives its slot back inside this same pass, so a capped
+                // run does not have to wait a whole tick to start the next branch.
+                if (task.Status == TeamTaskStatus.Dispatched) inFlight--;
                 continue;
             }
 
@@ -266,9 +304,15 @@ public sealed class TeamRunService
             // The one readiness rule in the system. An unresolved blocker holds the task where it is.
             if (!ConditionEvaluators.DependenciesResolved(Readiness, ticket.BlockedBy)) continue;
 
+            // Everything this task waits on is resolved, but the run may already have as many
+            // branches in the dispatch column as it is allowed. It stays in the hold column and the
+            // next reconcile picks it up when a slot frees.
+            if (!HasSlot(run.Definition, inFlight)) continue;
+
             if (!string.Equals(ticket.Status, ReadyStatus, StringComparison.OrdinalIgnoreCase))
                 await MoveAsync(projectSlug, ticket.Id, ReadyStatus);
             await _teams.UpdateTaskStatusAsync(projectSlug, task.Id, TeamTaskStatus.Dispatched);
+            inFlight++;
         }
 
         return await JoinAsync(projectSlug, runId, parent);
@@ -304,6 +348,14 @@ public sealed class TeamRunService
         await ReconcileRunAsync(projectSlug, run.Id);
         return failed;
     }
+
+    /// <summary>
+    /// Whether the run may put one more task in the dispatch column. A definition with
+    /// <see cref="TeamDefinition.MaxConcurrency"/> of 0 is unlimited, which is what every team
+    /// declared before C5 is.
+    /// </summary>
+    private static bool HasSlot(TeamDefinition definition, int inFlight) =>
+        definition.MaxConcurrency <= 0 || inFlight < definition.MaxConcurrency;
 
     // ── The join ────────────────────────────────────────────────────────────
 
@@ -351,6 +403,21 @@ public sealed class TeamRunService
         var synthesizer = run.SynthesizerRole is null ? null : run.Definition.FindRole(run.SynthesizerRole);
         if (synthesizer is null)
             return await FinalizeAsync(projectSlug, runId, parent);
+
+        // Fail-fast: the branches that did report are worthless without the ones that did not, so
+        // there is nothing worth synthesizing. The run closes on FinalizeAsync's receipt, which
+        // names every gap — the decision changes what happens next, never whether it is recorded.
+        if (!verdict.Success && run.Definition.PartialFailure == TeamPartialFailure.FailFast)
+        {
+            await NoteAsync(
+                projectSlug, parent.Id,
+                $"Team run #{runId} ({run.TeamSlug}) is fail-fast: skipping synthesis by '{synthesizer.AgentSlug}' "
+                + $"because {verdict.Missing.Count} of {verdict.Reported.Count + verdict.Missing.Count} lane(s) did not report.");
+            _logger.LogInformation(
+                "[{Slug}] team run #{RunId} fail-fast: synthesizer '{Agent}' not dispatched",
+                projectSlug, runId, synthesizer.AgentSlug);
+            return await FinalizeAsync(projectSlug, runId, parent);
+        }
 
         return await DispatchSynthesizerAsync(projectSlug, run, parent, synthesizer, verdict);
     }

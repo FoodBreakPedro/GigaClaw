@@ -125,6 +125,11 @@ scheduler.
   fanning out twice, so it is safe under a repeating `ticketInColumn` trigger. A filter-only team is
   refused, and so is a role whose agent is not a member of the project — checked before the run row
   exists, so a misconfigured team never leaves half a graph behind.
+- **Starting an ad-hoc run** — `StartRunAsync(slug, TeamDefinition, parentTicketId)` takes a
+  definition directly instead of looking one up. This is what the `parallelRunAgents` action uses:
+  its branches are translated into an inline definition (`ParallelRunPlan`) that is *never stored as
+  a `TeamDefinition` row*. It resumes anyway, because the run's own snapshot — not a definition row —
+  is what every later reconcile reads.
 - **Fan-out** — one sub-ticket per task template, titled from the template, described by its
   `Prompt`, assigned to the role's agent, parented to the run's ticket. Templates are materialized in
   dependency order because an edge can only point at a sibling that already exists. A task with no
@@ -132,6 +137,12 @@ scheduler.
   with blockers is born in **Blocked**, so the ordinary dispatch cannot start it early. Fan-out is
   re-entrant: a run interrupted mid-fan-out is completed by the next reconcile rather than left with
   a truncated graph.
+- **Concurrency ceiling** — `TeamDefinition.MaxConcurrency` (0 = unlimited) caps how many of a run's
+  tasks may sit in the dispatch column at once. Over the cap, an unblocked task waits in **Blocked**
+  like a blocked one and is released when a lane reports. The ceiling is expressed as a column, not a
+  flag, so it survives a restart with everything else. It is a *second* limit, not a replacement for
+  the host-wide `RunConcurrencyGate` or the R4 file leases: a branch is still started by the ordinary
+  per-agent automation and still queues behind both.
 - **Dispatch ordering** — `ReconcileRunAsync` releases a task (Blocked → Todo) exactly when
   `ConditionEvaluators.DependenciesResolved` — the evaluator behind the `dependenciesResolved`
   condition — says every live `blockedBy` edge of its ticket is resolved. That is the only readiness
@@ -189,9 +200,20 @@ to `Joining` with `SynthesisTicketId` set. Its description is the synthesizer's 
   failed or was cancelled, and the recorded reason, followed by an instruction not to present their
   subject matter as covered.
 
-Partial failure is an outcome, not an error: the synthesizer always runs, and it always learns which
-lanes are absent and why. A synthesis that silently drops a failed lane is worse than no synthesis,
-because it reads as complete.
+Partial failure is an outcome, not an error: by default the synthesizer always runs, and it always
+learns which lanes are absent and why. A synthesis that silently drops a failed lane is worse than no
+synthesis, because it reads as complete.
+
+`TeamDefinition.PartialFailure` chooses between the two honest answers when the join fires without
+every lane reporting:
+
+| Mode | The run does |
+|---|---|
+| `Synthesize` (default) | dispatches the synthesizer with the results **and** the named gaps — synthesize-with-gaps |
+| `FailFast` | skips the synthesizer and closes `Failed`, the gaps in its receipt |
+
+Both leave a receipt on the parent ticket, and `FailFast` leaves a second one naming the synthesizer
+it deliberately did not dispatch. The choice changes what happens next, never whether it is recorded.
 
 `TeamTask.ResultHandoffRef` is written the moment a lane completes, as `ticket-<id>/run-<runId>` —
 the marker identity of the handoff comment the contract calls authoritative, not a copy of it.
@@ -222,7 +244,9 @@ nothing about a run ever lived outside the project database.
 
 ## Entry points
 - `TeamStore` and `TeamRunService`, DI-registered singletons in `GigaClaw.Web/Program.cs`.
-- The `startTeamRun` automation action, for starting a run from the board.
+- The `startTeamRun` automation action, for starting a run of a named team from the board, and
+  `parallelRunAgents` for one whose branches are declared inline
+  (`GigaClaw.Core/Automation/ParallelRunPlan.cs` translates the second into the first's shape).
 - `TeamRunService.ReconcileProjectAsync(slug)` (engine tick / restart), `FailTaskAsync` and
   `CancelRunAsync` / `CancelRunsForParentAsync`.
 - `TeamJoinEvaluator.Evaluate` / `Succeeded` for the join decision, with no I/O.

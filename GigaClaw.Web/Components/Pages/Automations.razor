@@ -650,6 +650,10 @@ else
         "createTicket" => new CreateTicketActionSpec(),
         "httpRequest" => new HttpRequestActionSpec(),
         "startTeamRun" => new StartTeamRunActionSpec { Team = "" },
+        "parallelRunAgents" => new ParallelRunAgentsActionSpec
+        {
+            Branches = { new ParallelBranchSpec { Agent = _skills.FirstOrDefault() ?? "programmer" } }
+        },
         _ => throw new NotSupportedException($"Unknown action type key '{type}'. Register it in Automations.razor BuildAction."),
     };
 
@@ -744,6 +748,11 @@ else
         CreateTicketActionSpec s => s.Title,
         ExecutePowerShellActionSpec => L["ActionExecutePowerShell"],
         HttpRequestActionSpec s => string.IsNullOrWhiteSpace(s.Url) ? L["ActionHttpRequest"] : $"{s.Method} {s.Url}",
+        StartTeamRunActionSpec s => string.IsNullOrWhiteSpace(s.Team) ? L["ActionStartTeamRun"] : s.Team,
+        ParallelRunAgentsActionSpec s => s.Branches.Count == 0
+            ? L["ActionParallelRunAgents"]
+            : string.Join(" ∥ ", s.Branches.Select(b => b.Key ?? b.Agent)),
+        EnqueueMergeActionSpec => L["ActionEnqueueMerge"],
         _ => throw new NotSupportedException($"No UI description for action type {a.GetType().Name}. Register it in Automations.razor DescribeAction."),
     };
 }

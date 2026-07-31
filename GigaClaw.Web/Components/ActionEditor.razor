@@ -18,6 +18,7 @@
             <option value="createTicket">@L["ActionCreateTicket"]</option>
             <option value="httpRequest">@L["ActionHttpRequest"]</option>
             <option value="startTeamRun">@L["ActionStartTeamRun"]</option>
+            <option value="parallelRunAgents">@L["ActionParallelRunAgents"]</option>
             <option value="enqueueMerge">@L["ActionEnqueueMerge"]</option>
         </select>
     </label>
@@ -232,6 +233,68 @@
             </label>
             <p class="field-hint">@L["StrHint"]</p>
             break;
+        case ParallelRunAgentsActionSpec s:
+            @foreach (var branch in s.Branches)
+            {
+                <div class="node-editor-row" @key="branch">
+                    <label>@L["PraBranchAgent"]
+                        <select value="@branch.Agent" @onchange="e => branch.Agent = (string)e.Value!">
+                            @foreach (var m in Members) { <option value="@m">@m</option> }
+                            @if (!Members.Contains(branch.Agent) && !string.IsNullOrEmpty(branch.Agent))
+                            {
+                                <option value="@branch.Agent">@branch.Agent @L["ModelCustom"]</option>
+                            }
+                        </select>
+                    </label>
+                    <label>@L["PraBranchKey"]
+                        <input placeholder="@L["PraBranchKeyPlaceholder"]" value="@(branch.Key ?? "")"
+                               @onchange="e => branch.Key = string.IsNullOrWhiteSpace((string?)e.Value) ? null : (string)e.Value!" />
+                    </label>
+                    <label>@L["PraBranchTitle"]
+                        <input value="@(branch.Title ?? "")"
+                               @onchange="e => branch.Title = string.IsNullOrWhiteSpace((string?)e.Value) ? null : (string)e.Value!" />
+                    </label>
+                    <label>@L["PraBranchPrompt"]
+                        <textarea rows="2" value="@(branch.Prompt ?? "")"
+                                  @onchange="e => branch.Prompt = string.IsNullOrWhiteSpace((string?)e.Value) ? null : (string)e.Value!"></textarea>
+                    </label>
+                    <button class="delete-btn" @onclick="() => s.Branches.Remove(branch)">@L["PraRemoveBranch"]</button>
+                </div>
+            }
+            <button @onclick="() => s.Branches.Add(NewBranch())">@L["PraAddBranch"]</button>
+            <label>@L["PraMaxConcurrency"]
+                <input type="number" min="0" @bind="s.MaxConcurrency" />
+            </label>
+            <label>@L["PraJoin"]
+                <select value="@s.Join" @onchange="e => s.Join = (string)e.Value!">
+                    <option value="allDone">@L["PraJoinAllDone"]</option>
+                    <option value="quorum">@L["PraJoinQuorum"]</option>
+                    <option value="firstFailure">@L["PraJoinFirstFailure"]</option>
+                </select>
+            </label>
+            @if (string.Equals(s.Join, "quorum", StringComparison.OrdinalIgnoreCase))
+            {
+                <label>@L["PraQuorum"]
+                    <input type="number" min="1" @bind="s.Quorum" />
+                </label>
+            }
+            <label>@L["PraSynthesizer"]
+                <select value="@(s.Synthesizer ?? "")" @onchange="e => s.Synthesizer = string.IsNullOrEmpty((string?)e.Value) ? null : (string)e.Value!">
+                    <option value="">@L["PraSynthesizerNone"]</option>
+                    @foreach (var m in Members) { <option value="@m">@m</option> }
+                </select>
+            </label>
+            <label>@L["PraOnPartialFailure"]
+                <select value="@s.OnPartialFailure" @onchange="e => s.OnPartialFailure = (string)e.Value!">
+                    <option value="synthesize">@L["PraPartialSynthesize"]</option>
+                    <option value="failFast">@L["PraPartialFailFast"]</option>
+                </select>
+            </label>
+            <label>@L["PraRunSlug"]
+                <input placeholder="parallel-run" @bind="s.RunSlug" />
+            </label>
+            <p class="field-hint">@L["PraHint"]</p>
+            break;
         case EnqueueMergeActionSpec s:
             <label>@L["EmIntegrationCommand"]
                 <input placeholder="@L["EmIntegrationCommandPlaceholder"]" value="@(s.IntegrationCommand ?? "")"
@@ -287,9 +350,15 @@
         CreateTicketActionSpec => "createTicket",
         HttpRequestActionSpec => "httpRequest",
         StartTeamRunActionSpec => "startTeamRun",
+        ParallelRunAgentsActionSpec => "parallelRunAgents",
         EnqueueMergeActionSpec => "enqueueMerge",
         _ => throw new NotSupportedException($"No UI mapping for action type {Action.GetType().Name}. Register it in ActionEditor.razor."),
     };
+
+    // A branch always starts on a real member: an empty agent is refused when the action runs, and
+    // the editor should not be the place that produces one.
+    private ParallelBranchSpec NewBranch() =>
+        new() { Agent = Members.FirstOrDefault() ?? "programmer" };
 
     private static string JoinGroups(List<string> items) => string.Join(", ", items);
     private static List<string> SplitGroups(string? value) =>
@@ -328,6 +397,7 @@
             "createTicket" => new CreateTicketActionSpec(),
             "httpRequest" => new HttpRequestActionSpec(),
             "startTeamRun" => new StartTeamRunActionSpec { Team = "" },
+            "parallelRunAgents" => new ParallelRunAgentsActionSpec { Branches = { NewBranch() } },
             "enqueueMerge" => new EnqueueMergeActionSpec(),
             _ => throw new NotSupportedException($"Unknown action type key '{e.Value}'. Register it in ActionEditor.razor."),
         };

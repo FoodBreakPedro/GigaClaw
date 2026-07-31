@@ -516,6 +516,9 @@ internal sealed class ActionExecutor
                     case StartTeamRunActionSpec str:
                         await ExecuteStartTeamRunActionAsync(rt, firing, str);
                         break;
+                    case ParallelRunAgentsActionSpec pra:
+                        await ExecuteParallelRunAgentsActionAsync(rt, firing, pra);
+                        break;
                     case EnqueueMergeActionSpec em when firing.TicketId is not null:
                         await ExecuteEnqueueMergeActionAsync(rt, firing, em, ct);
                         break;
@@ -831,6 +834,9 @@ internal sealed class ActionExecutor
                     // A team run started after a runAgent is the normal shape: the producer decides
                     // the work needs a team, then the team fans out behind its ticket.
                     case StartTeamRunActionSpec str: await ExecuteStartTeamRunActionAsync(rt, firing, str); break;
+                    // Same reasoning one level up: a producer finishes, then fans its output out
+                    // into parallel branches behind the same ticket.
+                    case ParallelRunAgentsActionSpec pra: await ExecuteParallelRunAgentsActionAsync(rt, firing, pra); break;
                     // enqueueMerge after a runAgent is the normal shape too: the committer role
                     // enqueues the ticket's worktree branch once the preceding run finished.
                     case EnqueueMergeActionSpec em when firing.TicketId is not null: await ExecuteEnqueueMergeActionAsync(rt, firing, em, ct); break;
@@ -1210,6 +1216,50 @@ internal sealed class ActionExecutor
                 await _tickets.AddActivityAsync(
                     rt.Slug, firing.TicketId.Value,
                     $"Team run '{spec.Team}' could not be started: {exception.Message}", "automation");
+            }
+            catch { /* non-blocking */ }
+        }
+    }
+
+    /// <summary>
+    /// Fans the firing ticket out into the declared parallel branches (C5 part 1).
+    /// <para>
+    /// This arm deliberately starts <b>no agent process</b>. It translates the spec into an ad-hoc
+    /// team definition (<see cref="ParallelRunPlan"/>) and hands it to <see cref="TeamRunService"/>,
+    /// which materializes one sub-ticket per branch in the dispatch column. The branches are then
+    /// started by the ordinary per-agent <c>ticketInColumn</c> automations — the normal dispatch
+    /// path, which is what makes each branch queue behind <c>RunConcurrencyGate</c> and take its
+    /// file leases like every other run. A second execution engine here would have bypassed both.
+    /// </para>
+    /// </summary>
+    private async Task ExecuteParallelRunAgentsActionAsync(
+        ProjectRuntime rt, TriggerFiring firing, ParallelRunAgentsActionSpec spec)
+    {
+        if (firing.TicketId is null)
+        {
+            // Branches are sub-tickets of the firing ticket; a ticketless firing has no parent to
+            // hang them on. Skip rather than throw — the rest of the chain is still meaningful.
+            _logger.LogWarning("parallelRunAgents: no ticket in the firing — skipping {Count} branch(es)", spec.Branches.Count);
+            return;
+        }
+
+        try
+        {
+            var definition = ParallelRunPlan.ToDefinition(spec);
+            var run = await _teamRuns.StartRunAsync(rt.Slug, definition, firing.TicketId.Value);
+            _logger.LogInformation(
+                "parallelRunAgents: run #{RunId} is {Status} with {Branches} branch(es) (join {Join}, max concurrency {Max}) on ticket #{TicketId} in {Project}",
+                run.Id, run.Status, definition.TaskGraph.Count, definition.JoinPolicy.Mode,
+                definition.MaxConcurrency, firing.TicketId, rt.Slug);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "parallelRunAgents failed in project {Project}", rt.Slug);
+            try
+            {
+                await _tickets.AddActivityAsync(
+                    rt.Slug, firing.TicketId.Value,
+                    $"Parallel branches could not be started: {exception.Message}", "automation");
             }
             catch { /* non-blocking */ }
         }
