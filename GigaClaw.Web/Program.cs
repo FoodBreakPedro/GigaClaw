@@ -104,6 +104,19 @@ builder.Services.AddSingleton<GigaClaw.Web.Services.HermesAgentService>();
 // automation posting to a webhook should see the real status, not a silently followed 3xx.
 builder.Services.AddHttpClient(GigaClaw.Core.Automation.HttpRequestActionSpec.HttpClientName)
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+// C7/U5 GitHub surface (doc/github-surface.md). Entirely opt-in: with no per-project config in
+// settings.json nothing here ever reaches the network. Every call goes through GitHubApiClient,
+// which runs the same OutboundApprovalGate preflight the httpRequest action does — the gate is
+// constructed from the owner's settings.json exactly as AutomationEngine constructs its own.
+builder.Services.AddHttpClient(GigaClaw.Core.Github.GitHubApiClient.HttpClientName);
+builder.Services.AddSingleton(new GigaClaw.Core.Automation.Policy.OutboundApprovalGate(
+    appSettings.GetApprovedOutboundHosts));
+builder.Services.AddSingleton<
+    GigaClaw.Core.Automation.Policy.IOutboundReceiptSink,
+    GigaClaw.Core.Automation.Policy.TicketOutboundReceiptSink>();
+builder.Services.AddSingleton<GigaClaw.Core.Github.GitHubApiClient>();
+builder.Services.AddSingleton<GigaClaw.Core.Github.GitHubIssueLinkStore>();
+builder.Services.AddSingleton<GigaClaw.Core.Github.GitHubIssueSyncService>();
 builder.Services.AddSingleton<GigaClaw.Web.Services.UpdateCheckService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GigaClaw.Web.Services.UpdateCheckService>());
 // Anonymous daily usage heartbeat (see README "Telemetry" and doc/telemetry.md).

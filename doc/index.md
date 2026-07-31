@@ -28,3 +28,4 @@ For a high-level overview see the root [README.md](../README.md). For repo layou
 - [Local models (Ollama)](./local-models.md) — dispatching agents to a local Ollama model via the Anthropic-compat endpoint.
 - [Hermes Agent chat](./hermes-agent.md) — embedding a local Hermes API Server channel as a tool-capable chat target.
 - [Local media creation](./local-media.md) — governed OpenMontage, ComfyUI, and Phosphene image/video jobs with durable execution and review gates.
+- [GitHub surface](./github-surface.md) — optional per-project GitHub integration: labeled issue import, PR-comment owner feedback, and CI status as a trigger.

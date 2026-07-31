@@ -149,6 +149,97 @@ public class AppSettingsService
         return _data.ApprovedMergeProjects ?? [];
     }
 
+    /// <summary>
+    /// C7/U5 per-project GitHub configuration. Returns null for every project that has not opted
+    /// in — local-first is the default, and an absent entry is how a project says so.
+    /// Re-reads the file on every call for the same reason
+    /// <see cref="GetApprovedOutboundHosts"/> does: an owner edit must take effect on the next
+    /// poll without an engine restart.
+    /// </summary>
+    public Github.GitHubProjectConfig? GetGitHubConfig(string projectSlug)
+    {
+        if (string.IsNullOrWhiteSpace(projectSlug)) return null;
+        Load();
+        if (_data.GitHub is null || !_data.GitHub.TryGetValue(projectSlug, out var stored) || stored is null)
+            return null;
+        return new Github.GitHubProjectConfig
+        {
+            Enabled = stored.Enabled,
+            Owner = stored.Owner ?? "",
+            Repo = stored.Repo ?? "",
+            ImportLabel = stored.ImportLabel ?? "gigaclaw",
+            ImportStatus = string.IsNullOrWhiteSpace(stored.ImportStatus) ? "Backlog" : stored.ImportStatus,
+            CommentOnIssueWhenTicketDone = stored.CommentOnIssueWhenTicketDone,
+            CloseIssueWhenTicketDone = stored.CloseIssueWhenTicketDone,
+            DoneStatuses = stored.DoneStatuses is { Count: > 0 } ? stored.DoneStatuses : ["Done"],
+            OwnerLogins = stored.OwnerLogins ?? [],
+            ApiBaseUrl = string.IsNullOrWhiteSpace(stored.ApiBaseUrl) ? "https://api.github.com" : stored.ApiBaseUrl,
+        };
+    }
+
+    /// <summary>
+    /// The project's GitHub personal access token, for server-side callers only. Never returned by
+    /// the API, never rendered, never written to a ticket, a comment, a run prompt or a log line —
+    /// <see cref="GitHubTokenConfigured"/> is what every caller that only needs to know "is it set"
+    /// must use instead. The environment variable exists for headless deployments and mirrors
+    /// <see cref="GetHermesApiKey"/>.
+    /// </summary>
+    public string? GetGitHubToken(string projectSlug)
+    {
+        var perProject = Environment.GetEnvironmentVariable(
+            $"GIGACLAW_GITHUB_TOKEN_{projectSlug?.ToUpperInvariant().Replace('-', '_')}");
+        if (!string.IsNullOrWhiteSpace(perProject)) return perProject;
+
+        var global = Environment.GetEnvironmentVariable("GIGACLAW_GITHUB_TOKEN");
+        if (!string.IsNullOrWhiteSpace(global)) return global;
+
+        if (string.IsNullOrWhiteSpace(projectSlug)) return null;
+        Load();
+        if (_data.GitHub is null || !_data.GitHub.TryGetValue(projectSlug, out var stored)) return null;
+        return string.IsNullOrWhiteSpace(stored?.Token) ? null : stored.Token;
+    }
+
+    public bool GitHubTokenConfigured(string projectSlug) =>
+        !string.IsNullOrWhiteSpace(GetGitHubToken(projectSlug));
+
+    /// <summary>
+    /// Writes the project's GitHub configuration. A null/blank <paramref name="token"/> keeps the
+    /// previously stored one, so a settings round-trip never has to carry a secret back and forth
+    /// — the same rule <see cref="ConfigureHermes"/> follows.
+    /// </summary>
+    public void ConfigureGitHub(string projectSlug, Github.GitHubProjectConfig config, string? token)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectSlug);
+        ArgumentNullException.ThrowIfNull(config);
+        Load();
+        _data.GitHub ??= new();
+        if (!_data.GitHub.TryGetValue(projectSlug, out var stored) || stored is null)
+            stored = _data.GitHub[projectSlug] = new GitHubProjectData();
+
+        stored.Enabled = config.Enabled;
+        stored.Owner = config.Owner?.Trim() ?? "";
+        stored.Repo = config.Repo?.Trim() ?? "";
+        stored.ImportLabel = config.ImportLabel?.Trim() ?? "";
+        stored.ImportStatus = config.ImportStatus?.Trim() ?? "Backlog";
+        stored.CommentOnIssueWhenTicketDone = config.CommentOnIssueWhenTicketDone;
+        stored.CloseIssueWhenTicketDone = config.CloseIssueWhenTicketDone;
+        stored.DoneStatuses = config.DoneStatuses?.ToList() ?? ["Done"];
+        stored.OwnerLogins = config.OwnerLogins?.ToList() ?? [];
+        stored.ApiBaseUrl = config.ApiBaseUrl?.Trim() ?? "https://api.github.com";
+        if (!string.IsNullOrWhiteSpace(token))
+            stored.Token = token.Trim();
+        Save();
+    }
+
+    /// <summary>Forgets a project's GitHub configuration and its stored token.</summary>
+    public void RemoveGitHubConfig(string projectSlug)
+    {
+        if (string.IsNullOrWhiteSpace(projectSlug)) return;
+        Load();
+        if (_data.GitHub is null || !_data.GitHub.Remove(projectSlug)) return;
+        Save();
+    }
+
     private void Load()
     {
         if (!File.Exists(_settingsPath)) return;
@@ -179,5 +270,26 @@ public class AppSettingsService
         public string? HermesApiKey { get; set; }
         public List<string>? ApprovedOutboundHosts { get; set; }
         public List<string>? ApprovedMergeProjects { get; set; }
+        /// <summary>C7/U5: per-project GitHub surface config, keyed by project slug.</summary>
+        public Dictionary<string, GitHubProjectData>? GitHub { get; set; }
+    }
+
+    /// <summary>
+    /// On-disk shape of a project's GitHub settings. <see cref="Token"/> never leaves this file
+    /// except through <see cref="GetGitHubToken"/>, which only server-side request builders call.
+    /// </summary>
+    private class GitHubProjectData
+    {
+        public bool Enabled { get; set; }
+        public string? Owner { get; set; }
+        public string? Repo { get; set; }
+        public string? ImportLabel { get; set; }
+        public string? ImportStatus { get; set; }
+        public bool CommentOnIssueWhenTicketDone { get; set; }
+        public bool CloseIssueWhenTicketDone { get; set; }
+        public List<string>? DoneStatuses { get; set; }
+        public List<string>? OwnerLogins { get; set; }
+        public string? ApiBaseUrl { get; set; }
+        public string? Token { get; set; }
     }
 }
