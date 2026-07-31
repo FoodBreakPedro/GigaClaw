@@ -5,6 +5,28 @@
 
 ---
 
+## Update 2026-07-31 — R3 outbound criterion enforced
+
+The last open R3 criterion — host-side `httpRequest` governed by trusted owner approval — is now
+enforced. `ActionExecutor.ExecuteHttpRequestAsync` calls `OutboundApprovalGate.Evaluate` on the
+rendered URL before any request is built; `AutomationEngine` constructs the gate over
+`AppSettingsService.GetApprovedOutboundHosts()`, whose trust anchor is the owner's app-level
+`%APPDATA%/GigaClaw/settings.json` (`ApprovedOutboundHosts`) — outside every workspace, so no
+agent-mutable label or file can grant approval. The list is re-read from disk on every execution
+(hot-reloadable, never cached at engine start), and an `ActionExecutor` constructed without a gate
+denies all outbound (fail closed). Without approval the action is a dry run: nothing is sent, the
+denial is logged, and a queryable `outbound-denial/v1` ticket-comment receipt names agent (the
+automation id, or the preceding run's agent for post-run actions), action, target, host, rule
+(`outbound-approval`), and reason — the same "denials produce receipts just like warnings" contract
+as the `policy-violation/v1` run events above. A dry run honors `abortOnFailure` so downstream
+actions cannot act on a phantom success, but never fires the spec's `FailureComment`/`FailureStatus`
+(an unapproved host is configured behavior, not a dispatch failure). Proven by
+`ActionExecutorOutboundApprovalTests` (dry-run/send boundary, per-execution hot reload, receipt
+shape, and the shipped `cms-dispatch-on-done` automation end-to-end with aligned labels) on top of
+the 16 `OutboundApprovalGateTests`.
+
+---
+
 ## Executive Summary & Principles
 
 1. **Fail-Closed Policy Framework**: The runtime `ContractPolicy` engine evaluates tool calls against agent risk classes, write globs (`allowedWriteGlobs`), and ticket exit states (`ticketExit`).

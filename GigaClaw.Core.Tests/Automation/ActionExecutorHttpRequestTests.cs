@@ -64,7 +64,11 @@ public class ActionExecutorHttpRequestTests
             new RunStateManager(runs, cost, tickets, NullLogger.Instance),
             new FakeHttpClientFactory(handler),
             TestTeamRuns.For(projects, tickets),
-            NullLogger.Instance);
+            NullLogger.Instance,
+            // These tests cover httpRequest mechanics, not outbound approval — approve the
+            // fixture host so the R3 preflight stays out of the way. The approval boundary
+            // itself is covered by ActionExecutorOutboundApprovalTests.
+            new GigaClaw.Core.Automation.Policy.OutboundApprovalGate(() => ["cms.example"]));
 
         var ticket = await tickets.CreateTicketAsync(project.Slug, "Publish the launch post", description: description, status: "Review");
 

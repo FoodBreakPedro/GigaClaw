@@ -67,7 +67,10 @@ public class ActionExecutorPowerShellChainTests
             new RunStateManager(runs, cost, tickets, NullLogger.Instance),
             httpClientFactory ?? FakeHttpClientFactory.Unused,
             TestTeamRuns.For(projects, tickets),
-            NullLogger.Instance);
+            NullLogger.Instance,
+            // These tests cover chain-value mechanics, not outbound approval — approve the
+            // fixture host so the R3 preflight stays out of the way.
+            new GigaClaw.Core.Automation.Policy.OutboundApprovalGate(() => ["cms.example"]));
 
         var ticket = await tickets.CreateTicketAsync(project.Slug, "Publish the launch post", status: "Review");
 

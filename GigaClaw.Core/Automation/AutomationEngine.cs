@@ -1,6 +1,7 @@
 using System.Net.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using GigaClaw.Core.Automation.Policy;
 using GigaClaw.Core.Automation.Triggers;
 using GigaClaw.Core.Services;
 
@@ -27,6 +28,7 @@ public sealed class AutomationEngine : BackgroundService
         LocalizationService loc,
         TeamRunService teamRuns,
         IHttpClientFactory httpClientFactory,
+        AppSettingsService appSettings,
         ILogger<AutomationEngine> logger)
     {
         _runs = runs;
@@ -34,7 +36,11 @@ public sealed class AutomationEngine : BackgroundService
 
         _runtimeManager = new ProjectRuntimeManager(store, triggerState, projects, logger);
         var runState = new RunStateManager(runs, cost, tickets, logger);
-        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger);
+        // U17/R3: the outbound trust anchor is the owner's app-level settings.json, read per
+        // execution (never cached at engine start) so an owner approval takes effect without a
+        // restart. Agents can set labels; they cannot reach this file.
+        var outboundGate = new OutboundApprovalGate(appSettings.GetApprovedOutboundHosts);
+        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger, outboundGate);
         _triggerHandler = new TriggerHandler(projects, _runtimeManager, executor, tickets, members, sessions, runs, teamRuns, logger);
 
         store.OnConfigChangedOnDisk += slug =>

@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using GigaClaw.Core.Automation.Triggers;
 using GigaClaw.Core.Automation.Handoffs;
+using GigaClaw.Core.Automation.Policy;
 using GigaClaw.Core.Automation.Verdicts;
 using GigaClaw.Core.Services;
 
@@ -28,6 +29,7 @@ internal sealed class ActionExecutor
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TeamRunService _teamRuns;
     private readonly ILogger _logger;
+    private readonly OutboundApprovalGate _outboundGate;
 
     // Serializes in-process git operations per repository. Keyed by the git cwd so one
     // repo's slow/hung git (bounded by ProcessRunner's timeout) can't stall other projects.
@@ -53,7 +55,8 @@ internal sealed class ActionExecutor
         RunStateManager runState,
         IHttpClientFactory httpClientFactory,
         TeamRunService teamRuns,
-        ILogger logger)
+        ILogger logger,
+        OutboundApprovalGate? outboundGate = null)
     {
         _tickets = tickets;
         _members = members;
@@ -68,6 +71,9 @@ internal sealed class ActionExecutor
         _httpClientFactory = httpClientFactory;
         _teamRuns = teamRuns;
         _logger = logger;
+        // Fail closed: a caller that never wired a gate gets deny-all, not allow-all. Production
+        // (AutomationEngine) passes a gate anchored on the owner's app settings.json.
+        _outboundGate = outboundGate ?? new OutboundApprovalGate(static () => []);
     }
 
     // ── Condition evaluation ────────────────────────────────────────────────
@@ -482,7 +488,7 @@ internal sealed class ActionExecutor
                     }
                     case HttpRequestActionSpec hr:
                     {
-                        var abort = await ExecuteHttpRequestAsync(hr, rt.Slug, firing, state, ct);
+                        var abort = await ExecuteHttpRequestAsync(hr, rt.Slug, firing, state, automation.Id, ct);
                         if (abort) return state.LastRun;
                         break;
                     }
@@ -774,7 +780,7 @@ internal sealed class ActionExecutor
                     case SetLabelsActionSpec sl when firing.TicketId is not null: await ExecuteSetLabelsActionAsync(rt, firing, sl); break;
                     case AssignTicketActionSpec at when firing.TicketId is not null: await ExecuteAssignTicketActionAsync(rt, firing, at); break;
                     case ExecutePowerShellActionSpec ps: await ExecutePowerShellAsync(ps, rt.Workspace!, rt.Slug, firing, state, ct); break;
-                    case HttpRequestActionSpec hr: await ExecuteHttpRequestAsync(hr, rt.Slug, firing, state, ct); break;
+                    case HttpRequestActionSpec hr: await ExecuteHttpRequestAsync(hr, rt.Slug, firing, state, precedingRun.AgentName, ct); break;
                     // createTicket was missing here: a createTicket placed after a runAgent used to
                     // fall through the (previously default-less) switch and silently do nothing.
                     case CreateTicketActionSpec cta: await ExecuteCreateTicketActionAsync(rt, cta, state); break;
@@ -1377,6 +1383,7 @@ internal sealed class ActionExecutor
         string slug,
         TriggerFiring firing,
         ActionState? state,
+        string actor,
         CancellationToken ct)
     {
         // Substitution always targets locals — the spec objects are the shared, mutable instances
@@ -1428,6 +1435,25 @@ internal sealed class ActionExecutor
         {
             _logger.LogWarning("httpRequest: '{Url}' is not an absolute http(s) URL — skipping", url);
             return await FailAsync($"invalid URL '{url}'");
+        }
+
+        // U17/R3 host-side preflight. The trust anchor is the owner's app-level settings.json —
+        // never a ticket label, which agents holding board-write can set themselves. Without a
+        // trusted approval for this host, the action is a dry run: logged and receipted, but
+        // nothing leaves the process. The approved-host list is read per execution, so an owner
+        // edit takes effect on the next firing without an engine restart.
+        var approval = _outboundGate.Evaluate(url);
+        if (!approval.MaySend)
+        {
+            var reason = approval.Reason ?? "no trusted outbound approval";
+            Publish("http.dryRun", "true");
+            Publish("http.error", reason);
+            await WriteOutboundDenialReceiptAsync(slug, firing, actor, url, uri.Host, reason);
+            // Not sent means no response: actions downstream that assume a successful send must
+            // not run when the spec opted into abort-on-failure. The receipt above — not the
+            // spec's FailureComment/FailureStatus — is the record, because a dry run is the
+            // configured behavior of an unapproved host, not a dispatch failure.
+            return spec.AbortOnFailure;
         }
 
         var timeout = TimeSpan.FromSeconds(spec.TimeoutSeconds > 0 ? spec.TimeoutSeconds : 30);
@@ -1548,6 +1574,40 @@ internal sealed class ActionExecutor
         {
             _logger.LogWarning(ex, "httpRequest to {Url} failed; abortOnFailure={Abort}", uri, spec.AbortOnFailure);
             return await FailAsync(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Writes the queryable denial receipt for an outbound dry run: a structured
+    /// <c>outbound-denial/v1</c> ticket comment naming agent, action, target, and rule —
+    /// the same "denials produce receipts just like warnings" contract as the R2
+    /// <c>policy-violation/v1</c> run events. Firings without a ticket still get the log line.
+    /// </summary>
+    private async Task WriteOutboundDenialReceiptAsync(
+        string slug, TriggerFiring firing, string actor, string url, string host, string reason)
+    {
+        _logger.LogWarning(
+            "OUTBOUND DRY-RUN agent={Agent} action=httpRequest target={Target} rule=outbound-approval reason={Reason}",
+            actor, url, reason);
+
+        if (firing.TicketId is not int ticketId) return;
+
+        var receipt = JsonSerializer.Serialize(new
+        {
+            schema = "outbound-denial/v1",
+            agent = actor,
+            action = "httpRequest",
+            target = url,
+            host,
+            rule = "outbound-approval",
+            reason,
+            enforcementMode = "dry-run",
+        });
+
+        try { await _tickets.AddCommentAsync(slug, ticketId, receipt, "automation"); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "httpRequest: failed to write outbound-denial receipt for ticket #{Id}", ticketId);
         }
     }
 

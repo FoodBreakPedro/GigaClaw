@@ -121,6 +121,19 @@ public class AppSettingsService
         Save();
     }
 
+    /// <summary>
+    /// R3/U17 trust anchor for host-side outbound automation actions. The list lives in the
+    /// owner's settings.json, which sits outside every workspace and therefore outside every
+    /// agent's write globs — a ticket label is orchestration metadata, never authorization.
+    /// Re-reads the file on every call so an owner edit takes effect on the next httpRequest
+    /// execution without an engine restart.
+    /// </summary>
+    public IReadOnlyCollection<string> GetApprovedOutboundHosts()
+    {
+        Load();
+        return _data.ApprovedOutboundHosts ?? [];
+    }
+
     private void Load()
     {
         if (!File.Exists(_settingsPath)) return;
@@ -149,5 +162,6 @@ public class AppSettingsService
         public bool HermesEnabled { get; set; }
         public string? HermesApiBaseUrl { get; set; }
         public string? HermesApiKey { get; set; }
+        public List<string>? ApprovedOutboundHosts { get; set; }
     }
 }
