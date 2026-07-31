@@ -21,6 +21,8 @@
   "TrigBoardIdle": "board idle",
   "TrigAgentInactivity": "inactivité {0}min",
   "TrigCommentAdded": "commentaire ajouté (filtre : [{0}])",
+  "TrigGitHubPrComment": "commentaire PR GitHub du propriétaire ({0}s)",
+  "TrigGitHubCheckStatus": "statut CI GitHub ({0}s)",
   "CondInColumn": "dans [{0}]",
   "CondMinDesc": "desc ≥ {0} car.",
   "CondFieldLength": "{0} {1} {2} car.",

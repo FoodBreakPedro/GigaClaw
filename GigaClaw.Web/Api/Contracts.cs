@@ -35,3 +35,31 @@ public record ChatTargetsResponse(string? LastTarget, List<ChatTargetDto> Target
 public record ChatMessageDto(string Role, string Text, string? ToolName, string? Detail, string CreatedAt);
 public record MoveTileRequest(int X, int Y); // required — pixel coords snapped to 20px grid
 public record ResizeTileRequest(int Width, int Height); // required — pixels snapped to 20px grid
+
+// C7/U5 GitHub surface. The token is write-only: it goes in on SaveGitHubConfigRequest and never
+// comes back out — GitHubConfigDto reports only whether one is stored.
+public record SaveGitHubConfigRequest(
+    bool Enabled,
+    string? Owner = null,
+    string? Repo = null,
+    string? ImportLabel = null,
+    string? ImportStatus = null,
+    bool CommentOnIssueWhenTicketDone = false,
+    bool CloseIssueWhenTicketDone = false,
+    List<string>? DoneStatuses = null,
+    List<string>? OwnerLogins = null,
+    string? ApiBaseUrl = null,
+    string? Token = null);
+public record GitHubConfigDto(
+    bool Configured,
+    bool Enabled,
+    string Owner,
+    string Repo,
+    string ImportLabel,
+    string ImportStatus,
+    bool CommentOnIssueWhenTicketDone,
+    bool CloseIssueWhenTicketDone,
+    List<string> DoneStatuses,
+    List<string> OwnerLogins,
+    string ApiBaseUrl,
+    bool TokenConfigured);

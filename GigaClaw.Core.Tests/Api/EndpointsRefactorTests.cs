@@ -125,6 +125,12 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         "PUT /api/projects/{slug}/dashboard/tiles/{tileSlug}/sidecar",
         "GET /api/projects/{slug}/dashboard/tiles/{tileSlug}/script",
         "POST /api/projects/{slug}/dashboard/tiles/{tileSlug}/refresh",
+        // GitHub surface (C7/U5)
+        "GET /api/projects/{slug}/github",
+        "PUT /api/projects/{slug}/github",
+        "DELETE /api/projects/{slug}/github",
+        "POST /api/projects/{slug}/github/sync",
+        "GET /api/projects/{slug}/github/links",
     };
 
     [Fact]
@@ -221,6 +227,11 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         ["PUT /api/projects/{slug}/dashboard/tiles/{tileSlug}/sidecar"] = "Dashboard",
         ["GET /api/projects/{slug}/dashboard/tiles/{tileSlug}/script"] = "Dashboard",
         ["POST /api/projects/{slug}/dashboard/tiles/{tileSlug}/refresh"] = "Dashboard",
+        ["GET /api/projects/{slug}/github"] = "GitHub",
+        ["PUT /api/projects/{slug}/github"] = "GitHub",
+        ["DELETE /api/projects/{slug}/github"] = "GitHub",
+        ["POST /api/projects/{slug}/github/sync"] = "GitHub",
+        ["GET /api/projects/{slug}/github/links"] = "GitHub",
     };
 
     [Fact]
@@ -310,6 +321,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
             "Endpoints.Media.cs",
             "Endpoints.Dashboard.cs",
             "Endpoints.Ollama.cs",
+            "Endpoints.GitHub.cs",
         };
         var missing = expected.Where(f => !File.Exists(Path.Combine(apiDir, f))).ToList();
         Assert.True(missing.Count == 0,

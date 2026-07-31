@@ -21,6 +21,8 @@
   "TrigBoardIdle": "tablero inactivo",
   "TrigAgentInactivity": "inactividad {0}min",
   "TrigCommentAdded": "comentario añadido (filtro: [{0}])",
+  "TrigGitHubPrComment": "comentario de PR de GitHub del propietario ({0}s)",
+  "TrigGitHubCheckStatus": "estado de CI de GitHub ({0}s)",
   "CondInColumn": "en [{0}]",
   "CondMinDesc": "desc ≥ {0} caracteres",
   "CondFieldLength": "{0} {1} {2} caracteres",

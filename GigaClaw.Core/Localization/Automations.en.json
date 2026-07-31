@@ -21,6 +21,8 @@
   "TrigBoardIdle": "board idle",
   "TrigAgentInactivity": "inactivity {0}min",
   "TrigCommentAdded": "comment added (filter: [{0}])",
+  "TrigGitHubPrComment": "GitHub PR comment from owner ({0}s)",
+  "TrigGitHubCheckStatus": "GitHub CI status ({0}s)",
   "CondInColumn": "in [{0}]",
   "CondMinDesc": "desc ≥ {0} chars",
   "CondFieldLength": "{0} {1} {2} chars",

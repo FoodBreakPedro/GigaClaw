@@ -28,6 +28,8 @@ public sealed class Automation
 [JsonDerivedType(typeof(BoardIdleTriggerSpec), "boardIdle")]
 [JsonDerivedType(typeof(AgentInactivityTriggerSpec), "agentInactivity")]
 [JsonDerivedType(typeof(TicketCommentAddedTriggerSpec), "ticketCommentAdded")]
+[JsonDerivedType(typeof(GitHubPrCommentTriggerSpec), "githubPrComment")]
+[JsonDerivedType(typeof(GitHubCheckStatusTriggerSpec), "githubCheckStatus")]
 public abstract class TriggerSpec
 {
     public abstract string UiTypeKey { get; }
@@ -114,6 +116,39 @@ public sealed class TicketCommentAddedTriggerSpec : TriggerSpec
     public override string UiTypeKey => "ticketCommentAdded";
     public int PollSeconds { get; set; } = 30;
     public List<string> Authors { get; set; } = new();
+}
+
+/// <summary>
+/// C7 part 2 (see <c>doc/github-surface.md</c>). Fires when a pull-request review comment from a
+/// configured owner login arrives for a ticket's PR. Inert unless the project has a GitHub
+/// configuration, a token, and at least one owner login — this trigger cannot enable itself.
+/// </summary>
+public sealed class GitHubPrCommentTriggerSpec : TriggerSpec
+{
+    public override string UiTypeKey => "githubPrComment";
+    public int PollSeconds { get; set; } = 120;
+    /// <summary>
+    /// Optional narrowing of the project's owner logins. An automation lives in the workspace and
+    /// is therefore agent-editable, so this list can only intersect the trusted one in settings —
+    /// never add to it.
+    /// </summary>
+    public List<string> OwnerLogins { get; set; } = new();
+}
+
+/// <summary>
+/// C7 part 3 (see <c>doc/github-surface.md</c>). The <c>gitCommit</c> family's CI sibling: fires
+/// when a GitHub check run reaches one of <see cref="Conclusions"/> for the commit under watch.
+/// Like <see cref="GitCommitTriggerSpec"/> it is about a commit, so by default it watches the
+/// workspace's own HEAD.
+/// </summary>
+public sealed class GitHubCheckStatusTriggerSpec : TriggerSpec
+{
+    public override string UiTypeKey => "githubCheckStatus";
+    public int PollSeconds { get; set; } = 120;
+    /// <summary>Conclusions worth firing on. Empty means every concluded check run.</summary>
+    public List<string> Conclusions { get; set; } = new() { "failure" };
+    /// <summary>Branch or SHA to watch. Null (the default) means the workspace's own HEAD.</summary>
+    public string? Ref { get; set; }
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]

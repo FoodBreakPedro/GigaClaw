@@ -356,9 +356,10 @@ internal sealed class ActionExecutor
     /// <summary>
     /// Prepends what the ticket already knows to the action's own context, so the next agent starts
     /// from what happened instead of re-deriving it: the outstanding <c>FIX</c> verdict's findings
-    /// first (that is the reason this dispatch exists), then the previous run's handoff.
-    /// An unreadable handoff or verdict is skipped rather than injected half-parsed, and a ticket
-    /// with neither dispatches exactly as before.
+    /// first (that is the reason this dispatch exists), then any unanswered GitHub owner feedback
+    /// (C7 part 2 — the same mechanism, a different source of "you must address this"), then the
+    /// previous run's handoff. An unreadable handoff, verdict or feedback comment is skipped rather
+    /// than injected half-parsed, and a ticket with none of them dispatches exactly as before.
     /// </summary>
     internal async Task<string?> ComposeDispatchContextAsync(ProjectRuntime rt, int? ticketId, string? actionContext)
     {
@@ -367,19 +368,26 @@ internal sealed class ActionExecutor
 
         RunHandoff? handoff = null;
         string? repairBrief = null;
+        string? feedbackBrief = null;
         try
         {
             var ticket = await _tickets.GetTicketAsync(rt.Slug, ticketId.Value);
             if (ticket is not null)
             {
-                handoff = HandoffReader.Latest(
-                    ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList());
+                var bodies = ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList();
+                handoff = HandoffReader.Latest(bodies);
 
                 // A FIX with no SHIP or escalation after it means a repair is outstanding: whoever
                 // is dispatched next must see the categories and veto items that were refused.
                 var repair = await ResolveRepairStateAsync(rt, ticket, agent: null, maxOverride: null);
                 if (repair?.Newest is not null)
                     repairBrief = RepairLoop.RenderBrief(repair, $"ticket #{ticket.Id}");
+
+                // Owner feedback rides the same rail rather than a second one: comments posted
+                // since the agent last handed off are what this dispatch has to answer.
+                var feedback = Github.OwnerFeedback.Outstanding(bodies);
+                if (feedback.Count > 0)
+                    feedbackBrief = Github.OwnerFeedback.RenderBrief(feedback, ticket.Id);
             }
         }
         catch (Exception exception)
@@ -388,11 +396,14 @@ internal sealed class ActionExecutor
             _logger.LogWarning(exception, "[{Slug}] could not read the ticket context for #{TicketId}", rt.Slug, ticketId);
         }
 
-        if (handoff is null && string.IsNullOrWhiteSpace(repairBrief))
+        if (handoff is null
+            && string.IsNullOrWhiteSpace(repairBrief)
+            && string.IsNullOrWhiteSpace(feedbackBrief))
             return actionContext;
 
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(repairBrief)) parts.Add(repairBrief);
+        if (!string.IsNullOrWhiteSpace(feedbackBrief)) parts.Add(feedbackBrief);
         if (handoff is not null) parts.Add(HandoffReader.Render(handoff));
         if (!string.IsNullOrWhiteSpace(actionContext)) parts.Add(actionContext);
         return string.Join("\n\n", parts);
