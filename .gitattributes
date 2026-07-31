@@ -1,1 +1,35 @@
+# Line endings are part of the product, not an editor preference.
+#
+# `ProjectTemplate/**` and `Packs/**` are embedded verbatim into GigaClaw.Core.dll and written
+# byte-for-byte into every workspace. Git for Windows defaults to core.autocrlf=true, so without
+# this file a Windows clone checks those files out with CRLF, the build embeds the CRLF bytes, and
+# a workspace initialized on Windows gets different content than the same commit produces anywhere
+# else. That is what made CoreInitManifestTests fail on Windows across all 115 of its opaque files
+# at once — and, since shipped `.py` content is executed, an OS-dependent payload is a product bug
+# rather than a test-fixture nuisance.
+#
+# Declaring it repo-wide rather than only for the two shipped trees keeps committed baselines,
+# golden manifests and fixtures comparable by bytes on every platform, which is what those anchors
+# are for. CI asserts it per-platform before it compares any hashes.
+* text=auto eol=lf
+
+# The two formats that genuinely need CRLF: cmd.exe is unreliable with LF-only batch files.
+# Neither ships inside a pack.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# text=auto already detects these, but being explicit keeps a heuristic from ever rewriting a
+# binary asset.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.dll binary
+*.exe binary
+*.db binary
+
 graphify-out/graph.json merge=graphify

@@ -4,7 +4,7 @@
 Detects when a newer GigaClaw release is published on GitHub and surfaces a dismissible banner above the app shell so the user knows an update is available.
 
 ## Key components
-- `GigaClaw.Web/Services/UpdateCheckService.cs` — hosted `BackgroundService` that polls the GitHub Releases API (`/repos/Ekioo/GigaClaw/releases/latest`) at most once every 24h, caches the latest tag in memory, and exposes `CurrentVersion`, `LatestVersion`, `HasUpdate`, and an `OnChange` event. Also offers `Dismiss()`, `SimulateUpdate(version)`, and `ResetSimulation()`.
+- `GigaClaw.Web/Services/UpdateCheckService.cs` — hosted `BackgroundService` that polls the GitHub Releases API (`/repos/FoodBreakPedro/GigaClaw/releases/latest`) at most once every 24h, caches the latest tag in memory, and exposes `CurrentVersion`, `LatestVersion`, `HasUpdate`, and an `OnChange` event. Also offers `Dismiss()`, `SimulateUpdate(version)`, and `ResetSimulation()`.
 - `GigaClaw.Core/Services/VersionCompare.cs` — `IsNewer(current, latest)` parses `Major.Minor.Build`, tolerates a leading `v`/`V`, and returns `false` for unparseable inputs.
 - `GigaClaw.Core/Services/AppSettingsService.cs` — persists `UpdateDismissedVersion` and `UpdateCheckLastRun` in `%APPDATA%/GigaClaw/settings.json` so dismissals and throttling survive restarts.
 - `GigaClaw.Web/Components/Layout/UpdateBanner.razor` — `@rendermode InteractiveServer` component that subscribes to `OnChange`, renders the banner when `HasUpdate` is true, and calls `Dismiss()` on the ✕ button. Embedded in `MainLayout.razor` via `<UpdateBanner />`.

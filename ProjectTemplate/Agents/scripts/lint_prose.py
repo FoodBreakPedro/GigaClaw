@@ -13,6 +13,14 @@ import sys
 import re
 import math
 
+# These scripts print non-ASCII (arrows, middots, dashes, accents) and the host reads their
+# stdout as UTF-8. Python on Windows still defaults stdout to the ANSI code page (cp1252), where
+# those characters raise UnicodeEncodeError *after* the work succeeded -- turning a clean pass
+# into a crash. Pin the stream instead of degrading the output to ASCII.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8")
+
 BANNED_CLICHES = [
     r"in today's digital landscape",
     r"in the ever-evolving world of",

@@ -1,6 +1,13 @@
 # Build + test on every push/PR. GigaClaw.ClaudeMock is built explicitly so the hermetic
-# ClaudeRunner integration tests find the mock claude.exe instead of falling back to a real
+# ClaudeRunner integration tests find the mock claude binary instead of falling back to a real
 # CLI (MockClaudeBinFixture walks the repo tree for a previously built binary).
+#
+# The matrix is load-bearing. This job ran only on windows-latest for its whole life, on a project
+# developed on macOS, so every platform-shaped defect was either invisible or the *only* thing
+# visible — and neither state gets read correctly. The line-ending divergence that made
+# CoreInitManifestTests fail across all 115 shipped files at once is the canonical example: it was
+# a property of the checkout, could not reproduce locally, and would have been caught in one run by
+# comparing two platforms building the same commit.
 name: CI
 
 on:
@@ -11,8 +18,16 @@ on:
 
 jobs:
   build-test:
-    runs-on: windows-latest
+    name: build-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      # Never stop the other platforms because one failed: a divergence is only diagnosable when
+      # you can see which platforms agreed and which did not.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
     steps:
       - uses: actions/checkout@v7
 
@@ -20,10 +35,25 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # ProjectTemplate/** is embedded verbatim into GigaClaw.Core.dll and written byte-for-byte
+      # into every workspace, so the bytes Git hands the build ARE the product. .gitattributes pins
+      # eol=lf; this asserts the checkout honored it before anything downstream compares hashes and
+      # reports the mismatch as something more exotic.
+      - name: Checkout is normalized (no CRLF in shipped trees)
+        shell: bash
+        run: |
+          offenders=$(git ls-files --eol -- ProjectTemplate Packs | grep -E 'w/(crlf|mixed)' || true)
+          if [ -n "$offenders" ]; then
+            echo "::error::Shipped template files were checked out with CRLF. .gitattributes should pin eol=lf."
+            echo "$offenders"
+            exit 1
+          fi
+          echo "All shipped template files are LF."
+
       # T1/T2: committed catalog artifacts must remain deterministic. Enforces strict
       # five-part binding checks for every agent discovered in ProjectTemplate/Agents.
       - name: Catalog drift check
-        shell: pwsh
+        shell: bash
         run: |
           dotnet run --project GigaClaw.Catalog -- generate
           git diff --exit-code -- catalog.json doc/catalog.md
@@ -35,10 +65,11 @@ jobs:
       # them. A pack that cannot meet the bar on its first commit is the anti-pattern the rule
       # exists to prevent, so this is unconditional for packs whatever mode core is in (owner Q2).
       - name: Pack composition and strict binding gate
-        shell: pwsh
+        shell: bash
         run: dotnet run --project GigaClaw.Catalog -- check --strict-packs
 
       - name: Build
+        shell: bash
         run: |
           dotnet build GigaClaw.Web -c Release --nologo
           dotnet build GigaClaw.ClaudeMock -c Release --nologo
@@ -47,6 +78,7 @@ jobs:
           dotnet build GigaClaw.Eval.Tests -c Release --nologo
 
       - name: Test
+        shell: bash
         run: |
           dotnet test GigaClaw.Core.Tests -c Release --no-build --nologo --logger "console;verbosity=minimal"
           dotnet test GigaClaw.Eval.Tests -c Release --no-build --nologo --logger "console;verbosity=minimal"
@@ -54,4 +86,5 @@ jobs:
       # T4: committed static baselines are the reviewed policy snapshot. Strict mode fails on
       # findings outside the baseline as well as on malformed inputs and baseline drift.
       - name: Static agent eval
+        shell: bash
         run: dotnet run --project GigaClaw.Eval -c Release --no-build -- all --strict

@@ -15,14 +15,27 @@ namespace GigaClaw.Eval.Tests.Helpers;
 ///
 /// <para>Every use must carry a <see cref="Reason"/> that says what actually breaks and where the
 /// investigation is written up. Do not use this to silence a failure you have not diagnosed.</para>
+///
+/// <para>Set <c>GIGACLAW_RUN_KNOWN_WINDOWS_FAILURES=1</c> to run them anyway. A skipped test emits
+/// no diagnostics, so an exemption that can only be skipped is an exemption that can never be
+/// investigated from CI — which is how the one remaining entry stayed undiagnosed across releases.
+/// This is the one-command way to get a real failure message off a Windows machine without making
+/// the default build red.</para>
 /// </summary>
 public sealed class KnownWindowsFailureFactAttribute : FactAttribute
 {
+    /// <summary>Opt back in, so the exemption can be interrogated instead of only silenced.</summary>
+    public const string RunAnywayVariable = "GIGACLAW_RUN_KNOWN_WINDOWS_FAILURES";
+
     public KnownWindowsFailureFactAttribute(string reason)
     {
         Reason = reason;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            Skip = $"Known Windows failure — {reason} See doc/roadmap/SESSION-HANDOFF.md § Windows CI.";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            && Environment.GetEnvironmentVariable(RunAnywayVariable) != "1")
+        {
+            Skip = $"Known Windows failure — {reason} See doc/roadmap/SESSION-HANDOFF.md § Windows CI. " +
+                   $"Set {RunAnywayVariable}=1 to run it anyway and read the diagnostics.";
+        }
     }
 
     /// <summary>What breaks on Windows. Recorded even when the test runs, so it survives grep.</summary>

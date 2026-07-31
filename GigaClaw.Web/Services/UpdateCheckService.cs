@@ -54,7 +54,7 @@ public class UpdateCheckService : BackgroundService
             var client = _httpFactory.CreateClient();
             client.DefaultRequestHeaders.UserAgent.ParseAdd("GigaClaw-UpdateCheck");
             var resp = await client.GetFromJsonAsync<GitHubRelease>(
-                "https://api.github.com/repos/Ekioo/GigaClaw/releases/latest", ct);
+                "https://api.github.com/repos/FoodBreakPedro/GigaClaw/releases/latest", ct);
             if (resp is not null && !string.IsNullOrWhiteSpace(resp.TagName))
             {
                 _latestVersion = resp.TagName;

@@ -75,7 +75,7 @@ Variables are resolved just before each action executes, so a later action can r
 ```json
 {
   "setup": [
-    { "type": "createProject", "name": "qa-test", "workspacePath": "D:/Sources/Ekioo/Todo" },
+    { "type": "createProject", "name": "qa-test", "workspacePath": "C:/Sources/example-workspace" },
     { "type": "togglePause", "project": "qa-test" }
   ],
   "actions": [

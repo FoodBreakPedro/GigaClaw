@@ -202,10 +202,6 @@ No ticket content, project names, hostnames, or usage details are ever sent. Fai
 
 ---
 
-## More Projects & Contact
+## Links
 
-→ **Site + demo:** [gigaclaw.dev](https://gigaclaw.dev)
-
-Check out my other projects at **[ekioo.com](https://ekioo.com)**.
-
-Follow me on X: **[@DamienHOFFSCHIR](https://x.com/DamienHOFFSCHIR)**
+→ **Source, issues and releases:** [github.com/FoodBreakPedro/GigaClaw](https://github.com/FoodBreakPedro/GigaClaw)

@@ -280,7 +280,7 @@ Chat with agents, run history, demo & early-access launch.
 ### Added
 - **Chat** with agents: persistent messages, session management, target selection, SSE stream reattachment with optional timestamp filter, stop button for active runs.
 - **Run history** drawer with related UI components.
-- Per-ticket "updated" indicator that clears only on open ([#95](https://github.com/Ekioo/GigaClaw/pull/95)).
+- Per-ticket "updated" indicator that clears only on open ([#95](https://github.com/FoodBreakPedro/GigaClaw/pull/95)).
 - `createTicket` automation action with localization and UI.
 - `RunConcurrencyGate` to manage simultaneous `claude` subprocesses.
 - Multiple-assignee support for the assignee-resume automation.

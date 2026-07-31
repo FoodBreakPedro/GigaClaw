@@ -100,6 +100,8 @@ public sealed partial class PackInstaller
                     await transaction.WriteAsync(destination, content, ct);
                 }
 
+                VerifyEverythingPlannedReachedDisk(workspace, plan);
+
                 // Step 4 — the lockfile last. Its presence commits the install.
                 await transaction.WriteAsync(
                     lockRelative, Encoding.UTF8.GetBytes(PackLockSerializer.ToJson(lockFile)), ct);
@@ -121,6 +123,33 @@ public sealed partial class PackInstaller
         {
             TryDeleteDirectory(stagingDir);
         }
+    }
+
+    /// <summary>
+    /// The last thing checked before the lockfile commits the install: every destination the plan
+    /// claimed is actually on disk.
+    ///
+    /// <para>This exists because the failure it guards against is silent by construction. A pack
+    /// that enumerates to nothing composes, validates and installs cleanly — "no assets matched"
+    /// is indistinguishable from "this pack ships none" — so the only signal that 114 declared
+    /// files never landed would be a workspace that quietly does less. Running inside the
+    /// transaction's <c>try</c> means a violation rolls the whole install back rather than leaving
+    /// a half-populated <c>.agents/</c> behind a lockfile that claims otherwise.</para>
+    /// </summary>
+    private static void VerifyEverythingPlannedReachedDisk(
+        string workspace, List<(string Destination, byte[] Content)> plan)
+    {
+        var absent = plan
+            .Select(p => p.Destination)
+            .Where(d => !File.Exists(Path.Combine(workspace, d.Replace('/', Path.DirectorySeparatorChar))))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        if (absent.Count == 0) return;
+
+        throw new PackValidationException(
+            [$"install planned {plan.Count} files but {absent.Count} are not on disk after the " +
+             $"merge: {string.Join(", ", absent.Take(10))}" +
+             (absent.Count > 10 ? $" (+{absent.Count - 10} more)" : string.Empty)]);
     }
 
     /// <summary>
