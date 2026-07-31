@@ -1,0 +1,12 @@
+{
+  "UnifiedBoardTitle": "Todos los tableros",
+  "AllBoardsNavLabel": "Todos los tableros",
+  "UnifiedBoardLoading": "Cargando tableros…",
+  "UnifiedBoardNoProjects": "Aún no hay proyectos.",
+  "UnifiedBoardNoMatches": "Ningún ticket coincide con esta búsqueda.",
+  "UnifiedBoardSearchPlaceholder": "Buscar en todos los proyectos…",
+  "ClearSearch": "Limpiar búsqueda",
+  "UnifiedBoardCollapseLane": "Plegar carril",
+  "UnifiedBoardExpandLane": "Desplegar carril",
+  "UnifiedBoardCrossLaneBlocked": "Los tickets no se pueden mover entre proyectos."
+}

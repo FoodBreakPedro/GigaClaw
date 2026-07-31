@@ -25,6 +25,9 @@ public class Opus48ModelSupportTests
     private static string LocalizationFr() =>
         File.ReadAllText(Path.Combine(RepoRoot(), "GigaClaw.Core", "Localization", "ProjectSettings.fr.json"));
 
+    private static string LocalizationEs() =>
+        File.ReadAllText(Path.Combine(RepoRoot(), "GigaClaw.Core", "Localization", "ProjectSettings.es.json"));
+
     // The model selectors (action editor, chat drawer, dashboard, member defaults)
     // all bind to ClaudeModelCatalog.Models, so the catalog is the single thing to assert on.
 
@@ -66,7 +69,7 @@ public class Opus48ModelSupportTests
         Assert.Contains("claude-opus-4-8", ProjectSettings());
     }
 
-    // Localization keys present in both languages
+    // Localization keys present in all languages
 
     [Fact]
     public void Localization_En_ContainsFallbackOpus48Key()
@@ -78,5 +81,11 @@ public class Opus48ModelSupportTests
     public void Localization_Fr_ContainsFallbackOpus48Key()
     {
         Assert.Contains("FallbackOpus48", LocalizationFr());
+    }
+
+    [Fact]
+    public void Localization_Es_ContainsFallbackOpus48Key()
+    {
+        Assert.Contains("FallbackOpus48", LocalizationEs());
     }
 }

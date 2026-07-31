@@ -30,6 +30,9 @@ public class BoardFullscreenEscTests
     private static string BoardFrJsonPath() =>
         Path.Combine(RepoRoot(), "GigaClaw.Core", "Localization", "Board.fr.json");
 
+    private static string BoardEsJsonPath() =>
+        Path.Combine(RepoRoot(), "GigaClaw.Core", "Localization", "Board.es.json");
+
     private static string LoadBoard() => File.ReadAllText(BoardRazorPath());
 
     // Case 1 / Case 3: _escFullscreenEditor field must be declared.
@@ -112,6 +115,14 @@ public class BoardFullscreenEscTests
     public void BoardFrJson_HasDiscardChangesConfirmKey()
     {
         var json = File.ReadAllText(BoardFrJsonPath());
+        Assert.Contains("DiscardChangesConfirm", json);
+    }
+
+    // Edge: DiscardChangesConfirm key must exist in Board.es.json localization.
+    [Fact]
+    public void BoardEsJson_HasDiscardChangesConfirmKey()
+    {
+        var json = File.ReadAllText(BoardEsJsonPath());
         Assert.Contains("DiscardChangesConfirm", json);
     }
 }

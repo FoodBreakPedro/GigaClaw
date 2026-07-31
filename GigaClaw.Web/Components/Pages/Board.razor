@@ -663,7 +663,7 @@ else
                                         <small>@item.At.ToString("g")</small>
                                         @if (_editingCommentId != item.Id)
                                         {
-                                            <button class="icon-btn pencil-btn" title="Modifier" @onclick="() => StartEditComment(item.Id!.Value, item.Text)">&#9998;</button>
+                                            <button class="icon-btn pencil-btn" title="Edit" @onclick="() => StartEditComment(item.Id!.Value, item.Text)">&#9998;</button>
                                         }
                                     </div>
                                     <div class="markdown">@((MarkupString)Markdown.ToHtml(item.Text, _mdPipeline))</div>
@@ -762,8 +762,8 @@ else
         <ErrorContent Context="ex">
             <div class="chat-drawer-overlay" @onclick="CloseChatDrawer"></div>
             <div class="chat-drawer" style="padding:1.5rem;color:#f06b6b">
-                <strong>Erreur : </strong>@ex.Message
-                <br/><button @onclick="CloseChatDrawer" style="margin-top:1rem">Fermer</button>
+                <strong>Error: </strong>@ex.Message
+                <br/><button @onclick="CloseChatDrawer" style="margin-top:1rem">Close</button>
             </div>
         </ErrorContent>
     </ErrorBoundary>

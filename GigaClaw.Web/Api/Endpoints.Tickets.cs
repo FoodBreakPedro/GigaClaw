@@ -179,7 +179,7 @@ public static partial class Endpoints
         {
             var ok = await ts.SetParentAsync(slug, id, req.ParentId);
             if (ok) notifier.NotifyProjectUpdated(slug);
-            return ok ? Results.NoContent() : Results.BadRequest(new { error = "Impossible d'associer ce sous-ticket." });
+            return ok ? Results.NoContent() : Results.BadRequest(new { error = "Cannot link this sub-ticket." });
         }).WithTags("Tickets");
 
         api.MapDelete("/projects/{slug}/tickets/{id:int}/parent", async (string slug, int id, TicketService ts, BoardUpdateNotifier notifier) =>
