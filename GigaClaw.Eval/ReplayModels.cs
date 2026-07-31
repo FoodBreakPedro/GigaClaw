@@ -2,12 +2,27 @@ namespace GigaClaw.Eval;
 
 /// <summary>Optional, versioned knobs for the replay layer. Absent in older evalconfig.json files,
 /// in which case <see cref="Default"/> applies.</summary>
+/// <param name="FixtureRoots">Every directory replay fixtures are enumerated from — core's
+/// <c>GigaClaw.Eval/fixtures</c> plus each pack's <c>Packs/&lt;id&gt;/eval/fixtures</c>
+/// (doc/pack-infrastructure.md §9). Fixture ids stay globally unique across roots.</param>
+/// <param name="FixtureRoot">Legacy singular form, honoured only when <paramref name="FixtureRoots"/>
+/// is absent, so a config written before packs existed still deserializes and behaves as it did.</param>
 public sealed record ReplayConfig(
-    string FixtureRoot,
+    IReadOnlyList<string>? FixtureRoots,
     string ArtifactSubdirectory,
-    int TimeoutSeconds)
+    int TimeoutSeconds,
+    string? FixtureRoot = null)
 {
-    public static ReplayConfig Default { get; } = new("GigaClaw.Eval/fixtures", "replay", 120);
+    public const string CoreFixtureRoot = "GigaClaw.Eval/fixtures";
+
+    public static ReplayConfig Default { get; } = new([CoreFixtureRoot], "replay", 120);
+
+    /// <summary>The roots the runner actually enumerates: the plural form when present, else the
+    /// legacy singular, else core's fixtures.</summary>
+    public IReadOnlyList<string> Roots =>
+        FixtureRoots is { Count: > 0 } ? FixtureRoots
+        : !string.IsNullOrEmpty(FixtureRoot) ? [FixtureRoot]
+        : [CoreFixtureRoot];
 }
 
 public sealed record ReplayTicketComment(string Author, string Body);

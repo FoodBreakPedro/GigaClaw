@@ -209,6 +209,10 @@ public sealed class CatalogGenerator
                     .ToArray(),
                 EvalBaselinePresent: File.Exists(
                     Path.Combine(evalBaselineDirectory, $"{slug}.json")),
+                // Keyed off presence in a discovered fixture directory, which is also a claim of
+                // executability: every discovered fixture directory must be a configured
+                // Replay.FixtureRoots entry, pinned by ReplayRunnerTests
+                // .EveryDiscoveredPackFixtureDirectoryIsAConfiguredReplayRoot.
                 EvalFixturePresent: fixtureAgents.Contains(slug));
         }).ToArray();
 

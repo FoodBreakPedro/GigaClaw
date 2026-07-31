@@ -1,0 +1,58 @@
+{
+  "Version": 1,
+  "Agent": "threat-modeler",
+  "Judge": "deterministic",
+  "Fixtures": [
+    {
+      "Fixture": "security-threat-model-auth",
+      "Verdict": {
+        "schemaVersion": 1,
+        "agent": "threat-modeler",
+        "ticketId": 604,
+        "verdict": "SHIP",
+        "summary": "Deterministic rubric judge scored fixture 'security-threat-model-auth' at 100/100 (100%).",
+        "categories": [
+          {
+            "name": "Dispatch behaved as declared",
+            "score": 40,
+            "max": 40,
+            "notes": "All 5 fixture expectation(s) held."
+          },
+          {
+            "name": "Stream carries no error",
+            "score": 20,
+            "max": 20,
+            "notes": "The stream carries no error event."
+          },
+          {
+            "name": "Final message is a handoff",
+            "score": 20,
+            "max": 20,
+            "notes": "Final message is 832 character(s) against a floor of 80."
+          },
+          {
+            "name": "No placeholder handoff",
+            "score": 20,
+            "max": 20,
+            "notes": "None of 4 forbidden phrase(s) appear."
+          }
+        ],
+        "vetoItems": [],
+        "evidence": [
+          {
+            "kind": "hash",
+            "ref": "sha256:82af24eec1d296554da6b62899b4d252b86bf0192ddaaadf2efd607ff42c62e3",
+            "note": "normalized replay stream for fixture 'security-threat-model-auth' (7 event(s), exit 0)"
+          },
+          {
+            "kind": "hash",
+            "ref": "sha256:2ab95a8ba33161c4d60a3c2fcf6625352ba10206f4ed8343f4c0c937028bee83",
+            "note": "rubric 'default' v1"
+          }
+        ],
+        "reviewedAtUtc": "1970-01-01T00:00:00Z",
+        "inputDigest": "sha256:82af24eec1d296554da6b62899b4d252b86bf0192ddaaadf2efd607ff42c62e3"
+      }
+    }
+  ]
+}

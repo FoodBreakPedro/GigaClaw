@@ -52,7 +52,7 @@ public sealed class ReplayRunnerTests
             .ToArray();
 
         Assert.Equal(
-            new[] { "blog", "dev", "governance", "growth", "media" },
+            new[] { "blog", "dev", "governance", "growth", "media", "security" },
             families.OrderBy(family => family, StringComparer.Ordinal));
 
         var result = runner.Run("all", writeReport: false);
@@ -97,6 +97,74 @@ public sealed class ReplayRunnerTests
         Assert.Contains(result.Checks, check => check.Id == "replay.events" && check.Status == "error");
         Assert.Contains(result.Checks, check => check.Id == "replay.text" && check.Status == "error");
         Assert.Contains(result.Checks, check => check.Id == "replay.exit" && check.Status == "pass");
+    }
+
+    [Fact]
+    public void LoadFixtures_EnumeratesPackFixtureRootsBesideCore()
+    {
+        var runner = new ReplayRunner(RepositoryRoot);
+
+        var ids = runner.LoadFixtures().Select(fixture => fixture.Id).ToArray();
+
+        // Core fixtures are still present…
+        Assert.Contains("dev-fix-login-timeout", ids);
+        // …and the security-assurance pack's fixtures are enumerated from Packs/<id>/eval/fixtures.
+        Assert.Contains("security-injection-in-review", ids);
+        Assert.Contains("security-threat-model-auth", ids);
+        Assert.Contains("security-supply-chain-advisory", ids);
+        Assert.Contains("security-secret-in-diff", ids);
+        Assert.Contains("security-secret-clean-diff", ids);
+        Assert.Equal(ids.Length, ids.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void PackAgentFixtures_ReplayAgainstThePackSkill_AndPass()
+    {
+        var runner = new ReplayRunner(RepositoryRoot);
+
+        // Agent-slug targeting must reach a pack agent; secrets-reviewer carries both the BLOCK
+        // fixture and the SHIP fixture, so an always-BLOCK regression fails exactly one of them.
+        var result = runner.Run("secrets-reviewer", writeReport: false);
+
+        var fixtures = Assert.Single(result.Reports).Fixtures;
+        Assert.Equal(
+            new[] { "security-secret-clean-diff", "security-secret-in-diff" },
+            fixtures.Select(fixture => fixture.Fixture).ToArray());
+        Assert.Equal(0, result.ExitCode);
+        Assert.All(fixtures, fixture => Assert.Equal("pass", fixture.Status));
+    }
+
+    [Fact]
+    public void SecretsReviewer_ShipPathFixture_ReplaysAShipVerdict()
+    {
+        var runner = new ReplayRunner(RepositoryRoot);
+
+        var result = runner.Run("security-secret-clean-diff", writeReport: false);
+
+        var fixture = Assert.Single(Assert.Single(result.Reports).Fixtures);
+        Assert.Equal("pass", fixture.Status);
+        var finalText = fixture.Events.Last(captured => captured.Kind == "assistant").Text;
+        Assert.Contains("SHIP", finalText, StringComparison.Ordinal);
+        Assert.DoesNotContain("BLOCK", finalText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EveryDiscoveredPackFixtureDirectoryIsAConfiguredReplayRoot()
+    {
+        // catalog.json advertises EvalFixturePresent from the fixture directories
+        // PackCatalogSourceReader discovers; the replay layer enumerates the roots evalconfig.json
+        // configures. This pins the two to each other: a pack that ships fixtures without being
+        // added to Replay.FixtureRoots would make the catalog claim coverage replay cannot execute.
+        var configured = new ReplayRunner(RepositoryRoot).LoadFixtures()
+            .Select(fixture => fixture.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var source in GigaClaw.Catalog.PackCatalogSourceReader.Discover(RepositoryRoot))
+        {
+            if (source.FixtureDirectory is null) continue;
+            foreach (var path in Directory.EnumerateFiles(source.FixtureDirectory, "*.json"))
+                Assert.Contains(Path.GetFileNameWithoutExtension(path), configured);
+        }
     }
 
     [Fact]

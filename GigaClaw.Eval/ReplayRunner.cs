@@ -43,7 +43,8 @@ public sealed partial class ReplayRunner
         ValidateReplayConfig(_replay);
         _catalog = EvalJson.Read<SystemCatalog>(Path.Combine(_repositoryRoot, "catalog.json"));
         _ = ResolveConfiguredPath(_config.ArtifactRoot);
-        _ = ResolveConfiguredPath(_replay.FixtureRoot);
+        foreach (var root in _replay.Roots)
+            _ = ResolveConfiguredPath(root);
     }
 
     /// <param name="target">A fixture id, a pipeline family, a catalog agent slug, or "all".</param>
@@ -112,12 +113,26 @@ public sealed partial class ReplayRunner
     /// top of replay selects fixtures by exactly the same rules.</summary>
     public IReadOnlyList<ReplayFixture> ResolveTarget(string target) => ResolveFixtures(target);
 
-    public IReadOnlyList<ReplayFixture> LoadFixtures() =>
-        Directory
-            .EnumerateFiles(ResolveConfiguredPath(_replay.FixtureRoot), "*.json")
-            .OrderBy(path => path, StringComparer.Ordinal)
+    public IReadOnlyList<ReplayFixture> LoadFixtures()
+    {
+        // Roots are enumerated in configured order (core first by convention) and files ordinally
+        // within each root, so the fixture list is stable across runs and platforms.
+        var fixtures = _replay.Roots
+            .SelectMany(root => Directory
+                .EnumerateFiles(ResolveConfiguredPath(root), "*.json")
+                .OrderBy(path => path, StringComparer.Ordinal))
             .Select(ReadFixture)
             .ToArray();
+        var duplicate = fixtures
+            .GroupBy(fixture => fixture.Id, StringComparer.Ordinal)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new InvalidDataException(
+                $"Fixture id '{duplicate.Key}' appears in more than one fixture root; ids must be globally unique.");
+        }
+        return fixtures;
+    }
 
     private ReplayFixture ReadFixture(string path)
     {
@@ -138,7 +153,7 @@ public sealed partial class ReplayRunner
     {
         var all = LoadFixtures();
         if (all.Count == 0)
-            throw new ArgumentException($"No replay fixtures found under {_replay.FixtureRoot}.");
+            throw new ArgumentException($"No replay fixtures found under {string.Join(", ", _replay.Roots)}.");
         if (target == "all")
             return all.OrderBy(fixture => fixture.Id, StringComparer.Ordinal).ToArray();
 
@@ -238,28 +253,32 @@ public sealed partial class ReplayRunner
 
     /// <summary>Builds the throwaway workspace a replay dispatches into: the agent's committed
     /// SKILL.md, memory index, preamble and contract manifest (so the prompt matches production),
-    /// plus the rendered fixture ticket and the scenario the mock replays.</summary>
+    /// plus the rendered fixture ticket and the scenario the mock replays. The agent's own files
+    /// come from the pack that ships it — resolved through the catalog's <c>Pack</c> field, the
+    /// same way the static layer resolves them — while pieces a pack does not ship (the preamble,
+    /// and the contract manifest for a pack without one) fall back to core's template.</summary>
     private void MaterializeWorkspace(
         ReplayFixture fixture,
         string workspace,
         out string scenarioDirectory)
     {
-        var templateRoot = Path.Combine(_repositoryRoot, "ProjectTemplate", "Agents");
+        var coreRoot = Path.Combine(_repositoryRoot, "ProjectTemplate", "Agents");
+        var agentsRoot = AgentsRootFor(fixture.Agent);
         var agentsDirectory = Path.Combine(workspace, ".agents");
         var agentDirectory = Path.Combine(agentsDirectory, fixture.Agent);
         Directory.CreateDirectory(Path.Combine(agentDirectory, "memory"));
 
         File.Copy(
-            Path.Combine(templateRoot, "preamble.md"),
+            PreferPack(agentsRoot, coreRoot, "preamble.md"),
             Path.Combine(agentsDirectory, "preamble.md"));
         File.Copy(
-            Path.Combine(templateRoot, "contracts.json"),
+            PreferPack(agentsRoot, coreRoot, "contracts.json"),
             Path.Combine(agentsDirectory, "contracts.json"));
         File.Copy(
-            Path.Combine(templateRoot, fixture.Agent, "SKILL.md"),
+            Path.Combine(agentsRoot, fixture.Agent, "SKILL.md"),
             Path.Combine(agentDirectory, "SKILL.md"));
         File.Copy(
-            Path.Combine(templateRoot, fixture.Agent, "memory", "MEMORY.md"),
+            Path.Combine(agentsRoot, fixture.Agent, "memory", "MEMORY.md"),
             Path.Combine(agentDirectory, "memory", "MEMORY.md"));
 
         // Offline stand-in for the ticket the agent would otherwise fetch over the REST API.
@@ -411,10 +430,38 @@ public sealed partial class ReplayRunner
         _replay.ArtifactSubdirectory,
         $"{agent}.json");
 
-    private string ScenarioPath(ReplayFixture fixture) => Path.Combine(
-        ResolveConfiguredPath(_replay.FixtureRoot),
-        "scenarios",
-        $"{fixture.Scenario}.ndjson");
+    /// <summary>A scenario lives in <c>scenarios/</c> beside the fixture root that ships it, so
+    /// the roots are probed in configured order. When no root carries it, the first root's path is
+    /// returned so <see cref="ReadFixture"/> reports a concrete missing file.</summary>
+    private string ScenarioPath(ReplayFixture fixture)
+    {
+        var candidates = _replay.Roots
+            .Select(root => Path.Combine(
+                ResolveConfiguredPath(root),
+                "scenarios",
+                $"{fixture.Scenario}.ndjson"))
+            .ToArray();
+        return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
+    }
+
+    /// <summary>The <c>Agents/</c> root that ships this agent, resolved through the catalog's
+    /// <c>Pack</c> field exactly like <c>StaticEvalRunner.AgentsRootFor</c>: core stays at
+    /// <c>ProjectTemplate/Agents</c>, every other pack at <c>Packs/&lt;id&gt;/Agents</c>.</summary>
+    private string AgentsRootFor(string agentSlug)
+    {
+        var pack = _catalog.Agents
+            .FirstOrDefault(agent => agent.Slug.Equals(agentSlug, StringComparison.Ordinal))
+            ?.Pack;
+        return string.IsNullOrEmpty(pack) || pack == "core"
+            ? Path.Combine(_repositoryRoot, "ProjectTemplate", "Agents")
+            : Path.Combine(_repositoryRoot, "Packs", pack, "Agents");
+    }
+
+    private static string PreferPack(string agentsRoot, string coreRoot, string fileName)
+    {
+        var packed = Path.Combine(agentsRoot, fileName);
+        return File.Exists(packed) ? packed : Path.Combine(coreRoot, fileName);
+    }
 
     private string ResolveConfiguredPath(string path)
     {
@@ -432,8 +479,9 @@ public sealed partial class ReplayRunner
 
     private static void ValidateReplayConfig(ReplayConfig config)
     {
-        if (Path.IsPathRooted(config.FixtureRoot))
-            throw new InvalidDataException("Replay fixture root must be repository-relative.");
+        foreach (var root in config.Roots)
+            if (Path.IsPathRooted(root))
+                throw new InvalidDataException("Replay fixture roots must be repository-relative.");
         if (config.ArtifactSubdirectory.Length == 0 ||
             config.ArtifactSubdirectory.Contains('/') ||
             config.ArtifactSubdirectory.Contains('\\'))

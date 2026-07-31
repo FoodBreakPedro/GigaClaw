@@ -9,7 +9,10 @@
     "MaximumThreshold": 16384
   },
   "Replay": {
-    "FixtureRoot": "GigaClaw.Eval/fixtures",
+    "FixtureRoots": [
+      "GigaClaw.Eval/fixtures",
+      "Packs/security-assurance/eval/fixtures"
+    ],
     "ArtifactSubdirectory": "replay",
     "TimeoutSeconds": 120
   },

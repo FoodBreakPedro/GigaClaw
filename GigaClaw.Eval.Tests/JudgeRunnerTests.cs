@@ -63,7 +63,8 @@ public sealed class JudgeRunnerTests
         Assert.True(drifted.Length == 0, DescribeBaselineDrift(drifted));
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal(6, fixtures.Length);
+        // 6 core fixtures plus the security-assurance pack's 5.
+        Assert.Equal(11, fixtures.Length);
         Assert.All(fixtures, fixture =>
         {
             Assert.Equal("pass", fixture.Status);
@@ -190,7 +191,8 @@ public sealed class JudgeRunnerTests
     {
         var directory = Path.Combine(RepositoryRoot, "GigaClaw.Eval", "baselines", "judge");
         var baselines = Directory.GetFiles(directory, "*.json").OrderBy(path => path, StringComparer.Ordinal).ToArray();
-        Assert.Equal(6, baselines.Length);
+        // 6 core fixture agents plus the security-assurance pack's 4.
+        Assert.Equal(10, baselines.Length);
 
         var scratch = Path.Combine(Path.GetTempPath(), "gigaclaw-judge-verdicts-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(scratch);
@@ -294,8 +296,12 @@ public sealed class JudgeRunnerTests
         foreach (var fixture in replay.LoadFixtures())
         {
             var (rubric, source) = runner.LoadRubric(fixture.Agent);
-            Assert.Equal(fixture.Agent, source);
-            Assert.Equal(fixture.Agent, rubric.Agent);
+            // Core fixture agents ship bespoke rubrics; pack agents without one are judged by the
+            // shared default — resolvable either way is what this test guarantees.
+            Assert.True(
+                source == fixture.Agent || source == "default",
+                $"Rubric for '{fixture.Agent}' resolved to unexpected source '{source}'.");
+            Assert.Equal(source, rubric.Agent);
             Assert.NotEmpty(rubric.Criteria);
         }
 

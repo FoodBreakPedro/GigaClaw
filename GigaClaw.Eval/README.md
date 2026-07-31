@@ -72,10 +72,18 @@ A fixture is two committed files:
   in the same NDJSON dialect as `GigaClaw.ClaudeMock/scenarios/` (`_meta.exit` sets the
   process exit code, `{{session_id}}` is rewritten at replay time).
 
-The fixture id must equal its filename, the agent must exist in `catalog.json`, and the
-scenario file must exist — a replay refuses to start otherwise.
+The fixture id must equal its filename (globally unique across all roots), the agent must
+exist in `catalog.json`, and the scenario file must exist — a replay refuses to start
+otherwise.
 
-Committed fixtures, one per pipeline family:
+Fixtures are enumerated from every root in `evalconfig.json` `Replay.FixtureRoots`:
+core's `GigaClaw.Eval/fixtures` plus each pack's `Packs/<id>/eval/fixtures` (a pack's
+fixtures ship with the pack, so it stays reviewable and removable as one directory). A
+pack agent's replay workspace is materialized from that pack's `Agents/` directory,
+resolved through the catalog's `Pack` field; the preamble (and the contract manifest for
+a pack that ships none) falls back to core's template.
+
+Committed core fixtures, one per pipeline family:
 
 | Fixture | Family | Agent |
 | --- | --- | --- |
@@ -85,6 +93,11 @@ Committed fixtures, one per pipeline family:
 | `governance-reject-unscoped-release` | governance | `approval-gatekeeper` |
 | `growth-nurture-sequence` | growth | `growth-writer` |
 | `media-storyboard-teaser` | media | `local-media-director` |
+
+The `security-assurance` pack ships five more under
+`Packs/security-assurance/eval/fixtures/` (family `security`), including
+`security-secret-clean-diff`, the suite's one SHIP-path fixture — it fails if
+`secrets-reviewer` regresses into blocking everything.
 
 `dev-suite-fails-hard` deliberately exits non-zero: it proves the harness records a failed
 dispatch as data rather than crashing on it.
