@@ -81,15 +81,15 @@ python3 .agents/scripts/verdict_contract.py ./verdict.json \
 ## Worked verdict
 
 ```text
-GIGACLAW-VERDICT v1 threat-modeler FIX artifact-sha256:9b4d0e6a2c81f5379ad2c4be0187f6d53ea9b70c41d8256fb03e9a7c15d84620
+GIGACLAW-VERDICT v1 threat-modeler BLOCK artifact-sha256:9b4d0e6a2c81f5379ad2c4be0187f6d53ea9b70c41d8256fb03e9a7c15d84620
 
 ```json
 {
   "schemaVersion": 1,
   "agent": "threat-modeler",
   "ticketId": 604,
-  "verdict": "FIX",
-  "summary": "Tenant boundary in the shared-link design has no server-side owner check; threat model written to doc/security/threat-models/ticket-604.md.",
+  "verdict": "BLOCK",
+  "summary": "Tenant boundary in the shared-link design has no server-side owner check, so any link holder reads across tenants — an unmitigated Critical, and the ladder allows no exception; threat model written to doc/security/threat-models/ticket-604.md.",
   "categories": [
     { "name": "Boundaries & data flows", "score": 22, "max": 25, "notes": "Five boundaries modelled: browser/API, API/store, tenant/tenant, API/mail provider, operator/production data. The mail provider flow is described only as 'send the link'." },
     { "name": "Threat enumeration", "score": 20, "max": 25, "notes": "All six classes covered per boundary; repudiation on the operator boundary left thin because the design names no audit log." },

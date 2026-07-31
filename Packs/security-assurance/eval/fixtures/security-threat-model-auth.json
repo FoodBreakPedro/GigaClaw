@@ -33,6 +33,6 @@
       "assistant",
       "result"
     ],
-    "FinalTextContains": "no path evidence"
+    "FinalTextContains": "no path evidence, and the verdict is BLOCK"
   }
 }
