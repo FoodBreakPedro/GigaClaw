@@ -151,6 +151,7 @@ internal sealed class ProjectRuntimeManager
                     AgentInactivityTriggerSpec t    => new AgentInactivityTrigger(t),
                     TicketCommentAddedTriggerSpec t => new TicketCommentAddedTrigger(t),
                     GitHubPrCommentTriggerSpec t    => BuildGitHubTrigger(a.Id, t),
+                    GitHubCheckStatusTriggerSpec t  => BuildGitHubTrigger(a.Id, t),
                     _                              => new NullTrigger(),
                 };
             }
@@ -163,16 +164,21 @@ internal sealed class ProjectRuntimeManager
     /// A GitHub trigger with no GitHub services wired is a no-op, not a failure: the project's
     /// other automations must still load. The warning is the record that this one will never fire.
     /// </summary>
-    private ITrigger BuildGitHubTrigger(string automationId, GitHubPrCommentTriggerSpec spec)
+    private ITrigger BuildGitHubTrigger(string automationId, TriggerSpec spec)
     {
         if (_github is null)
         {
             _logger.LogWarning(
-                "Automation {Id} declares a githubPrComment trigger, but the GitHub services are not registered — it will never fire",
-                automationId);
+                "Automation {Id} declares a {Type} trigger, but the GitHub services are not registered — it will never fire",
+                automationId, spec.UiTypeKey);
             return new NullTrigger();
         }
-        return new GitHubPrCommentTrigger(spec, _github);
+        return spec switch
+        {
+            GitHubPrCommentTriggerSpec s   => new GitHubPrCommentTrigger(s, _github),
+            GitHubCheckStatusTriggerSpec s => new GitHubCheckStatusTrigger(s, _github),
+            _                              => new NullTrigger(),
+        };
     }
 
     private async Task<ITrigger> BuildTicketInColumnTriggerAsync(

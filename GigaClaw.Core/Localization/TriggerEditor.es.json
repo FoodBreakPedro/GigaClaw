@@ -11,6 +11,7 @@
   "TrigTypeGitHubCheckStatus": "Estado de CI de GitHub",
   "GitHubOwnerLoginsHint": "Logins de propietario (separados por comas, vacío = ajuste del proyecto)",
   "GitHubConclusionsHint": "Conclusiones (separadas por comas, p. ej. failure, success)",
+  "GitHubRefHint": "Rama o SHA (vacío = HEAD del espacio de trabajo)",
   "AuthorsFilterHint": "Autores (separados por comas, vacío = todos)",
   "IgnoreAuthorsHint": "Ignorar autores (correos separados por comas)",
   "ScheduleFrequency": "Frecuencia",

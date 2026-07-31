@@ -13,6 +13,7 @@
             <option value="agentInactivity">@L["TrigTypeAgentInactivity"]</option>
             <option value="ticketCommentAdded">@L["TrigTypeCommentAdded"]</option>
             <option value="githubPrComment">@L["TrigTypeGitHubPrComment"]</option>
+            <option value="githubCheckStatus">@L["TrigTypeGitHubCheckStatus"]</option>
         </select>
     </label>
 
@@ -201,6 +202,20 @@
                        @onchange="e => ParseOwnerLogins(s, (string?)e.Value)" />
             </label>
             break;
+
+        case GitHubCheckStatusTriggerSpec s:
+            <label>@L["PollSeconds"]
+                <input type="number" @bind="s.PollSeconds" />
+            </label>
+            <label>@L["GitHubConclusionsHint"]
+                <input placeholder="failure, success" value="@string.Join(", ", s.Conclusions)"
+                       @onchange="e => ParseConclusions(s, (string?)e.Value)" />
+            </label>
+            <label>@L["GitHubRefHint"]
+                <input placeholder="main" value="@(s.Ref ?? "")"
+                       @onchange="e => s.Ref = string.IsNullOrWhiteSpace((string?)e.Value) ? null : ((string)e.Value!).Trim()" />
+            </label>
+            break;
     }
 </div>
 
@@ -221,6 +236,7 @@
         AgentInactivityTriggerSpec => "agentInactivity",
         TicketCommentAddedTriggerSpec => "ticketCommentAdded",
         GitHubPrCommentTriggerSpec => "githubPrComment",
+        GitHubCheckStatusTriggerSpec => "githubCheckStatus",
         _ => throw new NotSupportedException($"No UI mapping for trigger type {Automation.Trigger.GetType().Name}. Register it in TriggerEditor.razor."),
     };
 
@@ -240,6 +256,7 @@
             "agentInactivity" => new AgentInactivityTriggerSpec { PollSeconds = 60, MinutesIdle = 45 },
             "ticketCommentAdded" => new TicketCommentAddedTriggerSpec { PollSeconds = 30 },
             "githubPrComment" => new GitHubPrCommentTriggerSpec { PollSeconds = 120 },
+            "githubCheckStatus" => new GitHubCheckStatusTriggerSpec { PollSeconds = 120 },
             _ => throw new NotSupportedException($"Unknown trigger type key '{e.Value}'. Register it in TriggerEditor.razor."),
         };
         await OnReplace.InvokeAsync(spec);
@@ -248,6 +265,13 @@
     private static void ParseOwnerLogins(GitHubPrCommentTriggerSpec spec, string? value)
     {
         spec.OwnerLogins = (value ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+    }
+
+    private static void ParseConclusions(GitHubCheckStatusTriggerSpec spec, string? value)
+    {
+        spec.Conclusions = (value ?? "")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
     }

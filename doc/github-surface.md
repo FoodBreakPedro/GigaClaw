@@ -22,6 +22,7 @@ A repo with a remote already has a place where humans file work and review it. C
 | `GigaClaw.Core/Github/GitHubIssueSyncService.cs` | One poll pass: import labeled issues, then run the closure round trip. |
 | `GigaClaw.Core/Github/OwnerFeedback.cs` | The `github-owner-feedback/v1` ticket-comment contract and the brief rendered into a re-dispatch. |
 | `GigaClaw.Core/Automation/Triggers/GitHubPrCommentTrigger.cs` | The `githubPrComment` trigger. |
+| `GigaClaw.Core/Automation/Triggers/GitHubCheckStatusTrigger.cs` | The `githubCheckStatus` trigger, in the `gitCommit` family. |
 | `GigaClaw.Core/Automation/Triggers/GitHubTriggerServices.cs` | The optional dependency bundle the GitHub triggers need. |
 | `GigaClaw.Core/Automation/Policy/OutboundReceipt.cs` | The shared `outbound-denial/v1` receipt shape and the sink that writes it. |
 | `GigaClaw.Web/Api/Endpoints.GitHub.cs` | REST configuration and manual sync. |
@@ -103,6 +104,18 @@ If none of those resolve, nothing fires. Guessing would re-dispatch an agent ont
 
 Dedupe is a per-automation cursor of the highest comment id seen, stored in the workspace's `dispatch-state.json` — the same mechanism `ticketCommentAdded` uses, so two automations watching one repository cannot swallow each other's comments.
 
+## CI status as a gitCommit-family trigger
+
+The `githubCheckStatus` trigger fires when a GitHub check run reaches one of its configured conclusions (`failure` by default; an empty list means every concluded run) for the commit under watch.
+
+It belongs to the **`gitCommit` family**, and that is a design claim, not a label. Like `gitCommit`, it is about a commit rather than a ticket or a clock: it resolves the commit from the workspace's own `git rev-parse HEAD` (unless `ref` pins a branch or SHA), it polls on the same debounce shape, and it keeps its seen-state in the same durable place. Anything else would give the board two different notions of "a commit happened".
+
+**Dedupe** is one key per `(sha, check-run id, conclusion)` in the workspace's `dispatch-state.json`, per automation — the same store `gitCommit` uses for its last-processed commit and `ticketCommentAdded` uses for its comment cursor. The conclusion is part of the key on purpose: a re-run that flips `failure` to `success` is a new event, not the same one seen twice. The key set is bounded so a long-lived workspace's state file cannot grow without limit.
+
+A check run that has not concluded (`queued`, `in_progress`) fires nothing — it has not concluded anything.
+
+**Ticket binding** is best-effort and free: the commit's own message is read for a `ticket-<id>` reference. When one is found the firing carries that ticket; otherwise it is ticketless, which is `gitCommit`'s normal shape rather than a failure.
+
 ## Entry points
 
 | Route | Purpose |
@@ -113,7 +126,9 @@ Dedupe is a per-automation cursor of the highest comment id seen, stored in the 
 | `POST /api/projects/{slug}/github/sync` | Run one sync pass now; returns the counts. |
 | `GET /api/projects/{slug}/github/links` | The issue ↔ ticket mapping. |
 
-Services are singletons registered in `GigaClaw.Web/Program.cs`. There is no Blazor UI for this surface yet — configuration is REST-only.
+Services are singletons registered in `GigaClaw.Web/Program.cs`. There is no Blazor page for this surface yet — repository, token and owner-login configuration is REST-only. The two triggers do appear in the automation editor's trigger palette, because leaving a registered trigger type out of that switch is a runtime failure, not a missing feature.
+
+`ProjectRuntimeManager` takes the GitHub services as an *optional* bundle: a host that never registered them builds every other trigger unchanged, and a GitHub trigger declared without them degrades to a no-op with a warning rather than failing the project's whole config load.
 
 ## External dependencies
 

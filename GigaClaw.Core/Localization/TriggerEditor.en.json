@@ -11,6 +11,7 @@
   "TrigTypeGitHubCheckStatus": "GitHub CI status",
   "GitHubOwnerLoginsHint": "Owner logins (comma-separated, empty = project setting)",
   "GitHubConclusionsHint": "Conclusions (comma-separated, e.g. failure, success)",
+  "GitHubRefHint": "Branch or SHA (empty = the workspace HEAD)",
   "AuthorsFilterHint": "Authors (comma-separated, empty = all)",
   "IgnoreAuthorsHint": "Ignore authors (comma-separated emails)",
   "ScheduleFrequency": "Frequency",
