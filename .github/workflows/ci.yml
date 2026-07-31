@@ -88,3 +88,16 @@ jobs:
       - name: Static agent eval
         shell: bash
         run: dotnet run --project GigaClaw.Eval -c Release --no-build -- all --strict
+
+      # The remaining KnownWindowsFailureFact (JudgeRunnerTests baseline match) runs here anyway,
+      # non-blocking, so every Windows run keeps emitting its drift diagnostics. CAUTION when
+      # reading results: because of continue-on-error, this step's CONCLUSION is always "success".
+      # Only the step's `outcome` field or its log tells the truth — a false "verified" was
+      # already shipped once by reading the conclusion. Read the log.
+      - name: Interrogate known Windows failures (non-blocking)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        shell: bash
+        env:
+          GIGACLAW_RUN_KNOWN_WINDOWS_FAILURES: "1"
+        run: dotnet test GigaClaw.Eval.Tests -c Release --no-build --nologo --filter "FullyQualifiedName~JudgeRunnerTests" --logger "console;verbosity=detailed"

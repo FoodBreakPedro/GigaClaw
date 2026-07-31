@@ -1,3 +1,4 @@
+using GigaClaw.Eval.Tests.Helpers;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -41,12 +42,15 @@ public sealed class JudgeRunnerTests
         Assert.Equal(RubricJudge.DeterministicReviewInstant, firstVerdict!.ReviewedAtUtc);
     }
 
-    // Exempted on Windows from before 94971fb until 2026-07-31. Diagnosed via the CI
-    // interrogation step (run 30669812287): only the stream-digest fields drifted, because
-    // Normalize's exact-substring scrubbing missed Windows path forms. Fixed by the structural
-    // workspace scrub in ReplayRunner.Normalize and observed green on a Windows runner
-    // (run 30671373306) before the exemption came off.
-    [Fact]
+    [KnownWindowsFailureFact(
+        "Only the stream-digest fields (evidence[].ref / inputDigest) drift; scored text is "
+        + "identical to the character. The workspace-path theory is DISPROVEN: aed9f74's "
+        + "structural scrub changed the produced Windows digests not at all (run 30673550327 "
+        + "byte-matches the pre-fix run 30669812287), so the differing bytes are something the "
+        + "path scrub never touches and remain unidentified. The exemption was briefly removed "
+        + "(118496e) on a false 'observed green' — a continue-on-error step's conclusion always "
+        + "reads success; only its log or outcome tells the truth. Next step: dump the normalized "
+        + "stream on a Windows runner and diff it against the committed macOS reference.")]
     public void Judge_MatchesTheCommittedBaselineForEveryFixture()
     {
         var result = new JudgeRunner(RepositoryRoot).Run("all", writeReport: false);

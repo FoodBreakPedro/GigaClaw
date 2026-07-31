@@ -12,7 +12,7 @@ Written for whoever picks this up next. Everything below was read from the tree,
 
 ### Verification on `4082184`
 
-`GigaClaw.Core.Tests` **1131 / 0** · `GigaClaw.Eval.Tests` **39 / 0** · `catalog check --strict` **0, zero gap lines** · `catalog check --strict-packs` **0** · `Eval -- all` **0** (37 agents) · `Eval -- replay all` **38 fixtures / 38 pass** · `Eval -- judge all` **38 / 38, zero drift**.
+`GigaClaw.Core.Tests` **1131 / 0** · `GigaClaw.Eval.Tests` **39 / 0** · `catalog check --strict` **0, zero gap lines** · `catalog check --strict-packs` **0** · `Eval -- all` **0** (37 agents) · `Eval -- replay all` **38 fixtures / 38 pass** · `Eval -- judge all` **38 / 38, zero drift** (macOS/Linux; on Windows the judge-baseline test is exempted again — see below).
 
 Re-run with the same commands as always (test both projects in `-c Release`; catalog `check --strict` and `--strict-packs`; eval `all`, `replay all`, `judge all`). In this sandbox, clean `bin`/`obj` before trusting incremental builds — clock skew makes MSBuild's up-to-date check lie, and it produced two false "green" runs this session.
 
@@ -34,9 +34,11 @@ Re-run with the same commands as always (test both projects in `-c Release`; cat
 14. **PolicyHookTransport shutdown race fixed** (`32ccd24`) — the Windows CI flake was an `ObjectDisposedException` escaping the accept loop during dispose; classifier tests pin the exact CI exception shapes.
 15. **MergeQueueTests CRLF fix** (`4082184`) — test temp repos pin `core.autocrlf=false`; Git for Windows' default was rewriting merged checkouts.
 
-## The Windows exemption is gone
+## The Windows exemption: narrowed, disproven once, and back on
 
-The `KnownWindowsFailureFact` debt list is **empty**. Sequence, because the method matters: a non-blocking CI interrogation step ran the exempted judge test on Windows with the field-by-field drift output → the output showed 29/38 fixtures drifting with **only** `evidence[].ref`/`inputDigest` moving (scored text identical to the character) → that convicted `ReplayRunner.Normalize`'s exact-substring workspace scrub (8.3 names, JSON-escaped backslashes, case variants all defeat it) → structural scrub keyed on the unique `gigaclaw-replay-<hex>` leaf landed with failing-then-passing tests for each form → interrogation step observed green on a real Windows runner → only then did the exemption and the step come off. The test now runs blocking on all three platforms.
+The judge-baseline drift got its first real evidence this session, and the honest state is: **still open, but much smaller.** The CI interrogation step showed 29/38 fixtures drifting with **only** `evidence[].ref`/`inputDigest` moving — scored text identical to the character. That implicated `Normalize`'s workspace scrub, a structural scrub landed (`aed9f74`) with failing-then-passing tests for the Windows path forms, and the exemption was removed (`118496e`) on an "observed green" — **which was false.** The interrogation step runs with `continue-on-error`, and such a step's *conclusion* always reads success; only its `outcome` or log tells the truth. The next runs proved the produced Windows digests are byte-identical before and after the scrub fix: **the leaked difference is not any representation of the workspace path.** The exemption is restored with that history in its reason string; the scrub fix stays (its tests are real; it just wasn't the mechanism).
+
+What the next session inherits: the differing bytes live somewhere in the normalized stream that path scrubbing never touches, on 29 of 38 fixtures, with per-fixture stable digests. The cheapest next move is a normalized-stream dump printed by the test on drift, diffed against a committed macOS reference — line-level, not hash-level, evidence. And the meta-lesson is now paid for twice in this repo: **a diagnostic (or CI field) that reports something other than what it appears to report is worse than none.**
 
 ## Gate state
 
@@ -51,7 +53,8 @@ The `KnownWindowsFailureFact` debt list is **empty**. Sequence, because the meth
 - **C5 / C7 / C8** — unparked by R4/R5 landing; not started tonight (owner unparked R4–R7 explicitly; the C-lane items were not named).
 - **Judge baselines for the 31 new fixtures were recorded, not reviewed** — same §9 posture the security four were in before G6. A G6-style review pass over the core judge baselines is cheap and closes the loop.
 - **Manual Board drags to Done skip worktree cleanup** — R5 cleanup triggers only through `ActionExecutor`'s `moveTicketStatus`; a UI-path drag bypasses it. Small, known, documented in the R5 commit.
-- **CI on `4082184`** — in flight at handoff time; it is the Windows confirmation for the MergeQueueTests CRLF fix. If its windows leg is green, the whole board is green on all three platforms with zero exemptions.
+- **Judge-drift stream dump** — the one remaining Windows exemption needs line-level evidence: make the test print the normalized stream of one drifting fixture on failure and commit a macOS reference dump to diff against. The interrogation CI step is back in `ci.yml`; read its **log**, never its conclusion.
+- **MergeQueueTests CRLF fix (`4082184`)** — its Windows leg passed in run 30673464742's Core.Tests (1131/0 there; the run's only red was the re-blocking judge test). Confirmed.
 
 ## Hard-won lessons, appended
 
