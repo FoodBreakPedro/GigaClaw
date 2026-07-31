@@ -111,6 +111,30 @@ public sealed class StaticEvalRunnerTests
 
         Assert.Equal(1, drifted.ExitCode);
         Assert.Equal("drift", drifted.Report.Agents[0].BaselineStatus);
+        Assert.Contains("1 baseline error(s) (baseline.drift: 1)", Program.Summary(drifted.Report));
+    }
+
+    [Fact]
+    public void Summary_ReportsMissingBaselineThatDrivesTheExitCode()
+    {
+        using var fixture = new EvalFixture();
+        fixture.AddAgent("worker", "# Worker\n");
+        fixture.WriteInputs();
+        var runner = new StaticEvalRunner(fixture.Root);
+
+        var missing = runner.Run("worker", writeReport: false);
+        var summary = Program.Summary(missing.Report);
+
+        // baseline.missing is an agent-level condition, not a check: it must still surface in the
+        // summary whenever it drives a non-zero exit, instead of hiding behind "0 error(s)".
+        Assert.Equal(1, missing.ExitCode);
+        Assert.Equal("missing", missing.Report.Agents[0].BaselineStatus);
+        Assert.Contains("1 baseline error(s) (baseline.missing: 1)", summary);
+
+        var repaired = runner.Run("worker", updateBaselines: true, writeReport: false);
+
+        Assert.Equal(0, repaired.ExitCode);
+        Assert.DoesNotContain("baseline error", Program.Summary(repaired.Report));
     }
 
     [Fact]

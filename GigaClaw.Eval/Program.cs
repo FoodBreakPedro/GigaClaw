@@ -122,13 +122,33 @@ internal static class Program
                 Console.WriteLine($"{agent.Agent}: error: baseline.{agent.BaselineStatus}");
         }
 
-        var checks = result.Report.Agents.SelectMany(agent => agent.Checks).ToArray();
-        Console.WriteLine(
-            $"Evaluated {result.Report.Agents.Count} agent(s): " +
+        Console.WriteLine(Summary(result.Report));
+        Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
+    }
+
+    // The summary must account for everything that drives the exit code, not just per-check
+    // statuses: baseline.missing/baseline.drift are agent-level conditions (not checks), and
+    // counting only checks once printed "0 error(s)" while exiting 1 — a summary that
+    // misattributes is worse than none.
+    internal static string Summary(EvalReport report)
+    {
+        var checks = report.Agents.SelectMany(agent => agent.Checks).ToArray();
+        var missing = report.Agents.Count(agent => agent.BaselineStatus == "missing");
+        var drift = report.Agents.Count(agent => agent.BaselineStatus == "drift");
+        var baselineSegment = (missing, drift) switch
+        {
+            (0, 0) => "",
+            (> 0, 0) => $", {missing} baseline error(s) (baseline.missing: {missing})",
+            (0, > 0) => $", {drift} baseline error(s) (baseline.drift: {drift})",
+            _ => $", {missing + drift} baseline error(s) " +
+                 $"(baseline.missing: {missing}, baseline.drift: {drift})"
+        };
+        return
+            $"Evaluated {report.Agents.Count} agent(s): " +
             $"{checks.Count(check => check.Status == "error")} error(s), " +
             $"{checks.Count(check => check.Status == "warning")} warning(s), " +
-            $"{checks.Count(check => check.Status == "pass")} pass(es).");
-        Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
+            $"{checks.Count(check => check.Status == "pass")} pass(es)" +
+            baselineSegment + ".";
     }
 
     private static void Print(ReplayRunResult result)

@@ -15,4 +15,7 @@
   <ItemGroup>
     <None Include="evalconfig.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="GigaClaw.Eval.Tests" />
+  </ItemGroup>
 </Project>
