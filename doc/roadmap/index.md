@@ -14,6 +14,8 @@
 | Plan home | Markdown docs only (this directory). Tickets created manually as work starts |
 | Semantic memory (P16), model routing (O3/O4) | Later pilots, shadow mode, hard-gated on O6 — per both the panel and the reconciliation |
 | Do-not-build | T15 consensus swarms, T16 federation, A14 queen agent, P14 GOAP, P17 signed receipts, O15 quantization, A12 business-ops. Unchanged |
+| Q3 confirmed (2026-07-31) | Owner confirms the explicit bindings as the intended reading: `security-auditor` → Sonnet, `threat-modeler` → Opus. The `models.json` header caveat is narrowed to match (no security-analysis agent on Fable; sub-Opus allowed where the criterion bounds or delegates the judgement) |
+| Runtime lane unparked (2026-07-31) | Owner unparks R4–R7 (leases → worktrees → merge queue → runner interface). R8 stays blocked on Codex usage cap |
 
 ## Lane model
 
