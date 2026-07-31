@@ -18,12 +18,22 @@ public static class PythonContractRunner
         Path.Combine(RepositoryRoot, "GigaClaw.Core.Tests", "Fixtures", name);
 
     public static (int ExitCode, string Output) RunScript(string scriptName, params string[] arguments)
-        => Run(Path.Combine(ScriptsDir, scriptName), arguments);
+        => Run(Path.Combine(ScriptsDir, scriptName), arguments, ioEncoding: null);
 
-    private static (int ExitCode, string Output) Run(string script, string[] arguments)
+    /// <summary>
+    /// Runs a script with <c>PYTHONIOENCODING</c> pinned, which is how a non-Windows machine can
+    /// exercise the one thing about Windows that broke these validators: Python there defaults
+    /// stdout to the ANSI code page, so a script that prints U+2192 crashes with
+    /// <c>UnicodeEncodeError</c> after its work already succeeded.
+    /// </summary>
+    public static (int ExitCode, string Output) RunScriptWithIoEncoding(
+        string scriptName, string ioEncoding, params string[] arguments)
+        => Run(Path.Combine(ScriptsDir, scriptName), arguments, ioEncoding);
+
+    private static (int ExitCode, string Output) Run(string script, string[] arguments, string? ioEncoding)
     {
         var (executable, prefix) = Interpreter.Value;
-        return Execute(executable, [.. prefix, script, .. arguments])
+        return Execute(executable, [.. prefix, script, .. arguments], ioEncoding)
             ?? throw new InvalidOperationException($"Could not start '{executable}' to run {Path.GetFileName(script)}.");
     }
 
@@ -44,7 +54,8 @@ public static class PythonContractRunner
         {
             var probe = Execute(
                 candidate.Executable,
-                [.. candidate.Prefix, "-c", "import sys; print(sys.version_info[0])"]);
+                [.. candidate.Prefix, "-c", "import sys; print(sys.version_info[0])"],
+                ioEncoding: null);
             if (probe is { ExitCode: 0 } result && result.Output.Trim().StartsWith('3'))
                 return candidate;
         }
@@ -54,16 +65,23 @@ public static class PythonContractRunner
             "enforcement layer is Python, so it is a prerequisite for running the test suite.");
     });
 
-    private static (int ExitCode, string Output)? Execute(string executable, string[] arguments)
+    private static (int ExitCode, string Output)? Execute(
+        string executable, string[] arguments, string? ioEncoding)
     {
         var info = new ProcessStartInfo(executable)
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             WorkingDirectory = RepositoryRoot,
+            // The scripts print non-ASCII and the host decodes their streams as UTF-8
+            // (ProcessLifecycleManager, DashboardScriptRunner), so the tests read them the same way.
+            StandardOutputEncoding = System.Text.Encoding.UTF8,
+            StandardErrorEncoding = System.Text.Encoding.UTF8,
         };
         foreach (var argument in arguments)
             info.ArgumentList.Add(argument);
+        if (ioEncoding is not null)
+            info.Environment["PYTHONIOENCODING"] = ioEncoding;
 
         try
         {

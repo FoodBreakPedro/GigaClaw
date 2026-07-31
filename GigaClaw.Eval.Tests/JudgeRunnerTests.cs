@@ -43,17 +43,29 @@ public sealed class JudgeRunnerTests
     }
 
     [KnownWindowsFailureFact(
-        "The committed judge baselines do not reproduce on Windows. Undiagnosed, and pre-existing: it was already failing at 94971fb, before the SP-2 branch existed.")]
+        "The committed judge baselines do not reproduce on Windows. Undiagnosed, and pre-existing: "
+        + "it was already failing at 94971fb, before the SP-2 branch existed. Line endings are "
+        + "ruled out — CRLF-converting GigaClaw.Eval, GigaClaw.ClaudeMock, ProjectTemplate and "
+        + "Packs leaves all of these passing, so it does not share a cause with the manifest bug.")]
     public void Judge_MatchesTheCommittedBaselineForEveryFixture()
     {
         var result = new JudgeRunner(RepositoryRoot).Run("all", writeReport: false);
 
-        Assert.Equal(0, result.ExitCode);
         var fixtures = result.Reports.SelectMany(report => report.Fixtures).ToArray();
+
+        // Baseline status first, and with the drift spelled out. This test has been exempted on
+        // Windows for longer than anyone can date, and the reason it stayed undiagnosed is that it
+        // reported only "expected match, got drift" — which names the symptom and nothing else.
+        // Every verdict is a hash of the normalized replay stream plus scored text, so the useful
+        // question is always *which field moved*; print it rather than making the next person
+        // reconstruct it from a Windows machine they may not have.
+        var drifted = fixtures.Where(f => f.BaselineStatus != "match").ToArray();
+        Assert.True(drifted.Length == 0, DescribeBaselineDrift(drifted));
+
+        Assert.Equal(0, result.ExitCode);
         Assert.Equal(6, fixtures.Length);
         Assert.All(fixtures, fixture =>
         {
-            Assert.Equal("match", fixture.BaselineStatus);
             Assert.Equal("pass", fixture.Status);
             Assert.NotNull(fixture.Verdict);
         });
@@ -62,6 +74,55 @@ public sealed class JudgeRunnerTests
         // worth nothing. dev-suite-fails-hard reports its blocker but proposes no way forward.
         var qa = fixtures.Single(fixture => fixture.Agent == "qa-tester");
         Assert.Equal("FIX", qa.Verdict!.Verdict);
+    }
+
+    /// <summary>
+    /// Renders a baseline drift as the committed verdict beside the produced one, field by field,
+    /// so the failure names its own cause. Kept next to the assertion rather than in a helper
+    /// class: its whole job is to be read at the moment the test goes red.
+    /// </summary>
+    private static string DescribeBaselineDrift(IReadOnlyList<JudgeFixtureResult> drifted)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"{drifted.Count} fixture(s) do not reproduce the committed baseline. ");
+        sb.Append($"os={System.Runtime.InteropServices.RuntimeInformation.OSDescription} ");
+        sb.Append($"tempPath={Path.GetTempPath()}");
+
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        foreach (var fixture in drifted)
+        {
+            sb.Append($"\n\n--- {fixture.Agent} / {fixture.Fixture}: {fixture.BaselineStatus} ---");
+
+            var baselinePath = Path.Combine(
+                RepositoryRoot, "GigaClaw.Eval", "baselines", "judge", fixture.Agent + ".json");
+            if (!File.Exists(baselinePath))
+            {
+                sb.Append($"\n  no baseline file at {baselinePath}");
+                continue;
+            }
+
+            var committed = JsonDocument.Parse(File.ReadAllText(baselinePath))
+                .RootElement.GetProperty("Fixtures")
+                .EnumerateArray()
+                .FirstOrDefault(e => e.GetProperty("Fixture").GetString() == fixture.Fixture);
+
+            sb.Append("\n  committed: ").Append(
+                committed.ValueKind == JsonValueKind.Undefined
+                    ? "(no entry for this fixture)"
+                    : Indent(committed.GetProperty("Verdict").GetRawText()));
+            sb.Append("\n  produced:  ").Append(
+                fixture.Verdict is null ? "(null)" : Indent(JsonSerializer.Serialize(fixture.Verdict, options)));
+        }
+
+        // The two most likely remaining culprits, both invisible in a bare status string.
+        sb.Append("\n\nIf only `evidence[].ref` / `inputDigest` moved, the normalized replay stream ");
+        sb.Append("differs — compare ReplayRunner.Normalize's workspace scrubbing against the ");
+        sb.Append("temp path above (8.3 short names and symlinked temp dirs both defeat a plain ");
+        sb.Append("string Replace). If a `notes` character count moved, the scored text itself ");
+        sb.Append("differs and the mock CLI's output is the place to look.");
+        return sb.ToString();
+
+        static string Indent(string json) => json.Replace("\n", "\n  ");
     }
 
     [Fact]

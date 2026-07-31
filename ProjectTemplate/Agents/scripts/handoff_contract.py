@@ -29,6 +29,14 @@ from typing import Any
 
 from schema_check import validate as validate_schema, workspace_relative_errors
 
+# These scripts print non-ASCII (arrows, middots, dashes, accents) and the host reads their
+# stdout as UTF-8. Python on Windows still defaults stdout to the ANSI code page (cp1252), where
+# those characters raise UnicodeEncodeError *after* the work succeeded -- turning a clean pass
+# into a crash. Pin the stream instead of degrading the output to ASCII.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8")
+
 SCHEMA_NAME = "handoff.schema.json"
 MARKER_RE = re.compile(
     r"^GIGACLAW-HANDOFF\s+v1\s+(?P<agent>[a-z0-9][a-z0-9-]*)\s+ticket-(?P<ticket>[0-9]+)\s+run-(?P<run>\S+)\s*$",

@@ -52,6 +52,9 @@ public class UnifiedBoardTests
     private static string UnifiedBoardFrJsonPath() =>
         Path.Combine(RepoRoot(), "GigaClaw.Core", "Localization", "UnifiedBoard.fr.json");
 
+    private static string UnifiedBoardEsJsonPath() =>
+        Path.Combine(RepoRoot(), "GigaClaw.Core", "Localization", "UnifiedBoard.es.json");
+
     private static string LoadUnifiedBoard() => File.ReadAllText(UnifiedBoardRazorPath());
 
     // The unified board is the application default and keeps /board as a stable alias.
@@ -238,15 +241,25 @@ public class UnifiedBoardTests
         Assert.Contains("UnifiedBoardTitle", json);
     }
 
-    // Parity: every key present in the en resource must also exist in the fr resource
-    // (and vice versa) so the localization fallback chain never silently ships English
-    // strings under the fr locale, or blank keys under en.
     [Fact]
-    public void UnifiedBoardJson_EnAndFrKeysMatch()
+    public void UnifiedBoardEsJson_HasAllBoardsNavLabelKey()
+    {
+        var json = File.ReadAllText(UnifiedBoardEsJsonPath());
+        Assert.Contains("AllBoardsNavLabel", json);
+        Assert.Contains("UnifiedBoardTitle", json);
+    }
+
+    // Parity: every key present in the en resource must also exist in fr and es
+    // (and vice versa) so the localization fallback chain never silently ships English
+    // strings under the fr/es locale, or blank keys under en.
+    [Fact]
+    public void UnifiedBoardJson_EnFrAndEsKeysMatch()
     {
         var enKeys = ExtractKeys(File.ReadAllText(UnifiedBoardEnJsonPath()));
         var frKeys = ExtractKeys(File.ReadAllText(UnifiedBoardFrJsonPath()));
+        var esKeys = ExtractKeys(File.ReadAllText(UnifiedBoardEsJsonPath()));
         Assert.Equal(enKeys, frKeys);
+        Assert.Equal(enKeys, esKeys);
     }
 
     private static HashSet<string> ExtractKeys(string json) =>

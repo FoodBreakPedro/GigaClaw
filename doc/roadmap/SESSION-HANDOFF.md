@@ -69,50 +69,65 @@ R4 (leases) → R5 (worktrees) → R6 (merge queue) → R7 (runner interface) �
 
 Fixed here:
 
-- **Embedded assets vanished on Windows.** `Initialize` wrote 5 of 119 files and reported no error. The survivors were exactly the four merge artifacts, which reach disk through a reader that probes both path separators; everything else goes through the enumerated set, whose *prefix comparison* ran against the raw resource name. MSBuild builds those names from a `LogicalName` template holding a literal `/` beside `%(RecursiveDir)`, and on Windows they can come back with backslashes — so every glob-sourced asset failed `StartsWith` and silently left the pack. Silently is the point: "no resources matched this prefix" is indistinguishable from "this pack ships none", so composition succeeded and `provides` verification passed against an equally empty actual set. `CorePackEnumerationTests` now pins it.
+- **Separator normalization in `EmbeddedPackSource`.** `%(RecursiveDir)` yields backslashes on Windows, so a resource name could differ from the `LogicalName` template's literal `/` and fail the prefix comparison. This was believed at the time to be the cause of assets vanishing on Windows. **It was not** — assets never vanished; see below. Windows CI later reported `AgentRelativePaths=104`, i.e. enumeration was already complete. Keep it as hardening, and describe it as hardening: it is defensible on its own terms and pinned by `CorePackEnumerationTests`, but it fixed no observed failure.
 - **A CRLF regex.** With `RegexOptions.Multiline`, .NET anchors `$` before `\n`, which on a CRLF checkout is *after* the `\r`, and `\S+` cannot consume `\r`. The verdict-marker pattern never matched on Windows.
 
-### Three tests are exempted on Windows, deliberately
+### The "install drops 114 files" bug: resolved, and it was never an install bug
 
-All three carry `[KnownWindowsFailureFact(reason)]`, which skips **only** on Windows and states what breaks. This is a deferral, not a fix.
+**Nothing was ever dropped.** The installer wrote all 119 files on Windows, correctly, every time. What was broken was the assertion message that reported the failure.
 
-The reasoning for making the job green rather than leaving it red: CI had been failing on `windows-latest` since before 2026-07-30, and because red was the normal state, two real defects sat in it unnoticed. A permanently failing job stops being read. A green job with three named exemptions still gets read. `grep -rn KnownWindowsFailureFact` is the debt list.
+`CoreInitManifestTests` printed its content-drift failure through this call:
+
+```csharp
+Assert.True(changed.All(MergeArtifacts.Contains),
+    Describe(changed.Where(c => !MergeArtifacts.Contains(c)).ToList(), [], []));
+```
+
+`Describe(missing, added, changed)` — so the **changed** list was passed in the **missing** slot, with the other two counts hardcoded to zero and printed under the heading "Missing (in manifest, not written)". A pure content drift across all 115 non-merge-artifact files therefore rendered as, exactly, `missing=115 added=0 changed=0` with "the four survivors are the merge artifacts". Every subsequent inference — files vanishing, staging sweeps eating the tree, rollback deleting pre-images, content deciding whether a write lands — was drawn from that one mislabeled string. Two fixes were attempted against it and both were wrong because the symptom they were aimed at did not exist.
+
+Once the message told the truth, the real signature was `missing=0 added=1 changed=115`: everything landed, and every text file differed in bytes.
+
+**The cause was the checkout, not the code.** Git for Windows defaults to `core.autocrlf=true`, and the repo had no `.gitattributes` governing content. Verified with a real clone: `git -c core.autocrlf=true clone` produced **120 of 120 `ProjectTemplate` text files with CRLF**; with the new `.gitattributes` in place, the same clone produces **0**. Since `ProjectTemplate/**` is embedded verbatim into `GigaClaw.Core.dll` and written byte-for-byte into workspaces, a Windows build shipped different content than the same commit produced anywhere else — and shipped `.py` content is executed, so this was a real product defect, just not the one it looked like.
+
+The macOS "reproduction" was the same illusion: editing four scripts changes their bytes, so their hashes stop matching the golden manifest. That is the test working. It printed as "missing".
+
+Fixed here:
+
+- **`.gitattributes` pins `* text=auto eol=lf`**, with `*.bat`/`*.cmd` kept CRLF. Thirteen files committed with CRLF (none shipped in a pack) were normalized in the same pass so the index and the attribute agree. *Existing Windows clones need `git add --renormalize .` or a fresh clone.*
+- **The assertion message reports each category in its own slot**, and now counts installed files containing CRLF, naming that cause in the failure text rather than leaving it to be re-derived.
+- **`PackInstaller` verifies before it commits.** `VerifyEverythingPlannedReachedDisk` checks every planned destination exists on disk before the lockfile is written; a violation rolls the install back instead of committing a workspace that quietly does less. `install.Written` was only ever `plan.Select(…)` — what was *planned*, never what was *verified* — which is why a hypothetical drop would have looked like a success.
+- **The four shipped scripts pin their streams to UTF-8.** `handoff_contract.py:297` prints `→`, and Python on Windows defaults stdout to cp1252, so the script raised `UnicodeEncodeError` *after* validating successfully — exit 2, a valid handoff read as rejected. Seven print sites across four scripts (`→`, `·`, `—`, `é`). The host already decodes these streams as UTF-8 (`ProcessLifecycleManager`, `DashboardScriptRunner`), so the streams are pinned rather than the output degraded to ASCII. Reproduced on macOS with `PYTHONIOENCODING=cp1252` (exit 2, `'charmap' codec can't encode '→'`) and confirmed fixed (exit 0).
+- **`TemplateScriptEncodingTests`** makes that Windows-only defect assertable everywhere: it runs the validators under a pinned cp1252 stream, checks the characters survive the round trip, and fails if any shipped script prints non-ASCII without pinning. Verified to fail when the fix is removed.
+
+Two of the three exemptions are gone. `CoreInitManifestTests` and `TemplateHandoffContractTests` now run on Windows.
+
+### CI now builds on three platforms
+
+The job ran only on `windows-latest` for its entire life, on a project developed on macOS. That is the condition that made all of the above possible: a platform-shaped defect was either invisible or the only thing visible, and neither state gets read correctly. It is now a `fail-fast: false` matrix over `ubuntu-latest`, `windows-latest` and `macos-latest`, so a divergence shows up as *which platforms disagreed* in a single run. All gates were verified green on macOS locally before the matrix landed.
+
+A step ahead of everything else asserts the checkout itself: `git ls-files --eol -- ProjectTemplate Packs` must report no `crlf`/`mixed` working-tree entries. The bytes Git hands the build **are** the product for those trees, so that is checked before anything downstream compares a hash and reports the mismatch as something more exotic.
+
+### One test is still exempted on Windows
 
 | Test | Status |
 |---|---|
-| `CoreInitManifestTests.Initialize_writes_exactly_the_golden_manifest` | **Install-correctness bug, own session.** See below. |
-| `TemplateHandoffContractTests.Committed_fixtures_are_classified_by_the_shared_validator` | Diagnosed, pre-existing. |
-| `JudgeRunnerTests.Judge_MatchesTheCommittedBaselineForEveryFixture` | Undiagnosed, pre-existing. |
+| `JudgeRunnerTests.Judge_MatchesTheCommittedBaselineForEveryFixture` | Undiagnosed, pre-existing since before `94971fb`. |
 
-**The install bug deserves its own session.** On Windows, `Initialize` writes 5 of 119 files and reports no error — `missing=115 added=0 changed=0`, so nothing lands at a different path and nothing differs in content; the four survivors are the merge artifacts. Two fixes were attempted by reasoning from partial evidence and **both were wrong** (a separator-normalization fix changed the result not at all). The test now emits `source.AgentRelativePaths`, `source.RootRelativePaths`, `install.Written` and `install.PreservedOwnerEdits` on failure — run it on Windows and read those first; they separate "the pack never contained it" from "the installer skipped it" from "the write was lost".
+`grep -rn KnownWindowsFailureFact` remains the debt list — now exactly one entry. The reasoning for keeping the job green with a named exemption rather than leaving it red: CI had been failing on `windows-latest` since before 2026-07-30, and because red was the normal state, two real defects sat in it unnoticed.
 
-**The diagnostics came back from Windows CI and they invert the investigation.** Run `30588536863`:
+**CRLF is ruled out for it.** Converting `GigaClaw.Eval/**`, `GigaClaw.Eval.Tests/**`, `GigaClaw.ClaudeMock/**`, `ProjectTemplate/**` and `Packs/**` to CRLF and re-running left all 27 eval tests passing, so it does not share a cause with the manifest failure.
 
-```
-source.AgentRelativePaths=104  source.RootRelativePaths=15
-install.Written=119  install.PreservedOwnerEdits=0  install.Quarantined=0
-firstAgentPaths=[BRAND.md, VOICE.md, approval-gatekeeper/SKILL.md]
-```
+**It is now interrogable instead of merely silenced**, which is the actual reason it survived this long — a skipped test emits no diagnostics, so CI could never say anything about it:
 
-104 + 15 = 119. The pack enumerated everything, the installer planned everything, nothing was preserved as an owner edit, nothing was quarantined — and then `HashTree` found 4 files on disk. **Enumeration, composition and planning are all correct on Windows.** Every theory about resource names, prefixes and separators is dead, including the normalization change that shipped in this branch (which is therefore unproven hardening, not a fix — say so in review).
+- `GIGACLAW_RUN_KNOWN_WINDOWS_FAILURES=1` runs the exempted tests anyway. One Windows run with that set should answer the question.
+- On drift the test now prints the committed verdict beside the produced one, field by field, plus `OSDescription` and `Path.GetTempPath()`. Verified to render by corrupting a baseline locally.
+- It names the two live hypotheses so the reader does not start from zero: if only `evidence[].ref`/`inputDigest` moved, the normalized replay stream differs and `ReplayRunner.Normalize`'s workspace scrubbing is the suspect (a plain string `Replace` is defeated by both Windows 8.3 short paths — GitHub runners expose `RUNNER~1`-style temp dirs — and symlinked temp dirs); if a `notes` character count moved, the scored text itself differs and the mock CLI's output is the place to look.
 
-The remaining question is narrow: the files are written and then are not there. Two candidates worth checking first, in `PackInstaller.InstallAsync`:
-- **The staging sweep.** Staging lives at `Path.Combine(workspace, StagingPrefix + installId)` — inside the workspace. `SweepStagingDirectories(workspace)` and the `finally` cleanup delete by prefix. If that prefix match behaves differently on Windows, cleanup can take the real tree with it.
-- **`WorkspaceMergeTransaction` rollback.** `Rollback()` restores pre-images, and a pre-image for a newly created file is null — i.e. delete. The `catch` rethrows, so a thrown rollback would surface, but check whether any path rolls back without throwing.
-
-Note also that `install.Written` is `plan.Select(p => p.Destination)` — it reports what was *planned*, not what was verified on disk. That is worth fixing on its own: it is why this looked like a success.
-
-There is likely **one root cause behind two symptoms**: on macOS, editing any of four `ProjectTemplate/Agents/scripts/*.py` files makes exactly those four go missing with the identical signature (`missing=4 added=0 changed=0`), reproducible in both directions via `git stash`. If file *content* can decide whether a file gets written, that explains both. Start there; it is reproducible on any machine.
-
-Still failing on Windows, both pre-existing and neither a regression from this branch:
-
-- **`TemplateHandoffContractTests`** — `handoff_contract.py:297` prints `→` (U+2192) and Python on Windows defaults stdout to cp1252, so the script raises `UnicodeEncodeError` *after* the validation succeeds. This is a product bug, not just a test one: the script ships into every workspace. Seven print sites across four shipped scripts have it (`→`, `·`, `—`, `é`).
-
-  **Do not fix this casually.** Adding a `sys.stdout.reconfigure(encoding="utf-8")` block to those four scripts reproducibly makes `CoreInitManifestTests` fail *on macOS* with `missing=4 added=0 changed=0` — exactly the four edited files, not written. It is reproducible in both directions (`git stash` of just those edits makes it pass). The mechanism does not fit the code: the new enumeration test confirms the scripts are still enumerated and readable, so they reach `pack.Files`, and `PlanOpaqueFiles` can only skip a file that already exists on disk, which is impossible in the fresh temp workspace the test uses. Worth attaching a debugger to `PackInstaller.InstallAsync` and inspecting `plan` rather than reasoning further.
-
-- **`JudgeRunnerTests.Judge_MatchesTheCommittedBaselineForEveryFixture`** — pre-existing, undiagnosed.
+**No speculative fix was applied.** Hardening was written for the 8.3 theory and deliberately discarded: it could not be verified without a Windows machine, and this session already paid for shipping exactly that (the separator normalization, declared a fix, which fixed nothing). Diagnose it first.
 
 ## Hard-won lessons worth not relearning
+
+**A diagnostic that misattributes is worse than none.** The "installer silently drops 114 files" bug did not exist. One assertion passed its `changed` list in the `missing` parameter and hardcoded the other counts to zero, and that single mislabeled string cost two wrong fixes, a Windows CI round-trip, and a written-up theory that file *content* decides whether a file gets written. Nobody re-read the `Describe` call, because the message was specific enough to be believed. When evidence forces an implausible mechanism, suspect the instrument before the machine — and check that a diagnostic's arguments are in the order its signature expects.
 
 **Read the tree, not the report.** Three tasks came back reported complete and were not. Every automated check was green each time.
 

@@ -7,7 +7,7 @@ Author: planning session, 2026-07-28
 
 Build a venture-aware content pipeline where **GigaClaw is the system of record and the place work happens**, n8n is reduced to two thin edges (ingress and egress), and a single consolidated PayloadCMS receives finished drafts tagged with the correct venture.
 
-This is a deliberate divergence from both upstream KittyClaw and ZabsAIOS. We are not porting the 47-node Prime Job Runner. We are keeping its *learnings* — dedup, quality gating, brand-config-per-venture, status writeback — and re-homing each into whichever system already has the better primitive for it.
+This is a deliberate divergence from ZabsAIOS. We are not porting the 47-node Prime Job Runner. We are keeping its *learnings* — dedup, quality gating, brand-config-per-venture, status writeback — and re-homing each into whichever system already has the better primitive for it.
 
 ### The shape
 
@@ -60,7 +60,7 @@ Migrate HyperlaneTravels content into the ZabalaZone Payload instance. Hyperlane
 
 Add a 10th `ActionSpec` to `GigaClaw.Core/Automation/`. It must capture the response body and expose it to subsequent actions in the chain, because the CMS returns `{id, slug, adminUrl}` that has to be written back onto the ticket.
 
-**Rationale.** The current 9 action types (`runAgent`, `moveTicketStatus`, `setLabels`, `assignTicket`, `addComment`, `commitAgentMemory`, `consolidateAgentMemory`, `executePowerShell`, `createTicket`) cannot make an HTTP call. The alternatives were polling from n8n (adds latency and a second source of truth for "was this dispatched?") or shelling out via `executePowerShell` (works — `ShellResolver.ResolvePowerShell()` is cross-platform — but puts URLs and secrets in shell strings, has no typed response handling, and is invisible to the automations UI). Given the explicit decision to diverge from KittyClaw, a first-class action is the right call and unlocks far more than this one pipeline.
+**Rationale.** The current 9 action types (`runAgent`, `moveTicketStatus`, `setLabels`, `assignTicket`, `addComment`, `commitAgentMemory`, `consolidateAgentMemory`, `executePowerShell`, `createTicket`) cannot make an HTTP call. The alternatives were polling from n8n (adds latency and a second source of truth for "was this dispatched?") or shelling out via `executePowerShell` (works — `ShellResolver.ResolvePowerShell()` is cross-platform — but puts URLs and secrets in shell strings, has no typed response handling, and is invisible to the automations UI). Since GigaClaw's action set is ours to shape, a first-class action is the right call and unlocks far more than this one pipeline.
 
 ### AD-3: The board is the quality gate
 
@@ -646,7 +646,7 @@ Highest-risk work first. If the `httpRequest` action can't cleanly capture and t
 | `automations.json` drift across six projects | Medium — recreates the Trend Jacking problem | Task 12 |
 | Agent output shape doesn't match the CMS body template | Medium — silent bad drafts | Contract test in Task 10; `sentinel`-style validation before dispatch |
 | Hyperlane migration loses media or breaks slugs | High, hard to reverse | Task 15 gated behind CHECKPOINT C; staging rehearsal; old instance retained read-only |
-| Divergence from KittyClaw makes upstream merges painful | Medium, accepted | Deliberate per project direction; keep new action types in clearly separated files |
+| A growing bespoke action set is harder to keep coherent | Medium, accepted | Deliberate per project direction; keep new action types in clearly separated files |
 | Dedup threshold too aggressive, drops good ideas | Low | Threshold as a named constant; log near-misses for tuning |
 | Post updated after publication surprises a reader | Low | Task 2's update path refuses `published` Posts unless forced |
 | Per-agent model assignment proves too expensive | Medium | AD-9 assignment is reviewed against the existing cost tracker at Checkpoint C; changing it is a config edit, not code |

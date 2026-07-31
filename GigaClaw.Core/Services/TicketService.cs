@@ -552,7 +552,7 @@ public class TicketService : ITicketDependencyQuery
         {
             TicketId = ticket.Id,
             Author = createdBy,
-            Text = "a créé le ticket"
+            Text = "created the ticket"
         });
         await db.SaveChangesAsync();
         await tx.CommitAsync();
@@ -562,14 +562,14 @@ public class TicketService : ITicketDependencyQuery
     public async Task<Ticket?> MoveTicketAsync(string projectSlug, int ticketId, string newStatus, string author = "owner")
     {
         if (string.IsNullOrWhiteSpace(author))
-            throw new InvalidOperationException("Le champ 'author' est requis.");
+            throw new InvalidOperationException("The 'author' field is required.");
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         await EnsureScheduleColumnsAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
         var columnExists = await db.BoardColumns.AnyAsync(c => c.Name == newStatus);
         if (!columnExists)
-            throw new InvalidOperationException($"La colonne '{newStatus}' n'existe pas.");
+            throw new InvalidOperationException($"Column '{newStatus}' does not exist.");
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return null;
         var oldStatus = ticket.Status;
@@ -588,7 +588,7 @@ public class TicketService : ITicketDependencyQuery
         {
             TicketId = ticketId,
             Author = author,
-            Text = $"a déplacé le ticket : {oldStatus} → {newStatus}"
+            Text = $"moved the ticket: {oldStatus} → {newStatus}"
         });
         await db.SaveChangesAsync();
         TicketStatusChanged?.Invoke(projectSlug, ticketId, oldStatus, newStatus);
@@ -692,7 +692,7 @@ public class TicketService : ITicketDependencyQuery
         {
             TicketId = ticketId,
             Author = author,
-            Text = $"a planifié le ticket pour {fireAt:yyyy-MM-dd HH:mm} UTC → {targetStatus}"
+            Text = $"scheduled the ticket for {fireAt:yyyy-MM-dd HH:mm} UTC → {targetStatus}"
         });
         await db.SaveChangesAsync();
         if (!string.Equals(oldStatus, "Scheduled", StringComparison.OrdinalIgnoreCase))
@@ -739,7 +739,7 @@ public class TicketService : ITicketDependencyQuery
         {
             TicketId = ticketId,
             Author = author,
-            Text = $"planification déclenchée : Scheduled → {target}"
+            Text = $"schedule triggered: Scheduled → {target}"
         });
         await db.SaveChangesAsync();
         TicketStatusChanged?.Invoke(projectSlug, ticketId, "Scheduled", target);
@@ -749,9 +749,9 @@ public class TicketService : ITicketDependencyQuery
     public async Task<Ticket?> UpdateTicketAsync(string projectSlug, int ticketId, string? title = null, string? description = null, string author = "owner", TicketPriority? priority = null, string? assignedTo = null)
     {
         if (string.IsNullOrWhiteSpace(author))
-            throw new InvalidOperationException("Le champ 'author' est requis.");
+            throw new InvalidOperationException("The 'author' field is required.");
         if (!string.IsNullOrEmpty(assignedTo) && !await _memberService.MemberExistsAsync(projectSlug, assignedTo))
-            throw new InvalidOperationException($"Le membre '{assignedTo}' n'existe pas.");
+            throw new InvalidOperationException($"Member '{assignedTo}' does not exist.");
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         await EnsureAssignedToColumnAsync(db);
@@ -766,7 +766,7 @@ public class TicketService : ITicketDependencyQuery
             {
                 TicketId = ticketId,
                 Author = author,
-                Text = $"a renommé le ticket : \"{old}\" → \"{title}\""
+                Text = $"renamed the ticket: \"{old}\" → \"{title}\""
             });
         }
         if (description is not null && description != ticket.Description)
@@ -776,7 +776,7 @@ public class TicketService : ITicketDependencyQuery
             {
                 TicketId = ticketId,
                 Author = author,
-                Text = "a modifié la description"
+                Text = "modified the description"
             });
         }
         if (priority is not null && priority != ticket.Priority)
@@ -787,18 +787,18 @@ public class TicketService : ITicketDependencyQuery
             {
                 TicketId = ticketId,
                 Author = author,
-                Text = $"a changé la priorité : {PriorityLabel(old)} → {PriorityLabel(priority.Value)}"
+                Text = $"changed priority: {PriorityLabel(old)} → {PriorityLabel(priority.Value)}"
             });
         }
         if (assignedTo is not null && assignedTo != ticket.AssignedTo)
         {
-            var old = ticket.AssignedTo ?? "personne";
+            var old = ticket.AssignedTo ?? "nobody";
             ticket.AssignedTo = assignedTo.Length == 0 ? null : assignedTo;
             db.ActivityEntries.Add(new ActivityEntry
             {
                 TicketId = ticketId,
                 Author = author,
-                Text = $"a assigné le ticket : {old} → {ticket.AssignedTo ?? "personne"}"
+                Text = $"assigned the ticket: {old} → {ticket.AssignedTo ?? "nobody"}"
             });
         }
         ticket.UpdatedAt = DateTime.UtcNow;
@@ -869,7 +869,7 @@ public class TicketService : ITicketDependencyQuery
         {
             TicketId = ticketId,
             Author = author,
-            Text = $"a été dissocié du ticket parent #{oldParentId}"
+            Text = $"was unlinked from parent ticket #{oldParentId}"
         });
         await db.SaveChangesAsync();
         return true;
@@ -878,7 +878,7 @@ public class TicketService : ITicketDependencyQuery
     public async Task<Comment?> AddCommentAsync(string projectSlug, int ticketId, string content, string author = "owner")
     {
         if (string.IsNullOrWhiteSpace(author))
-            throw new InvalidOperationException("Le champ 'author' est requis.");
+            throw new InvalidOperationException("The 'author' field is required.");
         await using var db = _projectService.GetProjectDb(projectSlug);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return null;
@@ -960,7 +960,7 @@ public class TicketService : ITicketDependencyQuery
     public async Task<bool> UpdateCommentAsync(string projectSlug, int ticketId, int commentId, string content, string author = "owner")
     {
         if (string.IsNullOrWhiteSpace(author))
-            throw new InvalidOperationException("Le champ 'author' est requis.");
+            throw new InvalidOperationException("The 'author' field is required.");
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         var comment = await db.Comments.FindAsync(commentId);
@@ -970,7 +970,7 @@ public class TicketService : ITicketDependencyQuery
         {
             TicketId = ticketId,
             Author = author,
-            Text = "a modifié un commentaire"
+            Text = "modified a comment"
         });
         await db.SaveChangesAsync();
         return true;
@@ -979,7 +979,7 @@ public class TicketService : ITicketDependencyQuery
     public async Task<bool> DeleteCommentAsync(string projectSlug, int ticketId, int commentId, string author = "owner")
     {
         if (string.IsNullOrWhiteSpace(author))
-            throw new InvalidOperationException("Le champ 'author' est requis.");
+            throw new InvalidOperationException("The 'author' field is required.");
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         var comment = await db.Comments.FindAsync(commentId);
@@ -989,7 +989,7 @@ public class TicketService : ITicketDependencyQuery
         {
             TicketId = ticketId,
             Author = author,
-            Text = "a supprimé un commentaire"
+            Text = "deleted a comment"
         });
         await db.SaveChangesAsync();
         return true;
@@ -1030,7 +1030,7 @@ public class TicketService : ITicketDependencyQuery
             {
                 TicketId = ticketId,
                 Author = "owner",
-                Text = $"a déplacé le ticket : {oldStatus} → {newStatus}"
+                Text = $"moved the ticket: {oldStatus} → {newStatus}"
             });
         }
 

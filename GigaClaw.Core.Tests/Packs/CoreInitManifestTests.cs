@@ -22,6 +22,11 @@ namespace GigaClaw.Core.Tests.Packs;
 /// <para>The manifest keys on the <strong>workspace-relative destination path</strong>, never on the
 /// embedded resource name: <c>%(RecursiveDir)</c> yields backslashes on Windows and forward slashes
 /// elsewhere, so resource names differ by build OS while destinations do not.</para>
+///
+/// <para>The <em>values</em> are byte hashes, which makes this test a checkout-hygiene assertion as
+/// much as an installer one: the template is embedded verbatim, so whatever line endings the clone
+/// has are what a workspace gets. That is why the repo pins <c>eol=lf</c> in <c>.gitattributes</c>.
+/// Without it, Git for Windows' <c>core.autocrlf=true</c> drifted all 115 opaque files at once.</para>
 /// </summary>
 public sealed class CoreInitManifestTests
 {
@@ -34,17 +39,19 @@ public sealed class CoreInitManifestTests
     /// </summary>
     private const string RegenerateVariable = "GIGACLAW_REGEN_CORE_MANIFEST";
 
-    [KnownWindowsFailureFact(
-        "Initialize writes 5 of 119 files and reports no error: missing=115 added=0 changed=0, so " +
-        "nothing lands at a different path and nothing differs in content. The four survivors are " +
-        "the merge artifacts. Two fixes were attempted from reasoning and both were wrong, so the " +
-        "test now emits installer diagnostics instead; run it on Windows and read them.")]
+    [Fact]
     public async Task Initialize_writes_exactly_the_golden_manifest()
     {
         var actual = await CaptureInitOutputAsync();
 
         if (Environment.GetEnvironmentVariable(RegenerateVariable) == "1")
         {
+            // packs.lock.json is deliberately not part of the anchor. It postdates the fixture, and
+            // its bytes carry a fresh installId and timestamp on every run, so recording it would
+            // bake in a hash that can never match again — and would also empty the `added` list the
+            // assertion below pins. It is the one path allowed to appear beyond the manifest.
+            actual.Remove(".agents/" + PackLockFile.FileName);
+
             Directory.CreateDirectory(Path.GetDirectoryName(ManifestPath)!);
             await File.WriteAllTextAsync(ManifestPath, Serialize(actual));
             return;
@@ -68,9 +75,15 @@ public sealed class CoreInitManifestTests
         // the *same content* is asserted separately below, which is the half that has teeth.
         Assert.True(missing.Count == 0, Describe(missing, added, changed));
         Assert.Equal(new[] { ".agents/" + PackLockFile.FileName }, added);
+        // Every category is reported by the same Describe, with the drifting paths in the slot they
+        // actually belong to. An earlier version passed the changed list as `missing` and hardcoded
+        // the other two counts to zero, so a pure content drift printed as
+        // "missing=115 added=0 changed=0" under the heading "in manifest, not written" — which sent
+        // two Windows investigations hunting for an installer that drops files, when nothing was
+        // ever dropped. A diagnostic that misattributes is worse than none.
         Assert.True(
             changed.All(MergeArtifacts.Contains),
-            Describe(changed.Where(c => !MergeArtifacts.Contains(c)).ToList(), [], []));
+            Describe(missing, added, changed.Where(c => !MergeArtifacts.Contains(c)).ToList()));
     }
 
     /// <summary>Workspace paths the installer merges in memory and writes back, so byte-identity
@@ -186,13 +199,26 @@ public sealed class CoreInitManifestTests
                 [source],
                 new PackInstallOptions(OverwriteConflicts: true));
 
+            // The golden manifest was generated from an LF working tree. Git for Windows defaults
+            // to core.autocrlf=true, so before .gitattributes pinned `eol=lf` a Windows clone
+            // embedded CRLF bytes and *every* text file here drifted at once — which reads as a
+            // catastrophic installer bug and is really a checkout setting. Counted explicitly so
+            // the failure says so itself.
+            var crlf = CountFilesContainingCrLf(workspace);
+
             LastInstallDiagnostics =
                 $"source.AgentRelativePaths={agentPaths.Count} " +
                 $"source.RootRelativePaths={rootPaths.Count} " +
                 $"install.Written={install.Written.Count} " +
                 $"install.PreservedOwnerEdits={install.PreservedOwnerEdits.Count} " +
-                $"install.Quarantined={install.QuarantinedPacks.Count}; " +
-                $"firstAgentPaths=[{string.Join(", ", agentPaths.Take(3))}]; " +
+                $"install.Quarantined={install.QuarantinedPacks.Count} " +
+                $"installedFilesContainingCRLF={crlf}" +
+                (crlf > 0
+                    ? " <-- almost certainly the whole story: this clone checked ProjectTemplate out "
+                      + "with CRLF. Check `git ls-files --eol ProjectTemplate` and re-checkout or "
+                      + "run `git add --renormalize .`; .gitattributes pins eol=lf."
+                    : string.Empty) +
+                $"; firstAgentPaths=[{string.Join(", ", agentPaths.Take(3))}]; " +
                 $"firstWritten=[{string.Join(", ", install.Written.Take(3))}]";
 
             return HashTree(workspace);
@@ -202,6 +228,12 @@ public sealed class CoreInitManifestTests
             TryDelete(workspace);
         }
     }
+
+    private static int CountFilesContainingCrLf(string workspace) =>
+        Directory.EnumerateFiles(workspace, "*", SearchOption.AllDirectories)
+            .Where(f => !Path.GetRelativePath(workspace, f).Replace('\\', '/')
+                             .StartsWith(".git/", StringComparison.Ordinal))
+            .Count(f => File.ReadAllBytes(f).AsSpan().IndexOf("\r\n"u8) >= 0);
 
     internal static SortedDictionary<string, string> HashTree(string workspace)
     {
