@@ -11,7 +11,7 @@ Background service that watches each project for events and dispatches agents in
 - `GigaClaw.Core/Automation/ProjectRuntimeManager.cs` — per-project runtime dictionary and signal fan-out.
 - `GigaClaw.Core/Automation/ProjectRuntime.cs` — data class holding per-project run state.
 - `GigaClaw.Core/Automation/AutomationConfig.cs` — JSON-deserialized automation definitions (triggers, conditions, actions).
-- `GigaClaw.Core/Automation/AutomationStore.cs` — loads/persists `automations.json` from each workspace's `.agents/` folder.
+- `GigaClaw.Core/Automation/AutomationStore.cs` — loads/persists `automations.json` from each workspace's `.agents/` folder, and validates the optional `workflow.json` beside it at the same load point (see [Workflow graph](./workflow-graph.md)). An invalid graph fails the reload as a whole, exactly as a malformed `automations.json` does.
 - `GigaClaw.Core/Automation/Triggers/` — trigger implementations.
 - `GigaClaw.Core/Automation/GitRepositoryWatcher.cs` — backs the `gitCommit` trigger.
 - `GigaClaw.Core/Automation/RunConcurrencyGate.cs` — serializes runs sharing a `concurrencyGroup`.
@@ -52,7 +52,7 @@ Content-pipeline projects append two things to `cms-dispatch-on-done`'s `httpReq
 
 ## Entry points
 - Hosted at app startup via DI in `GigaClaw.Web/Program.cs`.
-- Per-project configuration loaded from `<workspace>/.agents/automations.json` (seeded by the [project template](./project-template.md)).
+- Per-project configuration loaded from `<workspace>/.agents/automations.json` (seeded by the [project template](./project-template.md)), plus the optional `<workspace>/.agents/workflow.json` — see [Workflow graph](./workflow-graph.md).
 - Editable from the in-app **Automations** page.
 
 ## External dependencies

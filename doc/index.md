@@ -17,6 +17,7 @@ For a high-level overview see the root [README.md](../README.md). For repo layou
 - [Verdict contract](./verdict-contract.md) — the typed `SHIP`/`FIX`/`BLOCK` judgement every reviewer, gate and eval judge shares.
 - [Handoff contract](./handoff-contract.md) — what one agent leaves the next: outputs, owned files, assumptions, open loops.
 - [Executable teams](./executable-teams.md) — `TeamDefinition`/`TeamRun`/`TeamTask`: roles, task graphs, fan-out, join policies and the synthesizer.
+- [Workflow graph](./workflow-graph.md) — typed states, fan-out/join nodes, `verdictIs` gates, terminal states and the cycle bound, validated at config load.
 - [REST API](./rest-api.md) — OpenAPI-driven endpoints under `/api`, with auto-generated Markdown docs.
 - [Storage](./storage.md) — SQLite registry, per-project DBs, run logs, and workspace-side agent state.
 - [Kanban UI](./kanban-ui.md) — Blazor Server board, ticket panel, agent run drawer.

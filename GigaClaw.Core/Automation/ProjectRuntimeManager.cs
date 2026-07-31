@@ -56,11 +56,18 @@ internal sealed class ProjectRuntimeManager
             var (config, workspace, _) = await _store.LoadAsync(slug);
             rt.Workspace = workspace;
             rt.Config = config;
+            rt.Workflow = _store.GetCachedWorkflow(slug);
             rt.Triggers = await BuildTriggersAsync(slug, config);
-            _logger.LogInformation("Automations loaded for {Slug}: {Count} entries", slug, config.Automations.Count);
+            _logger.LogInformation(
+                "Automations loaded for {Slug}: {Count} entries, workflow graph: {Workflow}",
+                slug, config.Automations.Count,
+                rt.Workflow is null ? "none" : $"{rt.Workflow.States.Count} state(s)");
         }
         catch (Exception ex)
         {
+            // Same report for a malformed automations.json and an invalid workflow.json: the reload
+            // fails as a whole and the project keeps whatever runtime it already had. A config that
+            // cannot be trusted is never half-applied.
             _logger.LogWarning(ex, "Failed to reload automations for {Slug}", slug);
         }
     }
