@@ -615,6 +615,7 @@ else
         "subTicketStatus" => new SubTicketStatusTriggerSpec { PollSeconds = 30 },
         "boardIdle" => new BoardIdleTriggerSpec { PollSeconds = 60 },
         "agentInactivity" => new AgentInactivityTriggerSpec { PollSeconds = 60, MinutesIdle = 45 },
+        "githubPrComment" => new GitHubPrCommentTriggerSpec { PollSeconds = 120 },
         _ => new IntervalTriggerSpec { Cron = "0 9 * * *" },
     };
 
@@ -710,6 +711,7 @@ else
         BoardIdleTriggerSpec => L["TrigBoardIdle"],
         AgentInactivityTriggerSpec s => string.Format(L["TrigAgentInactivity"], s.MinutesIdle),
         TicketCommentAddedTriggerSpec s => string.Format(L["TrigCommentAdded"], string.Join(", ", s.Authors)),
+        GitHubPrCommentTriggerSpec s => string.Format(L["TrigGitHubPrComment"], s.PollSeconds),
         _ => throw new NotSupportedException($"No UI description for trigger type {t.GetType().Name}. Register it in Automations.razor DescribeTrigger."),
     };
 

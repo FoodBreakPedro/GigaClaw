@@ -32,12 +32,21 @@ public sealed class AutomationEngine : BackgroundService
         AppSettingsService appSettings,
         FileLeaseStore leases,
         MergeQueueStore mergeQueue,
-        ILogger<AutomationEngine> logger)
+        ILogger<AutomationEngine> logger,
+        Github.GitHubApiClient? github = null,
+        Github.GitHubIssueLinkStore? githubLinks = null)
     {
         _runs = runs;
         _logger = logger;
 
-        _runtimeManager = new ProjectRuntimeManager(store, triggerState, projects, logger);
+        // C7: optional so a host that never registered the GitHub services still constructs the
+        // engine. Both halves must be present — a client without the link table could not resolve
+        // a PR comment back to a ticket, so half-wired is treated as not wired.
+        var githubServices = github is not null && githubLinks is not null
+            ? new GitHubTriggerServices(github, appSettings, githubLinks)
+            : null;
+
+        _runtimeManager = new ProjectRuntimeManager(store, triggerState, projects, logger, githubServices);
         var runState = new RunStateManager(runs, cost, tickets, logger);
         // U17/R3: the outbound trust anchor is the owner's app-level settings.json, read per
         // execution (never cached at engine start) so an owner approval takes effect without a

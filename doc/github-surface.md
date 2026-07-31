@@ -20,6 +20,9 @@ A repo with a remote already has a place where humans file work and review it. C
 | `GigaClaw.Core/Github/GitHubApiClient.cs` | The single outbound door. Runs the [policy preflight](#the-policy-layer) on every call and attaches the PAT to the `Authorization` header only. |
 | `GigaClaw.Core/Github/GitHubIssueLinkStore.cs` | The issue ↔ ticket mapping table in the per-project SQLite DB (inline `CREATE TABLE IF NOT EXISTS` migration). What makes a re-sync an update rather than a copy. |
 | `GigaClaw.Core/Github/GitHubIssueSyncService.cs` | One poll pass: import labeled issues, then run the closure round trip. |
+| `GigaClaw.Core/Github/OwnerFeedback.cs` | The `github-owner-feedback/v1` ticket-comment contract and the brief rendered into a re-dispatch. |
+| `GigaClaw.Core/Automation/Triggers/GitHubPrCommentTrigger.cs` | The `githubPrComment` trigger. |
+| `GigaClaw.Core/Automation/Triggers/GitHubTriggerServices.cs` | The optional dependency bundle the GitHub triggers need. |
 | `GigaClaw.Core/Automation/Policy/OutboundReceipt.cs` | The shared `outbound-denial/v1` receipt shape and the sink that writes it. |
 | `GigaClaw.Web/Api/Endpoints.GitHub.cs` | REST configuration and manual sync. |
 
@@ -67,6 +70,38 @@ A ticket the owner deleted is **not** resurrected: the link is refreshed and the
 ### Round trip
 
 When a linked ticket reaches one of the configured `doneStatuses`, the sync optionally posts a comment on the issue and/or closes it. Both flags default off. The link row's `RoundTripDone` marker makes this happen exactly once — without it, every subsequent poll would post another comment. A refused (dry-run) write leaves the marker unset, so the round trip retries once the host is approved.
+
+## PR review comments as owner feedback
+
+The `githubPrComment` trigger polls `/repos/{owner}/{repo}/pulls/comments` and fires for each ticket whose pull request just received a comment from a configured **owner login**. Because it is a trigger in the ordinary [automation vocabulary](./automation-engine.md), it composes with every existing condition — `assignedTo`, `ticketInColumn`, `labels`, `repairBudget` — instead of being a bespoke hook with its own rules.
+
+### Re-dispatch reuses the repair-loop mechanism
+
+C3 already solved "re-dispatch an agent with something it must read first", and it solved it by putting the evidence on the ticket and re-deriving the state from the comment trail at dispatch time (see [verdict contract](./verdict-contract.md)). Owner feedback rides that rail rather than adding a second one:
+
+1. The trigger writes the comment onto the ticket as a `github-owner-feedback/v1` comment — **before** it fires, so the steering is durable even if the action chain then fails.
+2. The automation dispatches the assignee as usual.
+3. `ActionExecutor.ComposeDispatchContextAsync` renders the outstanding feedback into the prompt, beside the repair brief and the previous run's handoff.
+
+"Outstanding" means *every feedback comment since the agent last handed off*. A handoff closes the episode exactly as a `SHIP` closes a repair episode, so an answered comment is not re-litigated on every later dispatch.
+
+Several comments on one PR produce **one** firing carrying all of them — three comments should be one re-dispatch that addresses all three, not three competing runs on the same files.
+
+### Who counts as the owner
+
+The owner logins live in the project's app-level settings, alongside the token. An automation may **narrow** that list (the trigger intersects), never widen it: `automations.json` lives in the workspace and is agent-writable, so a widening list would let an agent with repository write access nominate itself and steer its own next dispatch. An empty owner list is "no one", not "anyone" — the trigger fails closed.
+
+### Resolving which ticket a comment steers
+
+Cheapest source first, and no guessing:
+
+1. an explicit `ticket-<id>` in the comment body;
+2. the pull request's branch name, title, or body;
+3. the issue the PR closes (`#n`), resolved through the part-1 link table.
+
+If none of those resolve, nothing fires. Guessing would re-dispatch an agent onto work the comment was never about.
+
+Dedupe is a per-automation cursor of the highest comment id seen, stored in the workspace's `dispatch-state.json` — the same mechanism `ticketCommentAdded` uses, so two automations watching one repository cannot swallow each other's comments.
 
 ## Entry points
 

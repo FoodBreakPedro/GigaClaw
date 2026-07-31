@@ -28,6 +28,7 @@ public sealed class Automation
 [JsonDerivedType(typeof(BoardIdleTriggerSpec), "boardIdle")]
 [JsonDerivedType(typeof(AgentInactivityTriggerSpec), "agentInactivity")]
 [JsonDerivedType(typeof(TicketCommentAddedTriggerSpec), "ticketCommentAdded")]
+[JsonDerivedType(typeof(GitHubPrCommentTriggerSpec), "githubPrComment")]
 public abstract class TriggerSpec
 {
     public abstract string UiTypeKey { get; }
@@ -114,6 +115,23 @@ public sealed class TicketCommentAddedTriggerSpec : TriggerSpec
     public override string UiTypeKey => "ticketCommentAdded";
     public int PollSeconds { get; set; } = 30;
     public List<string> Authors { get; set; } = new();
+}
+
+/// <summary>
+/// C7 part 2 (see <c>doc/github-surface.md</c>). Fires when a pull-request review comment from a
+/// configured owner login arrives for a ticket's PR. Inert unless the project has a GitHub
+/// configuration, a token, and at least one owner login — this trigger cannot enable itself.
+/// </summary>
+public sealed class GitHubPrCommentTriggerSpec : TriggerSpec
+{
+    public override string UiTypeKey => "githubPrComment";
+    public int PollSeconds { get; set; } = 120;
+    /// <summary>
+    /// Optional narrowing of the project's owner logins. An automation lives in the workspace and
+    /// is therefore agent-editable, so this list can only intersect the trusted one in settings —
+    /// never add to it.
+    /// </summary>
+    public List<string> OwnerLogins { get; set; } = new();
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
