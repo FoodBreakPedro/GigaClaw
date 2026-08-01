@@ -139,18 +139,34 @@ public sealed class EmbeddedPackSource : IPackSource
     private readonly string _rootPrefix;
     private readonly string _manifestResourceName;
 
+    private readonly IReadOnlyList<string> _rootExclusions;
+
+    /// <param name="rootExclusions">
+    /// Pack-relative paths to drop from <see cref="RootRelativePaths"/>. An entry ending in
+    /// <c>/</c> excludes a subtree, anything else excludes one exact path.
+    /// <para>
+    /// Core needs none of this: its root files sit under their own prefix. Every other pack is
+    /// embedded as a verbatim image of its directory, so its root prefix is the pack root and
+    /// therefore also spans <c>pack.json</c> and <c>Agents/**</c> — the two things §2 says are
+    /// <em>not</em> workspace-root content. This is the same filter
+    /// <see cref="DirectoryPackSource.RootRelativePaths"/> applies to a working tree, which is what
+    /// keeps the two sources' views of one pack identical.
+    /// </para>
+    /// </param>
     public EmbeddedPackSource(
         string id,
         Assembly assembly,
         string agentsPrefix,
         string rootPrefix,
-        string manifestResourceName)
+        string manifestResourceName,
+        IReadOnlyList<string>? rootExclusions = null)
     {
         Id = id;
         _assembly = assembly;
         _agentsPrefix = agentsPrefix;
         _rootPrefix = rootPrefix;
         _manifestResourceName = manifestResourceName;
+        _rootExclusions = rootExclusions ?? Array.Empty<string>();
     }
 
     public string Id { get; }
@@ -166,7 +182,13 @@ public sealed class EmbeddedPackSource : IPackSource
 
     public IReadOnlyList<string> AgentRelativePaths() => Enumerate(_agentsPrefix);
 
-    public IReadOnlyList<string> RootRelativePaths() => Enumerate(_rootPrefix);
+    public IReadOnlyList<string> RootRelativePaths() =>
+        [.. Enumerate(_rootPrefix).Where(relative => !IsExcludedFromRoot(relative))];
+
+    private bool IsExcludedFromRoot(string relativePath) =>
+        _rootExclusions.Any(exclusion => exclusion.EndsWith('/')
+            ? relativePath.StartsWith(exclusion, StringComparison.Ordinal)
+            : string.Equals(relativePath, exclusion, StringComparison.Ordinal));
 
     public byte[] ReadAgentAsset(string relativePath) => Read(_agentsPrefix, relativePath);
 
