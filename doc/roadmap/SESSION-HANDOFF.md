@@ -57,7 +57,7 @@ What the next session inherits: the differing bytes live somewhere in the normal
 
 - **SP-1** — enforced; 31 agents block, `programmer`/`code-janitor` warn (both declare `**`).
 - **SP-2** — closed.
-- **SP-3** — R4 leases, R5 worktrees, and P4/T2 prerequisites all exist now. What remains before the gate: integration-test the combined semantics (cycle detection, lease expiry, join semantics, ownership conflicts failing closed *together*) and the owner's call to enable `enqueueMerge`/worktree isolation by default. This is the natural next session.
+- **SP-3** — the combined-semantics integration suite exists as of 2026-08-01: `GigaClaw.Core.Tests/Integration/Sp3GateTests.cs` (10 tests, green in Release and Debug) proves cycle detection, lease expiry, join semantics and ownership conflicts failing closed *together*, each with its receipt. Evidence and the two open owner decisions are in [`SP3-EVIDENCE.md`](SP3-EVIDENCE.md). **Still open before the gate closes:** the owner's call on default-on `enqueueMerge` / worktree isolation, the two findings the suite recorded (the merge queue does not consult file leases; a lease denial is re-written on every refused poll), and the Board-drag bypass from `PLAN-remaining.md` §1 item 3 — which this suite does **not** cover.
 - **SP-4** — needs the U6 end-to-end demo (worktree→PR→CI→owner merge) and R8.
 
 ## Outstanding
