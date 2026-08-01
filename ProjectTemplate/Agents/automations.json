@@ -2033,6 +2033,46 @@
           "team": "parallel-review"
         }
       ]
+    },
+    {
+      "id": "hypothesis-debug-on-qa-block",
+      "name": "Team: escalate a qa-tester BLOCK on programmer's Review ticket to hypothesis-debug",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "BLOCK"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        }
+      ],
+      "actions": [
+        {
+          "type": "startTeamRun",
+          "team": "hypothesis-debug"
+        }
+      ]
     }
   ]
 }

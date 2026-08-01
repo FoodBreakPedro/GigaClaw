@@ -19,14 +19,15 @@ public sealed class CatalogGeneratorTests
         // 29 before C2 + the 14 verdict gate arms, all live now that blog-reviewer's AD-7 protocol
         // emits a typed verdict beside its CONTENT-REVIEW markers. Enabled trails total by one:
         // `weekly-ticket-example` is a shipped-off sample, not a gate.
-        // 43 core + the pack's 7, plus the C8 team-start automation (parallel-review-on-labeled) =
-        // 44 core + 7 pack. Enabled trails by one: `weekly-ticket-example` is a shipped-off sample,
-        // not a gate, and every pack automation is enabled by the binding rule.
-        Assert.Equal(51, catalog.Summary.Automations);
-        Assert.Equal(50, catalog.Summary.EnabledAutomations);
+        // 43 core + the pack's 7, plus the two C8 team-start automations (parallel-review-on-labeled,
+        // hypothesis-debug-on-qa-block) = 45 core + 7 pack. Enabled trails by one: `weekly-ticket-example`
+        // is a shipped-off sample, not a gate, and every pack automation is enabled by the binding rule.
+        Assert.Equal(52, catalog.Summary.Automations);
+        Assert.Equal(51, catalog.Summary.EnabledAutomations);
         Assert.Equal(37, catalog.Summary.ExplicitModelMappings);
-        // 9 filter-only core teams + the C8 preset (parallel-review) + the pack's security-review.
-        Assert.Equal(11, catalog.Summary.Teams);
+        // 9 filter-only core teams + the two C8 presets (parallel-review, hypothesis-debug) + the
+        // pack's security-review.
+        Assert.Equal(12, catalog.Summary.Teams);
         // 15 at T1 + the five contract files lane CL added (schema_check, verdict_contract,
         // handoff_contract and the two schemas) + sbom_diff.py, which the security pack contributes
         // and its supply-chain lane calls. The catalog counts them because agents call them.
@@ -39,9 +40,9 @@ public sealed class CatalogGeneratorTests
         Assert.Contains("content-engine", contentWriter.Teams);
         Assert.NotEmpty(contentWriter.EnabledDispatchingAutomations);
         Assert.Contains("scripts/content_contract.py", catalog.Scripts);
-        Assert.Equal(11, catalog.Teams.Count);
-        // 44 core (43 + the C8 team-start automation) + the pack's 7.
-        Assert.Equal(51, catalog.Automations.Count);
+        Assert.Equal(12, catalog.Teams.Count);
+        // 45 core (43 + the two C8 team-start automations) + the pack's 7.
+        Assert.Equal(52, catalog.Automations.Count);
         // Core only. A baseline is the *reviewed* static-check snapshot and §9 keeps it a
         // core-owned artifact about pack content, so a pack's baselines appear when someone
         // reviews them — not when the pack lands. The binding rule requires a fixture, which the

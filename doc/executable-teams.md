@@ -5,10 +5,10 @@ Turns a team from a static member filter into a runnable object. A `TeamDefiniti
 entry conditions, a task-graph template, a join policy and a synthesizer role; a `TeamRun` is one
 execution of that definition bound to a parent ticket; a `TeamTask` is a sub-ticket owned by a run.
 
-A definition with an **empty task graph is valid** and means "pure member filter". Nine of the ten
-built-in teams are exactly that, so team filtering behaves as it always has — see
-[Kanban UI](./kanban-ui.md). The other one, `parallel-review` (C8), is a real task graph — see
-[Team presets](#team-presets-c8) below.
+A definition with an **empty task graph is valid** and means "pure member filter". Nine of the
+eleven built-in teams are exactly that, so team filtering behaves as it always has — see
+[Kanban UI](./kanban-ui.md). The other two, `parallel-review` and `hypothesis-debug` (C8), are real
+task graphs — see [Team presets](#team-presets-c8) below.
 
 ## Key components
 - `GigaClaw.Core/Models/TeamDefinition.cs` — `TeamDefinition`, `TeamRole`, `TeamTaskTemplate`,
@@ -24,7 +24,7 @@ built-in teams are exactly that, so team filtering behaves as it always has — 
 
 ## Where team definitions come from
 
-Teams are **data, not code**. The ten built-ins live in `ProjectTemplate/Agents/teams.json`,
+Teams are **data, not code**. The eleven built-ins live in `ProjectTemplate/Agents/teams.json`,
 embedded as `GigaClaw.Core.AgentsTemplate/teams.json` and written to `<workspace>/.agents/teams.json`
 by Initialize like every other template asset — see [Project template](./project-template.md). That
 is what makes a team addable by something other than a `GigaClaw.Core` rebuild.
@@ -258,27 +258,39 @@ nothing about a run ever lived outside the project database.
 
 ## Team presets (C8)
 
-The first built-in to ship with a real task graph, proving the C4/C5 machinery end to end with
-agents that already exist in the core roster.
+Two built-ins ship with real task graphs, proving the C4/C5 machinery end to end with agents that
+already exist in the core roster. Both wire `TeamDefinition` fields the presets above introduced:
+`DedupeFindings` and `RequireEvidenceCitingArbitration`.
 
 - **`parallel-review`** — an `accessibility-lane` (`ui-auditor`) and a `coverage-lane` (`qa-tester`)
   run in parallel, `AllDone` join, synthesized by `producer`. `security-reviewer`,
   `performance-reviewer` and `architecture-reviewer` are reserved role names: no core agent reviews
   those dimensions today, and the specialists ship with the Security and Architecture & Data packs
   ([packs-and-later.md](./roadmap/packs-and-later.md)) — add a role plus a task template once they
-  land. `TeamDefinition.DedupeFindings: true` makes `TeamRunService.ComposeBrief` prepend a merged,
-  per-lane attributed view of every reporting lane's `RunHandoff.OpenLoops`
+  land. `DedupeFindings: true` makes `TeamRunService.ComposeBrief` prepend a merged, per-lane
+  attributed view of every reporting lane's `RunHandoff.OpenLoops`
   (`GigaClaw.Core/Automation/Handoffs/FindingDeduplicator.cs`, a pure function keyed on a normalized
   `location|category` string — no schema change, since open loops are the closest the frozen v1
   handoff contract has to "a lane's finding") and posts a host-authored `GIGACLAW-VERDICT` receipt
   (agent `team-synthesis`) on the parent ticket — SHIP with nothing blocking, FIX if a deduped
   finding is, BLOCK if the join did not get what it asked for. That receipt is what lets an ordinary
   `verdictIs` automation gate on the run without parsing the dispatched synthesizer's own prose.
-- The reserved-role agents are authored pending GM's G5 pass
+- **`hypothesis-debug`** — two investigator lanes (`qa-tester`, standing in twice for the reserved
+  `hypothesis-investigator` role under different `TeamRole`s) investigate independent hypotheses in
+  parallel; `debug-lead` (`producer`, standing in for the reserved `debug-lead` role) arbitrates.
+  `RequireEvidenceCitingArbitration: true` appends an instruction to the brief naming the
+  `GIGACLAW-ARBITRATION v1 winner=<task-key>` / `reason: …` shape the lead must emit; once the
+  synthesis ticket resolves, `TeamRunService.FinalizeAsync` reads that marker
+  (`GigaClaw.Core/Automation/Handoffs/ArbitrationReader.cs`) and posts a closing comment naming the
+  winner and reason on every other reported lane's own ticket. No marker is a no-op — the lead's
+  prose only has to trigger the mechanism, never perform the closing itself.
+- Both reserved-role agents are authored pending GM's G5 pass
   ([lane-gemini-templates.md](./roadmap/lane-gemini-templates.md)); the task-template prompts above
   are deliberately minimal placeholders, not the specialists' eventual prose.
-- Started by `parallel-review-on-labeled`, label-gated (`needs-parallel-review`) on `Review` — no
-  new trigger/condition/action vocabulary, only a new `automations.json` entry.
+- Started by two core automations (`parallel-review-on-labeled`, label-gated on `Review`;
+  `hypothesis-debug-on-qa-block`, gated on a `qa-tester` `BLOCK` verdict via the existing `verdictIs`
+  vocabulary — see [Automation engine](./automation-engine.md)) — no new trigger/condition/action
+  vocabulary, only new `automations.json` entries.
 
 ## Not implemented yet
 - **File-ownership leases** — two lanes writing the same file still race; `ownedFiles` from the

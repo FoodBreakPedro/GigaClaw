@@ -119,6 +119,17 @@ public sealed record TeamDefinition(string Slug, string Name, string Description
     /// </summary>
     public bool DedupeFindings { get; init; }
 
+    /// <summary>
+    /// C8: when true, once the run's synthesis ticket resolves, <c>TeamRunService.FinalizeAsync</c>
+    /// looks for a <c>GIGACLAW-ARBITRATION v1 winner=&lt;task-key&gt;</c> marker (see
+    /// <see cref="Automation.Handoffs.ArbitrationReader"/>) among its comments and, when one names a
+    /// task in this run, posts a comment on every other reported lane's own ticket naming the winner
+    /// and the stated reason — "losing hypotheses closed with reasons" as a host-side effect the
+    /// synthesizer's prose only has to trigger, not perform. No marker means no comments: a
+    /// synthesizer that never arbitrates leaves the board exactly as C4 already would.
+    /// </summary>
+    public bool RequireEvidenceCitingArbitration { get; init; }
+
     /// <summary>True when the definition can fan out; false for the pure member filters.</summary>
     [JsonIgnore]
     public bool IsExecutable => TaskGraph.Count > 0;

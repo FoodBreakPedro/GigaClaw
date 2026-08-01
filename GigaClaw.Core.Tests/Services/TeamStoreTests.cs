@@ -330,17 +330,18 @@ public sealed class TeamStoreTests
     }
 
     [Fact]
-    public void BuiltInTeams_AreValid_NineFilterOnlyPlusTheC8ExecutablePreset()
+    public void BuiltInTeams_AreValid_NineFilterOnlyPlusTheTwoC8ExecutablePresets()
     {
         var service = new AgentTeamService();
         var definitions = service.GetDefinitions();
 
-        // C8 added parallel-review alongside the nine pure filters — every built-in stays
-        // structurally valid, but only the C8 preset is executable.
-        Assert.Equal(10, definitions.Count);
+        // C8 added parallel-review and hypothesis-debug alongside the nine pure filters — every
+        // built-in stays structurally valid, but only the two C8 presets are executable.
+        Assert.Equal(11, definitions.Count);
         Assert.All(definitions, definition => Assert.Empty(definition.Validate()));
 
-        var filterOnly = definitions.Where(definition => definition.Slug != AgentTeamService.ParallelReviewSlug);
+        var filterOnly = definitions.Where(definition =>
+            definition.Slug is not (AgentTeamService.ParallelReviewSlug or AgentTeamService.HypothesisDebugSlug));
         Assert.Equal(9, filterOnly.Count());
         Assert.All(filterOnly, definition =>
         {
@@ -356,6 +357,12 @@ public sealed class TeamStoreTests
         Assert.Equal("synthesizer", parallelReview.SynthesizerRole);
         Assert.True(parallelReview.DedupeFindings);
         Assert.Equal(["ui-auditor", "qa-tester", "producer"], parallelReview.AgentSlugs);
+
+        var hypothesisDebug = definitions.Single(d => d.Slug == AgentTeamService.HypothesisDebugSlug);
+        Assert.True(hypothesisDebug.IsExecutable);
+        Assert.Equal("debug-lead", hypothesisDebug.SynthesizerRole);
+        Assert.True(hypothesisDebug.RequireEvidenceCitingArbitration);
+        Assert.Equal(["qa-tester", "producer"], hypothesisDebug.AgentSlugs);
 
         // The filter surface is exactly what the definitions project: no behavior moved.
         var teams = service.GetTeams();

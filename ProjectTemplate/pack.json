@@ -78,7 +78,8 @@
       "governance-ops",
       "health-performance",
       "local-media-creation",
-      "parallel-review"
+      "parallel-review",
+      "hypothesis-debug"
     ],
     "automations": [
       "approval-clear-on-revision",
@@ -105,6 +106,7 @@
       "evaluator-on-done",
       "groomer",
       "growth-approval-on-review",
+      "hypothesis-debug-on-qa-block",
       "local-media-reviewer-on-review",
       "owner-feedback",
       "parallel-review-on-labeled",

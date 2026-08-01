@@ -175,6 +175,48 @@
       "joinPolicy": { "mode": "AllDone" },
       "synthesizerRole": "synthesizer",
       "dedupeFindings": true
+    },
+    {
+      "slug": "hypothesis-debug",
+      "name": "Hypothesis Debug",
+      "description": "Fans a bug ticket into competing investigator lanes, one hypothesis each, then a lead arbitration that must cite evidence; the host closes the losing lane(s) once the lead names a winner (GIGACLAW-ARBITRATION marker). Dedicated hypothesis-investigator and debug-lead roles are reserved pending the Incident & Debug pack (doc/roadmap/packs-and-later.md) — qa-tester and producer stand in today.",
+      "icon": "🕵️",
+      "roles": [
+        {
+          "roleId": "investigator-a",
+          "agentSlug": "qa-tester",
+          "description": "Investigates one candidate hypothesis — stand-in for the dedicated hypothesis-investigator role (pending GM G5)."
+        },
+        {
+          "roleId": "investigator-b",
+          "agentSlug": "qa-tester",
+          "description": "Investigates a different candidate hypothesis — stand-in for the dedicated hypothesis-investigator role (pending GM G5)."
+        },
+        {
+          "roleId": "debug-lead",
+          "agentSlug": "producer",
+          "description": "Arbitrates between the investigators' hypotheses, citing evidence — stand-in for the dedicated debug-lead role (pending GM G5)."
+        }
+      ],
+      "taskGraph": [
+        {
+          "key": "investigator-a-lane",
+          "roleId": "investigator-a",
+          "title": "Investigate hypothesis A",
+          "prompt": "Investigate one candidate root cause for this ticket's bug. Gather evidence (repro steps, logs, stack trace, code path) — do not implement a fix. State your hypothesis as the handoff summary and cite the evidence in outputs/openLoops. Authored pending GM G5 — replace with the dedicated hypothesis-investigator prose.",
+          "dependsOn": []
+        },
+        {
+          "key": "investigator-b-lane",
+          "roleId": "investigator-b",
+          "title": "Investigate hypothesis B",
+          "prompt": "Investigate a DIFFERENT candidate root cause than any sibling investigator lane — do not repeat the same hypothesis. Gather evidence; do not implement a fix. State your hypothesis as the handoff summary and cite the evidence in outputs/openLoops. Authored pending GM G5 — replace with the dedicated hypothesis-investigator prose.",
+          "dependsOn": []
+        }
+      ],
+      "joinPolicy": { "mode": "AllDone" },
+      "synthesizerRole": "debug-lead",
+      "requireEvidenceCitingArbitration": true
     }
   ],
   "teamMembership": {}

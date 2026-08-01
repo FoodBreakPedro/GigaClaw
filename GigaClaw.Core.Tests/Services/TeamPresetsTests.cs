@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace GigaClaw.Core.Tests.Services;
 
 /// <summary>
-/// C8's built-in presets, driven through the real C4/C5 services exactly like
+/// C8's two built-in presets, driven through the real C4/C5 services exactly like
 /// <see cref="TeamRunJoinTests"/> and <see cref="TeamRunLifecycleTests"/> do — proving the shipped
 /// <c>ProjectTemplate/Agents/teams.json</c> definitions (via <see cref="AgentTeamService"/>), not a
 /// hand-rolled stand-in, so a regression here means the preset that ships actually broke.
@@ -138,6 +138,91 @@ public sealed class TeamPresetsTests
         var verdictComment = parentAfterJoin!.Comments.Single(c => VerdictReader.ContainsMarker(c.Content));
         Assert.True(VerdictReader.TryRead(verdictComment.Content, out var verdict, out _));
         Assert.Equal("SHIP", verdict!.Decision);
+    }
+
+    // ── Acceptance criterion 2: hypothesis-debug arbitration ───────────────────
+
+    [Fact]
+    public async Task HypothesisDebug_RecordsCompetingHypothesesAndClosesTheLosingLaneWithAReason()
+    {
+        var definition = Roster.GetDefinitionBySlug(AgentTeamService.HypothesisDebugSlug)!;
+        Assert.True(definition.IsExecutable);
+        Assert.True(definition.RequireEvidenceCitingArbitration);
+
+        using var sut = await Sut.CreateAsync("hypothesis-debug", definition);
+        var parent = await sut.Tickets.CreateTicketAsync(sut.Slug, "Intermittent 500 on checkout", status: "Blocked");
+        var run = await sut.Runs.StartRunAsync(sut.Slug, definition.Slug, parent.Id);
+        var tasks = await sut.Teams.ListTasksAsync(sut.Slug, run.Id);
+
+        // Two competing hypotheses, each with its own cited evidence.
+        await FinishLaneAsync(
+            sut, Task(tasks, "investigator-a-lane"), "hypA", "Hypothesis: a null cache lookup races the checkout write.",
+            [("Stack trace at CheckoutService.cs:88 shows a null-ref in the cache lookup path, reproduced 4/5 runs.", false)]);
+        await FinishLaneAsync(
+            sut, Task(tasks, "investigator-b-lane"), "hypB", "Hypothesis: the payment webhook retries out of order.",
+            [("Webhook logs show two deliveries for the same order id 40s apart; no repro under load test.", false)]);
+
+        await sut.Runs.ReconcileRunAsync(sut.Slug, run.Id);
+        var joined = await sut.Teams.GetRunAsync(sut.Slug, run.Id);
+        Assert.Equal(TeamRunStatus.Joining, joined!.Status);
+
+        var synthesis = await sut.Tickets.GetTicketAsync(sut.Slug, joined.SynthesisTicketId!.Value);
+        Assert.Equal("producer", synthesis!.AssignedTo);
+        // Both hypotheses (summary) and their evidence (open loops) are in the lead's brief.
+        Assert.Contains("a null cache lookup races the checkout write", synthesis.Description, StringComparison.Ordinal);
+        Assert.Contains("the payment webhook retries out of order", synthesis.Description, StringComparison.Ordinal);
+        Assert.Contains("null-ref in the cache lookup path, reproduced 4/5 runs", synthesis.Description, StringComparison.Ordinal);
+        Assert.Contains("two deliveries for the same order id 40s apart", synthesis.Description, StringComparison.Ordinal);
+        // The brief demands an evidence-citing arbitration and states the marker the lead must emit.
+        Assert.Contains("## Arbitration required", synthesis.Description, StringComparison.Ordinal);
+        Assert.Contains("GIGACLAW-ARBITRATION v1 winner=", synthesis.Description, StringComparison.Ordinal);
+
+        // The lead arbitrates, citing the winning lane's evidence.
+        await sut.Tickets.AddCommentAsync(
+            sut.Slug, synthesis.Id,
+            "GIGACLAW-ARBITRATION v1 winner=investigator-a-lane\n"
+            + "reason: the reproduced stack trace is direct evidence; the webhook theory has no repro.",
+            "producer");
+        await sut.Tickets.MoveTicketAsync(sut.Slug, synthesis.Id, "Done");
+        await sut.Runs.ReconcileProjectAsync(sut.Slug);
+
+        Assert.Equal(TeamRunStatus.Completed, (await sut.Teams.GetRunAsync(sut.Slug, run.Id))!.Status);
+
+        // Mechanically enforced: the host, not the lead's prose, closed the losing lane with a reason.
+        var loserTicket = await sut.Tickets.GetTicketAsync(sut.Slug, Task(tasks, "investigator-b-lane").TicketId);
+        var closingComment = loserTicket!.Comments.Single(c => c.Content.Contains("was selected as the winning hypothesis", StringComparison.Ordinal));
+        Assert.Contains("'investigator-a-lane'", closingComment.Content, StringComparison.Ordinal);
+        Assert.Contains("the reproduced stack trace is direct evidence", closingComment.Content, StringComparison.Ordinal);
+        Assert.Equal("automation", closingComment.Author);
+
+        // The winning lane gets no such comment.
+        var winnerTicket = await sut.Tickets.GetTicketAsync(sut.Slug, Task(tasks, "investigator-a-lane").TicketId);
+        Assert.DoesNotContain(
+            winnerTicket!.Comments, c => c.Content.Contains("was selected as the winning hypothesis", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task HypothesisDebug_WithNoArbitrationMarker_ClosesNothingAndStaysANoOp()
+    {
+        var definition = Roster.GetDefinitionBySlug(AgentTeamService.HypothesisDebugSlug)!;
+        using var sut = await Sut.CreateAsync("hypothesis-debug-no-marker", definition);
+        var parent = await sut.Tickets.CreateTicketAsync(sut.Slug, "Flaky test", status: "Blocked");
+        var run = await sut.Runs.StartRunAsync(sut.Slug, definition.Slug, parent.Id);
+        var tasks = await sut.Teams.ListTasksAsync(sut.Slug, run.Id);
+
+        await FinishLaneAsync(sut, Task(tasks, "investigator-a-lane"), "a", "Hypothesis A.", [("evidence A", false)]);
+        await FinishLaneAsync(sut, Task(tasks, "investigator-b-lane"), "b", "Hypothesis B.", [("evidence B", false)]);
+        await sut.Runs.ReconcileRunAsync(sut.Slug, run.Id);
+        var joined = await sut.Teams.GetRunAsync(sut.Slug, run.Id);
+
+        // The lead closes its own ticket without ever posting the marker (prose-only decision).
+        await sut.Tickets.AddCommentAsync(sut.Slug, joined!.SynthesisTicketId!.Value, "Went with hypothesis A, informally.", "producer");
+        await sut.Tickets.MoveTicketAsync(sut.Slug, joined.SynthesisTicketId!.Value, "Done");
+        await sut.Runs.ReconcileProjectAsync(sut.Slug);
+
+        var loserTicket = await sut.Tickets.GetTicketAsync(sut.Slug, Task(tasks, "investigator-b-lane").TicketId);
+        Assert.DoesNotContain(
+            loserTicket!.Comments, c => c.Content.Contains("was selected as the winning hypothesis", StringComparison.Ordinal));
     }
 
     // ── Harness ─────────────────────────────────────────────────────────────

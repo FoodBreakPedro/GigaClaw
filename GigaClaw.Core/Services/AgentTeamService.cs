@@ -33,6 +33,8 @@ public sealed class AgentTeamService
     public const string LocalMediaCreationSlug = "local-media-creation";
     /// <summary>C8: parallel-review, the first built-in with a real task graph.</summary>
     public const string ParallelReviewSlug = "parallel-review";
+    /// <summary>C8: hypothesis-debug, the second built-in with a real task graph.</summary>
+    public const string HypothesisDebugSlug = "hypothesis-debug";
 
     private const string TeamsResourceName = "GigaClaw.Core.AgentsTemplate/" + TeamSeed.FileName;
 
@@ -152,6 +154,40 @@ public sealed class AgentTeamService
             JoinPolicy = TeamJoinPolicy.AllDone,
             SynthesizerRole = "synthesizer",
             DedupeFindings = true
+        },
+        new(HypothesisDebugSlug, "Hypothesis Debug",
+            "Fans a bug ticket into competing investigator lanes, one hypothesis each, then a lead arbitration that must cite evidence; the host closes the losing lane(s) once the lead names a winner (GIGACLAW-ARBITRATION marker). Dedicated hypothesis-investigator and debug-lead roles are reserved pending the Incident & Debug pack (doc/roadmap/packs-and-later.md) — qa-tester and producer stand in today.",
+            "🕵️")
+        {
+            Roles =
+            [
+                new TeamRole("investigator-a", "qa-tester")
+                {
+                    Description = "Investigates one candidate hypothesis — stand-in for the dedicated hypothesis-investigator role (pending GM G5)."
+                },
+                new TeamRole("investigator-b", "qa-tester")
+                {
+                    Description = "Investigates a different candidate hypothesis — stand-in for the dedicated hypothesis-investigator role (pending GM G5)."
+                },
+                new TeamRole("debug-lead", "producer")
+                {
+                    Description = "Arbitrates between the investigators' hypotheses, citing evidence — stand-in for the dedicated debug-lead role (pending GM G5)."
+                }
+            ],
+            TaskGraph =
+            [
+                new TeamTaskTemplate("investigator-a-lane", "investigator-a", "Investigate hypothesis A")
+                {
+                    Prompt = "Investigate one candidate root cause for this ticket's bug. Gather evidence (repro steps, logs, stack trace, code path) — do not implement a fix. State your hypothesis as the handoff summary and cite the evidence in outputs/openLoops. Authored pending GM G5 — replace with the dedicated hypothesis-investigator prose."
+                },
+                new TeamTaskTemplate("investigator-b-lane", "investigator-b", "Investigate hypothesis B")
+                {
+                    Prompt = "Investigate a DIFFERENT candidate root cause than any sibling investigator lane — do not repeat the same hypothesis. Gather evidence; do not implement a fix. State your hypothesis as the handoff summary and cite the evidence in outputs/openLoops. Authored pending GM G5 — replace with the dedicated hypothesis-investigator prose."
+                }
+            ],
+            JoinPolicy = TeamJoinPolicy.AllDone,
+            SynthesizerRole = "debug-lead",
+            RequireEvidenceCitingArbitration = true
         }
     };
 

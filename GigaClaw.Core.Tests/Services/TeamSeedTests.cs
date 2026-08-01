@@ -54,13 +54,13 @@ public sealed class TeamSeedTests
     }
 
     [Fact]
-    public void GetTeams_StillResolvesTheNineFilterOnlyBuiltInsPlusTheC8Preset_FromDataInOrder()
+    public void GetTeams_StillResolvesTheNineFilterOnlyBuiltInsPlusTheTwoC8Presets_FromDataInOrder()
     {
         var teams = new AgentTeamService().GetTeams();
 
-        // C8 added parallel-review — the first built-in with a real task graph — after the nine
-        // original filter-only teams. The nine keep their exact order.
-        Assert.Equal(10, teams.Count);
+        // C8 added parallel-review and hypothesis-debug — the first two built-ins with a real task
+        // graph — after the nine original filter-only teams. The nine keep their exact order.
+        Assert.Equal(11, teams.Count);
         Assert.Equal(
             [
                 AgentTeamService.AllTeamsSlug,
@@ -72,7 +72,8 @@ public sealed class TeamSeedTests
                 AgentTeamService.GovernanceOpsSlug,
                 AgentTeamService.HealthPerformanceSlug,
                 AgentTeamService.LocalMediaCreationSlug,
-                AgentTeamService.ParallelReviewSlug
+                AgentTeamService.ParallelReviewSlug,
+                AgentTeamService.HypothesisDebugSlug
             ],
             teams.Select(team => team.Slug));
         // The no-filter sentinel stays first: GetTeamBySlug falls back to it.
@@ -81,9 +82,12 @@ public sealed class TeamSeedTests
 
         var definitions = new AgentTeamService().GetDefinitions();
         Assert.All(
-            definitions.Where(definition => definition.Slug != AgentTeamService.ParallelReviewSlug),
+            definitions.Where(definition =>
+                definition.Slug != AgentTeamService.ParallelReviewSlug &&
+                definition.Slug != AgentTeamService.HypothesisDebugSlug),
             definition => Assert.False(definition.IsExecutable));
         Assert.True(definitions.Single(d => d.Slug == AgentTeamService.ParallelReviewSlug).IsExecutable);
+        Assert.True(definitions.Single(d => d.Slug == AgentTeamService.HypothesisDebugSlug).IsExecutable);
     }
 
     [Fact]

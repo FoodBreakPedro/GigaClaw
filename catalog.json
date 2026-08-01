@@ -3,10 +3,10 @@
   "Summary": {
     "Agents": 37,
     "Contracts": 37,
-    "Automations": 51,
-    "EnabledAutomations": 50,
+    "Automations": 52,
+    "EnabledAutomations": 51,
     "ExplicitModelMappings": 37,
-    "Teams": 11,
+    "Teams": 12,
     "Scripts": 21
   },
   "Packs": [
@@ -645,6 +645,7 @@
         "governance-ops",
         "growth-marketing",
         "health-performance",
+        "hypothesis-debug",
         "local-media-creation",
         "parallel-review",
         "security-review",
@@ -697,6 +698,7 @@
       ],
       "ProjectFallbackRequired": false,
       "Teams": [
+        "hypothesis-debug",
         "parallel-review",
         "software-engineering"
       ],
@@ -985,6 +987,13 @@
         "evaluator",
         "producer",
         "wellness-coach"
+      ]
+    },
+    {
+      "Slug": "hypothesis-debug",
+      "Agents": [
+        "producer",
+        "qa-tester"
       ]
     },
     {
@@ -1482,6 +1491,12 @@
     },
     {
       "Id": "parallel-review-on-labeled",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "hypothesis-debug-on-qa-block",
       "Enabled": true,
       "Agents": [],
       "Models": []

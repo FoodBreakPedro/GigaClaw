@@ -498,6 +498,9 @@ public sealed class TeamRunService
         var missing = tasks.Where(task => task.Status != TeamTaskStatus.Done).ToArray();
         var succeeded = TeamJoinEvaluator.Succeeded(run.JoinPolicy, tasks);
 
+        if (run.Definition.RequireEvidenceCitingArbitration)
+            await CloseLosingLanesAsync(projectSlug, run, tasks);
+
         var gaps = missing.Length == 0 ? null : TeamJoinEvaluator.DescribeMissing(missing);
         await NoteAsync(
             projectSlug, parent.Id,
@@ -510,6 +513,50 @@ public sealed class TeamRunService
             runId,
             succeeded ? TeamRunStatus.Completed : TeamRunStatus.Failed,
             failureReason: succeeded ? null : gaps ?? "no lane reported");
+    }
+
+    /// <summary>
+    /// C8's mechanically-enforceable half of "losing hypotheses closed with reasons": reads the
+    /// debug-lead's <see cref="ArbitrationReader"/> marker off the synthesis ticket and, when one
+    /// names a task in this run, posts a comment on every <em>other</em> reported lane's own ticket
+    /// naming the winner and the stated reason. No marker (the lead never arbitrated, or this run
+    /// has no synthesizer) is a no-op — the board is left exactly as C4 already would leave it.
+    /// Called once, from <see cref="FinalizeAsync"/>, which "terminal is terminal" guarantees never
+    /// runs twice for the same run.
+    /// </summary>
+    private async Task CloseLosingLanesAsync(string projectSlug, TeamRun run, IReadOnlyList<TeamTask> tasks)
+    {
+        if (run.SynthesisTicketId is not int synthesisTicketId) return;
+
+        var synthesisTicket = await _tickets.GetTicketAsync(projectSlug, synthesisTicketId);
+        if (synthesisTicket is null) return;
+
+        var decision = ArbitrationReader.Latest(
+            synthesisTicket.Comments.OrderBy(comment => comment.CreatedAt).Select(comment => comment.Content).ToList());
+        if (decision is null) return;
+
+        var winner = tasks.FirstOrDefault(task =>
+            string.Equals(task.TemplateKey, decision.Winner, StringComparison.OrdinalIgnoreCase));
+        if (winner is null) return; // The lead named a key that is not one of this run's lanes — nothing to close.
+
+        foreach (var loser in tasks.Where(task =>
+            task.Status == TeamTaskStatus.Done && task.Id != winner.Id))
+        {
+            try
+            {
+                await _tickets.AddCommentAsync(
+                    projectSlug, loser.TicketId,
+                    $"Hypothesis debug run #{run.Id}: '{winner.TemplateKey}' ({winner.AgentSlug}) was selected "
+                    + $"as the winning hypothesis. This lane's hypothesis was not selected.\n\nReason: {decision.Reason}",
+                    "automation");
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    exception, "[{Slug}] team run #{RunId} could not close lane '{Key}' on ticket #{TicketId}",
+                    projectSlug, run.Id, loser.TemplateKey, loser.TicketId);
+            }
+        }
     }
 
     /// <summary>
@@ -580,6 +627,20 @@ public sealed class TeamRunService
             brief.AppendLine(
                 "These lanes produced nothing. Do not present their subject matter as covered: name "
                 + "each gap and its reason in your synthesis, and say what would still have to be done.");
+        }
+
+        if (run.Definition.RequireEvidenceCitingArbitration)
+        {
+            brief.AppendLine();
+            brief.AppendLine("## Arbitration required");
+            brief.AppendLine();
+            brief.AppendLine(
+                "Pick the hypothesis the evidence above actually supports, citing which lane's evidence "
+                + "decided it. Record the decision as its own comment on this ticket, in exactly this shape "
+                + "(the host closes the losing lane(s) once it reads this — no further action needed there):");
+            brief.AppendLine();
+            brief.AppendLine("GIGACLAW-ARBITRATION v1 winner=<task-key-of-the-winning-lane>");
+            brief.AppendLine("reason: <one line citing the deciding evidence>");
         }
 
         return brief.ToString().TrimEnd();
