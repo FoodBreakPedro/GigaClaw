@@ -1,0 +1,7 @@
+0	launch	programmer (new) session={{session_id}} cwd={{workspace}} skill=programmer/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Reading the auth service to locate the cookie expiry computation.
+3	tool_use	Bash
+4	user	[user] src/Auth/SessionCookieFactory.cs:41: ExpiresUtc = DateTime.Now.Add(lifetime);
+5	assistant	[assistant] Fixed SessionCookieFactory to compute the absolute expiry from DateTime.UtcNow, matching the validator. Added a regression test that asserts the issued expiry equals UtcNow plus the configured lifetime under a non-zero host offset. Moving the ticket to Review.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":180,"num_turns":2,"total_cost_usd":0.0812,"usage":{"input_tokens":420,"output_tokens":960,"cache_read_input_tokens":19400,"cache_creation_input_tokens":1700}}

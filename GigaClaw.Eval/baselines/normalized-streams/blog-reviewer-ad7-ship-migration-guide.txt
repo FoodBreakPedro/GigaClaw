@@ -1,0 +1,14 @@
+0	launch	blog-reviewer (new) session={{session_id}} cwd={{workspace}} skill=blog-reviewer/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] The description opens with a `---` frontmatter fence, so this is an AD-7 draft. Running the quality scripts against the description body before scoring.
+3	tool_use	Bash
+4	user	[user] lint_prose: burstiness=0.46 flesch=64 banned_phrases=0
+ai_citation_score: 84/100
+content_contract: PASS — schema BlogPosting valid, no dead links
+5	assistant	[assistant] Scored 93/100 with zero P0 issues: content & pacing 28/30 (two sections open with the same construction), SEO & navigation 24/25, E-E-A-T 14/15 (author bio lacks a credential line), technical & schema 15/15 (content_contract.py passed), AI citation readiness 12/15 (GEO 84/100 rounds to 12.6). That clears the 90-point gate. Posting the review:
+
+CONTENT-REVIEW APPROVE v1 artifact-sha256:{{session_id}}{{session_id}}
+GIGACLAW-VERDICT v1 blog-reviewer SHIP artifact-sha256:{{session_id}}{{session_id}}
+
+Added the ready-for-cms label and moved the ticket to Done.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":230,"num_turns":2,"total_cost_usd":0.0888,"usage":{"input_tokens":540,"output_tokens":1180,"cache_read_input_tokens":21100,"cache_creation_input_tokens":1700}}

@@ -1,0 +1,7 @@
+0	launch	blog-translator (new) session={{session_id}} cwd={{workspace}} skill=blog-translator/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] The source digest is covered by the BLOG-SEO VALIDATED receipt on the ticket, so the approval gate is satisfied. Translating to es, then running the deterministic parity audit across the source and the new locale file.
+3	tool_use	Bash
+4	user	[user] translation_contract: PASS — headings match, code blocks byte-identical, images preserved, alternates reciprocal (en<->es)
+5	assistant	[assistant] Wrote content/posts/es/offline-first-sync-launch.md, updated the alternates map in both the English source and the new Spanish file (en: /blog/offline-first-sync-migration, es: /es/blog/sincronizacion-offline-first), and verified locale keyword usage ("sincronizacion sin conexion" over a literal translation). The parity audit passed on every checked dimension. BLOG-TRANSLATION v1 artifact-sha256:{{session_id}}{{session_id}}. Status moved to Review.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":200,"num_turns":2,"total_cost_usd":0.0710,"usage":{"input_tokens":455,"output_tokens":940,"cache_read_input_tokens":18000,"cache_creation_input_tokens":1400}}

@@ -1,0 +1,9 @@
+0	launch	documentalist (new) session={{session_id}} cwd={{workspace}} skill=documentalist/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Reading the durable cursor and the commit range it has not processed yet.
+3	tool_use	Bash
+4	user	[user] a4e7c1b fix: add jittered exponential backoff to the offline queue retry
+src/Sync/RetryPolicy.cs
+src/Sync/QueueWorker.cs
+5	assistant	[assistant] Docs updated: doc/sync-engine.md — added a Retry policy subsection describing the jittered exponential backoff and its bounds, replacing the old "retries immediately" line, which was now wrong. Docs created: none, the sync engine already had a doc. Docs flagged obsolete: none. Source range processed: 9a2f1c0..a4e7c1b, cursor advanced. Committed doc/sync-engine.md alone under the documentalist identity with an explicit pathspec; the uncommitted source changes in the working tree were left untouched.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":180,"num_turns":2,"total_cost_usd":0.0498,"usage":{"input_tokens":370,"output_tokens":700,"cache_read_input_tokens":14100,"cache_creation_input_tokens":1050}}

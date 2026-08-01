@@ -413,13 +413,18 @@ public sealed partial class ReplayRunner
                 RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     }
 
-    internal static string Digest(IReadOnlyList<ReplayEvent> events)
-    {
-        var canonical = string.Join(
+    internal static string Digest(IReadOnlyList<ReplayEvent> events) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(CanonicalStream(events))));
+
+    /// <summary>The exact bytes <see cref="Digest"/> hashes — index, kind and normalized text, one
+    /// event per tab-separated line. This is the ONLY source of truth for what
+    /// <c>evidence[].ref</c>/<c>inputDigest</c> are derived from; a hash tells you two runs differ,
+    /// never where, so <see cref="JudgeStreamEvidence"/> diffs this string against a committed
+    /// reference instead of the hash.</summary>
+    internal static string CanonicalStream(IReadOnlyList<ReplayEvent> events) =>
+        string.Join(
             "\n",
             events.Select(captured => $"{captured.Index}\t{captured.Kind}\t{captured.Text}"));
-        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
-    }
 
     /// <summary>Hermetic by default: resolves the mock CLI built from GigaClaw.ClaudeMock. The
     /// real CLI is an explicit, costed opt-in and is gated on an environment variable so it can

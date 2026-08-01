@@ -78,12 +78,20 @@ internal static class Program
 
     private static int RunJudge(string root, string target, string[] args, bool writeReport)
     {
-        var result = new JudgeRunner(root).Run(
+        var runner = new JudgeRunner(root);
+        // Regenerates the committed normalized-stream references (GigaClaw.Eval/baselines/
+        // normalized-streams/), the bytes evidence[].ref/inputDigest hash. Unlike
+        // --update-baselines this never touches a verdict, so it is safe (and meant) to run on any
+        // platform whose bytes should be on record — the committed set here is macOS's.
+        if (args.Contains("--update-streams", StringComparer.Ordinal))
+            runner.WriteStreamBaselines(target);
+
+        var result = runner.Run(
             target,
             args.Contains("--llm", StringComparer.Ordinal),
             args.Contains("--update-baselines", StringComparer.Ordinal),
             writeReport);
-        Print(result);
+        Print(result, runner, root);
         return result.ExitCode;
     }
 
@@ -172,7 +180,7 @@ internal static class Program
         Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
     }
 
-    private static void Print(JudgeRunResult result)
+    private static void Print(JudgeRunResult result, JudgeRunner runner, string root)
     {
         var fixtures = result.Reports.SelectMany(report => report.Fixtures).ToArray();
         foreach (var fixture in fixtures)
@@ -191,6 +199,23 @@ internal static class Program
             $"{fixtures.Count(fixture => fixture.Status == "pass")} pass(es), " +
             $"{fixtures.Count(fixture => fixture.Status != "pass")} failure(s).");
         Console.WriteLine($"Elapsed: {result.ElapsedMilliseconds} ms.");
+
+        // A bare "baseline.drift" names a symptom the same way it always has; a hash difference in
+        // evidence[].ref/inputDigest never says WHERE. Print the exact bytes that hash for the
+        // first drifting fixture, diffed against the macOS reference this repository commits under
+        // GigaClaw.Eval/baselines/normalized-streams/, so a CI log alone localizes the difference —
+        // this is the log a `continue-on-error` interrogation step leaves behind; its conclusion
+        // always reads success, so the log has to be self-sufficient (doc/roadmap/SESSION-HANDOFF.md
+        // § The Windows exemption).
+        var drifted = fixtures.Where(fixture => fixture.BaselineStatus == "drift").ToArray();
+        if (drifted.Length == 0) return;
+
+        var first = drifted[0];
+        Console.WriteLine();
+        Console.WriteLine(
+            $"=== normalized-stream evidence for {first.Agent}/{first.Fixture} " +
+            $"(first of {drifted.Length} drifted fixture(s)) ===");
+        Console.WriteLine(JudgeStreamEvidence.Describe(root, first.Fixture, runner.NormalizedStream(first.Fixture)));
     }
 
     private static void Print(MonteCarloRunResult result)
@@ -292,7 +317,8 @@ internal static class Program
         Console.Error.WriteLine(
             "       GigaClaw.Eval replay <fixture|family|agent|all> [--real-cli] [--no-report] [--root PATH]");
         Console.Error.WriteLine(
-            "       GigaClaw.Eval judge  <fixture|family|agent|all> [--llm] [--update-baselines] [--no-report] [--root PATH]");
+            "       GigaClaw.Eval judge  <fixture|family|agent|all> [--llm] [--update-baselines] " +
+            "[--update-streams] [--no-report] [--root PATH]");
         Console.Error.WriteLine(
             "       GigaClaw.Eval montecarlo <fixture|family|agent|all> [--runs N] [--max-runs N] " +
             "[--max-spend-usd USD] [--real-cli] [--no-report] [--root PATH]");

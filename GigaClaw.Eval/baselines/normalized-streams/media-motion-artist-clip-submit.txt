@@ -1,0 +1,7 @@
+0	launch	local-motion-artist (new) session={{session_id}} cwd={{workspace}} skill=local-motion-artist/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Spec locks kind clip, provider phosphene, one explicit provider (not auto), and the prior checkpoint is approved. Phosphene requires frames % 8 == 1 — 41 satisfies that — and enhancement off with LoRA trigger words. Submitting the job.
+3	tool_use	Bash
+4	user	[user] 200
+5	assistant	[assistant] Submitted with idempotencyKey media-clip-v1:5044:{{session_id}}{{session_id}}, HTTP 200. No provider substitution — phosphene stays locked, not auto. Exiting now: the durable worker owns polling, timeout, cancellation and receipt writing from here. This clip remains an asset candidate until the OpenMontage assets checkpoint approves it.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":150,"num_turns":2,"total_cost_usd":0.0374,"usage":{"input_tokens":300,"output_tokens":510,"cache_read_input_tokens":11500,"cache_creation_input_tokens":760}}

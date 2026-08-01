@@ -1,0 +1,8 @@
+0	launch	email-copywriter (new) session={{session_id}} cwd={{workspace}} skill=email-copywriter/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Artifact type is cold email with a documented opt-in basis. Wrote content/emails/local-first-launch/cold-1.md with three subject lines and one CTA, then running the deterministic gates.
+3	tool_use	Bash
+4	user	[user] email_contract: PASS — 3 subject lines, 1 CTA marker, body 96 words
+privacy_guard: PASS — no secrets or privacy boundary violations
+5	assistant	[assistant] Spam/deliverability checklist: no ALL-CAPS, one exclamation mark across the whole variant, none of the banned phrases, body 96 words (under 120), exactly one CTA. Frontmatter declares artifact_type: cold-email, audience_relationship: prior-lead-magnet-opt-in, outreach_basis: documented-download-consent. EMAIL-COPY v1 artifact-sha256:{{session_id}}{{session_id}}. Moved the ticket to Review, assignee unchanged, for the approval-gatekeeper gate.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":185,"num_turns":2,"total_cost_usd":0.0602,"usage":{"input_tokens":400,"output_tokens":820,"cache_read_input_tokens":16200,"cache_creation_input_tokens":1250}}

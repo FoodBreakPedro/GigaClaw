@@ -1,0 +1,9 @@
+0	launch	lead-magnet-creator (new) session={{session_id}} cwd={{workspace}} skill=lead-magnet-creator/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Built the checklist and the three promo variations, saved the HTML export and the promo file, and now running every deterministic gate.
+3	tool_use	Bash
+4	user	[user] html_contract: PASS — semantic landmarks, responsive + print layout, accessible images
+social_contract: PASS — 3 post variants, contrarian/pain-first/results-led
+privacy_guard: PASS
+5	assistant	[assistant] Rendered at 390x844 (phone) and 1440x900 (desktop): keyboard focus order is correct and print preview is clean at both sizes. content/leadmagnets/local-first-migration-checklist.html has 6 sections with 2-3 tips each and one immediate action step; content/social/local-first-migration-checklist-promo.md has all three hook variants. LEAD-MAGNET v1 artifact-sha256:{{session_id}}{{session_id}}. Moved the ticket to Review, assignee unchanged, for the approval-gatekeeper gate.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":230,"num_turns":2,"total_cost_usd":0.0821,"usage":{"input_tokens":500,"output_tokens":1120,"cache_read_input_tokens":20500,"cache_creation_input_tokens":1650}}
