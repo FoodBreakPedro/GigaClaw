@@ -54,11 +54,13 @@ public sealed class TeamSeedTests
     }
 
     [Fact]
-    public void GetTeams_StillResolvesTheNineBuiltInsFromDataInOrder()
+    public void GetTeams_StillResolvesTheNineFilterOnlyBuiltInsPlusTheC8Preset_FromDataInOrder()
     {
         var teams = new AgentTeamService().GetTeams();
 
-        Assert.Equal(9, teams.Count);
+        // C8 added parallel-review — the first built-in with a real task graph — after the nine
+        // original filter-only teams. The nine keep their exact order.
+        Assert.Equal(10, teams.Count);
         Assert.Equal(
             [
                 AgentTeamService.AllTeamsSlug,
@@ -69,13 +71,19 @@ public sealed class TeamSeedTests
                 AgentTeamService.DataIntelligenceSlug,
                 AgentTeamService.GovernanceOpsSlug,
                 AgentTeamService.HealthPerformanceSlug,
-                AgentTeamService.LocalMediaCreationSlug
+                AgentTeamService.LocalMediaCreationSlug,
+                AgentTeamService.ParallelReviewSlug
             ],
             teams.Select(team => team.Slug));
         // The no-filter sentinel stays first: GetTeamBySlug falls back to it.
         Assert.Equal(AgentTeamService.AllTeamsSlug, teams[0].Slug);
         Assert.Empty(teams[0].AgentSlugs);
-        Assert.All(new AgentTeamService().GetDefinitions(), definition => Assert.False(definition.IsExecutable));
+
+        var definitions = new AgentTeamService().GetDefinitions();
+        Assert.All(
+            definitions.Where(definition => definition.Slug != AgentTeamService.ParallelReviewSlug),
+            definition => Assert.False(definition.IsExecutable));
+        Assert.True(definitions.Single(d => d.Slug == AgentTeamService.ParallelReviewSlug).IsExecutable);
     }
 
     [Fact]

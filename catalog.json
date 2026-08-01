@@ -3,10 +3,10 @@
   "Summary": {
     "Agents": 37,
     "Contracts": 37,
-    "Automations": 50,
-    "EnabledAutomations": 49,
+    "Automations": 51,
+    "EnabledAutomations": 50,
     "ExplicitModelMappings": 37,
-    "Teams": 10,
+    "Teams": 11,
     "Scripts": 21
   },
   "Packs": [
@@ -646,6 +646,7 @@
         "growth-marketing",
         "health-performance",
         "local-media-creation",
+        "parallel-review",
         "security-review",
         "software-engineering",
         "ux-design"
@@ -696,6 +697,7 @@
       ],
       "ProjectFallbackRequired": false,
       "Teams": [
+        "parallel-review",
         "software-engineering"
       ],
       "EnabledDispatchingAutomations": [
@@ -857,6 +859,7 @@
       ],
       "ProjectFallbackRequired": false,
       "Teams": [
+        "parallel-review",
         "ux-design"
       ],
       "EnabledDispatchingAutomations": [
@@ -998,6 +1001,14 @@
         "local-motion-artist",
         "producer",
         "system-watchdog"
+      ]
+    },
+    {
+      "Slug": "parallel-review",
+      "Agents": [
+        "producer",
+        "qa-tester",
+        "ui-auditor"
       ]
     },
     {
@@ -1465,6 +1476,12 @@
     },
     {
       "Id": "content-verdict-gate-block-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "parallel-review-on-labeled",
       "Enabled": true,
       "Agents": [],
       "Models": []

@@ -5,8 +5,10 @@ Turns a team from a static member filter into a runnable object. A `TeamDefiniti
 entry conditions, a task-graph template, a join policy and a synthesizer role; a `TeamRun` is one
 execution of that definition bound to a parent ticket; a `TeamTask` is a sub-ticket owned by a run.
 
-A definition with an **empty task graph is valid** and means "pure member filter". All nine built-in
-teams are exactly that, so team filtering behaves as it always has — see [Kanban UI](./kanban-ui.md).
+A definition with an **empty task graph is valid** and means "pure member filter". Nine of the ten
+built-in teams are exactly that, so team filtering behaves as it always has — see
+[Kanban UI](./kanban-ui.md). The other one, `parallel-review` (C8), is a real task graph — see
+[Team presets](#team-presets-c8) below.
 
 ## Key components
 - `GigaClaw.Core/Models/TeamDefinition.cs` — `TeamDefinition`, `TeamRole`, `TeamTaskTemplate`,
@@ -22,7 +24,7 @@ teams are exactly that, so team filtering behaves as it always has — see [Kanb
 
 ## Where team definitions come from
 
-Teams are **data, not code**. The nine built-ins live in `ProjectTemplate/Agents/teams.json`,
+Teams are **data, not code**. The ten built-ins live in `ProjectTemplate/Agents/teams.json`,
 embedded as `GigaClaw.Core.AgentsTemplate/teams.json` and written to `<workspace>/.agents/teams.json`
 by Initialize like every other template asset — see [Project template](./project-template.md). That
 is what makes a team addable by something other than a `GigaClaw.Core` rebuild.
@@ -254,11 +256,33 @@ nothing about a run ever lived outside the project database.
   `(…, workspacePath)` overloads for a workspace's composed roster.
 - `TeamStore.SeedDefinitionsAsync(slug)` to write the roster into a project explicitly.
 
+## Team presets (C8)
+
+The first built-in to ship with a real task graph, proving the C4/C5 machinery end to end with
+agents that already exist in the core roster.
+
+- **`parallel-review`** — an `accessibility-lane` (`ui-auditor`) and a `coverage-lane` (`qa-tester`)
+  run in parallel, `AllDone` join, synthesized by `producer`. `security-reviewer`,
+  `performance-reviewer` and `architecture-reviewer` are reserved role names: no core agent reviews
+  those dimensions today, and the specialists ship with the Security and Architecture & Data packs
+  ([packs-and-later.md](./roadmap/packs-and-later.md)) — add a role plus a task template once they
+  land. `TeamDefinition.DedupeFindings: true` makes `TeamRunService.ComposeBrief` prepend a merged,
+  per-lane attributed view of every reporting lane's `RunHandoff.OpenLoops`
+  (`GigaClaw.Core/Automation/Handoffs/FindingDeduplicator.cs`, a pure function keyed on a normalized
+  `location|category` string — no schema change, since open loops are the closest the frozen v1
+  handoff contract has to "a lane's finding") and posts a host-authored `GIGACLAW-VERDICT` receipt
+  (agent `team-synthesis`) on the parent ticket — SHIP with nothing blocking, FIX if a deduped
+  finding is, BLOCK if the join did not get what it asked for. That receipt is what lets an ordinary
+  `verdictIs` automation gate on the run without parsing the dispatched synthesizer's own prose.
+- The reserved-role agents are authored pending GM's G5 pass
+  ([lane-gemini-templates.md](./roadmap/lane-gemini-templates.md)); the task-template prompts above
+  are deliberately minimal placeholders, not the specialists' eventual prose.
+- Started by `parallel-review-on-labeled`, label-gated (`needs-parallel-review`) on `Review` — no
+  new trigger/condition/action vocabulary, only a new `automations.json` entry.
+
 ## Not implemented yet
 - **File-ownership leases** — two lanes writing the same file still race; `ownedFiles` from the
   handoff is the declared scope a lease will be taken on (lane CX-R's R4).
-- **Team presets** — no built-in definition ships a task graph yet, so every executable team is one
-  a project or its roster defines itself. The nine built-ins remain pure member filters.
 - **A pack team in the board's team picker** — the Blazor filter still calls the project-less
   `AgentTeamService.GetTeams()`, so a team contributed by a workspace roster resolves and runs but is
   not yet offered in the dropdown. Passing the project's workspace path to the `(…, workspacePath)`

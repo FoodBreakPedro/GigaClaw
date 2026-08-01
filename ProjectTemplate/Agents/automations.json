@@ -2004,6 +2004,35 @@
           "to": "Blocked"
         }
       ]
+    },
+    {
+      "id": "parallel-review-on-labeled",
+      "name": "Team: start parallel-review on a Review-column ticket labeled needs-parallel-review",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketInColumn",
+        "seconds": 60,
+        "columns": [
+          "Review"
+        ],
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 5,
+        "retryBackoffSeconds": 3600
+      },
+      "conditions": [
+        {
+          "type": "labels",
+          "labels": [
+            "needs-parallel-review"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "startTeamRun",
+          "team": "parallel-review"
+        }
+      ]
     }
   ]
 }

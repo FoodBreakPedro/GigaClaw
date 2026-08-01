@@ -107,6 +107,18 @@ public sealed record TeamDefinition(string Slug, string Name, string Description
     /// </summary>
     public int MaxConcurrency { get; init; }
 
+    /// <summary>
+    /// C8: when true, the synthesizer's brief (<c>TeamRunService.ComposeBrief</c>) is preceded by a
+    /// deduplicated view of every reporting lane's findings (<c>RunHandoff.OpenLoops</c>), merged by
+    /// <see cref="Automation.Handoffs.FindingDeduplicator"/> and attributed back to the lane(s) that
+    /// raised each one, and the join's outcome is distilled into a host-authored
+    /// <c>GIGACLAW-VERDICT</c> receipt on the parent ticket (agent <c>team-synthesis</c>) so an
+    /// ordinary <c>verdictIs</c> automation can gate on it — the same vocabulary C2 already reads,
+    /// no second one. A team that does not opt in keeps the C4 brief exactly as it was; a lane with
+    /// no parseable open loops degrades to an empty, honestly-labeled section rather than an error.
+    /// </summary>
+    public bool DedupeFindings { get; init; }
+
     /// <summary>True when the definition can fan out; false for the pure member filters.</summary>
     [JsonIgnore]
     public bool IsExecutable => TaskGraph.Count > 0;

@@ -330,21 +330,32 @@ public sealed class TeamStoreTests
     }
 
     [Fact]
-    public void BuiltInTeams_AreValidFilterOnlyDefinitions()
+    public void BuiltInTeams_AreValid_NineFilterOnlyPlusTheC8ExecutablePreset()
     {
         var service = new AgentTeamService();
         var definitions = service.GetDefinitions();
 
-        Assert.Equal(9, definitions.Count);
-        Assert.All(definitions, definition =>
+        // C8 added parallel-review alongside the nine pure filters — every built-in stays
+        // structurally valid, but only the C8 preset is executable.
+        Assert.Equal(10, definitions.Count);
+        Assert.All(definitions, definition => Assert.Empty(definition.Validate()));
+
+        var filterOnly = definitions.Where(definition => definition.Slug != AgentTeamService.ParallelReviewSlug);
+        Assert.Equal(9, filterOnly.Count());
+        Assert.All(filterOnly, definition =>
         {
-            Assert.Empty(definition.Validate());
             Assert.Empty(definition.TaskGraph);
             Assert.False(definition.IsExecutable);
             Assert.Null(definition.SynthesizerRole);
             Assert.Empty(definition.EntryConditions);
             Assert.Equal(TeamJoinMode.AllDone, definition.JoinPolicy.Mode);
         });
+
+        var parallelReview = definitions.Single(d => d.Slug == AgentTeamService.ParallelReviewSlug);
+        Assert.True(parallelReview.IsExecutable);
+        Assert.Equal("synthesizer", parallelReview.SynthesizerRole);
+        Assert.True(parallelReview.DedupeFindings);
+        Assert.Equal(["ui-auditor", "qa-tester", "producer"], parallelReview.AgentSlugs);
 
         // The filter surface is exactly what the definitions project: no behavior moved.
         var teams = service.GetTeams();
@@ -356,7 +367,6 @@ public sealed class TeamStoreTests
             Assert.Equal(definition.Description, team.Description);
             Assert.Equal(definition.Icon, team.Icon);
             Assert.Equal(definition.AgentSlugs, team.AgentSlugs);
-            Assert.Equal(definition.Roles.Select(role => role.AgentSlug), team.AgentSlugs);
         }
     }
 }

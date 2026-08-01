@@ -442,10 +442,16 @@ public sealed class TeamRunService
             reported.Add((task, ticket is null ? null : LatestHandoff(ticket)));
         }
 
+        // C8: findings are already fully known once the join has fired — the dedup and the receipt
+        // it drives do not need to wait for the dispatched synthesizer to read the brief.
+        var deduped = run.Definition.DedupeFindings ? DedupeLaneFindings(reported) : null;
+        if (deduped is not null)
+            await PostSynthesisVerdictAsync(projectSlug, run, parent, verdict, deduped);
+
         var ticketForSynthesis = await _tickets.CreateTicketAsync(
             projectSlug,
             $"Synthesize: {parent.Title}",
-            description: ComposeBrief(run, parent, verdict, reported),
+            description: ComposeBrief(run, parent, verdict, reported, deduped),
             createdBy: "automation",
             status: ReadyStatus,
             assignedTo: synthesizer.AgentSlug,
@@ -515,7 +521,8 @@ public sealed class TeamRunService
         TeamRun run,
         Ticket parent,
         TeamJoinVerdict verdict,
-        IReadOnlyList<(TeamTask Task, RunHandoff? Handoff)> reported)
+        IReadOnlyList<(TeamTask Task, RunHandoff? Handoff)> reported,
+        IReadOnlyList<DedupedFinding>? deduped)
     {
         var total = verdict.Reported.Count + verdict.Missing.Count;
         var brief = new System.Text.StringBuilder();
@@ -524,6 +531,29 @@ public sealed class TeamRunService
         brief.AppendLine();
         brief.AppendLine($"Join: {run.JoinPolicy.Mode} — {verdict.Reason}.");
         brief.AppendLine();
+
+        // C8: the deduped view comes first — a shorter, attributed summary of what every lane
+        // agreed and disagreed on — with the full per-lane rendering kept right below it for
+        // whatever the merge left out or a lane never expressed as an open loop.
+        if (deduped is not null)
+        {
+            brief.AppendLine($"## Deduplicated findings ({deduped.Count})");
+            if (deduped.Count == 0)
+            {
+                brief.AppendLine();
+                brief.AppendLine("No parseable findings on any reporting lane's handoff.");
+            }
+            else
+            {
+                foreach (var finding in deduped)
+                {
+                    var lanes = string.Join(", ", finding.Lanes.Select(lane => $"{lane.TaskKey} ({lane.AgentSlug})"));
+                    brief.AppendLine(
+                        $"- {(finding.Blocking ? "[blocking] " : "")}{finding.Statement} — reported by: {lanes}");
+                }
+            }
+            brief.AppendLine();
+        }
 
         brief.AppendLine($"## Lanes that reported ({verdict.Reported.Count} of {total})");
         if (reported.Count == 0)
@@ -553,6 +583,103 @@ public sealed class TeamRunService
         }
 
         return brief.ToString().TrimEnd();
+    }
+
+    /// <summary>
+    /// C8: extracts each reporting lane's <see cref="RunHandoff.OpenLoops"/> as raw
+    /// <see cref="LaneFinding"/>s and merges them through <see cref="FindingDeduplicator"/>. A lane
+    /// with no handoff, or a handoff with no open loops, simply contributes nothing — degrading to
+    /// an empty (not missing) deduped list is the "no parseable findings" no-op the dedup opt-in
+    /// promises for teams whose lanes don't happen to use open loops for findings.
+    /// </summary>
+    private static IReadOnlyList<DedupedFinding> DedupeLaneFindings(
+        IReadOnlyList<(TeamTask Task, RunHandoff? Handoff)> reported) =>
+        FindingDeduplicator.Dedupe(
+            reported.Where(entry => entry.Handoff is not null)
+                .SelectMany(entry => entry.Handoff!.OpenLoops.Select(loop =>
+                    new LaneFinding(entry.Task.TemplateKey, entry.Task.AgentSlug, loop.Statement, loop.Blocking))));
+
+    /// <summary>
+    /// C8: distills the join's outcome and the deduped findings into a host-authored
+    /// <c>GIGACLAW-VERDICT</c> receipt on the parent ticket, agent <c>team-synthesis</c> — a
+    /// synthetic identity, not a claim that any real reviewer wrote it. This is what lets an
+    /// ordinary <c>verdictIs</c> automation gate on a <c>parallel-review</c> run without parsing the
+    /// dispatched synthesizer's own free-text comment: BLOCK when the join did not get what it
+    /// asked for, FIX when it did but a deduped finding is blocking, SHIP otherwise.
+    /// </summary>
+    private async Task PostSynthesisVerdictAsync(
+        string projectSlug,
+        TeamRun run,
+        Ticket parent,
+        TeamJoinVerdict verdict,
+        IReadOnlyList<DedupedFinding> deduped)
+    {
+        var allTasks = verdict.Reported.Concat(verdict.Missing).ToArray();
+        if (allTasks.Length == 0) return;
+
+        var blocking = deduped.Where(finding => finding.Blocking).ToArray();
+        var decision = !verdict.Success ? "BLOCK" : blocking.Length > 0 ? "FIX" : "SHIP";
+        var digest = "sha256:" + Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes($"{run.TeamSlug}|{run.Id}|{parent.Id}")));
+
+        var categories = allTasks.Select(task => new
+        {
+            name = task.TemplateKey,
+            score = task.Status == TeamTaskStatus.Done ? 1 : 0,
+            max = 1,
+            notes = task.Status == TeamTaskStatus.Done
+                ? $"{task.AgentSlug} reported."
+                : $"{task.Status.ToString().ToLowerInvariant()} — {task.FailureReason ?? "no reason recorded"}"
+        }).ToArray();
+
+        var vetoItems = blocking.Select(finding => new
+        {
+            code = SlugifyVetoCode(finding.Key),
+            statement = finding.Statement,
+            evidenceRefs = new[] { digest }
+        }).ToArray();
+
+        var payload = new
+        {
+            schemaVersion = 1,
+            agent = "team-synthesis",
+            ticketId = parent.Id,
+            verdict = decision,
+            summary = $"{deduped.Count} deduplicated finding(s) across {verdict.Reported.Count} of {allTasks.Length} " +
+                $"lane(s) reporting; {blocking.Length} blocking.",
+            categories,
+            vetoItems,
+            evidence = new[] { new { kind = "hash", @ref = digest, note = (string?)"team run #" + run.Id } },
+            reviewedAtUtc = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            inputDigest = digest
+        };
+
+        var comment =
+            $"GIGACLAW-VERDICT v1 team-synthesis {decision} artifact-{digest}\n\n"
+            + "```json\n"
+            + System.Text.Json.JsonSerializer.Serialize(payload, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })
+            + "\n```";
+
+        try { await _tickets.AddCommentAsync(projectSlug, parent.Id, comment, "automation"); }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception, "[{Slug}] team run #{RunId} could not post its synthesis verdict on ticket #{TicketId}",
+                projectSlug, run.Id, parent.Id);
+        }
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex NonSlugChars = new(
+        "[^a-z0-9-]+", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>A finding's dedup key, reshaped into the slug a veto <c>code</c> must be.</summary>
+    private static string SlugifyVetoCode(string findingKey)
+    {
+        var slug = NonSlugChars.Replace(findingKey.ToLowerInvariant().Replace('|', '-').Replace('.', '-').Replace('/', '-'), "-")
+            .Trim('-');
+        while (slug.Contains("--", StringComparison.Ordinal)) slug = slug.Replace("--", "-");
+        return string.IsNullOrEmpty(slug) ? "finding" : slug;
     }
 
     /// <summary>
