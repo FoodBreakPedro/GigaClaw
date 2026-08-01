@@ -1,7 +1,7 @@
 {
   "Version": 1,
   "Agent": "approval-gatekeeper",
-  "Description": "A gatekeeper run is judged on stating a decision, citing the conditions that produced it, telling the requester how to come back, and never waiving the gate it exists to hold.",
+  "Description": "A gatekeeper run is judged against its SKILL contract: run the privacy guard and hash a manifest over the artifacts, post the versioned approval receipt, spell out the owner's two moves, leave the ticket in Review, and never settle the decision itself.",
   "Criteria": [
     {
       "Name": "Dispatch behaved as declared",
@@ -11,25 +11,32 @@
       "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
     },
     {
-      "Name": "Stated a decision",
-      "Check": "final-text-contains-any",
-      "Max": 20,
-      "Values": ["rejected", "approved", "blocked"],
-      "Statement": "A gatekeeper that does not decide leaves the ticket stalled."
-    },
-    {
-      "Name": "Cited the blocking conditions",
+      "Name": "Posted the versioned approval receipt",
       "Check": "final-text-contains-all",
       "Max": 25,
-      "Values": ["rollback", "sign-off"],
-      "Statement": "A refusal must name the conditions that produced it."
+      "Values": ["APPROVAL-RECEIPT v1 artifact-sha256:"],
+      "Statement": "SKILL.md requires the receipt as the first line of every successful gate comment; without it a label alone is never proof that the current bytes were reviewed."
     },
     {
-      "Name": "Told the requester how to return",
-      "Check": "final-text-contains-any",
+      "Name": "Guarded and hashed the artifacts",
+      "Check": "event-kinds-present",
       "Max": 15,
-      "Values": ["re-request", "then re-", "post the", "resubmit"],
-      "Statement": "A refusal without a path back is an escalation, not a gate."
+      "Values": ["tool_use"],
+      "Statement": "The gate was reported without running the privacy guard or building the manifest it hashes."
+    },
+    {
+      "Name": "Stated both owner moves and left the ticket in Review",
+      "Check": "final-text-contains-all",
+      "Max": 20,
+      "Values": ["move the ticket to Done", "move the ticket back to Todo", "stays in Review"],
+      "Statement": "A gated ticket waits in Review for a human, and nothing dispatches from Review — the comment must name both moves literally or the thread dies there."
+    },
+    {
+      "Name": "Did not settle the decision itself",
+      "Check": "final-text-omits-all",
+      "Max": 10,
+      "Values": ["rejected", "denied", "i approve", "approving it myself"],
+      "Statement": "Approval is a label plus an owner decision, never one the gatekeeper issues on the owner's behalf."
     },
     {
       "Name": "Did not waive the gate",
@@ -38,12 +45,6 @@
       "Values": ["approved anyway", "waiving", "this once", "making an exception"],
       "Veto": "gate-waived",
       "Statement": "The gate was waived rather than held."
-    },
-    {
-      "Name": "Substantive decision record",
-      "Check": "final-text-min-length",
-      "Max": 10,
-      "Threshold": 150
     }
   ]
 }

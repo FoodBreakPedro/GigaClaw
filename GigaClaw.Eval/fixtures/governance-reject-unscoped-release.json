@@ -4,13 +4,13 @@
   "Family": "governance",
   "Agent": "approval-gatekeeper",
   "Scenario": "governance-reject-unscoped-release",
-  "MaxTurns": 4,
+  "MaxTurns": 6,
   "Ticket": {
     "Id": 4505,
     "Title": "Approve the unscheduled production release of the scheduling engine",
     "Status": "Review",
     "Assignee": "approval-gatekeeper",
-    "Description": "A release to production is requested outside the release window. Decide whether it may proceed. The request carries no rollback plan and no owner sign-off.",
+    "Description": "A release to production is requested outside the release window. Gate it before anything leaves the system: the artifacts are release/scheduling-engine-4505.md and ops/rollback-plan-4505.md. The request carries no rollback plan and no owner sign-off.",
     "Comments": [
       {
         "Author": "committer",
@@ -28,9 +28,14 @@
     "EventKinds": [
       "system",
       "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "tool_use",
+      "user",
       "assistant",
       "result"
     ],
-    "FinalTextContains": "Rejected"
+    "FinalTextContains": "APPROVAL-RECEIPT v1 artifact-sha256:"
   }
 }
