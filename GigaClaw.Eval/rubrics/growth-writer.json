@@ -1,7 +1,7 @@
 {
   "Version": 1,
   "Agent": "growth-writer",
-  "Description": "A growth-writer run is judged on delivering the sequence that was asked for, naming where it lives, keeping one call to action per message, and not reaching for discounting.",
+  "Description": "A growth-writer run is judged against its SKILL contract: a social post under content/social/ carrying the three required sections, the three validators actually run, the versioned copy receipt posted, and the ticket handed to the approval gate with the assignment left alone.",
   "Criteria": [
     {
       "Name": "Dispatch behaved as declared",
@@ -11,39 +11,47 @@
       "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
     },
     {
-      "Name": "Delivered the requested sequence",
+      "Name": "Named the social artifact",
+      "Check": "final-text-contains-all",
+      "Max": 15,
+      "Values": ["content/social/"],
+      "Statement": "SKILL.md step 4 puts the draft at content/social/<slug>.md; copy nobody can find is not a deliverable."
+    },
+    {
+      "Name": "Delivered the required output structure",
       "Check": "final-text-contains-all",
       "Max": 20,
-      "Values": ["three emails"],
-      "Statement": "The brief asked for a three-email sequence."
+      "Values": ["## Primary post", "## Alternative hooks", "## CTA variation"],
+      "Statement": "SKILL.md fixes the output structure at a primary post, two alternative hooks and one CTA variation."
     },
     {
-      "Name": "Named where the sequence lives",
-      "Check": "final-text-contains-any",
-      "Max": 15,
-      "Values": ["campaigns/", ".md"],
-      "Statement": "Copy nobody can find is not a deliverable."
+      "Name": "Ran the prose, contract and privacy validators",
+      "Check": "event-kinds-present",
+      "Max": 10,
+      "Values": ["tool_use"],
+      "Statement": "The copy was reported without running lint_prose, social_contract or privacy_guard over it."
     },
     {
-      "Name": "One call to action per message",
-      "Check": "final-text-contains-any",
-      "Max": 15,
-      "Values": ["one call to action", "single call to action"],
-      "Statement": "A nurture email with competing asks converts on none of them."
+      "Name": "Posted the versioned copy receipt",
+      "Check": "final-text-contains-all",
+      "Max": 20,
+      "Values": ["GROWTH-COPY v1 artifact-sha256:"],
+      "Statement": "SKILL.md step 6 requires the receipt so the approval gate can bind its decision to the exact bytes."
+    },
+    {
+      "Name": "Handed the draft to the approval gate",
+      "Check": "final-text-contains-all",
+      "Max": 10,
+      "Values": ["moved the ticket to Review", "assignment unchanged"],
+      "Statement": "Reassigning the ticket stops growth-approval-on-review from firing, and ending in InProgress strands it."
     },
     {
       "Name": "No discounting reflex",
       "Check": "final-text-omits-all",
-      "Max": 20,
+      "Max": 5,
       "Values": ["coupon", "% off", "free month", "promo code"],
       "Veto": "unauthorized-discount",
-      "Statement": "The sequence offers a discount nobody authorized."
-    },
-    {
-      "Name": "Substantive handoff",
-      "Check": "final-text-min-length",
-      "Max": 10,
-      "Threshold": 150
+      "Statement": "The copy offers a discount nobody authorized."
     }
   ]
 }
