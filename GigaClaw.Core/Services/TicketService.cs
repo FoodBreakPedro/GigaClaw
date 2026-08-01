@@ -1,5 +1,8 @@
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using GigaClaw.Core.Automation;
 using GigaClaw.Core.Data;
 using GigaClaw.Core.Models;
 
@@ -27,6 +30,7 @@ public class TicketService : ITicketDependencyQuery
 {
     private readonly ProjectService _projectService;
     private readonly MemberService _memberService;
+    private readonly ILogger? _logger;
 
     /// <summary>
     /// Raised after a ticket's status has been persisted.
@@ -40,10 +44,11 @@ public class TicketService : ITicketDependencyQuery
     /// </summary>
     public event Action<string, int, string, string>? TicketCommentAdded;
 
-    public TicketService(ProjectService projectService, MemberService memberService)
+    public TicketService(ProjectService projectService, MemberService memberService, ILogger<TicketService>? logger = null)
     {
         _projectService = projectService;
         _memberService = memberService;
+        _logger = logger;
     }
 
     // Ensures the ActivityEntries table exists (for databases created before this feature)
@@ -578,6 +583,7 @@ public class TicketService : ITicketDependencyQuery
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         await EnsureScheduleColumnsAsync(db);
+        await EnsureWorktreeColumnsAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
         var columnExists = await db.BoardColumns.AnyAsync(c => c.Name == newStatus);
         if (!columnExists)
@@ -603,8 +609,77 @@ public class TicketService : ITicketDependencyQuery
             Text = $"moved the ticket: {oldStatus} → {newStatus}"
         });
         await db.SaveChangesAsync();
+        await TryCleanupWorktreeOnDoneAsync(projectSlug, ticket);
         TicketStatusChanged?.Invoke(projectSlug, ticketId, oldStatus, newStatus);
         return ticket;
+    }
+
+    /// <summary>
+    /// R6 (doc/roadmap/SESSION-HANDOFF.md, PLAN-remaining.md §1 item 3): worktree cleanup used to
+    /// run only from ActionExecutor's moveTicketStatus action, so a user dragging a ticket to Done
+    /// on the Board UI (which goes through <see cref="ReorderTicketAsync"/>, never through
+    /// ActionExecutor) silently orphaned the worktree. This is now the SINGLE shared implementation,
+    /// called from every method below that can land a ticket on "Done" — the automation
+    /// moveTicketStatus action (<see cref="MoveTicketAsync"/>), the Board drag-and-drop path
+    /// (<see cref="ReorderTicketAsync"/>), agent hand-offs (<see cref="TransitionTicketAsync"/>),
+    /// and scheduled promotions (<see cref="PromoteScheduledAsync"/>) — so any route into a
+    /// terminal status runs the exact same cleanup. Semantics are unchanged from R5: only a clean,
+    /// merged worktree is ever removed; a dirty checkout, an unmerged branch, or a git failure is
+    /// flagged (WorktreeStatus="dirty" + a worktree-cleanup-blocked/v1 comment receipt), never
+    /// silently deleted. Guarded by WorktreeStatus != "cleaned" so re-entering Done — from either
+    /// path, or twice in the same chain — never re-attempts cleanup: single ownership, no
+    /// double-cleanup, by construction (there is exactly one call site per status transition).
+    /// </summary>
+    private async Task TryCleanupWorktreeOnDoneAsync(string projectSlug, Ticket ticket, CancellationToken ct = default)
+    {
+        if (!string.Equals(ticket.Status, "Done", StringComparison.OrdinalIgnoreCase)) return;
+        if (string.IsNullOrWhiteSpace(ticket.WorktreeBranch)) return;
+        if (string.Equals(ticket.WorktreeStatus, "cleaned", StringComparison.OrdinalIgnoreCase)) return;
+
+        var project = await _projectService.GetProjectAsync(projectSlug);
+        if (project is null) return;
+        var workspace = _projectService.ResolveWorkspacePath(project);
+        var branch = ticket.WorktreeBranch!;
+        var path = ticket.WorktreePath!;
+
+        WorktreeCleanupResult result;
+        try
+        {
+            result = await WorktreeManager.TryCleanupAsync(workspace, branch, path, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "worktree cleanup: failed for ticket #{Id}", ticket.Id);
+            return;
+        }
+
+        if (result.Outcome is WorktreeCleanupOutcome.Cleaned or WorktreeCleanupOutcome.AlreadyGone)
+        {
+            try { await SetWorktreeStateAsync(projectSlug, ticket.Id, branch, path, "cleaned"); }
+            catch (Exception ex) { _logger?.LogWarning(ex, "worktree cleanup: failed to persist cleaned state for ticket #{Id}", ticket.Id); }
+            _logger?.LogInformation(
+                "worktree cleanup: ticket #{Id} branch {Branch} — {Outcome}", ticket.Id, branch, result.Outcome);
+            return;
+        }
+
+        try { await SetWorktreeStateAsync(projectSlug, ticket.Id, branch, path, "dirty"); }
+        catch (Exception ex) { _logger?.LogWarning(ex, "worktree cleanup: failed to persist dirty state for ticket #{Id}", ticket.Id); }
+
+        var receipt = JsonSerializer.Serialize(new
+        {
+            schema = "worktree-cleanup-blocked/v1",
+            ticketId = ticket.Id,
+            branch,
+            path,
+            rule = "worktree-cleanup",
+            outcome = result.Outcome.ToString(),
+            reason = result.Reason ?? "worktree cleanup was blocked",
+        });
+        try { await AddCommentAsync(projectSlug, ticket.Id, receipt, "automation"); }
+        catch (Exception ex) { _logger?.LogWarning(ex, "worktree cleanup: failed to write blocked receipt for ticket #{Id}", ticket.Id); }
+        _logger?.LogWarning(
+            "worktree cleanup: ticket #{Id} reached Done but the worktree was not cleaned ({Outcome}): {Reason}",
+            ticket.Id, result.Outcome, result.Reason);
     }
 
     /// <summary>
@@ -652,6 +727,7 @@ public class TicketService : ITicketDependencyQuery
         await EnsureActivityTableAsync(db);
         await EnsureScheduleColumnsAsync(db);
         await EnsureAssignedToColumnAsync(db);
+        await EnsureWorktreeColumnsAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
 
         if (!await db.BoardColumns.AnyAsync(column => column.Name == newStatus))
@@ -691,7 +767,10 @@ public class TicketService : ITicketDependencyQuery
         await db.SaveChangesAsync();
 
         if (statusChanged)
+        {
+            await TryCleanupWorktreeOnDoneAsync(projectSlug, ticket);
             TicketStatusChanged?.Invoke(projectSlug, ticketId, oldStatus, newStatus);
+        }
         return ticket;
     }
 
@@ -759,6 +838,7 @@ public class TicketService : ITicketDependencyQuery
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         await EnsureScheduleColumnsAsync(db);
+        await EnsureWorktreeColumnsAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null || !string.Equals(ticket.Status, "Scheduled", StringComparison.OrdinalIgnoreCase))
@@ -777,6 +857,7 @@ public class TicketService : ITicketDependencyQuery
             Text = $"schedule triggered: Scheduled → {target}"
         });
         await db.SaveChangesAsync();
+        await TryCleanupWorktreeOnDoneAsync(projectSlug, ticket);
         TicketStatusChanged?.Invoke(projectSlug, ticketId, "Scheduled", target);
         return ticket;
     }
@@ -1035,6 +1116,7 @@ public class TicketService : ITicketDependencyQuery
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureSortOrderColumnAsync(db);
         await EnsureActivityTableAsync(db);
+        await EnsureWorktreeColumnsAsync(db);
 
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return;
@@ -1071,7 +1153,10 @@ public class TicketService : ITicketDependencyQuery
 
         await db.SaveChangesAsync();
         if (statusChanged)
+        {
+            await TryCleanupWorktreeOnDoneAsync(projectSlug, ticket);
             TicketStatusChanged?.Invoke(projectSlug, ticketId, oldStatus, newStatus);
+        }
     }
 
     private static string PriorityLabel(TicketPriority p) => p switch
