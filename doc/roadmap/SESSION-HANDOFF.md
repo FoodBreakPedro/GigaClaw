@@ -1,4 +1,12 @@
-# Session handoff — 2026-07-31 (addendum 2026-08-01)
+# Session handoff — 2026-07-31 (addenda 2026-08-01, session-end 2026-08-01/02)
+
+## Session-end state — 2026-08-01 late (read this first)
+
+- **PR #15 (`t6-packs`)**: T6 pack infra + U6 vocabulary closures + decision sheet + **7b Pass 1 executed** (D1-A, D2-A, evalconfig v2 — 33 entries/32 files re-recorded, zero verdict flips, 5 scores 95→100) + the Windows fix (`5e5359b`: `ReadManifest` resolves by normalized name; `%(RecursiveDir)` backslashes broke all 11 Windows pack tests). All three OS legs were green on the pre-Pass-1 head; Pass 1 push triggered a re-run — eval-only changes, locally verified (eval 43/0, judge 38/38 all match, core 1339/0).
+- **PR #16** (other agent's template fixes): was red on the catalog drift gate — fixed by regenerating `catalog.json`/`doc/catalog.md` (`73fb333`). All legs green. NOTE: #15 and #16 both touch `automations.json`/`pack.json`/`CatalogGeneratorTests` — whichever merges second needs a trivial conflict resolution (no id-level conflicts; PR #16 changes no automation ids).
+- **7b Passes 2+3 (D3-A…D9-A, D10-B) were IN FLIGHT at session end** — an agent worktree under `.claude/worktrees/` (branch `worktree-agent-a00915cb8ceb310ba`, based on `t6-packs`) was executing the five fixture-to-contract repairs, the first BLOCK/veto baseline (D7), the new veto fixture (D8, bar → 39), the verdict-token doc (D9) and the handoffs move (D10). If its commits exist there, verify against `BASELINE-DECISIONS.md`'s per-decision shapes and its own verification bar (replay/judge 39/39, exact git diff --stat) before merging into `t6-packs`; if not, re-run Passes 2+3 from the sheet — the owner answered ALL recommendations (A everywhere, B for D10).
+- **Owner decisions on record this session**: the SP-3 defaults (isolation + enqueueMerge, contract-derived) at PR #13, and all ten baseline decisions (BASELINE-DECISIONS.md — take every recommendation), confirmed via PR-#16-first check (it addressed none of them).
+- Pass-1 judgment call to ratify: rubric `Version` fields were deliberately NOT bumped (digest distinguishes them); one-line follow-up re-record if `v2` should be on record.
 
 Written for whoever picks this up next. Everything below was read from the tree, not from a report.
 
