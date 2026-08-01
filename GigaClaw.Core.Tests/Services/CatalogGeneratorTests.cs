@@ -34,8 +34,10 @@ public sealed class CatalogGeneratorTests
         Assert.Equal(12, catalog.Summary.Teams);
         // 15 at T1 + the five contract files lane CL added (schema_check, verdict_contract,
         // handoff_contract and the two schemas) + sbom_diff.py, which the security pack contributes
-        // and its supply-chain lane calls. The catalog counts them because agents call them.
-        Assert.Equal(21, catalog.Summary.Scripts);
+        // and its supply-chain lane calls, + media_common.py, extracted as a shared sibling module
+        // for load_object() (previously duplicated verbatim in media_generate.py/media_contract.py).
+        // The catalog counts them because agents call them.
+        Assert.Equal(22, catalog.Summary.Scripts);
         var contentWriter = Assert.Single(catalog.Agents, agent => agent.Slug == "content-writer");
         Assert.True(contentWriter.ContractPresent);
         Assert.Equal("content-write", contentWriter.RiskClass);
