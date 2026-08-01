@@ -59,7 +59,12 @@ public sealed class AutomationEngine : BackgroundService
         // from the owner's settings.json on every enqueue (see MergeApprovalGate).
         var mergeApproval = new MergeApprovalGate(appSettings.GetApprovedMergeProjects);
         var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger, outboundGate, leases, mergeQueue, mergeApproval);
-        _triggerHandler = new TriggerHandler(projects, _runtimeManager, executor, tickets, members, sessions, runs, teamRuns, logger);
+        // C5 follow-up: the walker gates through the executor's own condition path, so verdictIs is
+        // the gate language rather than a second one. Wired as a delegate rather than a reference
+        // because the executor never calls the walker back — startWorkflow only writes a receipt.
+        var walker = new Workflow.WorkflowWalker(
+            tickets, members, teamRuns, executor.EvaluateWorkflowGateAsync, logger);
+        _triggerHandler = new TriggerHandler(projects, _runtimeManager, executor, tickets, members, sessions, runs, teamRuns, walker, logger);
 
         store.OnConfigChangedOnDisk += slug =>
         {
