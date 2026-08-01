@@ -7,7 +7,7 @@
     "EnabledAutomations": 54,
     "ExplicitModelMappings": 37,
     "Teams": 12,
-    "Scripts": 21
+    "Scripts": 22
   },
   "Packs": [
     {
@@ -273,7 +273,9 @@
       "RiskClass": "content-write",
       "ExplicitModelMapping": "claude-sonnet-4-6",
       "ModelCriterion": "Bulk drafting from a brief, with a reviewer gate downstream that catches quality misses before publication.",
-      "ActionModels": [],
+      "ActionModels": [
+        "claude-sonnet-4-6"
+      ],
       "ProjectFallbackRequired": false,
       "Teams": [
         "content-engine"
@@ -1394,7 +1396,9 @@
       "Agents": [
         "content-writer"
       ],
-      "Models": []
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
     },
     {
       "Id": "content-writer-resume",
@@ -1402,7 +1406,9 @@
       "Agents": [
         "content-writer"
       ],
-      "Models": []
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
     },
     {
       "Id": "content-reviewer-on-review",
@@ -1410,7 +1416,9 @@
       "Agents": [
         "blog-reviewer"
       ],
-      "Models": []
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
     },
     {
       "Id": "auto-approve-ungated",
@@ -1502,7 +1510,9 @@
       "Agents": [
         "content-writer"
       ],
-      "Models": []
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
     },
     {
       "Id": "content-verdict-gate-repair-exhausted",
@@ -1596,6 +1606,7 @@
     "scripts/handoff_contract.py",
     "scripts/html_contract.py",
     "scripts/lint_prose.py",
+    "scripts/media_common.py",
     "scripts/media_contract.py",
     "scripts/media_generate.py",
     "scripts/privacy_guard.py",
