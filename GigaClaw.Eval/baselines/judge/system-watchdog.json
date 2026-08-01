@@ -34,7 +34,7 @@
             "name": "Final message is a handoff",
             "score": 20,
             "max": 20,
-            "notes": "Final message is 542 character(s) against a floor of 80."
+            "notes": "Final message is 787 character(s) against a floor of 80."
           },
           {
             "name": "No placeholder handoff",
@@ -47,7 +47,7 @@
         "evidence": [
           {
             "kind": "hash",
-            "ref": "sha256:8eef75f3ab6cb65dcc15112cddbbebc91c447667c350d5b51a38055434d99cc7",
+            "ref": "sha256:2feedd2db559d3e7a6e642ec88618ba419efe19d6895a3c161d600e75b7ce41c",
             "note": "normalized replay stream for fixture 'governance-watchdog-probe-red' (7 event(s), exit 0)"
           },
           {
@@ -57,7 +57,7 @@
           }
         ],
         "reviewedAtUtc": "1970-01-01T00:00:00Z",
-        "inputDigest": "sha256:8eef75f3ab6cb65dcc15112cddbbebc91c447667c350d5b51a38055434d99cc7"
+        "inputDigest": "sha256:2feedd2db559d3e7a6e642ec88618ba419efe19d6895a3c161d600e75b7ce41c"
       }
     }
   ]

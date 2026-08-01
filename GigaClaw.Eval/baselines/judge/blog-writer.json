@@ -19,10 +19,10 @@
             "notes": "All 5 fixture expectation(s) held."
           },
           {
-            "name": "Named the artifact it produced",
+            "name": "Posted the versioned draft receipt",
             "score": 15,
             "max": 15,
-            "notes": "Marker 'content/drafts/' present."
+            "notes": "All 1 required marker(s) present."
           },
           {
             "name": "Read the house structure first",
@@ -46,24 +46,24 @@
             "name": "Substantive handoff",
             "score": 15,
             "max": 15,
-            "notes": "Final message is 277 character(s) against a floor of 150."
+            "notes": "Final message is 451 character(s) against a floor of 150."
           }
         ],
         "vetoItems": [],
         "evidence": [
           {
             "kind": "hash",
-            "ref": "sha256:cc5cfaf9ee21ceb2c09a1630c7995f81d0e663499043316bb1cf8480f21d5af5",
-            "note": "normalized replay stream for fixture 'blog-draft-release-notes' (7 event(s), exit 0)"
+            "ref": "sha256:82db3c8abcf55ef9e489e43a7e345af912b6bcf3dd998d59f439790868dc09d1",
+            "note": "normalized replay stream for fixture 'blog-draft-release-notes' (10 event(s), exit 0)"
           },
           {
             "kind": "hash",
-            "ref": "sha256:767a7915f117453375cd2dbec2915b5264b2888b429d2072ae4bc542e9e85040",
+            "ref": "sha256:54f4648c0e0b34a47963461e8df59e478c6c9b44a406792d7da6131f4bae2fd9",
             "note": "rubric 'blog-writer' v1"
           }
         ],
         "reviewedAtUtc": "1970-01-01T00:00:00Z",
-        "inputDigest": "sha256:cc5cfaf9ee21ceb2c09a1630c7995f81d0e663499043316bb1cf8480f21d5af5"
+        "inputDigest": "sha256:82db3c8abcf55ef9e489e43a7e345af912b6bcf3dd998d59f439790868dc09d1"
       }
     }
   ]

@@ -4,7 +4,7 @@
   "Family": "blog",
   "Agent": "blog-writer",
   "Scenario": "blog-draft-release-notes",
-  "MaxTurns": 4,
+  "MaxTurns": 6,
   "Ticket": {
     "Id": 4202,
     "Title": "Draft the launch post for the scheduling rework",
@@ -27,8 +27,11 @@
       "tool_use",
       "user",
       "assistant",
+      "tool_use",
+      "user",
+      "assistant",
       "result"
     ],
-    "FinalTextContains": "draft is ready for review"
+    "FinalTextContains": "BLOG-DRAFT v1 artifact-sha256:"
   }
 }

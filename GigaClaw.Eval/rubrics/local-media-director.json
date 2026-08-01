@@ -1,7 +1,7 @@
 {
   "Version": 1,
   "Agent": "local-media-director",
-  "Description": "A media-director run is judged on confirming the render target before planning shots, producing a spec-complete storyboard, accounting for the runtime, and never rendering ahead of sign-off.",
+  "Description": "A media-director run is judged against its SKILL contract: read the guide and the provider menu before choosing anything, write both the human direction and the version 1 execution spec under media/specs/ with a complete governance block, hand off, and never render ahead of sign-off.",
   "Criteria": [
     {
       "Name": "Dispatch behaved as declared",
@@ -11,18 +11,25 @@
       "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
     },
     {
-      "Name": "Confirmed the render target first",
+      "Name": "Read the guide and the provider menu first",
       "Check": "event-kinds-present",
-      "Max": 15,
+      "Max": 10,
       "Values": ["tool_use"],
-      "Statement": "Shots were laid out without reading the render profile."
+      "Statement": "A provider was chosen without reading AGENT_GUIDE.md or running provider_menu_summary()."
     },
     {
-      "Name": "Storyboard is spec-complete",
+      "Name": "Wrote both spec artifacts under media/specs/",
       "Check": "final-text-contains-all",
-      "Max": 20,
-      "Values": ["duration", "1080x1920"],
-      "Statement": "A storyboard without per-shot duration and a stated frame size cannot be rendered."
+      "Max": 15,
+      "Values": ["media/specs/", ".md", ".json"],
+      "Statement": "SKILL.md steps 6 and 7 require both media/specs/<ticket-id>.md and media/specs/<ticket-id>.json; a direction without a machine spec is not executable."
+    },
+    {
+      "Name": "Execution spec is version 1 with a complete governance block",
+      "Check": "final-text-contains-all",
+      "Max": 25,
+      "Values": ["execution-spec version 1", "approvalStatus", "approvedBy", "licenseNotes", "layer3SkillsRead"],
+      "Statement": "The governance block is what the downstream render gate reads; a spec without it cannot be gated on."
     },
     {
       "Name": "Held the render gate",
@@ -33,17 +40,11 @@
       "Statement": "Frames were produced before the storyboard was signed off."
     },
     {
-      "Name": "Runtime accounted for",
-      "Check": "final-text-contains-any",
-      "Max": 15,
-      "Values": ["totalling", "total runtime", "seconds", "15s"],
-      "Statement": "A teaser with no stated total runtime cannot be checked against the brief."
-    },
-    {
-      "Name": "Substantive handoff",
-      "Check": "final-text-min-length",
+      "Name": "Emitted the handoff comment",
+      "Check": "final-text-contains-all",
       "Max": 10,
-      "Threshold": 150
+      "Values": ["GIGACLAW-HANDOFF v1 local-media-director"],
+      "Statement": "The dependent worker is dispatched off the handoff; without it the next hop re-derives the spec from the ticket."
     }
   ]
 }

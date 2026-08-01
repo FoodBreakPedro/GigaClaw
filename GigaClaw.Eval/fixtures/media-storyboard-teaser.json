@@ -4,13 +4,13 @@
   "Family": "media",
   "Agent": "local-media-director",
   "Scenario": "media-storyboard-teaser",
-  "MaxTurns": 5,
+  "MaxTurns": 6,
   "Ticket": {
     "Id": 4404,
     "Title": "Storyboard the 15-second teaser for the scheduling rework",
     "Status": "InProgress",
     "Assignee": "local-media-director",
-    "Description": "Break a 15-second teaser into shots: one shot per idea, each with a duration, a visual description, and the on-screen text. Local generation only, no stock footage, 1080x1920 vertical.",
+    "Description": "Break a 15-second teaser into shots: one shot per idea, each with a duration, a visual description, and the on-screen text. Local generation only, no stock footage, 1080x1920 vertical. Land the direction and the execution spec under media/specs/ so the dependent worker has something to execute.",
     "Comments": [
       {
         "Author": "approval-gatekeeper",
@@ -27,8 +27,11 @@
       "tool_use",
       "user",
       "assistant",
+      "tool_use",
+      "user",
+      "assistant",
       "result"
     ],
-    "FinalTextContains": "awaiting sign-off"
+    "FinalTextContains": "GIGACLAW-HANDOFF v1 local-media-director ticket-4404"
   }
 }

@@ -91,7 +91,7 @@ Committed core fixtures, one per pipeline family:
 | `dev-fix-login-timeout` | dev | `programmer` |
 | `dev-suite-fails-hard` | dev | `qa-tester` |
 | `governance-reject-unscoped-release` | governance | `approval-gatekeeper` |
-| `growth-nurture-sequence` | growth | `growth-writer` |
+| `growth-social-linkedin-launch` | growth | `growth-writer` |
 | `media-storyboard-teaser` | media | `local-media-director` |
 
 The `security-assurance` pack ships five more under

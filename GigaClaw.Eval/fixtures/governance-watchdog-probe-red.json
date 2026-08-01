@@ -24,6 +24,6 @@
       "assistant",
       "result"
     ],
-    "FinalTextContains": "target=http:"
+    "FinalTextContains": "[system-watchdog:v1 target="
   }
 }

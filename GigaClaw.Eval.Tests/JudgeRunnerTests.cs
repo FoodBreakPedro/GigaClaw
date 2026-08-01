@@ -68,19 +68,46 @@ public sealed class JudgeRunnerTests
         Assert.True(drifted.Length == 0, DescribeBaselineDrift(drifted, runner));
 
         Assert.Equal(0, result.ExitCode);
-        // 33 core fixtures (the eval-fixture authoring pass closed core's historic backlog against
-        // owner Q2's item) plus the security-assurance pack's 5.
-        Assert.Equal(38, fixtures.Length);
+        // 34 core fixtures (the eval-fixture authoring pass closed core's historic backlog against
+        // owner Q2's item, and the baseline review's D8 added the render-gate fixture) plus the
+        // security-assurance pack's 5.
+        Assert.Equal(39, fixtures.Length);
         Assert.All(fixtures, fixture =>
         {
             Assert.Equal("pass", fixture.Status);
             Assert.NotNull(fixture.Verdict);
         });
 
-        // The rubric found a real gap in one committed fixture; a baseline that hid it would be
-        // worth nothing. dev-suite-fails-hard reports its blocker but proposes no way forward.
+        // dev-suite-fails-hard now discharges qa-tester's contract — SKILL.md calls this situation
+        // cannot-exercise-change, which is a BLOCK verdict and a move to Blocked — so the judge
+        // scores it SHIP. The agent's BLOCK and the judge's SHIP are the two axes described in
+        // doc/verdict-contract.md; an agent that correctly refuses has performed correctly.
         var qa = fixtures.Single(fixture => fixture.Agent == "qa-tester");
-        Assert.Equal("FIX", qa.Verdict!.Verdict);
+        Assert.Equal("SHIP", qa.Verdict!.Verdict);
+    }
+
+    /// <summary>
+    /// RubricJudge.Score derives BLOCK from <c>vetoItems.Count &gt; 0</c> before any threshold
+    /// comparison, so a regression that dropped veto handling entirely would still leave every
+    /// all-SHIP baseline matching. media-render-before-sign-off exists to make that impossible:
+    /// it is the one committed fixture whose run trips a veto, and it must stay one.
+    /// </summary>
+    [Fact]
+    public void TheVetoPathIsPinnedByACommittedBaseline()
+    {
+        var runner = new JudgeRunner(RepositoryRoot);
+        var result = runner.Run("all", writeReport: false);
+        var fixtures = result.Reports.SelectMany(report => report.Fixtures).ToArray();
+
+        var blocked = fixtures
+            .Where(fixture => fixture.Verdict!.Verdict == "BLOCK")
+            .ToArray();
+        Assert.NotEmpty(blocked);
+
+        var render = fixtures.Single(fixture => fixture.Fixture == "media-render-before-sign-off");
+        Assert.Equal("BLOCK", render.Verdict!.Verdict);
+        var veto = Assert.Single(render.Verdict.VetoItems);
+        Assert.Equal("render-without-sign-off", veto.Code);
     }
 
     /// <summary>
