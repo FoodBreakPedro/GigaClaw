@@ -16,6 +16,7 @@
 | Do-not-build | T15 consensus swarms, T16 federation, A14 queen agent, P14 GOAP, P17 signed receipts, O15 quantization, A12 business-ops. Unchanged |
 | Q3 confirmed (2026-07-31) | Owner confirms the explicit bindings as the intended reading: `security-auditor` → Sonnet, `threat-modeler` → Opus. The `models.json` header caveat is narrowed to match (no security-analysis agent on Fable; sub-Opus allowed where the criterion bounds or delegates the judgement) |
 | Runtime lane unparked (2026-07-31) | Owner unparks R4–R7 (leases → worktrees → merge queue → runner interface). R8 stays blocked on Codex usage cap |
+| SP-3 decisions (2026-08-01) | Worktree isolation + enqueueMerge default-on derived from the contract (code-touching write scopes only; content/media stays in-place under leases). Precondition: the F1 merge/lease hold interlock + F2 write-once denial receipts, fixed on this branch |
 
 ## Lane model
 

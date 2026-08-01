@@ -434,6 +434,185 @@ public class TemplateAutomationContractTests
             c => Assert.Equal("blog-reviewer", c.Agent));
     }
 
+    // ── SP-3: worktree isolation + merge queue default-on for code-touching contracts ──────
+    //
+    // Owner decision (2026-08-01): whether a ticket-dispatched runAgent action runs isolated in a
+    // per-ticket worktree, and lands through `enqueueMerge`, is derived from the dispatching
+    // agent's contract — not from the ticket's type/labels. A contract is "code-touching" when its
+    // `allowedWriteGlobs` (ProjectTemplate/Agents/contracts.json) reach source/build paths (e.g.
+    // "**", "**/*Tests*"), as opposed to a narrow content/media/docs/board-write scope. Non-git
+    // workspaces and ticketless firings fail closed under isolation, and content pipelines need
+    // write -> review -> revise visibility without a merge hop, so only code-touching contracts
+    // flip on.
+    //
+    // The template resolves to exactly two ticket-dispatched code-touching agents: `programmer`
+    // (allowedWriteGlobs: ["**"]) and `qa-tester` (allowedWriteGlobs: ["**/*Tests*", "**/tests/**"]
+    // — it writes test source, still a build path). `code-janitor` also declares ["**"] but is
+    // schedule-dispatched (`code-janitor-nightly`, an interval trigger with no ticket behind the
+    // firing) — there is no `<id>` to key a worktree branch on, so it cannot be isolated and fails
+    // the dispatch closed rather than silently running in place; it is deliberately excluded from
+    // the isolation set rather than flagged as a gap. `committer` and `decision-engine` also write
+    // `.git/**`, but that is repository plumbing, not a source/build path, so they stay unisolated
+    // board/git-write contracts like the rest.
+
+    private static readonly string[] CodeTouchingTicketDispatchedAgents = ["programmer", "qa-tester"];
+
+    [Fact]
+    public void SP3_the_code_touching_contract_set_is_derived_from_allowedWriteGlobs()
+    {
+        using var contracts = JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(AgentsDir, "contracts.json")));
+        var agents = contracts.RootElement.GetProperty("agents");
+
+        string[] Globs(string slug) => agents.GetProperty(slug).GetProperty("allowedWriteGlobs")
+            .EnumerateArray().Select(g => g.GetString()!).ToArray();
+
+        // The two ticket-dispatched agents this rule turns on.
+        Assert.Contains("**", Globs("programmer"));
+        Assert.Contains("**/*Tests*", Globs("qa-tester"));
+        Assert.Contains("**/tests/**", Globs("qa-tester"));
+
+        // code-janitor reaches the same "**" ceiling as programmer but is schedule-dispatched
+        // (see the note above) — it is a deliberate non-member of the isolation set, not a gap.
+        Assert.Contains("**", Globs("code-janitor"));
+        Assert.Empty(agents.GetProperty("code-janitor").GetProperty("ticketExit").EnumerateArray());
+
+        // Spot-check that git-plumbing-only and content/media/board contracts do NOT reach a
+        // source/build path, so the derivation has a real boundary rather than defaulting everyone
+        // on. ".git/**" is repository metadata, not a source/build path.
+        Assert.Equal([".git/**"], Globs("committer"));
+        Assert.DoesNotContain(Globs("blog-writer"), glob => glob is "**" or ".git/**");
+        Assert.DoesNotContain(Globs("ui-designer"), glob => glob is "**" or ".git/**");
+        Assert.DoesNotContain(Globs("decision-engine"), glob => glob == "**");
+    }
+
+    /// <summary>
+    /// Every runAgent action (after {assignee} expansion) that dispatches a code-touching agent on
+    /// a ticket trigger must run isolated. This is what actually protects the contract: the shared
+    /// `{assignee}` automations (assignee-dispatch, assignee-resume, owner-feedback) serve ~26
+    /// agents through ONE action, so programmer/qa-tester were split into their own
+    /// `*-code` twins specifically so isolation could be set without isolating everyone else
+    /// riding the same automation.
+    /// </summary>
+    [Fact]
+    public void SP3_every_ticket_dispatched_runAgent_action_for_a_code_touching_contract_is_worktree_isolated()
+    {
+        var config = LoadConfig();
+
+        foreach (var automation in config.Automations)
+        {
+            var assigneeSlugs = automation.Conditions.OfType<AssignedToConditionSpec>()
+                .SelectMany(c => c.Slugs)
+                .ToHashSet(StringComparer.Ordinal);
+
+            foreach (var run in automation.Actions.OfType<RunAgentActionSpec>())
+            {
+                var resolvedAgents = run.Agent == "{assignee}"
+                    ? assigneeSlugs
+                    : new HashSet<string>(StringComparer.Ordinal) { run.Agent };
+
+                if (resolvedAgents.Overlaps(CodeTouchingTicketDispatchedAgents))
+                {
+                    Assert.True(
+                        string.Equals(run.Isolation, "worktree", StringComparison.OrdinalIgnoreCase),
+                        $"Automation '{automation.Id}' dispatches a code-touching agent " +
+                        $"({string.Join(", ", resolvedAgents.Intersect(CodeTouchingTicketDispatchedAgents))}) " +
+                        "without worktree isolation.");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The flip side: no content/media/design/board dispatch picked up isolation as a side effect
+    /// of the split (e.g. a stray copy-paste onto the wrong twin). Isolation is exclusively for the
+    /// code-touching set.
+    /// </summary>
+    [Fact]
+    public void SP3_no_content_media_design_or_board_dispatch_is_worktree_isolated()
+    {
+        var config = LoadConfig();
+
+        foreach (var automation in config.Automations)
+        {
+            var assigneeSlugs = automation.Conditions.OfType<AssignedToConditionSpec>()
+                .SelectMany(c => c.Slugs)
+                .ToHashSet(StringComparer.Ordinal);
+
+            foreach (var run in automation.Actions.OfType<RunAgentActionSpec>())
+            {
+                var resolvedAgents = run.Agent == "{assignee}"
+                    ? assigneeSlugs
+                    : new HashSet<string>(StringComparer.Ordinal) { run.Agent };
+
+                if (!resolvedAgents.Overlaps(CodeTouchingTicketDispatchedAgents))
+                {
+                    Assert.True(
+                        string.IsNullOrEmpty(run.Isolation),
+                        $"Automation '{automation.Id}' sets isolation '{run.Isolation}' on a " +
+                        "non-code-touching dispatch — worktree isolation is derived from the " +
+                        "contract and must stay scoped to programmer/qa-tester.");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// code-janitor is ticketless (interval trigger, no ticket behind the firing) so there is no
+    /// `&lt;id&gt;` to key a worktree branch on. It fails closed rather than being isolated —
+    /// pinned here so a future edit cannot "fix" the schedule-dispatched exemption by isolating it.
+    /// </summary>
+    [Fact]
+    public void SP3_code_janitor_is_schedule_dispatched_and_stays_unisolated()
+    {
+        var config = LoadConfig();
+        var nightly = Assert.Single(config.Automations, a => a.Id == "code-janitor-nightly");
+        Assert.IsType<IntervalTriggerSpec>(nightly.Trigger);
+        Assert.Empty(nightly.Conditions.OfType<AssignedToConditionSpec>());
+
+        var run = Assert.Single(nightly.Actions.OfType<RunAgentActionSpec>());
+        Assert.Equal("code-janitor", run.Agent);
+        Assert.True(string.IsNullOrEmpty(run.Isolation));
+    }
+
+    /// <summary>
+    /// enqueueMerge is wired exactly where the owner decided it should be: the point a
+    /// code-touching ticket's work is accepted. For the dev pipeline that is
+    /// `verdict-gate-qa-ship-to-done` — the same arm that already advances the ticket out of
+    /// Review on a qa-tester SHIP verdict — enqueued before the ticket closes, so a candidate
+    /// with no recorded worktree branch never reaches the queue.
+    /// </summary>
+    [Fact]
+    public void SP3_enqueueMerge_is_wired_at_the_dev_pipelines_ticket_acceptance_point()
+    {
+        var config = LoadConfig();
+        var ship = Assert.Single(config.Automations, a => a.Id == "verdict-gate-qa-ship-to-done");
+
+        var enqueueIndex = ship.Actions.FindIndex(a => a is EnqueueMergeActionSpec);
+        var doneIndex = ship.Actions.FindIndex(a => a is MoveTicketStatusActionSpec { To: "Done" });
+
+        Assert.True(enqueueIndex >= 0, "'verdict-gate-qa-ship-to-done' must enqueue a merge on acceptance.");
+        Assert.True(doneIndex >= 0);
+        Assert.True(enqueueIndex < doneIndex, "The merge must be enqueued before the ticket closes.");
+    }
+
+    /// <summary>
+    /// enqueueMerge stays off every content/media/design pipeline's ship arm: those stay in-place
+    /// under R4 leases, which already serialize genuinely conflicting content writes, and a merge
+    /// hop would remove the write -&gt; review -&gt; revise visibility those pipelines need.
+    /// </summary>
+    [Fact]
+    public void SP3_enqueueMerge_appears_nowhere_outside_the_code_touching_pipeline()
+    {
+        var config = LoadConfig();
+        var withEnqueue = config.Automations
+            .Where(a => a.Actions.OfType<EnqueueMergeActionSpec>().Any())
+            .Select(a => a.Id)
+            .ToArray();
+
+        Assert.Equal(["verdict-gate-qa-ship-to-done"], withEnqueue);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
