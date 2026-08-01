@@ -56,5 +56,7 @@
   "PalActStartTeamRun": "Démarrer une équipe",
   "PalActStartTeamRunHint": "Déploie une définition d\u2019équipe en sous-tickets sous le ticket déclencheur, reliés par des dépendances",
   "PalActParallelRunAgents": "Branches parallèles",
-  "PalActParallelRunAgentsHint": "Exécute des agents en parallèle sur le ticket déclencheur, avec politique de jonction, plafond de concurrence et synthétiseur optionnel"
+  "PalActParallelRunAgentsHint": "Exécute des agents en parallèle sur le ticket déclencheur, avec politique de jonction, plafond de concurrence et synthétiseur optionnel",
+  "PalActStartWorkflow": "Démarrer un parcours de workflow",
+  "PalActStartWorkflowHint": "Fait parcourir au ticket déclencheur le graphe de workflow déclaré de l\u2019espace de travail : états de tâche, portes, éclatement et jonction, borné par maxCycles"
 }

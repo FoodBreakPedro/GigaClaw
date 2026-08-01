@@ -58,7 +58,7 @@ What the next session inherits: the differing bytes live somewhere in the normal
 - **SP-1** — enforced; 31 agents block, `programmer`/`code-janitor` warn (both declare `**`).
 - **SP-2** — closed.
 - **SP-3** — the combined-semantics integration suite exists as of 2026-08-01: `GigaClaw.Core.Tests/Integration/Sp3GateTests.cs` (10 tests, green in Release and Debug) proves cycle detection, lease expiry, join semantics and ownership conflicts failing closed *together*, each with its receipt. Evidence is in [`SP3-EVIDENCE.md`](SP3-EVIDENCE.md). The owner's call on default-on `enqueueMerge` / worktree isolation is decided (2026-08-01, see `doc/roadmap/index.md`'s decision log): both derive from the contract's `allowedWriteGlobs`, not the ticket type, and are wired into `ProjectTemplate/Agents/automations.json` behind the F1 merge/lease hold interlock fix landing on this same branch. **The gate now closes when this branch merges** — its precondition is the F1 interlock fix, not a further owner decision. The Board-drag bypass from `PLAN-remaining.md` §1 item 3 is closed on the same branch (`3b6b108` — cleanup relocated to the `TicketService` choke point both entry paths share).
-- **SP-4** — needs the U6 end-to-end demo (worktree→PR→CI→owner merge) and R8.
+- **SP-4** — the U6 half is **proven hermetically as of 2026-08-01** (`U6EndToEndTests` + [`U6-EVIDENCE.md`](U6-EVIDENCE.md): real git/queue/triggers, faked GitHub HTTP only; failure and restart legs included). R8 (Codex harness, usage-cap-gated) remains the other half; a live-GitHub run of the same flow is the only thing the hermetic proof does not cover.
 
 ## Outstanding
 

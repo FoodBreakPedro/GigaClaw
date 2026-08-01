@@ -170,7 +170,8 @@ public class TicketCommentAddedSignalPathTests
             store, new TriggerStateStore(h.Projects), h.Projects, NullLogger.Instance);
         var handler = new TriggerHandler(
             h.Projects, manager, h.Executor, h.Tickets, h.Members, h.Sessions, h.Runs,
-            TestTeamRuns.For(h.Projects, h.Tickets), NullLogger.Instance);
+            TestTeamRuns.For(h.Projects, h.Tickets),
+            TestWorkflowWalkers.Inert(h.Projects, h.Tickets), NullLogger.Instance);
         return (handler, manager);
     }
 

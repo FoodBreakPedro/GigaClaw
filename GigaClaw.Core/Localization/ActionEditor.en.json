@@ -92,5 +92,10 @@
   "ActionEnqueueMerge": "Enqueue merge",
   "EmIntegrationCommand": "Integration command (optional, overrides the project setting)",
   "EmIntegrationCommandPlaceholder": "dotnet test GigaClaw.Core.Tests -c Release",
-  "EmHint": "Enqueues the firing ticket's worktree branch on the project's merge queue. Requires an owner-approved project (settings.json) \u2014 otherwise the entry is held, not merged. Blank uses the project's own integration command, or skips the check if neither is set."
+  "EmHint": "Enqueues the firing ticket's worktree branch on the project's merge queue. Requires an owner-approved project (settings.json) \u2014 otherwise the entry is held, not merged. Blank uses the project's own integration command, or skips the check if neither is set.",
+
+  "ActionStartWorkflow": "Start workflow walk",
+  "SwAt": "Start at state",
+  "SwAtPlaceholder": "draft (blank = the graph\u2019s entry state)",
+  "SwHint": "Opens a walk of this workspace\u2019s .agents/workflow.json on the firing ticket. The action only records the intent \u2014 the engine\u2019s own poll enters the states, dispatches each task state as a sub-ticket, routes the gates through the ordinary conditions and bounds the cycles. Idempotent per ticket: firing again while a walk is running re-attaches instead of restarting it."
 }

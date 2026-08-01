@@ -83,6 +83,14 @@ public sealed class TeamRunService
     }
 
     /// <summary>
+    /// One run as it stands on the board, or null when it never existed. Exposed so a caller that
+    /// only holds a run id — the workflow walker, whose fan-out states are ad-hoc team runs — can
+    /// ask whether it closed without reaching for the store itself.
+    /// </summary>
+    public Task<TeamRun?> GetRunAsync(string projectSlug, long runId) =>
+        _teams.GetRunAsync(projectSlug, runId);
+
+    /// <summary>
     /// Starts (or re-attaches to) a run of <paramref name="teamSlug"/> for
     /// <paramref name="parentTicketId"/> and fans it out.
     /// <para>

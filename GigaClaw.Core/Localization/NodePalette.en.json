@@ -56,5 +56,7 @@
   "PalActStartTeamRun": "Start team run",
   "PalActStartTeamRunHint": "Fans a team definition out into sub-tickets under the firing ticket, wired with dependency edges",
   "PalActParallelRunAgents": "Parallel branches",
-  "PalActParallelRunAgentsHint": "Runs agents in parallel on the firing ticket with a join policy, a concurrency cap and an optional synthesizer"
+  "PalActParallelRunAgentsHint": "Runs agents in parallel on the firing ticket with a join policy, a concurrency cap and an optional synthesizer",
+  "PalActStartWorkflow": "Start workflow walk",
+  "PalActStartWorkflowHint": "Walks the firing ticket through the workspace's declared workflow graph: task states, gates, fan-out and join, bounded by maxCycles"
 }

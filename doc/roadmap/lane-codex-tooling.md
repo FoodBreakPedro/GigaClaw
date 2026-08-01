@@ -12,7 +12,7 @@ Verification bar: existing suite green in Release plus explicit build/test comma
 - Baseline truth is 33 agents, 33 contracts, 29 automations (28 enabled), 12 explicit model mappings, 9 team definitions (`all` plus 8 specialty teams), and 15 shared scripts. “Model present” reports action/member mapping separately from “project fallback required”; a fallback is not assumed to be configured.
 - A dispatch binding includes either an explicit `runAgent.agent` or membership in the assignee placeholder's allowed set. Enabled and disabled bindings are reported separately.
 - CI gates deterministic generation, schema, and committed drift immediately. Missing binding invariants are reported in baseline mode and become hard failures with `--strict` only at SP-1 after GM/CL fixes (including `content-writer` team membership and model completion).
-- `tools/check-automation-drift.sh` compares initialized projects/ventures against the template. Catalog checks do not replace that behavior, so the script is not retired without a per-project equivalent.
+- `tools/check-automation-drift.sh` compared initialized projects/ventures against the template. Catalog checks alone do not cover that behavior — that gap is now closed by `dotnet run --project GigaClaw.Catalog -- check --project`/`--projects` (doc/automation-drift-check.md), and the script has been retired (2026-08-01).
 - README currently has no canonical numeric inventory marker. A count mismatch check requires an explicit generated marker or section; it must not scrape incidental prose.
 - Eval baselines are deterministic committed inputs under `GigaClaw.Eval/baselines/`. Per-run reports go to a declared gitignored artifact root. Prompt budget source, units, and thresholds are versioned configuration, not hard-coded assumptions.
 
@@ -31,12 +31,12 @@ Verification bar: existing suite green in Release plus explicit build/test comma
 
 ## Task T2: CI enforcement of catalog invariants (P20, part 2)
 
-**Description:** CI regenerates the catalog and fails immediately on malformed inputs or drift between generated and committed output. Baseline mode reports missing contract/model/team/automation bindings; `--strict` fails on them and becomes the CI default at SP-1 after owning fixes land. README count enforcement is enabled only for an explicit generated inventory marker. The initialized-project drift checker remains until catalog tooling implements equivalent per-project comparison.
+**Description:** CI regenerates the catalog and fails immediately on malformed inputs or drift between generated and committed output. Baseline mode reports missing contract/model/team/automation bindings; `--strict` fails on them and becomes the CI default at SP-1 after owning fixes land. README count enforcement is enabled only for an explicit generated inventory marker. Per-project comparison against an initialized workspace now lives in the same tooling as `check --project`/`--projects` (doc/automation-drift-check.md), retiring the standalone script.
 
 **Acceptance criteria:**
 - [ ] Baseline CI red on uncommitted catalog drift and malformed/unreadable bindings; strict-mode fixture is red for a deliberately introduced unbound agent
 - [ ] If a README generated marker is added, a mismatch fixture fails; otherwise no incidental prose is treated as a count contract
-- [ ] `tools/check-automation-drift.sh` is retained until a separately tested per-project parity feature replaces it; “one green week” is an operational rollout gate, not code acceptance
+- [x] `tools/check-automation-drift.sh` is retired now that a separately tested per-project parity feature replaces it (`check --project`/`--projects`, doc/automation-drift-check.md, `WorkspaceDriftCheckerTests`)
 - [ ] Local `dotnet run --project GigaClaw.Catalog -- check` gives the same baseline verdict as CI; `--strict` gives the future SP-1 verdict
 
 **Dependencies:** T1. **Size:** S.

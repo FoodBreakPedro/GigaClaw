@@ -18,6 +18,7 @@ internal sealed class TriggerHandler
     private readonly SessionRegistry _sessions;
     private readonly AgentRunRegistry _runs;
     private readonly TeamRunService _teamRuns;
+    private readonly Workflow.WorkflowWalker _walker;
     private readonly ILogger _logger;
 
     public TriggerHandler(
@@ -29,8 +30,10 @@ internal sealed class TriggerHandler
         SessionRegistry sessions,
         AgentRunRegistry runs,
         TeamRunService teamRuns,
+        Workflow.WorkflowWalker walker,
         ILogger logger)
     {
+        _walker = walker;
         _projects = projects;
         _runtimeManager = runtimeManager;
         _executor = executor;
@@ -82,6 +85,11 @@ internal sealed class TriggerHandler
             // This is also the whole resume path: after a restart there is no in-memory run state
             // to rebuild — the first tick reads the open runs and continues from the tickets.
             await _teamRuns.ReconcileProjectAsync(project.Slug);
+            // The workflow walk is reconciled on the same terms and for the same reasons, right
+            // after the team runs it delegates its fan-outs to: a state entered this tick already
+            // has its sub-ticket in the dispatch column when the agent's trigger looks, and the
+            // walk resumes after a restart from the receipts on the ticket with nothing rebuilt.
+            await _walker.ReconcileProjectAsync(rt, ct);
 
             if (rt.Config is null) continue;
             foreach (var automation in rt.Config.Automations)

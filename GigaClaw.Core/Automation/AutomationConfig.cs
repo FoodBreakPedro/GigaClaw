@@ -350,6 +350,7 @@ public sealed class TicketAgeConditionSpec : ConditionSpec
 [JsonDerivedType(typeof(StartTeamRunActionSpec), "startTeamRun")]
 [JsonDerivedType(typeof(ParallelRunAgentsActionSpec), "parallelRunAgents")]
 [JsonDerivedType(typeof(EnqueueMergeActionSpec), "enqueueMerge")]
+[JsonDerivedType(typeof(StartWorkflowActionSpec), "startWorkflow")]
 public abstract class ActionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -485,6 +486,35 @@ public sealed class StartTeamRunActionSpec : ActionSpec
     /// <summary>Slug of the team definition to run. A project-scoped definition wins over the
     /// built-in team of the same slug.</summary>
     public required string Team { get; set; }
+}
+
+/// <summary>
+/// Opens a walk of the workspace's workflow graph (<c>.agents/workflow.json</c>) on the firing
+/// ticket — how a ticket opts in to a declared workflow. See <c>doc/workflow-graph.md</c>.
+/// <para>
+/// The action only <b>records intent</b>, exactly as <see cref="EnqueueMergeActionSpec"/> does: it
+/// writes the walk's opening receipt onto the ticket and returns. The engine's own poll
+/// (<c>WorkflowWalker.ReconcileProjectAsync</c>, run each tick beside the team-run reconcile) is what
+/// enters the first state and every one after it — so the walk advances on restart, on a verdict
+/// posted an hour later, and on a branch finishing, none of which are this automation's firing.
+/// </para>
+/// <para>
+/// Idempotent per ticket: firing again while a walk is still running re-attaches to it rather than
+/// restarting one, mirroring <see cref="StartTeamRunActionSpec"/>'s contract, so it is safe under a
+/// repeating <c>ticketInColumn</c> trigger. A ticket whose walk parked or finished may be walked
+/// again — that is how an owner re-runs a workflow after fixing what parked it.
+/// </para>
+/// </summary>
+public sealed class StartWorkflowActionSpec : ActionSpec
+{
+    public override string UiTypeKey => "startWorkflow";
+
+    /// <summary>
+    /// State to begin at. Null (the default) means the graph's own entry state — naming one is for
+    /// resuming a workflow partway, and a name that is not a state of the graph is refused with a
+    /// receipt rather than silently falling back to the entry.
+    /// </summary>
+    public string? At { get; set; }
 }
 
 /// <summary>
