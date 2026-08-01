@@ -19,16 +19,22 @@
             "notes": "All 5 fixture expectation(s) held."
           },
           {
-            "name": "Confirmed the render target first",
-            "score": 15,
-            "max": 15,
+            "name": "Read the guide and the provider menu first",
+            "score": 10,
+            "max": 10,
             "notes": "All 1 required event kind(s) appear."
           },
           {
-            "name": "Storyboard is spec-complete",
-            "score": 20,
-            "max": 20,
-            "notes": "All 2 required marker(s) present."
+            "name": "Wrote both spec artifacts under media/specs/",
+            "score": 15,
+            "max": 15,
+            "notes": "All 3 required marker(s) present."
+          },
+          {
+            "name": "Execution spec is version 1 with a complete governance block",
+            "score": 25,
+            "max": 25,
+            "notes": "All 5 required marker(s) present."
           },
           {
             "name": "Held the render gate",
@@ -37,33 +43,27 @@
             "notes": "Marker 'awaiting sign-off' present."
           },
           {
-            "name": "Runtime accounted for",
-            "score": 15,
-            "max": 15,
-            "notes": "Marker 'totalling' present."
-          },
-          {
-            "name": "Substantive handoff",
+            "name": "Emitted the handoff comment",
             "score": 10,
             "max": 10,
-            "notes": "Final message is 294 character(s) against a floor of 150."
+            "notes": "All 1 required marker(s) present."
           }
         ],
         "vetoItems": [],
         "evidence": [
           {
             "kind": "hash",
-            "ref": "sha256:b9b70d6479cf9d6dcaa9be89362d5afa9517a7c6c9e30ef001d05a07997dedbe",
-            "note": "normalized replay stream for fixture 'media-storyboard-teaser' (7 event(s), exit 0)"
+            "ref": "sha256:7e1f07d1cb1e8723e1f340b13c5077b1b9b5b21d9803f6f280a55ee41eb7816a",
+            "note": "normalized replay stream for fixture 'media-storyboard-teaser' (10 event(s), exit 0)"
           },
           {
             "kind": "hash",
-            "ref": "sha256:1c2d6c6df4fb73c82fe87194b0ff8f0eff2a954846a19d116de3234946b88200",
+            "ref": "sha256:7de6be1b4bbe77049278c3c787683b598082fee73e20dc95b48cc76f33b38e00",
             "note": "rubric 'local-media-director' v1"
           }
         ],
         "reviewedAtUtc": "1970-01-01T00:00:00Z",
-        "inputDigest": "sha256:b9b70d6479cf9d6dcaa9be89362d5afa9517a7c6c9e30ef001d05a07997dedbe"
+        "inputDigest": "sha256:7e1f07d1cb1e8723e1f340b13c5077b1b9b5b21d9803f6f280a55ee41eb7816a"
       }
     }
   ]
