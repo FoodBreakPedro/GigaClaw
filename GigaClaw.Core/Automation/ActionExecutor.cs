@@ -935,18 +935,13 @@ internal sealed class ActionExecutor
             await _tickets.MoveTicketAsync(rt.Slug, firing.TicketId!.Value, m.To, "automation");
             state.StatusAfterMove = m.To;
 
-            // R5: a ticket landing in Done with an active worktree is the cleanup trigger.
-            // TryCleanupWorktreeAsync only ever removes a clean, merged worktree — anything else
-            // (dirty checkout, unmerged branch, a git failure) is flagged to the owner instead of
-            // silently deleted. Guarded by WorktreeStatus so a re-entry into Done (or a second
-            // moveTicketStatus in the same chain) is not re-attempted once already cleaned.
-            if (string.Equals(m.To, "Done", StringComparison.OrdinalIgnoreCase)
-                && ticketBefore is not null
-                && !string.IsNullOrWhiteSpace(ticketBefore.WorktreeBranch)
-                && !string.Equals(ticketBefore.WorktreeStatus, "cleaned", StringComparison.OrdinalIgnoreCase))
-            {
-                await TryCleanupWorktreeAsync(rt, ticketBefore, ct);
-            }
+            // R6 (doc/roadmap/SESSION-HANDOFF.md, PLAN-remaining.md §1 item 3): worktree cleanup
+            // used to be triggered from here only, which meant a user dragging a ticket to Done on
+            // the Board UI (TicketService.ReorderTicketAsync — never routed through ActionExecutor)
+            // silently orphaned the worktree. Cleanup now lives in TicketService itself
+            // (TryCleanupWorktreeOnDoneAsync), called from every status-changing method — including
+            // MoveTicketAsync, which the line above already awaits — so it runs exactly once here,
+            // as part of that call, with no separate invocation needed on this path.
         }
         catch (Exception ex) { _logger.LogWarning(ex, "moveTicketStatus failed for ticket #{Id} in project {Project}", firing.TicketId, rt.Slug); }
     }
@@ -2002,60 +1997,6 @@ internal sealed class ActionExecutor
         {
             _logger.LogWarning(ex, "worktree isolation: failed to write failure receipt for ticket #{Id}", ticketId);
         }
-    }
-
-    /// <summary>
-    /// Attempts worktree cleanup for a ticket that just reached Done (see
-    /// <see cref="ExecuteMoveTicketStatusActionAsync"/>). Only <see cref="WorktreeCleanupOutcome.Cleaned"/>
-    /// updates <see cref="Models.Ticket.WorktreeStatus"/> to <c>"cleaned"</c>; every other outcome —
-    /// dirty checkout, unmerged branch, a git failure — is recorded as <c>"dirty"</c> and receipted
-    /// as <c>worktree-cleanup-blocked/v1</c>, the same "denials/serializations produce receipts"
-    /// idiom as R2's <c>policy-violation/v1</c>, R3's <c>outbound-denial/v1</c>, and R4's
-    /// <c>file-lease-denial/v1</c>. The worktree itself is never deleted in these cases.
-    /// </summary>
-    private async Task TryCleanupWorktreeAsync(ProjectRuntime rt, Models.Ticket ticket, CancellationToken ct)
-    {
-        var branch = ticket.WorktreeBranch!;
-        var path = ticket.WorktreePath!;
-
-        WorktreeCleanupResult result;
-        try
-        {
-            result = await WorktreeManager.TryCleanupAsync(rt.Workspace!, branch, path, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "worktree cleanup: failed for ticket #{Id}", ticket.Id);
-            return;
-        }
-
-        if (result.Outcome is WorktreeCleanupOutcome.Cleaned or WorktreeCleanupOutcome.AlreadyGone)
-        {
-            try { await _tickets.SetWorktreeStateAsync(rt.Slug, ticket.Id, branch, path, "cleaned"); }
-            catch (Exception ex) { _logger.LogWarning(ex, "worktree cleanup: failed to persist cleaned state for ticket #{Id}", ticket.Id); }
-            _logger.LogInformation(
-                "worktree cleanup: ticket #{Id} branch {Branch} — {Outcome}", ticket.Id, branch, result.Outcome);
-            return;
-        }
-
-        try { await _tickets.SetWorktreeStateAsync(rt.Slug, ticket.Id, branch, path, "dirty"); }
-        catch (Exception ex) { _logger.LogWarning(ex, "worktree cleanup: failed to persist dirty state for ticket #{Id}", ticket.Id); }
-
-        var receipt = JsonSerializer.Serialize(new
-        {
-            schema = "worktree-cleanup-blocked/v1",
-            ticketId = ticket.Id,
-            branch,
-            path,
-            rule = "worktree-cleanup",
-            outcome = result.Outcome.ToString(),
-            reason = result.Reason ?? "worktree cleanup was blocked",
-        });
-        try { await _tickets.AddCommentAsync(rt.Slug, ticket.Id, receipt, "automation"); }
-        catch (Exception ex) { _logger.LogWarning(ex, "worktree cleanup: failed to write blocked receipt for ticket #{Id}", ticket.Id); }
-        _logger.LogWarning(
-            "worktree cleanup: ticket #{Id} reached Done but the worktree was not cleaned ({Outcome}): {Reason}",
-            ticket.Id, result.Outcome, result.Reason);
     }
 
     /// <summary>
