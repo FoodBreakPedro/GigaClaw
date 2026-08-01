@@ -20,10 +20,14 @@ public sealed class CatalogGeneratorTests
         // emits a typed verdict beside its CONTENT-REVIEW markers. Enabled trails total by one:
         // `weekly-ticket-example` is a shipped-off sample, not a gate.
         // 43 core + the pack's 7, plus the two C8 team-start automations (parallel-review-on-labeled,
-        // hypothesis-debug-on-qa-block) = 45 core + 7 pack. Enabled trails by one: `weekly-ticket-example`
-        // is a shipped-off sample, not a gate, and every pack automation is enabled by the binding rule.
-        Assert.Equal(52, catalog.Summary.Automations);
-        Assert.Equal(51, catalog.Summary.EnabledAutomations);
+        // hypothesis-debug-on-qa-block) = 45 core + 7 pack, plus the SP-3 worktree-isolated twins split
+        // out of assignee-dispatch/assignee-resume/owner-feedback so isolation can be set on the
+        // programmer/qa-tester binding without touching every other agent sharing that automation
+        // (assignee-dispatch-code, assignee-resume-code, owner-feedback-code) = 48 core + 7 pack.
+        // Enabled trails by one: `weekly-ticket-example` is a shipped-off sample, not a gate, and
+        // every pack automation is enabled by the binding rule.
+        Assert.Equal(55, catalog.Summary.Automations);
+        Assert.Equal(54, catalog.Summary.EnabledAutomations);
         Assert.Equal(37, catalog.Summary.ExplicitModelMappings);
         // 9 filter-only core teams + the two C8 presets (parallel-review, hypothesis-debug) + the
         // pack's security-review.
@@ -41,8 +45,8 @@ public sealed class CatalogGeneratorTests
         Assert.NotEmpty(contentWriter.EnabledDispatchingAutomations);
         Assert.Contains("scripts/content_contract.py", catalog.Scripts);
         Assert.Equal(12, catalog.Teams.Count);
-        // 45 core (43 + the two C8 team-start automations) + the pack's 7.
-        Assert.Equal(52, catalog.Automations.Count);
+        // 48 core (45 + the three SP-3 worktree-isolated twins) + the pack's 7.
+        Assert.Equal(55, catalog.Automations.Count);
         // Core only. A baseline is the *reviewed* static-check snapshot and §9 keeps it a
         // core-owned artifact about pack content, so a pack's baselines appear when someone
         // reviews them — not when the pack lands. The binding rule requires a fixture, which the

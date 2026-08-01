@@ -20,9 +20,7 @@
         {
           "type": "assignedTo",
           "slugs": [
-            "programmer",
             "producer",
-            "qa-tester",
             "groomer",
             "blog-writer",
             "blog-reviewer",
@@ -74,6 +72,66 @@
           "env": {},
           "model": "claude-sonnet-4-6",
           "restoreStatusOnFail": true
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "{assignee}"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "{assignee}"
+        }
+      ]
+    },
+    {
+      "id": "assignee-dispatch-code",
+      "name": "Dispatch: Todo ticket -> InProgress + run assigned agent (SP-3: code-touching contracts run isolated)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketInColumn",
+        "seconds": 30,
+        "columns": [
+          "Todo"
+        ],
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 3,
+        "retryBackoffSeconds": 300,
+        "exhaustedStatus": "Blocked",
+        "exhaustedComment": "Automation stopped after 3 unchanged dispatch attempts. Add owner feedback or revise the ticket before retrying."
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer",
+            "qa-tester"
+          ]
+        },
+        {
+          "type": "ticketCountInColumn",
+          "columns": [
+            "InProgress"
+          ],
+          "sameAssignee": true,
+          "operator": "==",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "moveTicketStatus",
+          "to": "InProgress"
+        },
+        {
+          "type": "runAgent",
+          "agent": "{assignee}",
+          "concurrencyGroup": "{assignee}",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": true,
+          "isolation": "worktree"
         },
         {
           "type": "consolidateAgentMemory",
@@ -313,8 +371,6 @@
         {
           "type": "assignedTo",
           "slugs": [
-            "programmer",
-            "qa-tester",
             "groomer",
             "blog-writer",
             "blog-reviewer",
@@ -365,6 +421,53 @@
       ]
     },
     {
+      "id": "assignee-resume-code",
+      "name": "Resume assigned agent on InProgress tickets (SP-3: code-touching contracts run isolated)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketInColumn",
+        "seconds": 30,
+        "columns": [
+          "InProgress"
+        ],
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 3,
+        "retryBackoffSeconds": 300,
+        "exhaustedStatus": "Blocked",
+        "exhaustedComment": "Agent resume stopped after 3 unchanged attempts. Add owner feedback or revise the ticket before retrying."
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer",
+            "qa-tester"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "{assignee}",
+          "concurrencyGroup": "{assignee}",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false,
+          "isolation": "worktree"
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "{assignee}"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "{assignee}"
+        }
+      ]
+    },
+    {
       "id": "qa-on-review",
       "name": "QA: validate work moved to Review",
       "enabled": true,
@@ -390,7 +493,8 @@
           "mutuallyExclusiveWith": [],
           "env": {},
           "model": "claude-sonnet-4-6",
-          "restoreStatusOnFail": false
+          "restoreStatusOnFail": false,
+          "isolation": "worktree"
         },
         {
           "type": "consolidateAgentMemory",
@@ -476,9 +580,7 @@
         {
           "type": "assignedTo",
           "slugs": [
-            "programmer",
             "producer",
-            "qa-tester",
             "groomer",
             "blog-writer",
             "blog-reviewer",
@@ -525,6 +627,56 @@
           "env": {},
           "model": "claude-sonnet-4-6",
           "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "{assignee}"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "{assignee}"
+        }
+      ]
+    },
+    {
+      "id": "owner-feedback-code",
+      "name": "Owner feedback: re-dispatch assignee when owner comments (SP-3: code-touching contracts run isolated)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 30,
+        "authors": [
+          "owner"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer",
+            "qa-tester"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Todo",
+            "InProgress",
+            "Blocked"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "{assignee}",
+          "concurrencyGroup": "{assignee}",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false,
+          "isolation": "worktree"
         },
         {
           "type": "consolidateAgentMemory",
@@ -1273,6 +1425,9 @@
           "content": "GIGACLAW-GATE v1 ticket-{ticketId} advanced — qa-tester returned SHIP.\n\nThe automation engine re-read the reviewer's `GIGACLAW-VERDICT v1` comment and re-checked it against the v1 contract (marker/body agreement, schema, no veto item on a SHIP) before moving this ticket to Done. Nothing was taken on the reviewer's word.\n\nArtifact freshness is deliberately not re-hashed for qa-tester: its judgement covers a multi-file code change and an executed test run, not one workspace file, so no path evidence can hash to `inputDigest`. See `.agents/scripts/verdict.schema.json`."
         },
         {
+          "type": "enqueueMerge"
+        },
+        {
           "type": "moveTicketStatus",
           "to": "Done"
         }
@@ -1669,7 +1824,8 @@
           "mutuallyExclusiveWith": [],
           "env": {},
           "model": "claude-sonnet-4-6",
-          "restoreStatusOnFail": false
+          "restoreStatusOnFail": false,
+          "isolation": "worktree"
         },
         {
           "type": "consolidateAgentMemory",
