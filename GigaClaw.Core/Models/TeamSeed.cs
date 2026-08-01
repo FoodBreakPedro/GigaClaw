@@ -24,6 +24,12 @@ public sealed record TeamSeedEntry(string Slug, string Name, string Description,
     public TeamJoinPolicy? JoinPolicy { get; init; }
     public string? SynthesizerRole { get; init; }
 
+    /// <summary>C8: see <see cref="TeamDefinition.DedupeFindings"/>.</summary>
+    public bool DedupeFindings { get; init; }
+
+    /// <summary>C8: see <see cref="TeamDefinition.RequireEvidenceCitingArbitration"/>.</summary>
+    public bool RequireEvidenceCitingArbitration { get; init; }
+
     public TeamDefinition ToDefinition() =>
         new(Slug, Name, Description, Icon)
         {
@@ -31,7 +37,9 @@ public sealed record TeamSeedEntry(string Slug, string Name, string Description,
             EntryConditions = EntryConditions,
             TaskGraph = TaskGraph,
             JoinPolicy = JoinPolicy ?? TeamJoinPolicy.AllDone,
-            SynthesizerRole = SynthesizerRole
+            SynthesizerRole = SynthesizerRole,
+            DedupeFindings = DedupeFindings,
+            RequireEvidenceCitingArbitration = RequireEvidenceCitingArbitration
         };
 
     public static TeamSeedEntry FromDefinition(TeamDefinition definition) =>
@@ -41,7 +49,9 @@ public sealed record TeamSeedEntry(string Slug, string Name, string Description,
             EntryConditions = definition.EntryConditions,
             TaskGraph = definition.TaskGraph,
             JoinPolicy = definition.JoinPolicy,
-            SynthesizerRole = definition.SynthesizerRole
+            SynthesizerRole = definition.SynthesizerRole,
+            DedupeFindings = definition.DedupeFindings,
+            RequireEvidenceCitingArbitration = definition.RequireEvidenceCitingArbitration
         };
 }
 

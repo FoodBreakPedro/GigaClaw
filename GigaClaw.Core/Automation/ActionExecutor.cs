@@ -356,9 +356,10 @@ internal sealed class ActionExecutor
     /// <summary>
     /// Prepends what the ticket already knows to the action's own context, so the next agent starts
     /// from what happened instead of re-deriving it: the outstanding <c>FIX</c> verdict's findings
-    /// first (that is the reason this dispatch exists), then the previous run's handoff.
-    /// An unreadable handoff or verdict is skipped rather than injected half-parsed, and a ticket
-    /// with neither dispatches exactly as before.
+    /// first (that is the reason this dispatch exists), then any unanswered GitHub owner feedback
+    /// (C7 part 2 — the same mechanism, a different source of "you must address this"), then the
+    /// previous run's handoff. An unreadable handoff, verdict or feedback comment is skipped rather
+    /// than injected half-parsed, and a ticket with none of them dispatches exactly as before.
     /// </summary>
     internal async Task<string?> ComposeDispatchContextAsync(ProjectRuntime rt, int? ticketId, string? actionContext)
     {
@@ -367,19 +368,26 @@ internal sealed class ActionExecutor
 
         RunHandoff? handoff = null;
         string? repairBrief = null;
+        string? feedbackBrief = null;
         try
         {
             var ticket = await _tickets.GetTicketAsync(rt.Slug, ticketId.Value);
             if (ticket is not null)
             {
-                handoff = HandoffReader.Latest(
-                    ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList());
+                var bodies = ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList();
+                handoff = HandoffReader.Latest(bodies);
 
                 // A FIX with no SHIP or escalation after it means a repair is outstanding: whoever
                 // is dispatched next must see the categories and veto items that were refused.
                 var repair = await ResolveRepairStateAsync(rt, ticket, agent: null, maxOverride: null);
                 if (repair?.Newest is not null)
                     repairBrief = RepairLoop.RenderBrief(repair, $"ticket #{ticket.Id}");
+
+                // Owner feedback rides the same rail rather than a second one: comments posted
+                // since the agent last handed off are what this dispatch has to answer.
+                var feedback = Github.OwnerFeedback.Outstanding(bodies);
+                if (feedback.Count > 0)
+                    feedbackBrief = Github.OwnerFeedback.RenderBrief(feedback, ticket.Id);
             }
         }
         catch (Exception exception)
@@ -388,11 +396,14 @@ internal sealed class ActionExecutor
             _logger.LogWarning(exception, "[{Slug}] could not read the ticket context for #{TicketId}", rt.Slug, ticketId);
         }
 
-        if (handoff is null && string.IsNullOrWhiteSpace(repairBrief))
+        if (handoff is null
+            && string.IsNullOrWhiteSpace(repairBrief)
+            && string.IsNullOrWhiteSpace(feedbackBrief))
             return actionContext;
 
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(repairBrief)) parts.Add(repairBrief);
+        if (!string.IsNullOrWhiteSpace(feedbackBrief)) parts.Add(feedbackBrief);
         if (handoff is not null) parts.Add(HandoffReader.Render(handoff));
         if (!string.IsNullOrWhiteSpace(actionContext)) parts.Add(actionContext);
         return string.Join("\n\n", parts);
@@ -515,6 +526,9 @@ internal sealed class ActionExecutor
                         break;
                     case StartTeamRunActionSpec str:
                         await ExecuteStartTeamRunActionAsync(rt, firing, str);
+                        break;
+                    case ParallelRunAgentsActionSpec pra:
+                        await ExecuteParallelRunAgentsActionAsync(rt, firing, pra);
                         break;
                     case EnqueueMergeActionSpec em when firing.TicketId is not null:
                         await ExecuteEnqueueMergeActionAsync(rt, firing, em, ct);
@@ -831,6 +845,9 @@ internal sealed class ActionExecutor
                     // A team run started after a runAgent is the normal shape: the producer decides
                     // the work needs a team, then the team fans out behind its ticket.
                     case StartTeamRunActionSpec str: await ExecuteStartTeamRunActionAsync(rt, firing, str); break;
+                    // Same reasoning one level up: a producer finishes, then fans its output out
+                    // into parallel branches behind the same ticket.
+                    case ParallelRunAgentsActionSpec pra: await ExecuteParallelRunAgentsActionAsync(rt, firing, pra); break;
                     // enqueueMerge after a runAgent is the normal shape too: the committer role
                     // enqueues the ticket's worktree branch once the preceding run finished.
                     case EnqueueMergeActionSpec em when firing.TicketId is not null: await ExecuteEnqueueMergeActionAsync(rt, firing, em, ct); break;
@@ -1210,6 +1227,50 @@ internal sealed class ActionExecutor
                 await _tickets.AddActivityAsync(
                     rt.Slug, firing.TicketId.Value,
                     $"Team run '{spec.Team}' could not be started: {exception.Message}", "automation");
+            }
+            catch { /* non-blocking */ }
+        }
+    }
+
+    /// <summary>
+    /// Fans the firing ticket out into the declared parallel branches (C5 part 1).
+    /// <para>
+    /// This arm deliberately starts <b>no agent process</b>. It translates the spec into an ad-hoc
+    /// team definition (<see cref="ParallelRunPlan"/>) and hands it to <see cref="TeamRunService"/>,
+    /// which materializes one sub-ticket per branch in the dispatch column. The branches are then
+    /// started by the ordinary per-agent <c>ticketInColumn</c> automations — the normal dispatch
+    /// path, which is what makes each branch queue behind <c>RunConcurrencyGate</c> and take its
+    /// file leases like every other run. A second execution engine here would have bypassed both.
+    /// </para>
+    /// </summary>
+    private async Task ExecuteParallelRunAgentsActionAsync(
+        ProjectRuntime rt, TriggerFiring firing, ParallelRunAgentsActionSpec spec)
+    {
+        if (firing.TicketId is null)
+        {
+            // Branches are sub-tickets of the firing ticket; a ticketless firing has no parent to
+            // hang them on. Skip rather than throw — the rest of the chain is still meaningful.
+            _logger.LogWarning("parallelRunAgents: no ticket in the firing — skipping {Count} branch(es)", spec.Branches.Count);
+            return;
+        }
+
+        try
+        {
+            var definition = ParallelRunPlan.ToDefinition(spec);
+            var run = await _teamRuns.StartRunAsync(rt.Slug, definition, firing.TicketId.Value);
+            _logger.LogInformation(
+                "parallelRunAgents: run #{RunId} is {Status} with {Branches} branch(es) (join {Join}, max concurrency {Max}) on ticket #{TicketId} in {Project}",
+                run.Id, run.Status, definition.TaskGraph.Count, definition.JoinPolicy.Mode,
+                definition.MaxConcurrency, firing.TicketId, rt.Slug);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "parallelRunAgents failed in project {Project}", rt.Slug);
+            try
+            {
+                await _tickets.AddActivityAsync(
+                    rt.Slug, firing.TicketId.Value,
+                    $"Parallel branches could not be started: {exception.Message}", "automation");
             }
             catch { /* non-blocking */ }
         }

@@ -22,5 +22,6 @@ public static partial class Endpoints
         MapMedia(api);
         MapDashboard(api);
         MapOllama(api);
+        MapGitHub(api);
     }
 }

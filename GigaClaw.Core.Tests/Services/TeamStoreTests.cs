@@ -330,21 +330,39 @@ public sealed class TeamStoreTests
     }
 
     [Fact]
-    public void BuiltInTeams_AreValidFilterOnlyDefinitions()
+    public void BuiltInTeams_AreValid_NineFilterOnlyPlusTheTwoC8ExecutablePresets()
     {
         var service = new AgentTeamService();
         var definitions = service.GetDefinitions();
 
-        Assert.Equal(9, definitions.Count);
-        Assert.All(definitions, definition =>
+        // C8 added parallel-review and hypothesis-debug alongside the nine pure filters — every
+        // built-in stays structurally valid, but only the two C8 presets are executable.
+        Assert.Equal(11, definitions.Count);
+        Assert.All(definitions, definition => Assert.Empty(definition.Validate()));
+
+        var filterOnly = definitions.Where(definition =>
+            definition.Slug is not (AgentTeamService.ParallelReviewSlug or AgentTeamService.HypothesisDebugSlug));
+        Assert.Equal(9, filterOnly.Count());
+        Assert.All(filterOnly, definition =>
         {
-            Assert.Empty(definition.Validate());
             Assert.Empty(definition.TaskGraph);
             Assert.False(definition.IsExecutable);
             Assert.Null(definition.SynthesizerRole);
             Assert.Empty(definition.EntryConditions);
             Assert.Equal(TeamJoinMode.AllDone, definition.JoinPolicy.Mode);
         });
+
+        var parallelReview = definitions.Single(d => d.Slug == AgentTeamService.ParallelReviewSlug);
+        Assert.True(parallelReview.IsExecutable);
+        Assert.Equal("synthesizer", parallelReview.SynthesizerRole);
+        Assert.True(parallelReview.DedupeFindings);
+        Assert.Equal(["ui-auditor", "qa-tester", "producer"], parallelReview.AgentSlugs);
+
+        var hypothesisDebug = definitions.Single(d => d.Slug == AgentTeamService.HypothesisDebugSlug);
+        Assert.True(hypothesisDebug.IsExecutable);
+        Assert.Equal("debug-lead", hypothesisDebug.SynthesizerRole);
+        Assert.True(hypothesisDebug.RequireEvidenceCitingArbitration);
+        Assert.Equal(["qa-tester", "producer"], hypothesisDebug.AgentSlugs);
 
         // The filter surface is exactly what the definitions project: no behavior moved.
         var teams = service.GetTeams();
@@ -356,7 +374,6 @@ public sealed class TeamStoreTests
             Assert.Equal(definition.Description, team.Description);
             Assert.Equal(definition.Icon, team.Icon);
             Assert.Equal(definition.AgentSlugs, team.AgentSlugs);
-            Assert.Equal(definition.Roles.Select(role => role.AgentSlug), team.AgentSlugs);
         }
     }
 }

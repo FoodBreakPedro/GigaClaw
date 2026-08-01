@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using GigaClaw.Core.Automation.Workflow;
 using GigaClaw.Core.Services;
 
 namespace GigaClaw.Core.Automation;
@@ -61,9 +62,26 @@ public sealed class AutomationStore : IDisposable
 
         ApplyQuarantine(config, workspace);
 
+        // The workflow graph is loaded and validated here, at the same point and on the same terms
+        // as the automations: an unreadable or structurally invalid graph throws out of LoadAsync
+        // exactly as a malformed automations.json does, so ProjectRuntimeManager's existing catch
+        // reports it as a failed reload and the project keeps its previous runtime. Validation is
+        // deliberately not deferred to first use — an unreachable state or an ungated loop must be
+        // refused before a ticket is inside it.
+        var workflow = WorkflowGraphFile.Read(agentsDir);
+
         entry.LastLoaded = config;
+        entry.LastWorkflow = workflow;
         return (config, workspace, configPath);
     }
+
+    /// <summary>
+    /// The workflow graph read by the last successful <see cref="LoadAsync"/> for this project, or
+    /// null when the workspace has none. Exposed separately rather than added to the load tuple so
+    /// every existing caller keeps its shape — a load that threw never updates it.
+    /// </summary>
+    public WorkflowGraph? GetCachedWorkflow(string slug) =>
+        _cache.TryGetValue(slug, out var entry) ? entry.LastWorkflow : null;
 
     /// <summary>
     /// §5: a quarantined pack's automations are force-disabled at config load. Done here rather
@@ -121,6 +139,7 @@ public sealed class AutomationStore : IDisposable
         public string ConfigPath { get; set; } = "";
         public string WorkspacePath { get; set; } = "";
         public AutomationConfig? LastLoaded { get; set; }
+        public WorkflowGraph? LastWorkflow { get; set; }
         public bool SuppressWatcher { get; set; }
         public FileSystemWatcher? Watcher { get; set; }
         public readonly object Lock = new();

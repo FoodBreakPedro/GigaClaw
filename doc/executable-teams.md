@@ -5,8 +5,10 @@ Turns a team from a static member filter into a runnable object. A `TeamDefiniti
 entry conditions, a task-graph template, a join policy and a synthesizer role; a `TeamRun` is one
 execution of that definition bound to a parent ticket; a `TeamTask` is a sub-ticket owned by a run.
 
-A definition with an **empty task graph is valid** and means "pure member filter". All nine built-in
-teams are exactly that, so team filtering behaves as it always has — see [Kanban UI](./kanban-ui.md).
+A definition with an **empty task graph is valid** and means "pure member filter". Nine of the
+eleven built-in teams are exactly that, so team filtering behaves as it always has — see
+[Kanban UI](./kanban-ui.md). The other two, `parallel-review` and `hypothesis-debug` (C8), are real
+task graphs — see [Team presets](#team-presets-c8) below.
 
 ## Key components
 - `GigaClaw.Core/Models/TeamDefinition.cs` — `TeamDefinition`, `TeamRole`, `TeamTaskTemplate`,
@@ -22,7 +24,7 @@ teams are exactly that, so team filtering behaves as it always has — see [Kanb
 
 ## Where team definitions come from
 
-Teams are **data, not code**. The nine built-ins live in `ProjectTemplate/Agents/teams.json`,
+Teams are **data, not code**. The eleven built-ins live in `ProjectTemplate/Agents/teams.json`,
 embedded as `GigaClaw.Core.AgentsTemplate/teams.json` and written to `<workspace>/.agents/teams.json`
 by Initialize like every other template asset — see [Project template](./project-template.md). That
 is what makes a team addable by something other than a `GigaClaw.Core` rebuild.
@@ -125,6 +127,11 @@ scheduler.
   fanning out twice, so it is safe under a repeating `ticketInColumn` trigger. A filter-only team is
   refused, and so is a role whose agent is not a member of the project — checked before the run row
   exists, so a misconfigured team never leaves half a graph behind.
+- **Starting an ad-hoc run** — `StartRunAsync(slug, TeamDefinition, parentTicketId)` takes a
+  definition directly instead of looking one up. This is what the `parallelRunAgents` action uses:
+  its branches are translated into an inline definition (`ParallelRunPlan`) that is *never stored as
+  a `TeamDefinition` row*. It resumes anyway, because the run's own snapshot — not a definition row —
+  is what every later reconcile reads.
 - **Fan-out** — one sub-ticket per task template, titled from the template, described by its
   `Prompt`, assigned to the role's agent, parented to the run's ticket. Templates are materialized in
   dependency order because an edge can only point at a sibling that already exists. A task with no
@@ -132,6 +139,12 @@ scheduler.
   with blockers is born in **Blocked**, so the ordinary dispatch cannot start it early. Fan-out is
   re-entrant: a run interrupted mid-fan-out is completed by the next reconcile rather than left with
   a truncated graph.
+- **Concurrency ceiling** — `TeamDefinition.MaxConcurrency` (0 = unlimited) caps how many of a run's
+  tasks may sit in the dispatch column at once. Over the cap, an unblocked task waits in **Blocked**
+  like a blocked one and is released when a lane reports. The ceiling is expressed as a column, not a
+  flag, so it survives a restart with everything else. It is a *second* limit, not a replacement for
+  the host-wide `RunConcurrencyGate` or the R4 file leases: a branch is still started by the ordinary
+  per-agent automation and still queues behind both.
 - **Dispatch ordering** — `ReconcileRunAsync` releases a task (Blocked → Todo) exactly when
   `ConditionEvaluators.DependenciesResolved` — the evaluator behind the `dependenciesResolved`
   condition — says every live `blockedBy` edge of its ticket is resolved. That is the only readiness
@@ -189,9 +202,20 @@ to `Joining` with `SynthesisTicketId` set. Its description is the synthesizer's 
   failed or was cancelled, and the recorded reason, followed by an instruction not to present their
   subject matter as covered.
 
-Partial failure is an outcome, not an error: the synthesizer always runs, and it always learns which
-lanes are absent and why. A synthesis that silently drops a failed lane is worse than no synthesis,
-because it reads as complete.
+Partial failure is an outcome, not an error: by default the synthesizer always runs, and it always
+learns which lanes are absent and why. A synthesis that silently drops a failed lane is worse than no
+synthesis, because it reads as complete.
+
+`TeamDefinition.PartialFailure` chooses between the two honest answers when the join fires without
+every lane reporting:
+
+| Mode | The run does |
+|---|---|
+| `Synthesize` (default) | dispatches the synthesizer with the results **and** the named gaps — synthesize-with-gaps |
+| `FailFast` | skips the synthesizer and closes `Failed`, the gaps in its receipt |
+
+Both leave a receipt on the parent ticket, and `FailFast` leaves a second one naming the synthesizer
+it deliberately did not dispatch. The choice changes what happens next, never whether it is recorded.
 
 `TeamTask.ResultHandoffRef` is written the moment a lane completes, as `ticket-<id>/run-<runId>` —
 the marker identity of the handoff comment the contract calls authoritative, not a copy of it.
@@ -222,7 +246,9 @@ nothing about a run ever lived outside the project database.
 
 ## Entry points
 - `TeamStore` and `TeamRunService`, DI-registered singletons in `GigaClaw.Web/Program.cs`.
-- The `startTeamRun` automation action, for starting a run from the board.
+- The `startTeamRun` automation action, for starting a run of a named team from the board, and
+  `parallelRunAgents` for one whose branches are declared inline
+  (`GigaClaw.Core/Automation/ParallelRunPlan.cs` translates the second into the first's shape).
 - `TeamRunService.ReconcileProjectAsync(slug)` (engine tick / restart), `FailTaskAsync` and
   `CancelRunAsync` / `CancelRunsForParentAsync`.
 - `TeamJoinEvaluator.Evaluate` / `Succeeded` for the join decision, with no I/O.
@@ -230,11 +256,45 @@ nothing about a run ever lived outside the project database.
   `(…, workspacePath)` overloads for a workspace's composed roster.
 - `TeamStore.SeedDefinitionsAsync(slug)` to write the roster into a project explicitly.
 
+## Team presets (C8)
+
+Two built-ins ship with real task graphs, proving the C4/C5 machinery end to end with agents that
+already exist in the core roster. Both wire `TeamDefinition` fields the presets above introduced:
+`DedupeFindings` and `RequireEvidenceCitingArbitration`.
+
+- **`parallel-review`** — an `accessibility-lane` (`ui-auditor`) and a `coverage-lane` (`qa-tester`)
+  run in parallel, `AllDone` join, synthesized by `producer`. `security-reviewer`,
+  `performance-reviewer` and `architecture-reviewer` are reserved role names: no core agent reviews
+  those dimensions today, and the specialists ship with the Security and Architecture & Data packs
+  ([packs-and-later.md](./roadmap/packs-and-later.md)) — add a role plus a task template once they
+  land. `DedupeFindings: true` makes `TeamRunService.ComposeBrief` prepend a merged, per-lane
+  attributed view of every reporting lane's `RunHandoff.OpenLoops`
+  (`GigaClaw.Core/Automation/Handoffs/FindingDeduplicator.cs`, a pure function keyed on a normalized
+  `location|category` string — no schema change, since open loops are the closest the frozen v1
+  handoff contract has to "a lane's finding") and posts a host-authored `GIGACLAW-VERDICT` receipt
+  (agent `team-synthesis`) on the parent ticket — SHIP with nothing blocking, FIX if a deduped
+  finding is, BLOCK if the join did not get what it asked for. That receipt is what lets an ordinary
+  `verdictIs` automation gate on the run without parsing the dispatched synthesizer's own prose.
+- **`hypothesis-debug`** — two investigator lanes (`qa-tester`, standing in twice for the reserved
+  `hypothesis-investigator` role under different `TeamRole`s) investigate independent hypotheses in
+  parallel; `debug-lead` (`producer`, standing in for the reserved `debug-lead` role) arbitrates.
+  `RequireEvidenceCitingArbitration: true` appends an instruction to the brief naming the
+  `GIGACLAW-ARBITRATION v1 winner=<task-key>` / `reason: …` shape the lead must emit; once the
+  synthesis ticket resolves, `TeamRunService.FinalizeAsync` reads that marker
+  (`GigaClaw.Core/Automation/Handoffs/ArbitrationReader.cs`) and posts a closing comment naming the
+  winner and reason on every other reported lane's own ticket. No marker is a no-op — the lead's
+  prose only has to trigger the mechanism, never perform the closing itself.
+- Both reserved-role agents are authored pending GM's G5 pass
+  ([lane-gemini-templates.md](./roadmap/lane-gemini-templates.md)); the task-template prompts above
+  are deliberately minimal placeholders, not the specialists' eventual prose.
+- Started by two core automations (`parallel-review-on-labeled`, label-gated on `Review`;
+  `hypothesis-debug-on-qa-block`, gated on a `qa-tester` `BLOCK` verdict via the existing `verdictIs`
+  vocabulary — see [Automation engine](./automation-engine.md)) — no new trigger/condition/action
+  vocabulary, only new `automations.json` entries.
+
 ## Not implemented yet
 - **File-ownership leases** — two lanes writing the same file still race; `ownedFiles` from the
   handoff is the declared scope a lease will be taken on (lane CX-R's R4).
-- **Team presets** — no built-in definition ships a task graph yet, so every executable team is one
-  a project or its roster defines itself. The nine built-ins remain pure member filters.
 - **A pack team in the board's team picker** — the Blazor filter still calls the project-less
   `AgentTeamService.GetTeams()`, so a team contributed by a workspace roster resolves and runs but is
   not yet offered in the dropdown. Passing the project's workspace path to the `(…, workspacePath)`

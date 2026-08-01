@@ -3,10 +3,10 @@
   "Summary": {
     "Agents": 37,
     "Contracts": 37,
-    "Automations": 50,
-    "EnabledAutomations": 49,
+    "Automations": 52,
+    "EnabledAutomations": 51,
     "ExplicitModelMappings": 37,
-    "Teams": 10,
+    "Teams": 12,
     "Scripts": 21
   },
   "Packs": [
@@ -645,7 +645,9 @@
         "governance-ops",
         "growth-marketing",
         "health-performance",
+        "hypothesis-debug",
         "local-media-creation",
+        "parallel-review",
         "security-review",
         "software-engineering",
         "ux-design"
@@ -696,6 +698,8 @@
       ],
       "ProjectFallbackRequired": false,
       "Teams": [
+        "hypothesis-debug",
+        "parallel-review",
         "software-engineering"
       ],
       "EnabledDispatchingAutomations": [
@@ -857,6 +861,7 @@
       ],
       "ProjectFallbackRequired": false,
       "Teams": [
+        "parallel-review",
         "ux-design"
       ],
       "EnabledDispatchingAutomations": [
@@ -985,6 +990,13 @@
       ]
     },
     {
+      "Slug": "hypothesis-debug",
+      "Agents": [
+        "producer",
+        "qa-tester"
+      ]
+    },
+    {
       "Slug": "local-media-creation",
       "Agents": [
         "approval-gatekeeper",
@@ -998,6 +1010,14 @@
         "local-motion-artist",
         "producer",
         "system-watchdog"
+      ]
+    },
+    {
+      "Slug": "parallel-review",
+      "Agents": [
+        "producer",
+        "qa-tester",
+        "ui-auditor"
       ]
     },
     {
@@ -1465,6 +1485,18 @@
     },
     {
       "Id": "content-verdict-gate-block-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "parallel-review-on-labeled",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "hypothesis-debug-on-qa-block",
       "Enabled": true,
       "Agents": [],
       "Models": []

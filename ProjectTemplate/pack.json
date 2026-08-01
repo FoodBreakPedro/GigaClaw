@@ -77,7 +77,9 @@
       "data-intelligence",
       "governance-ops",
       "health-performance",
-      "local-media-creation"
+      "local-media-creation",
+      "parallel-review",
+      "hypothesis-debug"
     ],
     "automations": [
       "approval-clear-on-revision",
@@ -104,8 +106,10 @@
       "evaluator-on-done",
       "groomer",
       "growth-approval-on-review",
+      "hypothesis-debug-on-qa-block",
       "local-media-reviewer-on-review",
       "owner-feedback",
+      "parallel-review-on-labeled",
       "producer-on-subtick",
       "qa-on-review",
       "stale-blocked-nudge",
@@ -204,7 +208,8 @@
       "httpRequest",
       "moveTicketStatus",
       "runAgent",
-      "setLabels"
+      "setLabels",
+      "startTeamRun"
     ],
     "network": "declared",
     "networkHosts": [

@@ -15,6 +15,26 @@ public enum TeamJoinMode
 }
 
 /// <summary>
+/// What a run does when the join fires <b>without</b> every lane having reported — one branch
+/// failed, was cancelled, or the quorum went out of reach.
+/// </summary>
+public enum TeamPartialFailure
+{
+    /// <summary>
+    /// Hand the synthesizer what did report, plus a named list of every gap and its reason
+    /// (synthesize-with-gaps). The C4 behaviour and the default: a partial answer with its holes
+    /// stated is worth more than none.
+    /// </summary>
+    Synthesize,
+
+    /// <summary>
+    /// Skip the synthesizer entirely and close the run as failed, the gaps in its receipt. For
+    /// branches whose results are worthless unless all of them arrived.
+    /// </summary>
+    FailFast
+}
+
+/// <summary>
 /// Join semantics of a team definition. <see cref="Quorum"/> is only meaningful for
 /// <see cref="TeamJoinMode.Quorum"/> and must then name at least one task.
 /// </summary>
@@ -67,6 +87,48 @@ public sealed record TeamDefinition(string Slug, string Name, string Description
 
     /// <summary>Role that receives the join result. Null for filter-only definitions.</summary>
     public string? SynthesizerRole { get; init; }
+
+    /// <summary>
+    /// What the join does when it fires without every lane reporting. Defaults to
+    /// <see cref="TeamPartialFailure.Synthesize"/>, which is what every C4 team already did.
+    /// </summary>
+    public TeamPartialFailure PartialFailure { get; init; } = TeamPartialFailure.Synthesize;
+
+    /// <summary>
+    /// Most tasks of this run that may sit in the dispatch column at the same time. <c>0</c> (the
+    /// default) means unlimited — the run releases every task whose blockers resolved and lets the
+    /// host-wide <c>RunConcurrencyGate</c> be the only limit.
+    /// <para>
+    /// This is a <i>second</i>, per-run ceiling, not a replacement for the gate: a task is still
+    /// dispatched by the ordinary <c>ticketInColumn</c> automation and still queues behind the gate
+    /// and the file leases. Capping it here only decides how many sub-tickets are offered to that
+    /// path at once.
+    /// </para>
+    /// </summary>
+    public int MaxConcurrency { get; init; }
+
+    /// <summary>
+    /// C8: when true, the synthesizer's brief (<c>TeamRunService.ComposeBrief</c>) is preceded by a
+    /// deduplicated view of every reporting lane's findings (<c>RunHandoff.OpenLoops</c>), merged by
+    /// <see cref="Automation.Handoffs.FindingDeduplicator"/> and attributed back to the lane(s) that
+    /// raised each one, and the join's outcome is distilled into a host-authored
+    /// <c>GIGACLAW-VERDICT</c> receipt on the parent ticket (agent <c>team-synthesis</c>) so an
+    /// ordinary <c>verdictIs</c> automation can gate on it — the same vocabulary C2 already reads,
+    /// no second one. A team that does not opt in keeps the C4 brief exactly as it was; a lane with
+    /// no parseable open loops degrades to an empty, honestly-labeled section rather than an error.
+    /// </summary>
+    public bool DedupeFindings { get; init; }
+
+    /// <summary>
+    /// C8: when true, once the run's synthesis ticket resolves, <c>TeamRunService.FinalizeAsync</c>
+    /// looks for a <c>GIGACLAW-ARBITRATION v1 winner=&lt;task-key&gt;</c> marker (see
+    /// <see cref="Automation.Handoffs.ArbitrationReader"/>) among its comments and, when one names a
+    /// task in this run, posts a comment on every other reported lane's own ticket naming the winner
+    /// and the stated reason — "losing hypotheses closed with reasons" as a host-side effect the
+    /// synthesizer's prose only has to trigger, not perform. No marker means no comments: a
+    /// synthesizer that never arbitrates leaves the board exactly as C4 already would.
+    /// </summary>
+    public bool RequireEvidenceCitingArbitration { get; init; }
 
     /// <summary>True when the definition can fan out; false for the pure member filters.</summary>
     [JsonIgnore]
@@ -143,6 +205,9 @@ public sealed record TeamDefinition(string Slug, string Name, string Description
 
         if (SynthesizerRole is not null && FindRole(SynthesizerRole) is null)
             problems.Add($"Synthesizer role '{SynthesizerRole}' is not one of the team roles.");
+
+        if (MaxConcurrency < 0)
+            problems.Add($"Max concurrency {MaxConcurrency} is negative; use 0 for unlimited.");
 
         if (JoinPolicy.Mode == TeamJoinMode.Quorum)
         {

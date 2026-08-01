@@ -54,11 +54,13 @@ public sealed class TeamSeedTests
     }
 
     [Fact]
-    public void GetTeams_StillResolvesTheNineBuiltInsFromDataInOrder()
+    public void GetTeams_StillResolvesTheNineFilterOnlyBuiltInsPlusTheTwoC8Presets_FromDataInOrder()
     {
         var teams = new AgentTeamService().GetTeams();
 
-        Assert.Equal(9, teams.Count);
+        // C8 added parallel-review and hypothesis-debug — the first two built-ins with a real task
+        // graph — after the nine original filter-only teams. The nine keep their exact order.
+        Assert.Equal(11, teams.Count);
         Assert.Equal(
             [
                 AgentTeamService.AllTeamsSlug,
@@ -69,13 +71,23 @@ public sealed class TeamSeedTests
                 AgentTeamService.DataIntelligenceSlug,
                 AgentTeamService.GovernanceOpsSlug,
                 AgentTeamService.HealthPerformanceSlug,
-                AgentTeamService.LocalMediaCreationSlug
+                AgentTeamService.LocalMediaCreationSlug,
+                AgentTeamService.ParallelReviewSlug,
+                AgentTeamService.HypothesisDebugSlug
             ],
             teams.Select(team => team.Slug));
         // The no-filter sentinel stays first: GetTeamBySlug falls back to it.
         Assert.Equal(AgentTeamService.AllTeamsSlug, teams[0].Slug);
         Assert.Empty(teams[0].AgentSlugs);
-        Assert.All(new AgentTeamService().GetDefinitions(), definition => Assert.False(definition.IsExecutable));
+
+        var definitions = new AgentTeamService().GetDefinitions();
+        Assert.All(
+            definitions.Where(definition =>
+                definition.Slug != AgentTeamService.ParallelReviewSlug &&
+                definition.Slug != AgentTeamService.HypothesisDebugSlug),
+            definition => Assert.False(definition.IsExecutable));
+        Assert.True(definitions.Single(d => d.Slug == AgentTeamService.ParallelReviewSlug).IsExecutable);
+        Assert.True(definitions.Single(d => d.Slug == AgentTeamService.HypothesisDebugSlug).IsExecutable);
     }
 
     [Fact]

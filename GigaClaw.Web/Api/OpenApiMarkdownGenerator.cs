@@ -360,6 +360,7 @@ public static class OpenApiMarkdownGenerator
         sb.AppendLine("| `runAgent` | `agent`, `maxTurns?`, `concurrencyGroup?`, `mutuallyExclusiveWith[]`, `context?`, `env?`, `model?` | Launches the named agent; its skill is resolved by convention to `.agents/{agent}/SKILL.md` |");
         sb.AppendLine("| `moveTicketStatus` | `to` | Moves the ticket to the given column |");
         sb.AppendLine("| `startTeamRun` | `team` | Starts a run of the named team definition on the firing ticket: one sub-ticket per task template, assigned to the role's agent, ordered by ticket dependency edges (see doc/executable-teams.md). Idempotent per (ticket, team) |");
+        sb.AppendLine("| `parallelRunAgents` | `branches[{agent, prompt?, title?, key?}]`, `maxConcurrency?`, `join?` (`allDone`\\|`quorum`\\|`firstFailure`), `quorum?`, `onPartialFailure?` (`synthesize`\\|`failFast`), `synthesizer?`, `runSlug?`, `name?` | Fans the firing ticket out into declared parallel branches and joins them by policy. Executed as an ad-hoc team run (see doc/executable-teams.md), so branches are sub-tickets started by the ordinary per-agent automations and queue behind the concurrency gate and file leases. Idempotent per (ticket, `runSlug`) |");
         sb.AppendLine();
         sb.AppendLine("### Concurrency");
         sb.AppendLine();

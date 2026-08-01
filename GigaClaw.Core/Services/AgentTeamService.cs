@@ -31,6 +31,10 @@ public sealed class AgentTeamService
     public const string GovernanceOpsSlug = "governance-ops";
     public const string HealthPerformanceSlug = "health-performance";
     public const string LocalMediaCreationSlug = "local-media-creation";
+    /// <summary>C8: parallel-review, the first built-in with a real task graph.</summary>
+    public const string ParallelReviewSlug = "parallel-review";
+    /// <summary>C8: hypothesis-debug, the second built-in with a real task graph.</summary>
+    public const string HypothesisDebugSlug = "hypothesis-debug";
 
     private const string TeamsResourceName = "GigaClaw.Core.AgentsTemplate/" + TeamSeed.FileName;
 
@@ -112,7 +116,79 @@ public sealed class AgentTeamService
                 "local-media-compositor", "local-media-reviewer", "producer",
                 "approval-gatekeeper", "system-watchdog", "committer", "evaluator", "documentalist"
             }
-        )
+        ),
+        // C8: the first two built-ins with a real task graph. Kept byte-for-shape identical to
+        // ProjectTemplate/Agents/teams.json's entries by TeamSeedTests.EmbeddedRoster_
+        // MatchesTheCompiledFallbackDefinitionsExactly — the same drift anchor the nine filter-only
+        // teams above already have to honor.
+        new(ParallelReviewSlug, "Parallel Review",
+            "Fans a ticket into independent accessibility and coverage review lanes, deduplicates overlapping findings across them with per-lane attribution, and hands a synthesizer a gate-consumable verdict (GIGACLAW-VERDICT, agent team-synthesis). Security, performance and architecture lane roles (security-reviewer, performance-reviewer, architecture-reviewer) are reserved: no core agent does that review today, and the dedicated agents ship with the Security and Architecture & Data packs (doc/roadmap/packs-and-later.md) — add a role plus a task template once they exist.",
+            "🔍")
+        {
+            Roles =
+            [
+                new TeamRole("accessibility-reviewer", "ui-auditor")
+                {
+                    Description = "Accessibility and WCAG-adjacent findings — stand-in for the dedicated accessibility-reviewer role (pending GM G5)."
+                },
+                new TeamRole("coverage-reviewer", "qa-tester")
+                {
+                    Description = "Test coverage and adversarial verification findings — stand-in for the dedicated coverage-reviewer role (pending GM G5)."
+                },
+                new TeamRole("synthesizer", "producer")
+                {
+                    Description = "Reads the deduped findings and closes the run."
+                }
+            ],
+            TaskGraph =
+            [
+                new TeamTaskTemplate("accessibility-lane", "accessibility-reviewer", "Accessibility review")
+                {
+                    Prompt = "Review this ticket's change for accessibility issues (contrast, focus order, keyboard reachability). Record each finding as an openLoops entry in your handoff, one per issue, naming the file or location it is in. Authored pending GM G5 — replace with the dedicated accessibility-reviewer prose."
+                },
+                new TeamTaskTemplate("coverage-lane", "coverage-reviewer", "Coverage review")
+                {
+                    Prompt = "Review this ticket's change for test coverage gaps and untested edge cases. Record each finding as an openLoops entry in your handoff, one per gap, naming the file or location it is in. Authored pending GM G5 — replace with the dedicated coverage-reviewer prose."
+                }
+            ],
+            JoinPolicy = TeamJoinPolicy.AllDone,
+            SynthesizerRole = "synthesizer",
+            DedupeFindings = true
+        },
+        new(HypothesisDebugSlug, "Hypothesis Debug",
+            "Fans a bug ticket into competing investigator lanes, one hypothesis each, then a lead arbitration that must cite evidence; the host closes the losing lane(s) once the lead names a winner (GIGACLAW-ARBITRATION marker). Dedicated hypothesis-investigator and debug-lead roles are reserved pending the Incident & Debug pack (doc/roadmap/packs-and-later.md) — qa-tester and producer stand in today.",
+            "🕵️")
+        {
+            Roles =
+            [
+                new TeamRole("investigator-a", "qa-tester")
+                {
+                    Description = "Investigates one candidate hypothesis — stand-in for the dedicated hypothesis-investigator role (pending GM G5)."
+                },
+                new TeamRole("investigator-b", "qa-tester")
+                {
+                    Description = "Investigates a different candidate hypothesis — stand-in for the dedicated hypothesis-investigator role (pending GM G5)."
+                },
+                new TeamRole("debug-lead", "producer")
+                {
+                    Description = "Arbitrates between the investigators' hypotheses, citing evidence — stand-in for the dedicated debug-lead role (pending GM G5)."
+                }
+            ],
+            TaskGraph =
+            [
+                new TeamTaskTemplate("investigator-a-lane", "investigator-a", "Investigate hypothesis A")
+                {
+                    Prompt = "Investigate one candidate root cause for this ticket's bug. Gather evidence (repro steps, logs, stack trace, code path) — do not implement a fix. State your hypothesis as the handoff summary and cite the evidence in outputs/openLoops. Authored pending GM G5 — replace with the dedicated hypothesis-investigator prose."
+                },
+                new TeamTaskTemplate("investigator-b-lane", "investigator-b", "Investigate hypothesis B")
+                {
+                    Prompt = "Investigate a DIFFERENT candidate root cause than any sibling investigator lane — do not repeat the same hypothesis. Gather evidence; do not implement a fix. State your hypothesis as the handoff summary and cite the evidence in outputs/openLoops. Authored pending GM G5 — replace with the dedicated hypothesis-investigator prose."
+                }
+            ],
+            JoinPolicy = TeamJoinPolicy.AllDone,
+            SynthesizerRole = "debug-lead",
+            RequireEvidenceCitingArbitration = true
+        }
     };
 
     private static readonly Lazy<IReadOnlyList<TeamDefinition>> BuiltIn = new(LoadEmbeddedDefinitions);

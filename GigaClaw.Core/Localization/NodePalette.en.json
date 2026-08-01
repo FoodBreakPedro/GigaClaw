@@ -54,5 +54,7 @@
   "PalActHttpRequest": "HTTP request",
   "PalActHttpRequestHint": "Calls a webhook or API and captures the response for later actions in the chain",
   "PalActStartTeamRun": "Start team run",
-  "PalActStartTeamRunHint": "Fans a team definition out into sub-tickets under the firing ticket, wired with dependency edges"
+  "PalActStartTeamRunHint": "Fans a team definition out into sub-tickets under the firing ticket, wired with dependency edges",
+  "PalActParallelRunAgents": "Parallel branches",
+  "PalActParallelRunAgentsHint": "Runs agents in parallel on the firing ticket with a join policy, a concurrency cap and an optional synthesizer"
 }

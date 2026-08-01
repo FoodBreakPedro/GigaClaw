@@ -19,19 +19,27 @@ internal sealed class ProjectRuntimeManager
     private readonly ITriggerStateStore _triggerState;
     private readonly ColumnService _columns;
     private readonly ILogger _logger;
+    private readonly GitHubTriggerServices? _github;
 
     internal sealed record UrgentEntry(string Slug, Automation Automation, ITrigger Trigger, TriggerFiring Firing);
 
+    /// <param name="github">
+    /// C7: the GitHub triggers' dependencies. Optional — a host that never registered the GitHub
+    /// services builds every other trigger unchanged, and a GitHub trigger declared without them
+    /// degrades to a no-op rather than taking down the project's whole config load.
+    /// </param>
     public ProjectRuntimeManager(
         AutomationStore store,
         ITriggerStateStore triggerState,
         ProjectService projects,
-        ILogger logger)
+        ILogger logger,
+        GitHubTriggerServices? github = null)
     {
         _store = store;
         _triggerState = triggerState;
         _columns = new ColumnService(projects);
         _logger = logger;
+        _github = github;
     }
 
     public ChannelReader<UrgentEntry> UrgentReader => _urgentChannel.Reader;
@@ -56,11 +64,18 @@ internal sealed class ProjectRuntimeManager
             var (config, workspace, _) = await _store.LoadAsync(slug);
             rt.Workspace = workspace;
             rt.Config = config;
+            rt.Workflow = _store.GetCachedWorkflow(slug);
             rt.Triggers = await BuildTriggersAsync(slug, config);
-            _logger.LogInformation("Automations loaded for {Slug}: {Count} entries", slug, config.Automations.Count);
+            _logger.LogInformation(
+                "Automations loaded for {Slug}: {Count} entries, workflow graph: {Workflow}",
+                slug, config.Automations.Count,
+                rt.Workflow is null ? "none" : $"{rt.Workflow.States.Count} state(s)");
         }
         catch (Exception ex)
         {
+            // Same report for a malformed automations.json and an invalid workflow.json: the reload
+            // fails as a whole and the project keeps whatever runtime it already had. A config that
+            // cannot be trusted is never half-applied.
             _logger.LogWarning(ex, "Failed to reload automations for {Slug}", slug);
         }
     }
@@ -142,12 +157,35 @@ internal sealed class ProjectRuntimeManager
                     BoardIdleTriggerSpec t          => new BoardIdleTrigger(t),
                     AgentInactivityTriggerSpec t    => new AgentInactivityTrigger(t),
                     TicketCommentAddedTriggerSpec t => new TicketCommentAddedTrigger(t),
+                    GitHubPrCommentTriggerSpec t    => BuildGitHubTrigger(a.Id, t),
+                    GitHubCheckStatusTriggerSpec t  => BuildGitHubTrigger(a.Id, t),
                     _                              => new NullTrigger(),
                 };
             }
             map[a.Id] = trigger;
         }
         return map;
+    }
+
+    /// <summary>
+    /// A GitHub trigger with no GitHub services wired is a no-op, not a failure: the project's
+    /// other automations must still load. The warning is the record that this one will never fire.
+    /// </summary>
+    private ITrigger BuildGitHubTrigger(string automationId, TriggerSpec spec)
+    {
+        if (_github is null)
+        {
+            _logger.LogWarning(
+                "Automation {Id} declares a {Type} trigger, but the GitHub services are not registered — it will never fire",
+                automationId, spec.UiTypeKey);
+            return new NullTrigger();
+        }
+        return spec switch
+        {
+            GitHubPrCommentTriggerSpec s   => new GitHubPrCommentTrigger(s, _github),
+            GitHubCheckStatusTriggerSpec s => new GitHubCheckStatusTrigger(s, _github),
+            _                              => new NullTrigger(),
+        };
     }
 
     private async Task<ITrigger> BuildTicketInColumnTriggerAsync(

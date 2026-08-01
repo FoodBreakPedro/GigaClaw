@@ -28,6 +28,8 @@ public sealed class Automation
 [JsonDerivedType(typeof(BoardIdleTriggerSpec), "boardIdle")]
 [JsonDerivedType(typeof(AgentInactivityTriggerSpec), "agentInactivity")]
 [JsonDerivedType(typeof(TicketCommentAddedTriggerSpec), "ticketCommentAdded")]
+[JsonDerivedType(typeof(GitHubPrCommentTriggerSpec), "githubPrComment")]
+[JsonDerivedType(typeof(GitHubCheckStatusTriggerSpec), "githubCheckStatus")]
 public abstract class TriggerSpec
 {
     public abstract string UiTypeKey { get; }
@@ -114,6 +116,39 @@ public sealed class TicketCommentAddedTriggerSpec : TriggerSpec
     public override string UiTypeKey => "ticketCommentAdded";
     public int PollSeconds { get; set; } = 30;
     public List<string> Authors { get; set; } = new();
+}
+
+/// <summary>
+/// C7 part 2 (see <c>doc/github-surface.md</c>). Fires when a pull-request review comment from a
+/// configured owner login arrives for a ticket's PR. Inert unless the project has a GitHub
+/// configuration, a token, and at least one owner login — this trigger cannot enable itself.
+/// </summary>
+public sealed class GitHubPrCommentTriggerSpec : TriggerSpec
+{
+    public override string UiTypeKey => "githubPrComment";
+    public int PollSeconds { get; set; } = 120;
+    /// <summary>
+    /// Optional narrowing of the project's owner logins. An automation lives in the workspace and
+    /// is therefore agent-editable, so this list can only intersect the trusted one in settings —
+    /// never add to it.
+    /// </summary>
+    public List<string> OwnerLogins { get; set; } = new();
+}
+
+/// <summary>
+/// C7 part 3 (see <c>doc/github-surface.md</c>). The <c>gitCommit</c> family's CI sibling: fires
+/// when a GitHub check run reaches one of <see cref="Conclusions"/> for the commit under watch.
+/// Like <see cref="GitCommitTriggerSpec"/> it is about a commit, so by default it watches the
+/// workspace's own HEAD.
+/// </summary>
+public sealed class GitHubCheckStatusTriggerSpec : TriggerSpec
+{
+    public override string UiTypeKey => "githubCheckStatus";
+    public int PollSeconds { get; set; } = 120;
+    /// <summary>Conclusions worth firing on. Empty means every concluded check run.</summary>
+    public List<string> Conclusions { get; set; } = new() { "failure" };
+    /// <summary>Branch or SHA to watch. Null (the default) means the workspace's own HEAD.</summary>
+    public string? Ref { get; set; }
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
@@ -313,6 +348,7 @@ public sealed class TicketAgeConditionSpec : ConditionSpec
 [JsonDerivedType(typeof(CreateTicketActionSpec), "createTicket")]
 [JsonDerivedType(typeof(HttpRequestActionSpec), "httpRequest")]
 [JsonDerivedType(typeof(StartTeamRunActionSpec), "startTeamRun")]
+[JsonDerivedType(typeof(ParallelRunAgentsActionSpec), "parallelRunAgents")]
 [JsonDerivedType(typeof(EnqueueMergeActionSpec), "enqueueMerge")]
 public abstract class ActionSpec
 {
@@ -449,6 +485,98 @@ public sealed class StartTeamRunActionSpec : ActionSpec
     /// <summary>Slug of the team definition to run. A project-scoped definition wins over the
     /// built-in team of the same slug.</summary>
     public required string Team { get; set; }
+}
+
+/// <summary>
+/// One branch of a <see cref="ParallelRunAgentsActionSpec"/>: an agent and what to ask it.
+/// </summary>
+public sealed class ParallelBranchSpec
+{
+    /// <summary>Agent slug the branch is dispatched to. Must be a member of the project.</summary>
+    public string Agent { get; set; } = "";
+
+    /// <summary>
+    /// Prompt for the branch, which becomes its sub-ticket's description. Empty means "the agent
+    /// reads the parent ticket", the same as a task template with no prompt.
+    /// </summary>
+    public string? Prompt { get; set; }
+
+    /// <summary>Sub-ticket title. Defaults to the agent slug when empty.</summary>
+    public string? Title { get; set; }
+
+    /// <summary>
+    /// Stable identity of the branch inside the run. Defaults to the agent slug, which is enough
+    /// until the same agent runs two branches — then name them, or the second one collides.
+    /// </summary>
+    public string? Key { get; set; }
+}
+
+/// <summary>
+/// Fans the firing ticket out into declared parallel branches, joins them by policy, and optionally
+/// hands the result to a synthesizer. The engine-level generalization of <c>startTeamRun</c>: the
+/// branches are written inline in the automation instead of being looked up as a stored
+/// <c>TeamDefinition</c>.
+/// <para>
+/// It is <b>implemented as</b> a team run. The action materializes an ad-hoc
+/// <c>TeamDefinition</c> — one role and one task template per branch — and starts it through
+/// <c>TeamRunService</c>. A run already carries its own definition snapshot for restart-safe resume,
+/// so an inline definition needs no stored row and resumes on the same terms as a named team. Every
+/// C4 guarantee therefore applies unchanged: fan-out to sub-tickets, join policy, cancellation
+/// propagation, synthesize-with-gaps, and the restart reconcile.
+/// </para>
+/// <para>
+/// Branches are <b>not</b> dispatched by this action. Each one is a sub-ticket in the dispatch
+/// column, started by the ordinary per-agent <c>ticketInColumn</c> automation — which is what makes
+/// a branch queue behind <c>RunConcurrencyGate</c> and take its file leases like any other run.
+/// <see cref="MaxConcurrency"/> is a second, per-run ceiling on top of that, not a replacement.
+/// </para>
+/// Idempotent per (ticket, <see cref="RunSlug"/>): firing again while the run is open re-attaches
+/// instead of fanning out a second set of branches.
+/// </summary>
+public sealed class ParallelRunAgentsActionSpec : ActionSpec
+{
+    public override string UiTypeKey => "parallelRunAgents";
+
+    /// <summary>The branches to run in parallel. An empty list is a no-op with a receipt.</summary>
+    public List<ParallelBranchSpec> Branches { get; set; } = new();
+
+    /// <summary>
+    /// Most branches allowed in the dispatch column at once. <c>0</c> (default) is unlimited and
+    /// leaves the host-wide <c>RunConcurrencyGate</c> as the only ceiling.
+    /// </summary>
+    public int MaxConcurrency { get; set; }
+
+    /// <summary>
+    /// <c>allDone</c> (default), <c>quorum</c> or <c>firstFailure</c>. An unrecognized value is
+    /// refused when the action runs rather than silently read as all-done.
+    /// </summary>
+    public string Join { get; set; } = "allDone";
+
+    /// <summary>Successful branches <c>quorum</c> waits for. Ignored by the other modes.</summary>
+    public int Quorum { get; set; }
+
+    /// <summary>
+    /// <c>synthesize</c> (default) hands the synthesizer what reported plus a named list of the
+    /// gaps; <c>failFast</c> skips synthesis and closes the run failed. Both leave a receipt on the
+    /// parent ticket. Only meaningful together with <see cref="Synthesizer"/>.
+    /// </summary>
+    public string OnPartialFailure { get; set; } = "synthesize";
+
+    /// <summary>
+    /// Agent that synthesizes the join result. Null means the run finishes at the join with no
+    /// synthesis step.
+    /// </summary>
+    public string? Synthesizer { get; set; }
+
+    /// <summary>
+    /// Slug the ad-hoc run is recorded under, and the key idempotency is measured on. Defaults to
+    /// <c>parallel-run</c>; give two parallel actions on the same ticket different slugs or the
+    /// second will re-attach to the first one's run instead of starting its own.
+    /// </summary>
+    public string RunSlug { get; set; } = "parallel-run";
+
+    /// <summary>Human-readable name of the ad-hoc team, used in receipts and the synthesis brief.</summary>
+    public string? Name { get; set; }
 }
 
 /// <summary>

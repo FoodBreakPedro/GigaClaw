@@ -615,6 +615,8 @@ else
         "subTicketStatus" => new SubTicketStatusTriggerSpec { PollSeconds = 30 },
         "boardIdle" => new BoardIdleTriggerSpec { PollSeconds = 60 },
         "agentInactivity" => new AgentInactivityTriggerSpec { PollSeconds = 60, MinutesIdle = 45 },
+        "githubPrComment" => new GitHubPrCommentTriggerSpec { PollSeconds = 120 },
+        "githubCheckStatus" => new GitHubCheckStatusTriggerSpec { PollSeconds = 120 },
         _ => new IntervalTriggerSpec { Cron = "0 9 * * *" },
     };
 
@@ -650,6 +652,10 @@ else
         "createTicket" => new CreateTicketActionSpec(),
         "httpRequest" => new HttpRequestActionSpec(),
         "startTeamRun" => new StartTeamRunActionSpec { Team = "" },
+        "parallelRunAgents" => new ParallelRunAgentsActionSpec
+        {
+            Branches = { new ParallelBranchSpec { Agent = _skills.FirstOrDefault() ?? "programmer" } }
+        },
         _ => throw new NotSupportedException($"Unknown action type key '{type}'. Register it in Automations.razor BuildAction."),
     };
 
@@ -710,6 +716,8 @@ else
         BoardIdleTriggerSpec => L["TrigBoardIdle"],
         AgentInactivityTriggerSpec s => string.Format(L["TrigAgentInactivity"], s.MinutesIdle),
         TicketCommentAddedTriggerSpec s => string.Format(L["TrigCommentAdded"], string.Join(", ", s.Authors)),
+        GitHubPrCommentTriggerSpec s => string.Format(L["TrigGitHubPrComment"], s.PollSeconds),
+        GitHubCheckStatusTriggerSpec s => string.Format(L["TrigGitHubCheckStatus"], s.PollSeconds),
         _ => throw new NotSupportedException($"No UI description for trigger type {t.GetType().Name}. Register it in Automations.razor DescribeTrigger."),
     };
 
@@ -744,6 +752,11 @@ else
         CreateTicketActionSpec s => s.Title,
         ExecutePowerShellActionSpec => L["ActionExecutePowerShell"],
         HttpRequestActionSpec s => string.IsNullOrWhiteSpace(s.Url) ? L["ActionHttpRequest"] : $"{s.Method} {s.Url}",
+        StartTeamRunActionSpec s => string.IsNullOrWhiteSpace(s.Team) ? L["ActionStartTeamRun"] : s.Team,
+        ParallelRunAgentsActionSpec s => s.Branches.Count == 0
+            ? L["ActionParallelRunAgents"]
+            : string.Join(" ∥ ", s.Branches.Select(b => b.Key ?? b.Agent)),
+        EnqueueMergeActionSpec => L["ActionEnqueueMerge"],
         _ => throw new NotSupportedException($"No UI description for action type {a.GetType().Name}. Register it in Automations.razor DescribeAction."),
     };
 }

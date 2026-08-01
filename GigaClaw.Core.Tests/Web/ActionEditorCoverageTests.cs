@@ -53,6 +53,42 @@ public class ActionEditorCoverageTests
         }
     }
 
+    /// <summary>
+    /// <c>DescribeAction</c> is the other, quieter way an unmapped action takes the page down: it
+    /// runs for every action of every automation just to render the list, so a missing arm makes
+    /// the Automations page unopenable rather than merely un-editable. C5 found <c>startTeamRun</c>
+    /// and <c>enqueueMerge</c> already in that state; this is why they cannot recur.
+    /// </summary>
+    [Fact]
+    public void Every_action_type_can_be_described_on_the_automations_page()
+    {
+        var page = File.ReadAllText(Path.Combine(WebComponentsDir, "Pages", "Automations.razor"));
+        var describe = Section(page, "private string DescribeAction");
+
+        foreach (var type in SpecTypes)
+        {
+            Assert.True(
+                describe.Contains(type.Name, StringComparison.Ordinal),
+                $"Automations.razor DescribeAction has no arm for {type.Name}; opening the page would throw.");
+        }
+    }
+
+    private static readonly Type[] SpecTypes = typeof(ActionSpec)
+        .GetCustomAttributes(typeof(JsonDerivedTypeAttribute), inherit: false)
+        .Cast<JsonDerivedTypeAttribute>()
+        .Select(a => a.DerivedType)
+        .ToArray();
+
+    /// <summary>The switch body following a member declaration, up to its closing <c>};</c>.</summary>
+    private static string Section(string source, string declaration)
+    {
+        var start = source.IndexOf(declaration, StringComparison.Ordinal);
+        Assert.True(start >= 0, $"'{declaration}' is gone from Automations.razor.");
+        var end = source.IndexOf("\n    };", start, StringComparison.Ordinal);
+        Assert.True(end > start, $"Could not find the end of '{declaration}'.");
+        return source[start..end];
+    }
+
     private static string WebComponentsDir
     {
         get

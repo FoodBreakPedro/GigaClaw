@@ -62,7 +62,8 @@ public sealed class TeamSeedStoreTests
 
         var expected = new AgentTeamService().GetDefinitions().Select(definition => definition.Slug);
         Assert.All(expected, slug => Assert.Contains(listed, definition => definition.Slug == slug));
-        Assert.Equal(9, listed.Count);
+        // C8 added parallel-review and hypothesis-debug to the roster: 11 built-ins now seed.
+        Assert.Equal(11, listed.Count);
 
         // Seat-for-seat identical to the roster, so nothing about filtering or resolution changed.
         var seeded = listed.Single(definition => definition.Slug == AgentTeamService.SoftwareEngineeringSlug);
@@ -81,9 +82,9 @@ public sealed class TeamSeedStoreTests
         var first = await sut.Teams.SeedDefinitionsAsync(sut.Slug);
         var second = await sut.Teams.SeedDefinitionsAsync(sut.Slug);
 
-        Assert.Equal(9, first.Count);
+        Assert.Equal(11, first.Count);
         Assert.Empty(second);
-        Assert.Equal(9, (await sut.Teams.ListDefinitionsAsync(sut.Slug)).Count);
+        Assert.Equal(11, (await sut.Teams.ListDefinitionsAsync(sut.Slug)).Count);
     }
 
     [Fact]
@@ -112,12 +113,12 @@ public sealed class TeamSeedStoreTests
 
         var touched = await sut.Teams.SeedDefinitionsAsync(sut.Slug);
 
-        // Eight of the nine land; software-engineering is the owner's and is not one of them.
-        Assert.Equal(8, touched.Count);
+        // Ten of the eleven built-ins land; software-engineering is the owner's and is not one of them.
+        Assert.Equal(10, touched.Count);
         Assert.DoesNotContain(AgentTeamService.SoftwareEngineeringSlug, touched);
 
         await using var migrated = sut.Projects.GetProjectDb(sut.Slug);
-        Assert.Equal(10, await migrated.TeamDefinitions.CountAsync());
+        Assert.Equal(12, await migrated.TeamDefinitions.CountAsync());
         Assert.Equal(2, await migrated.TeamDefinitions.CountAsync(row => row.SeedHash == null));
 
         // Every pre-existing row survived byte-for-byte.

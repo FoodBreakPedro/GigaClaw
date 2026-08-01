@@ -54,5 +54,7 @@
   "PalActHttpRequest": "Requête HTTP",
   "PalActHttpRequestHint": "Appelle un webhook ou une API et capture la réponse pour les actions suivantes de la chaîne",
   "PalActStartTeamRun": "Démarrer une équipe",
-  "PalActStartTeamRunHint": "Déploie une définition d\u2019équipe en sous-tickets sous le ticket déclencheur, reliés par des dépendances"
+  "PalActStartTeamRunHint": "Déploie une définition d\u2019équipe en sous-tickets sous le ticket déclencheur, reliés par des dépendances",
+  "PalActParallelRunAgents": "Branches parallèles",
+  "PalActParallelRunAgentsHint": "Exécute des agents en parallèle sur le ticket déclencheur, avec politique de jonction, plafond de concurrence et synthétiseur optionnel"
 }
