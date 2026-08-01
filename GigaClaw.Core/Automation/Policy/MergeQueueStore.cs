@@ -173,6 +173,29 @@ public sealed class MergeQueueStore
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
+    /// <summary>
+    /// Returns a claimed entry to <see cref="MergeQueueState.Held"/> with the reason it is waiting —
+    /// the SP-3 F1 hold, as distinct from <see cref="CompleteAsync"/>'s terminal bounce. A held entry
+    /// is picked up again by the very next <see cref="ClaimNextAsync"/> on an approved project (the
+    /// same held→queued promotion the owner-approval hot-reload path uses), so a hold is a retry, not
+    /// a park: nothing has to re-enqueue it and no timer has to remember it.
+    /// <para>
+    /// <paramref name="reason"/> is durable and is the dedup key for the hold's receipt — an
+    /// identical reason on a later pass means "still the same hold", which is why the receipt is
+    /// written once per reason rather than once per pass, and why that survives a restart for free.
+    /// </para>
+    /// </summary>
+    public async Task HoldAsync(string slug, long id, string reason, DateTime now, CancellationToken ct = default)
+    {
+        await using var conn = await OpenReadyAsync(slug, ct);
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE merge_queue SET State = 'held', Reason = @reason, UpdatedAtUtc = @now WHERE Id = @id";
+        cmd.Parameters.AddWithValue("@reason", reason);
+        cmd.Parameters.AddWithValue("@now", Iso(now));
+        cmd.Parameters.AddWithValue("@id", id);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
     /// <summary>All entries for a project, oldest first — for tests and any future queue UI.</summary>
     public async Task<IReadOnlyList<MergeQueueEntry>> ListAsync(string slug, CancellationToken ct = default)
     {
@@ -358,6 +381,48 @@ internal static class MergeReceipts
         rule = "merge-approval",
         reason = "No trusted owner approval for this project's merge queue — the entry is held. " +
                  "Approve the project in the owner's settings to let it merge.",
+    });
+
+    /// <summary>
+    /// SP-3 F1: the merge is held because a run other than the branch's author holds a live R4 lease
+    /// over paths this merge would rewrite. Same <c>merge-held/v1</c> family as the approval hold —
+    /// a hold is a hold, whatever gate produced it — distinguished by <c>rule</c>, and naming the
+    /// lease precisely enough that an operator can see whose run to wait for.
+    /// </summary>
+    public static string HeldForFileLease(
+        int ticketId, string branch, FileLease conflict, IReadOnlyList<string> overlappingFiles) =>
+        JsonSerializer.Serialize(new
+        {
+            schema = "merge-held/v1",
+            ticketId,
+            branch,
+            rule = "file-lease-interlock",
+            conflictingLeaseId = conflict.LeaseId,
+            conflictingRunId = conflict.RunId,
+            conflictingAgent = conflict.Agent,
+            conflictingTicketId = conflict.TicketId,
+            conflictingScope = conflict.Scope,
+            overlappingFiles,
+            reason = $"This merge would rewrite {overlappingFiles.Count} file(s) covered by an active " +
+                     $"file lease held by '{conflict.Agent}' (run {conflict.RunId}) on ticket #{conflict.TicketId}. " +
+                     "The merge is held and retried on later polls — it lands once that lease is released or expires.",
+        });
+
+    /// <summary>
+    /// SP-3 F1, fail-closed: git could not tell the queue which files the branch would rewrite, so
+    /// the interlock cannot prove the merge is clear of every live lease and holds instead of
+    /// guessing. Unlike a bounce this is retried — a transient git fault must not cost the candidate
+    /// its place in the queue.
+    /// </summary>
+    public static string HeldForUnknownDiff(int ticketId, string branch, string? error) => JsonSerializer.Serialize(new
+    {
+        schema = "merge-held/v1",
+        ticketId,
+        branch,
+        rule = "file-lease-interlock",
+        reason = "The queue could not compute which files this branch would rewrite, so it cannot rule out " +
+                 "an overlap with an active file lease. The merge is held and retried on later polls.",
+        error,
     });
 
     public static string Bounced(

@@ -19,12 +19,22 @@ namespace GigaClaw.Core.Services;
 /// wide. The queue is the serializer (design requirement 6): a second candidate for the same
 /// project never starts until the first reaches <c>Merged</c> or <c>Bounced</c>.
 /// </para>
+/// <para>
+/// <b>The R4 interlock (SP-3 F1).</b> Before it touches either checkout, a claimed candidate is
+/// checked against the project's live file leases: if any run other than the branch's own author
+/// holds a lease covering a file this merge would rewrite, the entry goes back to <c>Held</c> with a
+/// <c>merge-held/v1</c> receipt and is retried on later polls. A lease <b>holds</b> a merge; it
+/// never bounces it and is never stolen to make room. Because the queue is FIFO and serialized, a
+/// held head-of-line candidate does delay the candidates behind it — that is the queue working as
+/// designed (one merge at a time, in order), not a separate stall to work around.
+/// </para>
 /// </summary>
 public sealed class MergeQueueProcessor : BackgroundService
 {
     private readonly ProjectService _projects;
     private readonly TicketService _tickets;
     private readonly MergeQueueStore _queue;
+    private readonly FileLeaseStore _leases;
     private readonly MergeApprovalGate _approval;
     private readonly ILogger<MergeQueueProcessor> _logger;
 
@@ -37,12 +47,14 @@ public sealed class MergeQueueProcessor : BackgroundService
         ProjectService projects,
         TicketService tickets,
         MergeQueueStore queue,
+        FileLeaseStore leases,
         AppSettingsService appSettings,
         ILogger<MergeQueueProcessor> logger)
     {
         _projects = projects;
         _tickets = tickets;
         _queue = queue;
+        _leases = leases;
         // U17/R3/R6 precedent: the trust anchor is read fresh from the owner's settings.json on
         // every call (see AppSettingsService.GetApprovedMergeProjects), never cached at startup, so
         // an owner flipping approval takes effect on the very next poll.
@@ -80,6 +92,8 @@ public sealed class MergeQueueProcessor : BackgroundService
     /// into the workspace. Returns the claimed entry (whatever its final state) or null when the
     /// project's queue had nothing claimable — an empty queue and a queue that is entirely
     /// <c>Held</c> for an unapproved project both return null, which is exactly "nothing merges".
+    /// A candidate held behind a live file lease is returned in state <c>Held</c> — it was claimed
+    /// and examined, and it will be claimed again on the next pass.
     /// </summary>
     internal async Task<MergeQueueEntry?> ProcessProjectAsync(string slug, CancellationToken ct)
     {
@@ -101,6 +115,12 @@ public sealed class MergeQueueProcessor : BackgroundService
             return await BounceAsync(slug, claimed, "no-worktree",
                 $"Ticket #{claimed.TicketId} has no worktree checkout at the recorded path — nothing to rebase or merge.");
         }
+
+        // SP-3 F1: the lease interlock runs FIRST, before the rebase — a held merge must leave both
+        // the worktree and the workspace exactly as it found them, and a rebase already rewrites the
+        // candidate's checkout.
+        var interlocked = await CheckFileLeaseInterlockAsync(slug, claimed, workspace, ct);
+        if (interlocked is not null) return interlocked;
 
         var rebase = await MergeEngine.RebaseOntoWorkspaceHeadAsync(workspace, worktreePath, ct);
         if (rebase.Outcome == MergeRebaseOutcome.Conflict)
@@ -145,6 +165,85 @@ public sealed class MergeQueueProcessor : BackgroundService
         _logger.LogInformation(
             "MergeQueueProcessor: merged {Branch} for ticket #{Id} in project {Slug}", claimed.Branch, claimed.TicketId, slug);
         return claimed with { State = MergeQueueState.Merged, Reason = null, UpdatedAtUtc = mergedAt };
+    }
+
+    /// <summary>
+    /// SP-3 F1. Returns the held entry when a live lease covers what this merge would rewrite (or
+    /// when the diff is unknowable, which is the same answer for a gate that must fail closed), or
+    /// null when the merge is clear to proceed.
+    /// <para>
+    /// A fault reading the lease table is <b>not</b> treated as "no leases": unlike
+    /// <c>ActionExecutor.TryAcquireDispatchLeaseAsync</c>, which fails open because halting every
+    /// dispatch in a project over a hiccup in a serialization aid is worse than the race it
+    /// prevents, the cost here is one delayed merge on a queue that retries by construction — so
+    /// this side of the interlock fails closed, and both directions of the asymmetry are deliberate.
+    /// </para>
+    /// </summary>
+    private async Task<MergeQueueEntry?> CheckFileLeaseInterlockAsync(
+        string slug, MergeQueueEntry claimed, string workspace, CancellationToken ct)
+    {
+        var changed = await MergeEngine.ChangedFilesAgainstWorkspaceHeadAsync(workspace, claimed.Branch, ct);
+        if (!changed.Computed)
+        {
+            return await HoldAsync(
+                slug, claimed,
+                reason: "file-lease-interlock: the branch diff could not be computed",
+                receipt: MergeReceipts.HeldForUnknownDiff(claimed.TicketId, claimed.Branch, changed.Error));
+        }
+
+        IReadOnlyList<FileLease> active;
+        try
+        {
+            active = await _leases.ListActiveAsync(slug, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "MergeQueueProcessor: could not read file leases for project {Slug} — holding", slug);
+            return await HoldAsync(
+                slug, claimed,
+                reason: "file-lease-interlock: the lease table could not be read",
+                receipt: MergeReceipts.HeldForUnknownDiff(claimed.TicketId, claimed.Branch, ex.Message));
+        }
+
+        var blocking = MergeLeaseInterlock.FindBlocking(changed.Files, active, claimed.TicketId, DateTime.UtcNow);
+        if (blocking is null) return null;
+
+        return await HoldAsync(
+            slug, claimed,
+            // Keyed on the lease, not on the file list: the same lease still holding on the next
+            // pass is the same hold and writes no second receipt, while a different lease taking
+            // over the block is new information and gets one of its own.
+            reason: $"file-lease-interlock: lease {blocking.Lease.LeaseId} held by '{blocking.Lease.Agent}' " +
+                    $"(run {blocking.Lease.RunId}) on ticket #{blocking.Lease.TicketId}",
+            receipt: MergeReceipts.HeldForFileLease(
+                claimed.TicketId, claimed.Branch, blocking.Lease, blocking.Files));
+    }
+
+    /// <summary>
+    /// Puts a claimed entry back to <c>Held</c> and writes its receipt <b>once per hold reason</b> —
+    /// the same first-hold-only discipline <c>enqueueMerge</c> applies to the approval hold
+    /// (ActionExecutor.ExecuteEnqueueMergeActionAsync). The previous reason is read off the claimed
+    /// entry, which came from SQLite, so this survives a restart without any in-memory bookkeeping:
+    /// a process that comes back to a still-blocked merge re-holds it silently.
+    /// </summary>
+    private async Task<MergeQueueEntry> HoldAsync(
+        string slug, MergeQueueEntry claimed, string reason, string receipt)
+    {
+        var repeat = string.Equals(claimed.Reason, reason, StringComparison.Ordinal);
+        var heldAt = DateTime.UtcNow;
+        await _queue.HoldAsync(slug, claimed.Id, reason, heldAt, CancellationToken.None);
+
+        if (!repeat)
+        {
+            try { await _tickets.AddCommentAsync(slug, claimed.TicketId, receipt, "automation"); }
+            catch (Exception ex) { _logger.LogWarning(ex, "MergeQueueProcessor: failed to write merge-held receipt for ticket #{Id}", claimed.TicketId); }
+        }
+
+        _logger.LogInformation(
+            "MergeQueueProcessor: held ticket #{Id} branch {Branch} in project {Slug}: {Reason}",
+            claimed.TicketId, claimed.Branch, slug, reason);
+
+        return claimed with { State = MergeQueueState.Held, Reason = reason, UpdatedAtUtc = heldAt };
     }
 
     private async Task<MergeQueueEntry> BounceAsync(

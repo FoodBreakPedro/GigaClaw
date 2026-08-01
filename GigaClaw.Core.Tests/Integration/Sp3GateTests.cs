@@ -432,26 +432,21 @@ public sealed class Sp3GateTests
     }
 
     /// <summary>
-    /// <b>Characterization of a known uninterlocked boundary — this asserts what the system does
-    /// today, not what it ought to do.</b>
+    /// <b>The SP-3 F1 interlock</b> (replaces the characterization test that recorded its absence).
+    /// A merge whose diff falls inside a live lease held by <i>another</i> run is <b>held</b>, not
+    /// bounced: nothing is written to the workspace, the lease is never stolen, a single
+    /// <c>merge-held/v1</c> receipt (<c>rule: "file-lease-interlock"</c>) names the holder, and later
+    /// polls re-hold it silently rather than re-receipting. When the holding run finishes and its
+    /// lease is released, the very same candidate lands — a hold is a delay, not a refusal.
     /// <para>
-    /// R4's file lease and R6's merge queue do not consult each other. <see cref="MergeQueueProcessor"/>
-    /// takes no <see cref="FileLeaseStore"/> (see its constructor), so a merge lands into the main
-    /// workspace checkout while a run holds an active lease over the very globs the merge rewrites —
-    /// silently, with no receipt on either side. That is harmless when every agent runs in its own
-    /// R5 worktree and merely surprising when one does not, because a dispatch without
-    /// <c>isolation: "worktree"</c> executes <i>in</i> the workspace the merge is rewriting.
-    /// </para>
-    /// <para>
-    /// It is recorded here rather than fixed because interlocking them is an owner decision, not a
-    /// bug fix — should a merge wait behind a lease, or bounce with a receipt? — and the answer is
-    /// coupled to both open SP-3 decisions (doc/roadmap/SP3-EVIDENCE.md). If this test ever starts
-    /// failing because a merge is refused or deferred, that is the interlock landing, and this test
-    /// should be replaced by the assertion of whichever semantics were chosen.
+    /// The lease here is taken on the ordinary dispatch path by a genuinely in-flight run parked on
+    /// <see cref="RunConcurrencyGate"/> — the exact configuration the finding was about, since a
+    /// dispatch <i>without</i> <c>isolation: "worktree"</c> executes in the same checkout the merge
+    /// rewrites.
     /// </para>
     /// </summary>
     [Fact]
-    public async Task Characterization_the_merge_queue_does_not_consult_file_leases_and_lands_under_a_held_one()
+    public async Task A_live_overlapping_lease_holds_the_merge_until_it_is_released_and_receipts_the_hold_once()
     {
         using var h = await Sp3Harness.CreateAsync("sp3-merge-vs-lease", AllContend);
         h.SetMergeApproval(true);
@@ -461,11 +456,12 @@ public sealed class Sp3GateTests
         await Sp3Harness.CommitAsync(worktree, Path.Combine("src", "app.txt"), "landed\n", "t1-change");
         await h.FireEnqueueMergeAsync(mergeTicket);
         Assert.Equal(MergeQueueState.Queued, Assert.Single(await h.Queue.ListAsync(h.Slug)).State);
+        await h.LeasesQuiesceAsync();
 
         // A second run genuinely in flight, in place (no worktree isolation), holding a lease over
         // src/** — the scope the queued merge is about to rewrite in that same checkout.
         var inPlace = await h.Tickets.CreateTicketAsync(h.Slug, "Runs in the workspace", status: "Doing");
-        using var pinned = await h.Gate.AcquireAsync(isChat: false, agentName: "someone-else", CancellationToken.None);
+        var pinned = await h.Gate.AcquireAsync(isChat: false, agentName: "someone-else", CancellationToken.None);
         await h.DispatchAsync(inPlace.Id, "programmer");
         Assert.True(
             await Sp3Harness.WaitUntilAsync(async () => (await h.Leases.ListActiveAsync(h.Slug)).Count == 1),
@@ -473,17 +469,197 @@ public sealed class Sp3GateTests
         var lease = Assert.Single(await h.Leases.ListActiveAsync(h.Slug));
         Assert.Equal(SrcGlob, Assert.Single(lease.Scope));
 
+        // The merge is held: nothing lands, and the live lease is neither stolen nor reaped.
+        var held = await h.Processor.ProcessProjectAsync(h.Slug, CancellationToken.None);
+        Assert.Equal(MergeQueueState.Held, held!.State);
+        Assert.Equal(mergeTicket, held.TicketId);
+        Assert.False(File.Exists(Path.Combine(h.Workspace, "src", "app.txt")));
+        Assert.Contains(await h.Leases.ListActiveAsync(h.Slug), active => active.LeaseId == lease.LeaseId);
+        Assert.DoesNotContain(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-completed/v1"));
+        Assert.DoesNotContain(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-bounced/v1"));
+
+        var receipt = Assert.Single(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-held/v1"));
+        using (var doc = JsonDocument.Parse(receipt))
+        {
+            var root = doc.RootElement;
+            Assert.Equal("merge-held/v1", root.GetProperty("schema").GetString());
+            Assert.Equal("file-lease-interlock", root.GetProperty("rule").GetString());
+            Assert.Equal(lease.LeaseId, root.GetProperty("conflictingLeaseId").GetString());
+            Assert.Equal(lease.RunId, root.GetProperty("conflictingRunId").GetString());
+            Assert.Equal(inPlace.Id, root.GetProperty("conflictingTicketId").GetInt32());
+            Assert.Contains(
+                "src/app.txt",
+                root.GetProperty("overlappingFiles").EnumerateArray().Select(e => e.GetString()));
+        }
+
+        // Retry while still blocked: held again, and the receipt is NOT written a second time —
+        // the same first-hold-only discipline R6 already applies to the approval hold.
+        var stillHeld = await h.Processor.ProcessProjectAsync(h.Slug, CancellationToken.None);
+        Assert.Equal(MergeQueueState.Held, stillHeld!.State);
+        Assert.Single(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-held/v1"));
+
+        // The holder finishes and releases; the very same candidate now lands.
+        pinned.Dispose();
+        Assert.True(
+            await Sp3Harness.WaitUntilAsync(async () => (await h.Leases.ListActiveAsync(h.Slug)).Count == 0),
+            "the in-place run never released its lease");
+
+        var merged = await h.Processor.ProcessProjectAsync(h.Slug, CancellationToken.None);
+        Assert.Equal(MergeQueueState.Merged, merged!.State);
+        Assert.Equal(mergeTicket, merged.TicketId);
+        Assert.Equal("landed\n", await File.ReadAllTextAsync(Path.Combine(h.Workspace, "src", "app.txt")));
+        Assert.Single(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-completed/v1"));
+        Assert.Single(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-held/v1"));
+    }
+
+    /// <summary>
+    /// The interlock is a real overlap test, not "any lease stops any merge": a live lease over
+    /// <c>src/**</c> leaves a merge that only rewrites <c>README.md</c> alone. Same conservative
+    /// glob-intersection R4 uses at acquire time, so the two gates cannot disagree about what
+    /// "overlapping" means.
+    /// </summary>
+    [Fact]
+    public async Task A_disjoint_live_lease_does_not_hold_the_merge()
+    {
+        using var h = await Sp3Harness.CreateAsync("sp3-merge-lease-disjoint", ProgrammerVsDocs);
+        h.SetMergeApproval(true);
+
+        var (mergeTicket, worktree) = await h.WorktreeDispatchAsync("Ticket one", "programmer");
+        await Sp3Harness.CommitAsync(worktree, "README.md", "hello\nfrom-t1\n", "t1-change");
+        await h.LeasesQuiesceAsync();
+
+        var other = await h.Tickets.CreateTicketAsync(h.Slug, "Owns src", status: "Doing");
+        var holder = await h.Leases.AcquireAsync(
+            h.Slug, other.Id, "run-src-holder", "code-janitor", [SrcGlob],
+            DateTime.UtcNow, TimeSpan.FromMinutes(90));
+        Assert.True(holder.IsAcquired);
+
+        await h.FireEnqueueMergeAsync(mergeTicket);
         var merged = await h.Processor.ProcessProjectAsync(h.Slug, CancellationToken.None);
 
-        // Today: the merge lands regardless. No lease was consulted, none was reaped, and neither
-        // ticket carries a receipt about the overlap.
+        Assert.Equal(MergeQueueState.Merged, merged!.State);
+        Assert.Equal("hello\nfrom-t1\n", await File.ReadAllTextAsync(Path.Combine(h.Workspace, "README.md")));
+        Assert.DoesNotContain(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-held/v1"));
+        // …and the disjoint lease is still exactly where it was: the merge did not reap it to pass.
+        Assert.Contains(await h.Leases.ListActiveAsync(h.Slug), l => l.RunId == "run-src-holder");
+    }
+
+    /// <summary>
+    /// A run holds a lease over precisely the files it wrote, so counting its own lease would
+    /// deadlock every merge behind its own author. The lease belonging to the ticket that produced
+    /// the branch is excluded; an overlapping lease on <i>any other</i> ticket still holds.
+    /// </summary>
+    [Fact]
+    public async Task The_producing_tickets_own_lease_does_not_hold_its_own_merge()
+    {
+        using var h = await Sp3Harness.CreateAsync("sp3-merge-own-lease", AllContend);
+        h.SetMergeApproval(true);
+
+        var (mergeTicket, worktree) = await h.WorktreeDispatchAsync("Ticket one", "producer");
+        Directory.CreateDirectory(Path.Combine(worktree, "src"));
+        await Sp3Harness.CommitAsync(worktree, Path.Combine("src", "app.txt"), "landed\n", "t1-change");
+        await h.LeasesQuiesceAsync();
+
+        // The branch's own author, still holding its lease over the very files it wrote.
+        var own = await h.Leases.AcquireAsync(
+            h.Slug, mergeTicket, "run-author", "producer", [SrcGlob],
+            DateTime.UtcNow, TimeSpan.FromMinutes(90));
+        Assert.True(own.IsAcquired);
+
+        await h.FireEnqueueMergeAsync(mergeTicket);
+        var merged = await h.Processor.ProcessProjectAsync(h.Slug, CancellationToken.None);
+
         Assert.Equal(MergeQueueState.Merged, merged!.State);
         Assert.Equal("landed\n", await File.ReadAllTextAsync(Path.Combine(h.Workspace, "src", "app.txt")));
-        Assert.Contains(await h.Leases.ListActiveAsync(h.Slug), active => active.LeaseId == lease.LeaseId);
-        Assert.DoesNotContain(await h.CommentsAsync(mergeTicket), c => c.Contains("file-lease-denial/v1"));
-        Assert.DoesNotContain(await h.CommentsAsync(inPlace.Id), c => c.Contains("merge-bounced/v1"));
+        Assert.DoesNotContain(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-held/v1"));
+    }
 
-        pinned.Dispose();
+    /// <summary>
+    /// The third way a hold clears (after release and after the holder completes): the lease simply
+    /// expires and is reaped. The reaper's <c>now</c> is injected, so "expired" is a fact about the
+    /// clock the sweep was handed rather than a sleep this test has to race.
+    /// </summary>
+    [Fact]
+    public async Task An_expired_and_reaped_lease_stops_holding_the_merge()
+    {
+        using var h = await Sp3Harness.CreateAsync("sp3-merge-lease-expiry", AllContend);
+        h.SetMergeApproval(true);
+
+        var (mergeTicket, worktree) = await h.WorktreeDispatchAsync("Ticket one", "producer");
+        Directory.CreateDirectory(Path.Combine(worktree, "src"));
+        await Sp3Harness.CommitAsync(worktree, Path.Combine("src", "app.txt"), "landed\n", "t1-change");
+        await h.LeasesQuiesceAsync();
+
+        // Acquired an hour ago for 90 minutes: live now, and 30 minutes from expiring.
+        var acquiredAt = DateTime.UtcNow.AddMinutes(-60);
+        var other = await h.Tickets.CreateTicketAsync(h.Slug, "Owns src", status: "Doing");
+        var holder = await h.Leases.AcquireAsync(
+            h.Slug, other.Id, "run-src-holder", "code-janitor", [SrcGlob],
+            acquiredAt, TimeSpan.FromMinutes(90));
+        Assert.True(holder.IsAcquired);
+
+        await h.FireEnqueueMergeAsync(mergeTicket);
+        Assert.Equal(
+            MergeQueueState.Held,
+            (await h.Processor.ProcessProjectAsync(h.Slug, CancellationToken.None))!.State);
+        Assert.False(File.Exists(Path.Combine(h.Workspace, "src", "app.txt")));
+
+        // A sweep past the TTL reaps it — and only then does the merge proceed.
+        var reaped = await h.Reaper.ReapAllAsync(acquiredAt.AddMinutes(120), CancellationToken.None);
+        Assert.Equal("run-src-holder", Assert.Single(reaped).RunId);
+
+        var merged = await h.Processor.ProcessProjectAsync(h.Slug, CancellationToken.None);
+        Assert.Equal(MergeQueueState.Merged, merged!.State);
+        Assert.Equal("landed\n", await File.ReadAllTextAsync(Path.Combine(h.Workspace, "src", "app.txt")));
+        Assert.Single(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-held/v1"));
+    }
+
+    /// <summary>
+    /// The hold is durable, not a fact this process remembers: a restart over the same data
+    /// directory re-reads the held entry and its hold reason from SQLite, re-holds it silently (no
+    /// second receipt, nothing landed prematurely), and lands it once the lease clears.
+    /// </summary>
+    [Fact]
+    public async Task A_restart_while_a_merge_is_held_resumes_held_without_a_second_receipt()
+    {
+        using var tmp = new TempDir();
+        int mergeTicket;
+
+        // ── first "process": the merge is claimed, held behind a live lease, and receipted once ──
+        {
+            var h = await Sp3Harness.AttachAsync(tmp, "sp3-merge-hold-restart", create: true, AllContend);
+            h.SetMergeApproval(true);
+            var (ticket, worktree) = await h.WorktreeDispatchAsync("Ticket one", "producer");
+            mergeTicket = ticket;
+            Directory.CreateDirectory(Path.Combine(worktree, "src"));
+            await Sp3Harness.CommitAsync(worktree, Path.Combine("src", "app.txt"), "landed\n", "t1-change");
+            await h.LeasesQuiesceAsync();
+
+            var other = await h.Tickets.CreateTicketAsync(h.Slug, "Owns src", status: "Doing");
+            Assert.True((await h.Leases.AcquireAsync(
+                h.Slug, other.Id, "run-src-holder", "code-janitor", [SrcGlob],
+                DateTime.UtcNow, TimeSpan.FromMinutes(90))).IsAcquired);
+
+            await h.FireEnqueueMergeAsync(mergeTicket);
+            Assert.Equal(
+                MergeQueueState.Held,
+                (await h.Processor.ProcessProjectAsync(h.Slug, CancellationToken.None))!.State);
+            Assert.Single(await h.CommentsAsync(mergeTicket), c => c.Contains("merge-held/v1"));
+        }
+
+        // ── restart: brand-new everything over the same directory ──────────────
+        using var resumed = await Sp3Harness.AttachAsync(tmp, "sp3-merge-hold-restart", create: false, AllContend);
+
+        var heldAgain = await resumed.Processor.ProcessProjectAsync(resumed.Slug, CancellationToken.None);
+        Assert.Equal(MergeQueueState.Held, heldAgain!.State);
+        Assert.False(File.Exists(Path.Combine(resumed.Workspace, "src", "app.txt")));
+        Assert.Single(await resumed.CommentsAsync(mergeTicket), c => c.Contains("merge-held/v1"));
+
+        await resumed.Leases.ReleaseAsync(resumed.Slug, "run-src-holder", DateTime.UtcNow);
+        var merged = await resumed.Processor.ProcessProjectAsync(resumed.Slug, CancellationToken.None);
+        Assert.Equal(MergeQueueState.Merged, merged!.State);
+        Assert.Equal("landed\n", await File.ReadAllTextAsync(Path.Combine(resumed.Workspace, "src", "app.txt")));
+        Assert.Single(await resumed.CommentsAsync(mergeTicket), c => c.Contains("merge-held/v1"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -717,7 +893,7 @@ internal sealed class Sp3Harness : IDisposable
         Reaper = new FileLeaseReaper(projects, Leases, NullLogger<FileLeaseReaper>.Instance);
         Queue = new MergeQueueStore(projects);
         Processor = new MergeQueueProcessor(
-            projects, tickets, Queue, appSettings, NullLogger<MergeQueueProcessor>.Instance);
+            projects, tickets, Queue, Leases, appSettings, NullLogger<MergeQueueProcessor>.Instance);
 
         Executor = new ActionExecutor(
             tickets, members, new LabelService(projects), sessions, AgentRuns,
@@ -921,6 +1097,14 @@ internal sealed class Sp3Harness : IDisposable
         Assert.True(Directory.Exists(after.WorktreePath));
         return (ticket.Id, after.WorktreePath!);
     }
+
+    /// <summary>Waits until no lease is active. A dispatch takes its lease before the run starts and
+    /// releases it when the run ends, so a test that wants to plant a lease of its own has to let the
+    /// dispatch it just made finish letting go of its.</summary>
+    public async Task LeasesQuiesceAsync() =>
+        Assert.True(
+            await WaitUntilAsync(async () => (await Leases.ListActiveAsync(Slug)).Count == 0),
+            "a dispatched run never released its file lease");
 
     // ── Observation ─────────────────────────────────────────────────────────
 

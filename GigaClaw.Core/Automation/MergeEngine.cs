@@ -30,6 +30,18 @@ public sealed record MergeRebaseResult(MergeRebaseOutcome Outcome, IReadOnlyList
 /// such rather than treating it as green by default.</summary>
 public sealed record IntegrationRunResult(bool Ran, bool Success, string? OutputExcerpt);
 
+/// <summary>
+/// Result of <see cref="MergeEngine.ChangedFilesAgainstWorkspaceHeadAsync"/> — the workspace-relative
+/// paths a candidate branch would rewrite when it lands. <see cref="Computed"/> is false when git
+/// could not answer (a missing branch, an unreadable repo, a timeout); callers must treat that as
+/// "unknown, therefore possibly everything" and fail closed rather than as "nothing changed".
+/// </summary>
+public sealed record MergeChangedFilesResult(bool Computed, IReadOnlyList<string> Files, string? Error)
+{
+    internal static MergeChangedFilesResult Ok(IReadOnlyList<string> files) => new(true, files, null);
+    internal static MergeChangedFilesResult Unknown(string error) => new(false, Array.Empty<string>(), error);
+}
+
 public static class MergeEngine
 {
     // 2-minute cap mirrors WorktreeManager/ActionExecutor's own git helpers: a git blocked on a
@@ -75,6 +87,31 @@ public static class MergeEngine
         return files.Count > 0
             ? MergeRebaseResult.Conflict(files)
             : MergeRebaseResult.Failure($"git rebase failed: {rebase.stderr.Trim()}");
+    }
+
+    /// <summary>
+    /// The workspace-relative paths landing <paramref name="branch"/> would rewrite: the three-dot
+    /// diff <c>HEAD...branch</c>, i.e. everything the branch changed since it forked from the
+    /// integration target, with the target's own subsequent commits excluded. Read in the workspace
+    /// (a worktree shares objects and refs with its parent, so no fetch is needed) and computed
+    /// <b>before</b> the rebase, so an interlock can refuse to touch the checkout at all.
+    /// <para>
+    /// Any git failure yields <see cref="MergeChangedFilesResult.Computed"/> false rather than an
+    /// empty file list — "git could not tell us" and "this branch changes nothing" are opposite
+    /// answers for a gate, and conflating them would let an unanswerable diff sail through.
+    /// </para>
+    /// </summary>
+    public static async Task<MergeChangedFilesResult> ChangedFilesAgainstWorkspaceHeadAsync(
+        string workspacePath, string branch, CancellationToken ct)
+    {
+        var res = await RunGitAsync(workspacePath, $"diff --name-only HEAD...{branch}", ct);
+        if (res.exitCode != 0)
+            return MergeChangedFilesResult.Unknown($"git diff HEAD...{branch} failed: {res.stderr.Trim()}");
+
+        var files = res.stdout
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+        return MergeChangedFilesResult.Ok(files);
     }
 
     /// <summary>
