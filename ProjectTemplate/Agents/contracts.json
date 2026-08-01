@@ -81,7 +81,7 @@
     "content-writer": {
       "dispatches": ["content-writer-on-inprogress", "content-writer-resume"],
       "ticketExit": ["Review", "Blocked"],
-      "allowedWriteGlobs": [],
+      "allowedWriteGlobs": ["cw-draft.md", "cw-description.json", "cw-resp.json", "cw-report.md"],
       "riskClass": "content-write",
       "maxReviewCycles": 2
     },
