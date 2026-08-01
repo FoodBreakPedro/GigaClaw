@@ -1839,6 +1839,9 @@ internal sealed class ActionExecutor
             return FileLeaseGateDecision.NotApplicable;
 
         IReadOnlyList<string> scope;
+        // Oldest-first, and reused twice: as the handoff source the leased scope is resolved from,
+        // and as the receipt history the write-once denial check reads (see WriteFileLeaseReceiptAsync).
+        var comments = new List<string>();
         try
         {
             Models.Ticket? ticket = null;
@@ -1848,8 +1851,8 @@ internal sealed class ActionExecutor
                 _logger.LogWarning(ex, "fileLease: could not read ticket #{Id} for scope resolution", ticketId);
             }
 
-            var comments = ticket?.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList()
-                ?? new List<string>();
+            if (ticket is not null)
+                comments.AddRange(ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content));
             scope = await FileLeaseScopeResolver.ResolveAsync(rt.Workspace!, comments, agentName, ct);
         }
         catch (Exception ex)
@@ -1882,7 +1885,8 @@ internal sealed class ActionExecutor
         var outcome = enforcement == PolicyEnforcementMode.Block
             ? FileLeaseGateOutcome.Blocked
             : FileLeaseGateOutcome.WarnedAndProceeded;
-        await WriteFileLeaseReceiptAsync(rt.Slug, ticketId.Value, agentName, scope, result.ConflictingLease!, enforcement);
+        await WriteFileLeaseReceiptAsync(
+            rt.Slug, ticketId.Value, agentName, scope, result.ConflictingLease!, enforcement, comments);
         _logger.LogWarning(
             "fileLease: {Outcome} agent={Agent} ticket=#{Ticket} run={Run} conflictsWith run={ConflictRun} agent={ConflictAgent}",
             outcome, agentName, ticketId, runId, result.ConflictingLease!.RunId, result.ConflictingLease.Agent);
@@ -1900,6 +1904,18 @@ internal sealed class ActionExecutor
     /// lease — the same "denials/serializations produce receipts" idiom as R2's
     /// <c>policy-violation/v1</c> and R3's <c>outbound-denial/v1</c>
     /// (<see cref="WriteOutboundDenialReceiptAsync"/>).
+    /// <para>
+    /// <b>Once per conflict, not once per poll (SP-3 F2).</b> A blocked dispatch returns before
+    /// <c>FinalizeAsync</c>, so its trigger firing is never committed and a repeating
+    /// <c>ticketInColumn</c> trigger retries it every tick — deliberately, so the lane resumes the
+    /// moment the lease frees, and that retry behavior is unchanged here. What changes is the noise:
+    /// if the newest <c>file-lease-denial/v1</c> already on the ticket is byte-identical to the one
+    /// this refusal would write, nothing is appended. The receipt is its own dedup key — same
+    /// blocked agent, same scope, same conflicting lease means the same JSON, whereas a different
+    /// lease, holder, ticket or scope produces different JSON and therefore a new receipt. That is
+    /// the same first-refusal-only discipline R6 applies to <c>merge-held/v1</c>, and because the
+    /// key is the durable comment rather than in-process memory it holds across a restart too.
+    /// </para>
     /// </summary>
     private async Task WriteFileLeaseReceiptAsync(
         string slug,
@@ -1907,7 +1923,8 @@ internal sealed class ActionExecutor
         string agent,
         IReadOnlyList<string> scope,
         FileLease conflict,
-        PolicyEnforcementMode enforcement)
+        PolicyEnforcementMode enforcement,
+        IReadOnlyList<string> priorCommentsOldestFirst)
     {
         var receipt = JsonSerializer.Serialize(new
         {
@@ -1916,12 +1933,22 @@ internal sealed class ActionExecutor
             action = "runAgent",
             scope,
             rule = "file-ownership-lease",
+            conflictingLeaseId = conflict.LeaseId,
             conflictingRunId = conflict.RunId,
             conflictingAgent = conflict.Agent,
             conflictingTicketId = conflict.TicketId,
             reason = $"Scope overlaps an active lease held by '{conflict.Agent}' (run {conflict.RunId}) on ticket #{conflict.TicketId}.",
             enforcementMode = enforcement == PolicyEnforcementMode.Block ? "block" : "warn",
         });
+
+        var newest = priorCommentsOldestFirst.LastOrDefault(
+            c => c.Contains("file-lease-denial/v1", StringComparison.Ordinal));
+        if (string.Equals(newest, receipt, StringComparison.Ordinal))
+        {
+            _logger.LogDebug(
+                "fileLease: ticket #{Id} already carries this exact denial receipt — not appending another", ticketId);
+            return;
+        }
 
         try { await _tickets.AddCommentAsync(slug, ticketId, receipt, "automation"); }
         catch (Exception ex)

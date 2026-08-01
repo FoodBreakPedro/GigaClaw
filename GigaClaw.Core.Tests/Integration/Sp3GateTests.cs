@@ -227,15 +227,62 @@ public sealed class Sp3GateTests
         // …and the lease that had NOT expired is still enforcing: nothing was stolen to make room.
         await h.DispatchAsync(docsTicket.Id, "qa-tester");
         Assert.Empty(h.AgentRuns.AllForTicket(h.Slug, docsTicket.Id));
-        // Characterization: a lease denial is written on EVERY refused attempt. A blocked dispatch
-        // never commits its trigger firing (ExecuteRunAgentActionAsync returns before FinalizeAsync),
-        // so a repeating ticketInColumn trigger retries it each poll and accumulates one receipt per
-        // poll for as long as the conflicting lease lives. R6's enqueueMerge deliberately writes
-        // merge-held/v1 only on the FIRST hold for exactly this reason; R4 has no such guard. Noise,
-        // not a correctness break — recorded in doc/roadmap/SP3-EVIDENCE.md as an open finding.
-        Assert.Equal(2, (await h.CommentsAsync(docsTicket.Id)).Count(c => c.Contains("file-lease-denial/v1")));
+        // SP-3 F2: the dispatch is refused again — the retry semantics are unchanged — but the
+        // identical refusal does not append a second receipt. One conflict, one receipt.
+        Assert.Single(await h.CommentsAsync(docsTicket.Id), c => c.Contains("file-lease-denial/v1"));
         Assert.Contains(
             await h.Leases.ListActiveAsync(h.Slug), lease => lease.RunId == "run-docs-holder");
+    }
+
+    /// <summary>
+    /// <b>SP-3 F2</b>: a lease denial is a receipt per <i>conflict</i>, not per poll. A blocked
+    /// dispatch never commits its trigger firing, so a repeating <c>ticketInColumn</c> trigger
+    /// retries it every tick for as long as the conflict lives — that is deliberate and unchanged
+    /// here (every poll below is still refused, and no run is ever registered). What changed is that
+    /// the identical refusal stops appending an identical comment to the ticket a synthesizer will
+    /// later read. A genuinely different conflict — a new lease, a new holder — is new information
+    /// and gets a receipt of its own.
+    /// </summary>
+    [Fact]
+    public async Task Repeated_identical_refusals_write_one_denial_receipt_and_a_new_conflict_writes_another()
+    {
+        using var h = await Sp3Harness.CreateAsync("sp3-denial-once", ProgrammerVsDocs);
+        var ticket = await h.Tickets.CreateTicketAsync(h.Slug, "Touches src", status: "Doing");
+        var holderTicket = await h.Tickets.CreateTicketAsync(h.Slug, "Owns src", status: "Doing");
+
+        var first = await h.Leases.AcquireAsync(
+            h.Slug, holderTicket.Id, "run-holder-one", "code-janitor", [SrcGlob],
+            DateTime.UtcNow, TimeSpan.FromMinutes(90));
+        Assert.True(first.IsAcquired);
+
+        // Five polls of the same repeating trigger against the same unchanged conflict.
+        for (var poll = 0; poll < 5; poll++)
+            await h.DispatchAsync(ticket.Id, "programmer");
+
+        Assert.Empty(h.AgentRuns.AllForTicket(h.Slug, ticket.Id)); // refused every time — unchanged
+        var only = Assert.Single(await h.CommentsAsync(ticket.Id), c => c.Contains("file-lease-denial/v1"));
+        using (var doc = JsonDocument.Parse(only))
+            Assert.Equal(first.Lease!.LeaseId, doc.RootElement.GetProperty("conflictingLeaseId").GetString());
+
+        // The conflict clears and a different run takes the same scope: a new conflict, so a new receipt.
+        await h.Leases.ReleaseAsync(h.Slug, "run-holder-one", DateTime.UtcNow);
+        var second = await h.Leases.AcquireAsync(
+            h.Slug, holderTicket.Id, "run-holder-two", "doc-janitor", [SrcGlob],
+            DateTime.UtcNow, TimeSpan.FromMinutes(90));
+        Assert.True(second.IsAcquired);
+
+        await h.DispatchAsync(ticket.Id, "programmer");
+        await h.DispatchAsync(ticket.Id, "programmer");
+
+        var denials = (await h.CommentsAsync(ticket.Id))
+            .Where(c => c.Contains("file-lease-denial/v1")).ToList();
+        Assert.Equal(2, denials.Count);
+        using (var doc = JsonDocument.Parse(denials[1]))
+        {
+            Assert.Equal(second.Lease!.LeaseId, doc.RootElement.GetProperty("conflictingLeaseId").GetString());
+            Assert.Equal("run-holder-two", doc.RootElement.GetProperty("conflictingRunId").GetString());
+        }
+        Assert.Empty(h.AgentRuns.AllForTicket(h.Slug, ticket.Id));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -726,9 +773,11 @@ public sealed class Sp3GateTests
         Assert.Equal(DocsGlob, Assert.Single(stillHeld.Scope));
         await resumed.DispatchAsync(refusedTicketId, "qa-tester");
         Assert.Empty(resumed.AgentRuns.AllForTicket(resumed.Slug, refusedTicketId));
-        var denials = (await resumed.CommentsAsync(refusedTicketId)).Where(c => c.Contains("file-lease-denial/v1")).ToList();
-        Assert.Equal(2, denials.Count);
-        Assert.Equal(denialBefore, denials[0]); // the pre-restart receipt survived unaltered
+        // The pre-restart receipt survived unaltered — and SP-3 F2's write-once rule holds across the
+        // restart too, because its dedup key is the durable comment rather than in-process memory:
+        // the same lease refusing the same branch again writes nothing.
+        var denial = Assert.Single(await resumed.CommentsAsync(refusedTicketId), c => c.Contains("file-lease-denial/v1"));
+        Assert.Equal(denialBefore, denial);
 
         // The run resumes from the board, not from anything this process was handed.
         var open = Assert.Single(await resumed.Teams.ListRunsAsync(resumed.Slug, openOnly: true));

@@ -1,6 +1,6 @@
 # SP-3 gate — evidence
 
-**Date:** 2026-08-01 · **Suite:** `GigaClaw.Core.Tests/Integration/Sp3GateTests.cs` (10 tests) · **Branch:** `sp3/integration-gate`
+**Date:** 2026-08-01 · **Suite:** `GigaClaw.Core.Tests/Integration/Sp3GateTests.cs` (15 tests) · **Branch:** `sp3/integration-gate`
 
 SP-3 asks for one thing the per-feature suites cannot give: proof that P4 cycle validation, R4 file
 leases, R5 worktrees, R6 the merge queue and C4/C5 joins **fail closed together, each with its
@@ -188,36 +188,75 @@ receipt after the successful retry; synthesis brief `Lanes that reported (3 of 3
 
 ---
 
-## Open findings (not fixed — recorded, not papered over)
+## Findings
 
-### F1 — the merge queue does not consult file leases
+### F1 — the merge queue did not consult file leases · **FIXED** (`0ac0f79`)
 
-**Test:** `Characterization_the_merge_queue_does_not_consult_file_leases_and_lands_under_a_held_one`
-(a characterization test: it asserts what the system does **today**, not what it ought to do).
+**Was:** `MergeQueueProcessor` took no `FileLeaseStore`, and the suite's characterization test
+demonstrated a merge landing into the main workspace checkout while an in-flight run held an active
+`src/**` lease over the very paths the merge rewrote — no receipt on either side, no lease consulted.
+Harmless when every agent runs in its own R5 worktree, materially not harmless when one does not:
+**a dispatch without `isolation: "worktree"` executes *in* the workspace the merge is rewriting.**
 
-`MergeQueueProcessor` takes no `FileLeaseStore` — see its constructor. The suite demonstrates a merge
-landing into the main workspace checkout while an in-flight run holds an active `src/**` lease over
-the very paths the merge rewrites, with no receipt on either side and no lease consulted or reaped.
+**Owner decision (2026-08-01):** an overlapping live lease **holds** the merge. Never bounce for this
+reason; never steal a live lease.
 
-This is harmless when every agent runs in its own R5 worktree, and materially not harmless when one
-does not: **a dispatch without `isolation: "worktree"` executes *in* the workspace the merge is
-rewriting.** It is recorded rather than fixed because interlocking the two is an owner decision, not
-a bug fix — should a merge wait behind a lease, or bounce with a receipt? — and the answer is coupled
-to both decisions below. If that test ever fails because a merge is refused or deferred, the
-interlock has landed and the test should be replaced by an assertion of whichever semantics were
-chosen.
+**Now:** before it touches either checkout, a claimed candidate's diff against the integration target
+(`git diff --name-only HEAD...<branch>`, read in the workspace — a worktree shares objects and refs
+with its parent, so no fetch) is compared against every live lease held by a ticket **other than** the
+branch's own author, using R4's existing conservative `GlobIntersection` with each changed path
+treated as a wildcard-free glob. The two gates therefore cannot disagree about what "overlapping"
+means. An overlap returns the entry to `Held` with a `merge-held/v1` receipt whose
+`rule: "file-lease-interlock"` names the lease, run, agent, ticket, scope and the overlapping files;
+held entries are re-claimed by the very next `ClaimNextAsync` on an approved project, so the merge
+lands once the lease is released, expires and is reaped, or its holder run completes. The receipt is
+written once per hold **reason** (the reason lives in the `merge_queue` row, so this survives a
+restart with no in-memory bookkeeping) — the same first-hold-only discipline `enqueueMerge` already
+applied to the approval hold. An uncomputable diff or an unreadable lease table **holds**, receipted
+and retried: a queue that retries by construction can afford to wait, but not to guess.
 
-### F2 — a lease denial is written on every refused attempt
+A lease counts as live when it is unreleased **and** not past its TTL — an expired-but-unreaped lease
+reads as dead here rather than being reaped, since reaping is `FileLeaseReaper`'s job and a merge
+should not wait out its cadence. Because the queue is FIFO and serialized, a held head-of-line
+candidate does delay the candidates behind it; that is the queue working as designed, not a new stall.
 
-Asserted inline in scenario 2 (`Assert.Equal(2, …)` denial comments after two refusals).
+**Tests** (the characterization test is gone, replaced by the interlock itself):
 
-A blocked dispatch returns from `ExecuteRunAgentActionAsync` before `FinalizeAsync`, so the trigger
-firing is never committed and a repeating `ticketInColumn` trigger retries it every poll — correct
-(the lane is not permanently parked) but it accumulates one `file-lease-denial/v1` comment per poll
-for as long as the conflicting lease lives. R6's `enqueueMerge` deliberately writes `merge-held/v1`
-only on the **first** hold for exactly this reason; R4 has no equivalent guard. Noise on the ticket
-the synthesizer will later read, not a correctness break. Left unfixed because suppressing repeat
-receipts changes what the audit trail records, which is the owner's call.
+- `A_live_overlapping_lease_holds_the_merge_until_it_is_released_and_receipts_the_hold_once` — held,
+  nothing written to the workspace, lease neither stolen nor reaped, exactly one `merge-held/v1`
+  across two blocked passes, lands after the holder finishes and releases.
+- `A_disjoint_live_lease_does_not_hold_the_merge` — `src/**` lease, `README.md` merge: merges, no
+  hold receipt, lease untouched.
+- `The_producing_tickets_own_lease_does_not_hold_its_own_merge` — the branch's author never blocks
+  itself.
+- `An_expired_and_reaped_lease_stops_holding_the_merge` — held, then a reaper sweep with an injected
+  clock past the TTL, then it lands.
+- `A_restart_while_a_merge_is_held_resumes_held_without_a_second_receipt` — brand-new services over
+  the same data directory re-hold silently and land after release.
+
+### F2 — a lease denial was written on every refused attempt · **FIXED** (`fix(policy): write lease-denial receipts once per conflict, not per poll (SP-3 F2)`)
+
+**Was:** a blocked dispatch returns from `ExecuteRunAgentActionAsync` before `FinalizeAsync`, so the
+trigger firing is never committed and a repeating `ticketInColumn` trigger retries it every poll —
+correct (the lane is not permanently parked) but it accumulated one `file-lease-denial/v1` comment per
+poll for as long as the conflicting lease lived. R6's `enqueueMerge` already wrote `merge-held/v1`
+only on the **first** hold for exactly this reason; R4 had no equivalent guard.
+
+**Now:** the retry-until-free dispatch semantics are unchanged — every poll is still refused, and no
+run is registered — but the receipt is written once per **conflict**. The receipt is its own dedup
+key: if the newest `file-lease-denial/v1` already on the ticket is byte-identical to the one this
+refusal would write, nothing is appended. Same blocked agent, same scope, same conflicting lease
+produces the same JSON; a different lease, holder, ticket or scope produces different JSON and
+therefore a new receipt. The receipt now carries `conflictingLeaseId`, which is what makes "the same
+conflict" precise rather than approximate. Because the key is the durable comment rather than
+in-process memory, write-once holds across a restart too.
+
+**Tests:** `Repeated_identical_refusals_write_one_denial_receipt_and_a_new_conflict_writes_another`
+(five refused polls → one receipt naming the first lease; the conflict clears, a different run takes
+the same scope, and the next refusals produce exactly one further receipt naming the second lease).
+Scenario 2's inline `Assert.Equal(2, …)` became `Assert.Single`, and scenario 5's post-restart
+assertion became a single denial still byte-identical to the pre-restart capture — the restart proof
+is now stronger, not weaker: the receipt survived *and* was not duplicated.
 
 ### F3 — the Board-drag bypass: not covered by this suite, closed on this branch separately
 
@@ -250,9 +289,10 @@ Today `enqueueMerge` is opt-in vocabulary: an automation has to name the action,
   switches are separable.
 - **5** shows the queue survives a restart with exactly-once completion, so enabling it by default
   does not introduce a durability question.
-- **F1** cuts the other way: more candidates flowing through the queue means more merges landing in
-  the workspace, and the queue currently does not check whether a run holds a lease over what it is
-  about to rewrite. The exposure scales with how many projects enqueue by default.
+- **F1** used to cut the other way — more candidates flowing through the queue meant more merges
+  landing in a workspace the queue never checked for live leases. That exposure is closed: since
+  `0ac0f79` a merge whose diff overlaps another run's live lease is held and receipted rather than
+  landed, so the count of projects enqueuing by default no longer scales an unguarded write.
 - **F3** is adjacent: a ticket dragged to Done in the UI does not go through the action path at all,
   so default-on would not cover that entry point.
 
@@ -263,9 +303,11 @@ project workspace.
 
 *Evidence that bears on it:*
 
-- **F1** is the strongest argument in favour: the concrete harm demonstrated (a merge rewriting files
-  under a running agent) only exists for in-place dispatches. Worktree-by-default removes that class
-  without needing the lease/queue interlock at all.
+- **F1** was the strongest argument in favour: the concrete harm demonstrated (a merge rewriting
+  files under a running agent) only exists for in-place dispatches, and worktree-by-default removes
+  that class outright. The interlock landed first instead (`0ac0f79`), so the harm is now guarded
+  even for in-place dispatches — worktree-by-default remains the stronger remedy (it removes the
+  overlap rather than serializing it) but is no longer the only one.
 - **4c** shows the worktree path is already the prerequisite for `enqueueMerge`: a ticket with no
   recorded worktree bounces immediately with a `no-worktree` `merge-bounced/v1`. Default-on worktrees
   and default-on `enqueueMerge` are therefore ordered — the second is much less useful without the
