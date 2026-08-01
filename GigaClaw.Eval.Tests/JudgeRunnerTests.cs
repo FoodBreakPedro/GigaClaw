@@ -309,6 +309,156 @@ public sealed class JudgeRunnerTests
         }
     }
 
+    // ------------------------------------------------------------------
+    // replay-expectation-ids: the split of the old single 40-point
+    // `replay-expectations` bucket. The whole point of the check kind is that
+    // *which* expectation failed now changes the score, so every test below is
+    // written as a pair — the same rubric against a stream that satisfies the
+    // named expectation and one that does not.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void ReplayExpectationIds_ScoreTheReceiptApartFromTheDispatchAssertions()
+    {
+        var runner = new JudgeRunner(RepositoryRoot);
+        var rubric = SplitExpectationRubric();
+
+        // Passing half: the committed fixture satisfies every expectation it declares.
+        var passing = runner.JudgeSingle(LoadFixture(Fixture), rubric);
+
+        Assert.Equal("pass", passing.Status);
+        Assert.Equal("SHIP", passing.Verdict!.Verdict);
+        Assert.Equal(15, Category(passing, "Dispatch behaved as declared").Score);
+        Assert.Equal(25, Category(passing, "Delivered the declared receipt").Score);
+
+        // Failing half: only the declared final-text marker is unsatisfiable. Under the old
+        // all-or-nothing `replay-expectations` criterion this and a wrong exit code were the same
+        // 0; here the dispatch assertions keep their full 15 and only the receipt is docked.
+        var failing = runner.JudgeSingle(
+            WithExpectedFinalText(LoadFixture(Fixture), "no assistant message ever says this"),
+            rubric);
+
+        Assert.Equal("pass", failing.Status);
+        Assert.Equal(15, Category(failing, "Dispatch behaved as declared").Score);
+        Assert.Equal(0, Category(failing, "Delivered the declared receipt").Score);
+        Assert.Contains("replay.text", Category(failing, "Delivered the declared receipt").Notes!, StringComparison.Ordinal);
+        // 15 + 20 + 20 + 20 out of 100 — a receipt-less run is no longer indistinguishable from a
+        // clean one, which is the entire reason the criterion was split.
+        Assert.Equal(75, failing.Verdict!.Categories.Sum(category => category.Score));
+
+        // The behaviour this replaced, pinned so the improvement is legible: the undivided
+        // `replay-expectations` criterion collapses the same stream to a flat 0, which is why a
+        // wrong exit code and a missing receipt used to be the same 40-point loss.
+        var undivided = runner.JudgeSingle(
+            WithExpectedFinalText(LoadFixture(Fixture), "no assistant message ever says this"),
+            new AgentRubric(1, Agent, "The pre-split criterion.",
+                [new RubricCriterion("Dispatch behaved as declared", "replay-expectations", 40)]));
+        Assert.Equal(0, Category(undivided, "Dispatch behaved as declared").Score);
+    }
+
+    [Fact]
+    public void ReplayExpectationIds_TripTheirVetoWhenTheNamedExpectationIsUnmet()
+    {
+        var runner = new JudgeRunner(RepositoryRoot);
+
+        var result = runner.JudgeSingle(
+            WithExpectedFinalText(LoadFixture(Fixture), "no assistant message ever says this"),
+            SplitExpectationRubric());
+
+        // Fail-closed exactly as the single 40-point criterion did: an unmet expectation is a veto,
+        // not merely a lower score, so a split that quietly turned BLOCK into FIX would fail here.
+        Assert.Equal("BLOCK", result.Verdict!.Verdict);
+        var veto = Assert.Single(result.Verdict.VetoItems);
+        Assert.Equal("replay-expectation-unmet", veto.Code);
+    }
+
+    [Fact]
+    public void ReplayExpectationIds_FailClosedOnAnExpectationTheReplayNeverProduced()
+    {
+        var runner = new JudgeRunner(RepositoryRoot);
+        var rubric = new AgentRubric(
+            Version: 1,
+            Agent: Agent,
+            Description: "Names an expectation id the replay layer does not emit.",
+            Criteria:
+            [
+                new RubricCriterion(
+                    "Delivered the declared receipt",
+                    "replay-expectation-ids",
+                    100,
+                    Values: ["replay.text", "replay.telepathy"]),
+            ]);
+
+        var result = runner.JudgeSingle(LoadFixture(Fixture), rubric);
+
+        // A rubric naming an expectation that no longer exists is a broken instrument. Scoring the
+        // criterion at its maximum because nothing contradicted it is the failure mode this guards.
+        Assert.Equal(0, Category(result, "Delivered the declared receipt").Score);
+        Assert.Contains(
+            "replay.telepathy",
+            Category(result, "Delivered the declared receipt").Notes!,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DefaultRubric_GradesEveryExpectationTheReplayLayerAsserts()
+    {
+        var runner = new JudgeRunner(RepositoryRoot);
+        var (rubric, source) = runner.LoadRubric("documentalist");
+        Assert.Equal("default", source);
+
+        var graded = rubric.Criteria
+            .Where(criterion => criterion.Check == "replay-expectation-ids")
+            .SelectMany(criterion => criterion.Values ?? [])
+            .ToHashSet(StringComparer.Ordinal);
+
+        var asserted = new ReplayRunner(RepositoryRoot)
+            .ReplaySingle(LoadFixture(Fixture))
+            .Checks.Select(check => check.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        // Splitting one bucket into two named ones introduces a way to lose an assertion silently:
+        // add a replay check the default rubric does not name and it stops being scored at all.
+        Assert.Equal(asserted.OrderBy(id => id, StringComparer.Ordinal), graded.OrderBy(id => id, StringComparer.Ordinal));
+    }
+
+    /// <summary>The committed default rubric's split shape, restated in-memory so these tests read
+    /// as a specification of the check kind rather than as a mirror of one JSON file.</summary>
+    private static AgentRubric SplitExpectationRubric() =>
+        new(Version: 1,
+            Agent: Agent,
+            Description: "The default rubric's split replay expectations.",
+            Criteria:
+            [
+                new RubricCriterion(
+                    "Dispatch behaved as declared",
+                    "replay-expectation-ids",
+                    15,
+                    Values: ["replay.dispatch", "replay.exit", "replay.status", "replay.events"],
+                    Veto: "replay-expectation-unmet",
+                    Statement: "The run did not start, exit, terminate or emit events the way the fixture declares."),
+                new RubricCriterion(
+                    "Delivered the declared receipt",
+                    "replay-expectation-ids",
+                    25,
+                    Values: ["replay.text"],
+                    Veto: "replay-expectation-unmet",
+                    Statement: "The final message does not carry the marker the fixture declares."),
+                new RubricCriterion("Stream carries no error", "no-error-events", 20),
+                new RubricCriterion("Final message is a handoff", "final-text-min-length", 20, Threshold: 80),
+                new RubricCriterion(
+                    "No placeholder handoff",
+                    "final-text-omits-all",
+                    20,
+                    Values: ["TODO:", "lorem ipsum", "as an ai", "placeholder text"]),
+            ]);
+
+    private static JudgeCategory Category(JudgeFixtureResult result, string name) =>
+        result.Verdict!.Categories.Single(category => category.Name == name);
+
+    private static ReplayFixture WithExpectedFinalText(ReplayFixture fixture, string marker) =>
+        fixture with { Expect = fixture.Expect with { FinalTextContains = marker } };
+
     [Fact]
     public void EveryFixtureAgentHasAResolvableRubric()
     {

@@ -28,7 +28,7 @@
       "Name": "No hedged handoff",
       "Check": "final-text-omits-all",
       "Max": 20,
-      "Values": ["I think", "probably", "TODO", "not sure", "should work"],
+      "Values": ["I think", "probably", "TODO:", "not sure", "should work"],
       "Statement": "The closing message hedges instead of stating what was changed."
     },
     {

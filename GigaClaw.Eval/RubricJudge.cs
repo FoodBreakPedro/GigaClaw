@@ -32,6 +32,7 @@ public static class RubricJudge
     public static IReadOnlyList<string> CheckKinds { get; } =
     [
         "replay-expectations",
+        "replay-expectation-ids",
         "no-error-events",
         "event-kinds-present",
         "final-text-contains-all",
@@ -115,6 +116,38 @@ public static class RubricJudge
                 return failed.Length == 0
                     ? (criterion.Max, $"All {replay.Checks.Count} fixture expectation(s) held.")
                     : (0, $"Unmet fixture expectation(s): {string.Join(", ", failed.Select(check => check.Id))}.");
+            }
+
+            // The named-subset form of the criterion above. `replay-expectations` collapses every
+            // assertion a fixture makes — exit code, run status, event kinds, and the declared final
+            // -text marker — into one all-or-nothing bucket, so a run with a perfect receipt and a
+            // wrong exit code scores exactly like one that exits 0 with no receipt. Naming the
+            // expectation ids lets a rubric weight them apart while keeping the fail-closed shape of
+            // the original: still all-or-nothing *within* a criterion, so any unmet expectation
+            // zeroes it and trips its veto exactly as before.
+            //
+            // The ids are ReplayRunner.Assert's: replay.dispatch, replay.exit, replay.status,
+            // replay.events, replay.text. An id the replay did not produce scores 0 rather than
+            // being skipped — a rubric naming an expectation that no longer exists is a broken
+            // instrument, and a broken instrument must not read "pass".
+            case "replay-expectation-ids":
+            {
+                if (values.Count == 0)
+                    return (0, "The criterion names no fixture expectation to grade.");
+
+                var unknown = values
+                    .Where(id => !replay.Checks.Any(check => string.Equals(check.Id, id, StringComparison.Ordinal)))
+                    .ToArray();
+                if (unknown.Length > 0)
+                    return (0, $"The replay produced no expectation(s) named: {string.Join(", ", unknown)}.");
+
+                var unmet = values
+                    .Where(id => replay.Checks.Any(check =>
+                        string.Equals(check.Id, id, StringComparison.Ordinal) && check.Status != "pass"))
+                    .ToArray();
+                return unmet.Length == 0
+                    ? (criterion.Max, $"All {values.Count} named fixture expectation(s) held: {string.Join(", ", values)}.")
+                    : (0, $"Unmet fixture expectation(s): {string.Join(", ", unmet)}.");
             }
 
             case "no-error-events":
