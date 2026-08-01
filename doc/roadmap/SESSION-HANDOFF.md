@@ -4,7 +4,7 @@ Written for whoever picks this up next. Everything below was read from the tree,
 
 ## Addendum — 2026-08-01: C5, C7, C8 landed on a PR branch
 
-This session ran as a background job that cannot push `main`; unlike 2026-07-31's per-task merges, the work sits on branch **`worktree-c5-c7-c8`** as a draft PR for the owner to merge. Eight feature commits plus one merge commit:
+This session ran as a background job that cannot push `main`; the work went up as draft **PR #11** from branch `worktree-c5-c7-c8` and the owner **merged it to `main` as `d1cce5d` on 2026-08-01**. Eight feature commits plus one merge commit:
 
 - **C5** — `2ade596` (`parallelRunAgents`: inline branches translated to an ad-hoc `TeamDefinition` and driven through the C4 machinery — fan-out, joins, cancellation, restart-resume inherited, branches dispatched as ordinary sub-tickets so `RunConcurrencyGate` and the R4 leases apply; plus `MaxConcurrency`/`PartialFailure` on the team model) and `ab268a1` (typed `WorkflowGraph` at `.agents/workflow.json`, validated inside `AutomationStore.LoadAsync` — unreachable states and gate-less cycles rejected exactly like a malformed `automations.json`. **Declared and validated, not executed** — the walker is future work, stated in `doc/workflow-graph.md`).
 - **C7** — `394cdb3` / `19209c2` / `59e40fe` (merge `17aad77`): labeled issue import with an idempotent mapping table, owner PR comments re-dispatching the assignee through C3's dispatch-injection rail, CI check status as a gitCommit-family trigger with restart-surviving dedupe in `SessionRegistry`. PAT settings-only (containment proven both directions), every call behind the P3 gate. No Blazor settings UI (REST-only, deliberate).
