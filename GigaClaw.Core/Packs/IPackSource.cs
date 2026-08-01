@@ -173,10 +173,21 @@ public sealed class EmbeddedPackSource : IPackSource
 
     public string ReadManifest()
     {
-        using var stream = _assembly.GetManifestResourceStream(_manifestResourceName)
+        // The same §6 hazard Enumerate documents applies to this direct lookup: on Windows the
+        // actual resource name carries %(RecursiveDir)'s backslashes, so the literal probe misses
+        // and must fall back to a normalized-name match.
+        var stream = _assembly.GetManifestResourceStream(_manifestResourceName);
+        if (stream is null)
+        {
+            var wanted = _manifestResourceName.Replace('\\', '/');
+            var actual = _assembly.GetManifestResourceNames()
+                .FirstOrDefault(n => n.Replace('\\', '/') == wanted);
+            if (actual is not null) stream = _assembly.GetManifestResourceStream(actual);
+        }
+        using var resolved = stream
             ?? throw new PackValidationException(
                 $"pack '{Id}': embedded manifest '{_manifestResourceName}' not found.");
-        using var reader = new StreamReader(stream);
+        using var reader = new StreamReader(resolved);
         return reader.ReadToEnd();
     }
 
