@@ -1,0 +1,8 @@
+0	launch	blog-researcher (new) session={{session_id}} cwd={{workspace}} skill=blog-researcher/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Loading BRAND.md for audience and positioning, then pulling live community pain points before drafting the brief.
+3	tool_use	Bash
+4	user	[user] r/selfhosted: "Kanban tool loses my board every time wifi drops" (312 upvotes, 84 comments)
+r/homelab: "Any PM tool that survives a flaky VPN?" (190 upvotes, 41 comments)
+5	assistant	[assistant] Brief written to content/briefs/offline-first-sync-brief.md: target keyword "offline kanban sync", primary persona a self-hosting team lead, H2 outline leads with migration steps ahead of the rationale per the audience note. Source inventory has two primary/official rows from the changelog and one community row from the Reddit pull above, each with retrieval date and confidence; source_inventory.py passed. Handed off to blog-writer with BLOG-BRIEF v1 artifact-sha256:{{session_id}}{{session_id}}.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":205,"num_turns":2,"total_cost_usd":0.0721,"usage":{"input_tokens":460,"output_tokens":980,"cache_read_input_tokens":18200,"cache_creation_input_tokens":1500}}

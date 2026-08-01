@@ -1,0 +1,7 @@
+0	launch	groomer (new) session={{session_id}} cwd={{workspace}} skill=groomer/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Description is thin (under 100 chars, just a title-shaped sentence). Enriching it into a structured description and checking the member list before reassigning.
+3	tool_use	Bash
+4	user	[user] [{"slug":"programmer"},{"slug":"qa-tester"},{"slug":"producer"},{"slug":"owner"}]
+5	assistant	[assistant] Retitled to "Fix broken scroll in chat drawer", rewrote the description with Context/Goal/Acceptance criteria (scroll pins to the latest message on new content, works with keyboard navigation), set priority Required, and reassigned to programmer (verified against the member list). PATCH returned 2xx and the re-fetched ticket reflects all four fields. Ticket stays in Backlog. Posted the trace comment: Groomed. Reassigned to programmer. [groomer:v1 input-sha256={{session_id}}{{session_id}} output-sha256={{session_id}}{{session_id}} result=complete]
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":165,"num_turns":2,"total_cost_usd":0.0455,"usage":{"input_tokens":350,"output_tokens":680,"cache_read_input_tokens":13600,"cache_creation_input_tokens":1000}}

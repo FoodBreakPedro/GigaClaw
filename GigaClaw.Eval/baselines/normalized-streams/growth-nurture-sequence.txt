@@ -1,0 +1,5 @@
+0	launch	growth-writer (new) session={{session_id}} cwd={{workspace}} skill=growth-writer/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Anchoring email one on the first project, since that is where trials stall.
+3	assistant	[assistant] Drafted three emails in campaigns/trial-nurture.md — day 1 walks through creating the first project, day 3 shows one automation worth keeping, day 7 asks what blocked them. One call to action each and no discounts.
+4	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":150,"num_turns":1,"total_cost_usd":0.0471,"usage":{"input_tokens":300,"output_tokens":720,"cache_read_input_tokens":14100,"cache_creation_input_tokens":1100}}

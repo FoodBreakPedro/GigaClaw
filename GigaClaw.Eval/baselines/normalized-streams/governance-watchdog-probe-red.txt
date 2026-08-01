@@ -1,0 +1,8 @@
+0	launch	system-watchdog (new) session={{session_id}} cwd={{workspace}} skill=system-watchdog/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Reading the project's declared endpoints before probing anything, then checking the staging webhook with a HEAD request under a 10 second timeout, two attempts at most.
+3	tool_use	Bash
+4	user	[user] curl: (7) Failed to connect to staging.example.local port 443: Connection refused
+exit=7
+5	assistant	[assistant] Both attempts failed to connect (connection refused), classified as fail for target key target=http:staging.example.local/webhooks/cms-dispatch — this matches the two consecutive cms-dispatch-on-done failures already reported, so it is not a fixture read as a live probe. Checked open tickets for the same target key and evidence digest first; none matched, so this is a new failure. Posted the findings comment with the sanitized evidence (URL, connection-refused error class, latency, timestamp) and moved the ticket to Blocked.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":170,"num_turns":2,"total_cost_usd":0.0472,"usage":{"input_tokens":360,"output_tokens":680,"cache_read_input_tokens":13900,"cache_creation_input_tokens":1000}}

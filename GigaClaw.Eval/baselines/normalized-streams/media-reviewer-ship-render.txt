@@ -1,0 +1,8 @@
+0	launch	local-media-reviewer (new) session={{session_id}} cwd={{workspace}} skill=local-media-reviewer/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Running media_contract.py check against the receipt, then extracting representative frames and probing the render.
+3	tool_use	Bash
+4	user	[user] media_contract: PASS — artifact digest matches receipt, provider comfyui/remotion recorded, no substitution detected
+ffprobe: 1080x1920, h264, 24fps, duration 15.02s
+5	assistant	[assistant] Artifact bytes match the receipt digest, provenance (provider, model, runtime, license) is complete, spec adherence is within tolerance (15.02s against a 15s target), visual quality and continuity hold across the five shots, and technical conformance matches the locked spec. Wrote media/reviews/5043.md with the scored breakdown. Scores: Receipt & digest match 10/10, Provenance completeness 10/10, Spec adherence 9/10, Visual quality & continuity 9/10, Technical conformance 10/10 — 48/50. GIGACLAW-VERDICT v1 local-media-reviewer SHIP artifact-sha256:{{session_id}}{{session_id}}. Added pending-approval label, left status in Review, assignment unchanged.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":215,"num_turns":2,"total_cost_usd":0.0712,"usage":{"input_tokens":450,"output_tokens":980,"cache_read_input_tokens":18700,"cache_creation_input_tokens":1500}}

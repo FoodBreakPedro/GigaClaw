@@ -1,0 +1,7 @@
+0	launch	local-media-director (new) session={{session_id}} cwd={{workspace}} skill=local-media-director/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Confirming the render target before laying out the shots.
+3	tool_use	Bash
+4	user	[user] {"width":1080,"height":1920,"fps":30,"backend":"local"}
+5	assistant	[assistant] Wrote media/storyboard-teaser.md with five vertical 1080x1920 shots totalling 15s: 3s cron wall of text, 3s single schedule card, 4s drag onto the calendar, 3s run firing, 2s wordmark. Each shot lists duration, visual and on-screen text. No frames generated yet — awaiting sign-off.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":210,"num_turns":2,"total_cost_usd":0.0655,"usage":{"input_tokens":390,"output_tokens":880,"cache_read_input_tokens":17800,"cache_creation_input_tokens":1400}}

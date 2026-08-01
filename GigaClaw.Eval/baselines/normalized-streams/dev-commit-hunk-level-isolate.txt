@@ -1,0 +1,10 @@
+0	launch	committer (new) session={{session_id}} cwd={{workspace}} skill=committer/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Reading the working tree state before deciding what belongs to this ticket.
+3	tool_use	Bash
+4	user	[user]  M src/Sync/RetryPolicy.cs
+ M src/Sync/QueueWorker.cs
+ M src/Sync/ConflictResolver.cs
+ 3 files changed, 61 insertions(+), 9 deletions(-)
+5	assistant	[assistant] RetryPolicy.cs is fully related (case A) — staged whole file. QueueWorker.cs has one hunk adding the backoff call and a second, unrelated hunk touching an unrelated log line from another ticket — staged hunk-by-hunk (case B) via a scratch patch, then verified `git diff --cached` matches only the backoff hunk. ConflictResolver.cs has no hunk matching this ticket, so it was left untouched. Verified the full staged diff, deleted the scratch patch files, then committed the exact staged paths: `git commit -m "fix: add jittered exponential backoff to the offline queue retry" -- src/Sync/RetryPolicy.cs src/Sync/QueueWorker.cs`. Committed 4f9a21e: jittered exponential backoff on the queue retry. Files: src/Sync/RetryPolicy.cs, src/Sync/QueueWorker.cs (partial — one hunk). The remaining hunk in QueueWorker.cs and all of ConflictResolver.cs belong to other tickets and were left pending.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":215,"num_turns":2,"total_cost_usd":0.0640,"usage":{"input_tokens":410,"output_tokens":900,"cache_read_input_tokens":16800,"cache_creation_input_tokens":1300}}
