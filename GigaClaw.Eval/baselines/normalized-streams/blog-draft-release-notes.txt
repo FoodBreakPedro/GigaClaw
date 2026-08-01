@@ -1,0 +1,7 @@
+0	launch	blog-writer (new) session={{session_id}} cwd={{workspace}} skill=blog-writer/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Checking the existing drafts folder so the new post follows the house structure.
+3	tool_use	Bash
+4	user	[user] 2026-05-scheduling-rework.md
+5	assistant	[assistant] Wrote content/drafts/2026-05-scheduling-rework.md: 912 words, answer-first opening, one Key Takeaways box, migration steps ahead of the rationale as requested. No statistics were invented; every number comes from the linked changelog. The draft is ready for review.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":240,"num_turns":2,"total_cost_usd":0.0934,"usage":{"input_tokens":510,"output_tokens":1240,"cache_read_input_tokens":21500,"cache_creation_input_tokens":1900}}

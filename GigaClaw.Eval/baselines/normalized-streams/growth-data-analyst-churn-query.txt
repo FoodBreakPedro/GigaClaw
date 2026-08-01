@@ -1,0 +1,10 @@
+0	launch	data-analyst (new) session={{session_id}} cwd={{workspace}} skill=data-analyst/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Inspecting the query before running it — a read-only SELECT grouped by week, no CTEs, nothing mutating — then executing it against the read-only credential in a read-only transaction.
+3	tool_use	Bash
+4	user	[user] wk         | conversion
+2026-05-04 | 0.18
+2026-05-11 | 0.21
+2026-05-18 | 0.24
+5	assistant	[assistant] Ran a single read-only SELECT under a READ ONLY transaction, row limit and statement timeout applied. Wrote data/reports/trial-conversion-by-week.md with the Reproducibility section (query digest, engine version, row count 13, no NULL rows dropped) and a ```mermaid xychart-beta spec labelled as a spec, not a picture. Posted the key metrics and chart spec in a comment with the receipt `<!-- data-analyst:v1 ticket=5024 input-sha256={{session_id}}{{session_id}} -->` and moved the ticket to Review.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":210,"num_turns":2,"total_cost_usd":0.0733,"usage":{"input_tokens":465,"output_tokens":1010,"cache_read_input_tokens":19800,"cache_creation_input_tokens":1550}}

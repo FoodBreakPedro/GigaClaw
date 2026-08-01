@@ -68,7 +68,8 @@ public class MergeQueueTests
         var queue = new MergeQueueStore(projects);
         var appSettings = new AppSettingsService(tmp.Path);
         var processor = new MergeQueueProcessor(
-            projects, tickets, queue, appSettings, NullLogger<MergeQueueProcessor>.Instance);
+            projects, tickets, queue, new FileLeaseStore(projects), appSettings,
+            NullLogger<MergeQueueProcessor>.Instance);
 
         return new Harness
         {
@@ -249,7 +250,8 @@ public class MergeQueueTests
         var freshQueue = new MergeQueueStore(freshProjects);
         var freshAppSettings = new AppSettingsService(h.Tmp.Path);
         var freshProcessor = new MergeQueueProcessor(
-            freshProjects, freshTickets, freshQueue, freshAppSettings, NullLogger<MergeQueueProcessor>.Instance);
+            freshProjects, freshTickets, freshQueue, new FileLeaseStore(freshProjects), freshAppSettings,
+            NullLogger<MergeQueueProcessor>.Instance);
 
         var resumed = await freshProcessor.ProcessProjectAsync(h.Slug, CancellationToken.None);
 

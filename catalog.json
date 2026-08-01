@@ -3,8 +3,8 @@
   "Summary": {
     "Agents": 37,
     "Contracts": 37,
-    "Automations": 52,
-    "EnabledAutomations": 51,
+    "Automations": 55,
+    "EnabledAutomations": 54,
     "ExplicitModelMappings": 37,
     "Teams": 12,
     "Scripts": 21
@@ -677,9 +677,9 @@
         "ux-design"
       ],
       "EnabledDispatchingAutomations": [
-        "assignee-dispatch",
-        "assignee-resume",
-        "owner-feedback",
+        "assignee-dispatch-code",
+        "assignee-resume-code",
+        "owner-feedback-code",
         "verdict-gate-qa-repair-round"
       ],
       "DisabledDispatchingAutomations": [],
@@ -703,9 +703,9 @@
         "software-engineering"
       ],
       "EnabledDispatchingAutomations": [
-        "assignee-dispatch",
-        "assignee-resume",
-        "owner-feedback",
+        "assignee-dispatch-code",
+        "assignee-resume-code",
+        "owner-feedback-code",
         "qa-on-review"
       ],
       "DisabledDispatchingAutomations": [],
@@ -1088,13 +1088,22 @@
         "local-media-reviewer",
         "local-motion-artist",
         "producer",
-        "programmer",
-        "qa-tester",
         "system-watchdog",
         "trend-researcher",
         "ui-auditor",
         "ui-designer",
         "wellness-coach"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "assignee-dispatch-code",
+      "Enabled": true,
+      "Agents": [
+        "programmer",
+        "qa-tester"
       ],
       "Models": [
         "claude-sonnet-4-6"
@@ -1180,13 +1189,22 @@
         "local-media-director",
         "local-media-reviewer",
         "local-motion-artist",
-        "programmer",
-        "qa-tester",
         "system-watchdog",
         "trend-researcher",
         "ui-auditor",
         "ui-designer",
         "wellness-coach"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "assignee-resume-code",
+      "Enabled": true,
+      "Agents": [
+        "programmer",
+        "qa-tester"
       ],
       "Models": [
         "claude-sonnet-4-6"
@@ -1243,13 +1261,22 @@
         "local-media-reviewer",
         "local-motion-artist",
         "producer",
-        "programmer",
-        "qa-tester",
         "system-watchdog",
         "trend-researcher",
         "ui-auditor",
         "ui-designer",
         "wellness-coach"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "owner-feedback-code",
+      "Enabled": true,
+      "Agents": [
+        "programmer",
+        "qa-tester"
       ],
       "Models": [
         "claude-sonnet-4-6"

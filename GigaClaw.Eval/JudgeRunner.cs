@@ -114,6 +114,34 @@ public sealed class JudgeRunner
         return Score(fixture, replayed, rubric, source, compareBaseline: false, llm: false);
     }
 
+    /// <summary>Re-replays one fixture and returns the exact bytes that fed its
+    /// <c>evidence[].ref</c>/<c>inputDigest</c> — see <see cref="ReplayRunner.CanonicalStream"/>.
+    /// Diagnostic only, never on the hot scoring path: a baseline drift names a hash difference,
+    /// and this is what turns that into something a human can diff.</summary>
+    public string NormalizedStream(string fixtureId)
+    {
+        var fixture = _replay.LoadFixtures()
+            .FirstOrDefault(candidate => string.Equals(candidate.Id, fixtureId, StringComparison.Ordinal))
+            ?? throw new ArgumentException($"Unknown fixture '{fixtureId}'.");
+        return ReplayRunner.CanonicalStream(_replay.ReplaySingle(fixture).Events);
+    }
+
+    /// <summary>Regenerates the committed normalized-stream reference dumps under
+    /// <c>GigaClaw.Eval/baselines/normalized-streams/</c> for every fixture <paramref name="target"/>
+    /// resolves to. Unlike <c>--update-baselines</c>, which records a new verdict, this records the
+    /// bytes the verdict's digest was computed from — meant to be regenerated on every platform whose
+    /// bytes should be on record (the committed reference here is macOS's), not only when a rubric
+    /// changes.</summary>
+    public void WriteStreamBaselines(string target)
+    {
+        foreach (var fixture in _replay.ResolveTarget(target))
+        {
+            var replayed = _replay.ReplaySingle(fixture);
+            JudgeStreamEvidence.WriteReference(
+                _repositoryRoot, fixture.Id, ReplayRunner.CanonicalStream(replayed.Events));
+        }
+    }
+
     private JudgeFixtureResult JudgeOne(ReplayFixture fixture, ReplayFixtureResult replayed, bool llm)
     {
         var (rubric, source) = LoadRubric(fixture.Agent);

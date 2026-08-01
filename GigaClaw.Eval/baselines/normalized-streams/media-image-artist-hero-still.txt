@@ -1,0 +1,7 @@
+0	launch	local-image-artist (new) session={{session_id}} cwd={{workspace}} skill=local-image-artist/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Spec locks kind image, provider comfyui, an explicit output path, approval and license notes. Recomputed the spec digest, checked for a prior submission under the same immutable key, then submitting the job.
+3	tool_use	Bash
+4	user	[user] 202
+5	assistant	[assistant] Submitted with idempotencyKey media-image-v1:5041:{{session_id}}{{session_id}}, HTTP 202 accepted. No provider/model/workflow substitution and no unapproved batch expansion. The durable job runner owns polling from here — not staying alive to watch it. The service will move the ticket to Backlog while the render runs, then to Review or Blocked on completion.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":160,"num_turns":2,"total_cost_usd":0.0398,"usage":{"input_tokens":320,"output_tokens":540,"cache_read_input_tokens":12100,"cache_creation_input_tokens":800}}

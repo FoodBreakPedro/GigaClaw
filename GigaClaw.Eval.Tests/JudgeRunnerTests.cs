@@ -53,7 +53,8 @@ public sealed class JudgeRunnerTests
         + "stream on a Windows runner and diff it against the committed macOS reference.")]
     public void Judge_MatchesTheCommittedBaselineForEveryFixture()
     {
-        var result = new JudgeRunner(RepositoryRoot).Run("all", writeReport: false);
+        var runner = new JudgeRunner(RepositoryRoot);
+        var result = runner.Run("all", writeReport: false);
 
         var fixtures = result.Reports.SelectMany(report => report.Fixtures).ToArray();
 
@@ -64,7 +65,7 @@ public sealed class JudgeRunnerTests
         // question is always *which field moved*; print it rather than making the next person
         // reconstruct it from a Windows machine they may not have.
         var drifted = fixtures.Where(f => f.BaselineStatus != "match").ToArray();
-        Assert.True(drifted.Length == 0, DescribeBaselineDrift(drifted));
+        Assert.True(drifted.Length == 0, DescribeBaselineDrift(drifted, runner));
 
         Assert.Equal(0, result.ExitCode);
         // 33 core fixtures (the eval-fixture authoring pass closed core's historic backlog against
@@ -87,8 +88,13 @@ public sealed class JudgeRunnerTests
     /// so the failure names its own cause. Kept next to the assertion rather than in a helper
     /// class: its whole job is to be read at the moment the test goes red.
     /// </summary>
-    private static string DescribeBaselineDrift(IReadOnlyList<JudgeFixtureResult> drifted)
+    private static string DescribeBaselineDrift(IReadOnlyList<JudgeFixtureResult> drifted, JudgeRunner runner)
     {
+        // Assert.True evaluates its message argument unconditionally — even when `drifted` is
+        // empty and the assertion is about to pass — so this must tolerate the empty case rather
+        // than assume a caller only builds the message on failure.
+        if (drifted.Count == 0) return "";
+
         var sb = new System.Text.StringBuilder();
         sb.Append($"{drifted.Count} fixture(s) do not reproduce the committed baseline. ");
         sb.Append($"os={System.Runtime.InteropServices.RuntimeInformation.OSDescription} ");
@@ -126,6 +132,17 @@ public sealed class JudgeRunnerTests
         sb.Append("temp path above (8.3 short names and symlinked temp dirs both defeat a plain ");
         sb.Append("string Replace). If a `notes` character count moved, the scored text itself ");
         sb.Append("differs and the mock CLI's output is the place to look.");
+
+        // Line-level evidence for the first drifting fixture: the exact bytes evidence[].ref /
+        // inputDigest hash, diffed against the macOS reference committed at
+        // GigaClaw.Eval/baselines/normalized-streams/. A hash difference names a symptom; this
+        // names the byte. Only the first fixture, not all of them — the point is to localize the
+        // mechanism once, not to dump 29 fixtures' worth of stream into one CI log.
+        var first = drifted[0];
+        sb.Append($"\n\n=== normalized-stream evidence for {first.Agent} / {first.Fixture} " +
+                  $"(first of {drifted.Count} drifted fixture(s)) ===\n");
+        sb.Append(JudgeStreamEvidence.Describe(RepositoryRoot, first.Fixture, runner.NormalizedStream(first.Fixture)));
+
         return sb.ToString();
 
         static string Indent(string json) => json.Replace("\n", "\n  ");

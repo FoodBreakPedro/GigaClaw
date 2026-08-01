@@ -1,0 +1,8 @@
+0	launch	blog-seo (new) session={{session_id}} cwd={{workspace}} skill=blog-seo/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Digest of the post file matches the BLOG-REVIEW APPROVE receipt on the ticket, so the approval chain covers this exact version. Repairing the JSON-LD block — it was missing the required datePublished field — then running both validators.
+3	tool_use	Bash
+4	user	[user] ai_citation_score: 88/100
+content_contract: PASS — BlogPosting schema valid, canonical tag present, OG tags complete
+5	assistant	[assistant] Repaired BlogPosting JSON-LD (added datePublished), verified canonical tag and OpenGraph metadata, GEO score 88/100 clears the 85 gate, content_contract passed. No prose was touched. BLOG-SEO VALIDATED v1 source-review-sha256:{{session_id}}{{session_id}} artifact-sha256:{{session_id}}{{session_id}}. Status moved to Review for the owner.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":190,"num_turns":2,"total_cost_usd":0.0679,"usage":{"input_tokens":430,"output_tokens":890,"cache_read_input_tokens":17400,"cache_creation_input_tokens":1300}}

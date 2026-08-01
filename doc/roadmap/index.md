@@ -16,6 +16,7 @@
 | Do-not-build | T15 consensus swarms, T16 federation, A14 queen agent, P14 GOAP, P17 signed receipts, O15 quantization, A12 business-ops. Unchanged |
 | Q3 confirmed (2026-07-31) | Owner confirms the explicit bindings as the intended reading: `security-auditor` → Sonnet, `threat-modeler` → Opus. The `models.json` header caveat is narrowed to match (no security-analysis agent on Fable; sub-Opus allowed where the criterion bounds or delegates the judgement) |
 | Runtime lane unparked (2026-07-31) | Owner unparks R4–R7 (leases → worktrees → merge queue → runner interface). R8 stays blocked on Codex usage cap |
+| SP-3 decisions (2026-08-01) | Worktree isolation + enqueueMerge default-on derived from the contract (code-touching write scopes only; content/media stays in-place under leases). Precondition: the F1 merge/lease hold interlock + F2 write-once denial receipts, fixed on this branch |
 
 ## Lane model
 
@@ -32,6 +33,8 @@ Per owner direction: **Codex** takes the most complex surgical code changes (str
 Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/cx-tooling`, `lane/claude-orch`, `lane/gemini-vol`). A lane never edits another lane's files outside a documented merge window; cross-lane needs are raised as notes in the lane doc and resolved at sync points. Lane CL runs the merge queue: every lane branch is reviewed (five-axis) before merging to main. Existing tests must pass with `dotnet test GigaClaw.Core.Tests -c Release`; new projects must also be built and have their own tests invoked explicitly by CI.
 
 > **Session handoff:** [`SESSION-HANDOFF.md`](SESSION-HANDOFF.md) — current gate state, outstanding work, and the roadmap artifact link. Start there.
+>
+> **SP-3 gate evidence:** [`SP3-EVIDENCE.md`](SP3-EVIDENCE.md) — what the combined lease/cycle/join/merge integration suite proves, the receipts it observes, the open findings it records, and the two owner decisions (`enqueueMerge` by default? worktree isolation by default?) stated with the evidence for each. **Both decisions are still open.**
 
 ## Lane status (living — updated by CL as the merge-queue owner)
 

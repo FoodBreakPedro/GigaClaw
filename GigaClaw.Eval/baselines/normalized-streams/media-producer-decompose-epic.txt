@@ -1,0 +1,7 @@
+0	launch	producer (new) session={{session_id}} cwd={{workspace}} skill=producer/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Ticket is unambiguous. Derived plan={{session_id}}{{session_id}} from the parent id and its current fields. Inventoried existing sub-tickets first (none), then posting the four planned units one at a time.
+3	tool_use	Bash
+4	user	[user] 201
+5	assistant	[assistant] Created 4 sub-tickets, reused 0, failed 0: [producer-sub:v1 parent=5045 plan={{session_id}}{{session_id}} key=storyboard] to local-media-director (Todo), key=still to local-image-artist (Backlog, depends on storyboard), key=clip to local-motion-artist (Backlog, depends on storyboard), key=compose to local-media-compositor (Backlog, depends on still+clip). Posted the manifest comment: [producer-plan:v1 parent=5045 input-sha256={{session_id}}{{session_id}} result=complete]. Parent stays InProgress.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":225,"num_turns":2,"total_cost_usd":0.0768,"usage":{"input_tokens":480,"output_tokens":1040,"cache_read_input_tokens":19600,"cache_creation_input_tokens":1600}}

@@ -935,18 +935,13 @@ internal sealed class ActionExecutor
             await _tickets.MoveTicketAsync(rt.Slug, firing.TicketId!.Value, m.To, "automation");
             state.StatusAfterMove = m.To;
 
-            // R5: a ticket landing in Done with an active worktree is the cleanup trigger.
-            // TryCleanupWorktreeAsync only ever removes a clean, merged worktree — anything else
-            // (dirty checkout, unmerged branch, a git failure) is flagged to the owner instead of
-            // silently deleted. Guarded by WorktreeStatus so a re-entry into Done (or a second
-            // moveTicketStatus in the same chain) is not re-attempted once already cleaned.
-            if (string.Equals(m.To, "Done", StringComparison.OrdinalIgnoreCase)
-                && ticketBefore is not null
-                && !string.IsNullOrWhiteSpace(ticketBefore.WorktreeBranch)
-                && !string.Equals(ticketBefore.WorktreeStatus, "cleaned", StringComparison.OrdinalIgnoreCase))
-            {
-                await TryCleanupWorktreeAsync(rt, ticketBefore, ct);
-            }
+            // R6 (doc/roadmap/SESSION-HANDOFF.md, PLAN-remaining.md §1 item 3): worktree cleanup
+            // used to be triggered from here only, which meant a user dragging a ticket to Done on
+            // the Board UI (TicketService.ReorderTicketAsync — never routed through ActionExecutor)
+            // silently orphaned the worktree. Cleanup now lives in TicketService itself
+            // (TryCleanupWorktreeOnDoneAsync), called from every status-changing method — including
+            // MoveTicketAsync, which the line above already awaits — so it runs exactly once here,
+            // as part of that call, with no separate invocation needed on this path.
         }
         catch (Exception ex) { _logger.LogWarning(ex, "moveTicketStatus failed for ticket #{Id} in project {Project}", firing.TicketId, rt.Slug); }
     }
@@ -1844,6 +1839,9 @@ internal sealed class ActionExecutor
             return FileLeaseGateDecision.NotApplicable;
 
         IReadOnlyList<string> scope;
+        // Oldest-first, and reused twice: as the handoff source the leased scope is resolved from,
+        // and as the receipt history the write-once denial check reads (see WriteFileLeaseReceiptAsync).
+        var comments = new List<string>();
         try
         {
             Models.Ticket? ticket = null;
@@ -1853,8 +1851,8 @@ internal sealed class ActionExecutor
                 _logger.LogWarning(ex, "fileLease: could not read ticket #{Id} for scope resolution", ticketId);
             }
 
-            var comments = ticket?.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList()
-                ?? new List<string>();
+            if (ticket is not null)
+                comments.AddRange(ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content));
             scope = await FileLeaseScopeResolver.ResolveAsync(rt.Workspace!, comments, agentName, ct);
         }
         catch (Exception ex)
@@ -1887,7 +1885,8 @@ internal sealed class ActionExecutor
         var outcome = enforcement == PolicyEnforcementMode.Block
             ? FileLeaseGateOutcome.Blocked
             : FileLeaseGateOutcome.WarnedAndProceeded;
-        await WriteFileLeaseReceiptAsync(rt.Slug, ticketId.Value, agentName, scope, result.ConflictingLease!, enforcement);
+        await WriteFileLeaseReceiptAsync(
+            rt.Slug, ticketId.Value, agentName, scope, result.ConflictingLease!, enforcement, comments);
         _logger.LogWarning(
             "fileLease: {Outcome} agent={Agent} ticket=#{Ticket} run={Run} conflictsWith run={ConflictRun} agent={ConflictAgent}",
             outcome, agentName, ticketId, runId, result.ConflictingLease!.RunId, result.ConflictingLease.Agent);
@@ -1905,6 +1904,18 @@ internal sealed class ActionExecutor
     /// lease — the same "denials/serializations produce receipts" idiom as R2's
     /// <c>policy-violation/v1</c> and R3's <c>outbound-denial/v1</c>
     /// (<see cref="WriteOutboundDenialReceiptAsync"/>).
+    /// <para>
+    /// <b>Once per conflict, not once per poll (SP-3 F2).</b> A blocked dispatch returns before
+    /// <c>FinalizeAsync</c>, so its trigger firing is never committed and a repeating
+    /// <c>ticketInColumn</c> trigger retries it every tick — deliberately, so the lane resumes the
+    /// moment the lease frees, and that retry behavior is unchanged here. What changes is the noise:
+    /// if the newest <c>file-lease-denial/v1</c> already on the ticket is byte-identical to the one
+    /// this refusal would write, nothing is appended. The receipt is its own dedup key — same
+    /// blocked agent, same scope, same conflicting lease means the same JSON, whereas a different
+    /// lease, holder, ticket or scope produces different JSON and therefore a new receipt. That is
+    /// the same first-refusal-only discipline R6 applies to <c>merge-held/v1</c>, and because the
+    /// key is the durable comment rather than in-process memory it holds across a restart too.
+    /// </para>
     /// </summary>
     private async Task WriteFileLeaseReceiptAsync(
         string slug,
@@ -1912,7 +1923,8 @@ internal sealed class ActionExecutor
         string agent,
         IReadOnlyList<string> scope,
         FileLease conflict,
-        PolicyEnforcementMode enforcement)
+        PolicyEnforcementMode enforcement,
+        IReadOnlyList<string> priorCommentsOldestFirst)
     {
         var receipt = JsonSerializer.Serialize(new
         {
@@ -1921,12 +1933,22 @@ internal sealed class ActionExecutor
             action = "runAgent",
             scope,
             rule = "file-ownership-lease",
+            conflictingLeaseId = conflict.LeaseId,
             conflictingRunId = conflict.RunId,
             conflictingAgent = conflict.Agent,
             conflictingTicketId = conflict.TicketId,
             reason = $"Scope overlaps an active lease held by '{conflict.Agent}' (run {conflict.RunId}) on ticket #{conflict.TicketId}.",
             enforcementMode = enforcement == PolicyEnforcementMode.Block ? "block" : "warn",
         });
+
+        var newest = priorCommentsOldestFirst.LastOrDefault(
+            c => c.Contains("file-lease-denial/v1", StringComparison.Ordinal));
+        if (string.Equals(newest, receipt, StringComparison.Ordinal))
+        {
+            _logger.LogDebug(
+                "fileLease: ticket #{Id} already carries this exact denial receipt — not appending another", ticketId);
+            return;
+        }
 
         try { await _tickets.AddCommentAsync(slug, ticketId, receipt, "automation"); }
         catch (Exception ex)
@@ -2002,60 +2024,6 @@ internal sealed class ActionExecutor
         {
             _logger.LogWarning(ex, "worktree isolation: failed to write failure receipt for ticket #{Id}", ticketId);
         }
-    }
-
-    /// <summary>
-    /// Attempts worktree cleanup for a ticket that just reached Done (see
-    /// <see cref="ExecuteMoveTicketStatusActionAsync"/>). Only <see cref="WorktreeCleanupOutcome.Cleaned"/>
-    /// updates <see cref="Models.Ticket.WorktreeStatus"/> to <c>"cleaned"</c>; every other outcome —
-    /// dirty checkout, unmerged branch, a git failure — is recorded as <c>"dirty"</c> and receipted
-    /// as <c>worktree-cleanup-blocked/v1</c>, the same "denials/serializations produce receipts"
-    /// idiom as R2's <c>policy-violation/v1</c>, R3's <c>outbound-denial/v1</c>, and R4's
-    /// <c>file-lease-denial/v1</c>. The worktree itself is never deleted in these cases.
-    /// </summary>
-    private async Task TryCleanupWorktreeAsync(ProjectRuntime rt, Models.Ticket ticket, CancellationToken ct)
-    {
-        var branch = ticket.WorktreeBranch!;
-        var path = ticket.WorktreePath!;
-
-        WorktreeCleanupResult result;
-        try
-        {
-            result = await WorktreeManager.TryCleanupAsync(rt.Workspace!, branch, path, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "worktree cleanup: failed for ticket #{Id}", ticket.Id);
-            return;
-        }
-
-        if (result.Outcome is WorktreeCleanupOutcome.Cleaned or WorktreeCleanupOutcome.AlreadyGone)
-        {
-            try { await _tickets.SetWorktreeStateAsync(rt.Slug, ticket.Id, branch, path, "cleaned"); }
-            catch (Exception ex) { _logger.LogWarning(ex, "worktree cleanup: failed to persist cleaned state for ticket #{Id}", ticket.Id); }
-            _logger.LogInformation(
-                "worktree cleanup: ticket #{Id} branch {Branch} — {Outcome}", ticket.Id, branch, result.Outcome);
-            return;
-        }
-
-        try { await _tickets.SetWorktreeStateAsync(rt.Slug, ticket.Id, branch, path, "dirty"); }
-        catch (Exception ex) { _logger.LogWarning(ex, "worktree cleanup: failed to persist dirty state for ticket #{Id}", ticket.Id); }
-
-        var receipt = JsonSerializer.Serialize(new
-        {
-            schema = "worktree-cleanup-blocked/v1",
-            ticketId = ticket.Id,
-            branch,
-            path,
-            rule = "worktree-cleanup",
-            outcome = result.Outcome.ToString(),
-            reason = result.Reason ?? "worktree cleanup was blocked",
-        });
-        try { await _tickets.AddCommentAsync(rt.Slug, ticket.Id, receipt, "automation"); }
-        catch (Exception ex) { _logger.LogWarning(ex, "worktree cleanup: failed to write blocked receipt for ticket #{Id}", ticket.Id); }
-        _logger.LogWarning(
-            "worktree cleanup: ticket #{Id} reached Done but the worktree was not cleaned ({Outcome}): {Reason}",
-            ticket.Id, result.Outcome, result.Reason);
     }
 
     /// <summary>

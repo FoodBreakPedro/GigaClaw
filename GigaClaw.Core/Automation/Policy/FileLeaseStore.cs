@@ -134,6 +134,63 @@ internal static class GlobIntersection
 }
 
 /// <summary>
+/// The SP-3 F1 interlock: does landing a merge collide with a file lease that is still live?
+/// <para>
+/// R4 leases a <i>glob scope</i>; a merge rewrites <i>concrete paths</i>. The comparison is the same
+/// conservative one <see cref="FileLeaseStore.AcquireAsync"/> already makes between two scopes —
+/// <see cref="GlobIntersection.MayIntersect(IReadOnlyList{string}, IReadOnlyList{string}, PathCaseSensitivity)"/>
+/// with each changed path treated as a wildcard-free glob — so the merge queue and the lease store
+/// cannot disagree about what "overlapping" means. Over-inclusive in exactly the same documented
+/// direction: a spurious hold costs one poll interval, a missed one lets a merge rewrite a file
+/// under a running agent.
+/// </para>
+/// <para>
+/// <b>Live</b> means unreleased <i>and</i> not past its TTL. An expired-but-not-yet-reaped lease is
+/// read as dead here rather than reaped: this is a gate on a read path, and reaping is
+/// <see cref="Services.FileLeaseReaper"/>'s job — a merge should not have to wait out the reaper's
+/// cadence for a lease whose own clock already said it was over.
+/// </para>
+/// <para>
+/// <b>A run never blocks its own merge.</b> The run that produced the branch holds a lease over
+/// precisely the files it wrote, so counting it would deadlock every merge behind its own author.
+/// Leases are matched to the producing run by ticket, which is the same key the queue entry and the
+/// R5 worktree branch (<c>ticket/&lt;id&gt;</c>) are already keyed on.
+/// </para>
+/// </summary>
+internal static class MergeLeaseInterlock
+{
+    /// <summary>One live lease and the changed paths that fall inside its scope.</summary>
+    internal sealed record Overlap(FileLease Lease, IReadOnlyList<string> Files);
+
+    /// <summary>
+    /// The first live lease held by another ticket whose scope covers any of
+    /// <paramref name="changedFiles"/>, or null when the merge is clear to proceed. Deterministic in
+    /// lease-id order so a held merge names the same lease on every retry — which is what makes the
+    /// "one receipt per hold reason" dedup stable.
+    /// </summary>
+    public static Overlap? FindBlocking(
+        IReadOnlyList<string> changedFiles,
+        IReadOnlyList<FileLease> leases,
+        int producingTicketId,
+        DateTime now,
+        PathCaseSensitivity caseSensitivity = PathCaseSensitivity.Sensitive)
+    {
+        if (changedFiles.Count == 0) return null;
+
+        foreach (var lease in leases.Where(IsLive).OrderBy(l => l.LeaseId, StringComparer.Ordinal))
+        {
+            var overlapping = changedFiles
+                .Where(file => GlobIntersection.MayIntersect([file], lease.Scope, caseSensitivity))
+                .ToList();
+            if (overlapping.Count > 0) return new Overlap(lease, overlapping);
+        }
+        return null;
+
+        bool IsLive(FileLease lease) => lease.TicketId != producingTicketId && lease.ExpiresAtUtc > now;
+    }
+}
+
+/// <summary>
 /// Resolves the file scope a dispatch should lease (R4). Primary source is the newest readable
 /// handoff's <c>ownedFiles</c> — "the interface R4 leases consume" per doc/handoff-contract.md and
 /// doc/roadmap/index.md. Falls back to the dispatched agent's own <c>allowedWriteGlobs</c> from

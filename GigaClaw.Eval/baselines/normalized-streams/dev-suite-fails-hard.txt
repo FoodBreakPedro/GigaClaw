@@ -1,0 +1,4 @@
+0	launch	qa-tester (new) session={{session_id}} cwd={{workspace}} skill=qa-tester/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] The isolated test instance could not start: port 5232 is already bound. No test result can be reported from this run.
+3	result	{"type":"result","subtype":"error","is_error":true,"duration_ms":70,"total_cost_usd":0.0031,"usage":{"input_tokens":110,"output_tokens":60,"cache_read_input_tokens":3400,"cache_creation_input_tokens":0}}

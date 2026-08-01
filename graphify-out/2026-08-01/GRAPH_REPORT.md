@@ -1,16 +1,16 @@
-# Graph Report - GigaClaw  (2026-07-31)
+# Graph Report - c5-c7-c8  (2026-08-01)
 
 ## Corpus Check
-- 770 files · ~1,473,884 words
+- 806 files · ~1,526,153 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8955 nodes · 18585 edges · 529 communities (418 shown, 111 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 754 edges (avg confidence: 0.78)
+- 9404 nodes · 20449 edges · 480 communities (420 shown, 60 thin omitted)
+- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 988 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4082184b`
+- Built from commit: `17cd7f7d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -32,7 +32,7 @@
 - UnifiedBoard.razor
 - ConditionEvaluatorsTests
 - JudgeRunner
-- Task
+- ActionExecutor
 - GigaClaw.Core.Automation
 - TicketReferenceExtensionTests
 - .ApplySort
@@ -50,9 +50,9 @@
 - PolicyHookTransport
 - System.Text
 - 2. Scoped-Glob Agents (31 Agents)
-- GitCommitTrigger
-- MemberService
-- ProjectRuntimeManager
+- .RunAsync
+- Sut
+- TeamDefinition
 - UnifiedBoardTests
 - Endpoints
 - TeamSeedTests
@@ -62,7 +62,7 @@
 - TeamRunService
 - DashboardService
 - resolveModelForTask
-- Task
+- .LoadPolicyAsync
 - CommentMarkdownPipelineTests
 - PolicyEnforcementModeTests
 - TeamRunJoinTests
@@ -70,10 +70,10 @@
 - CatalogGenerator
 - SecurityAssurancePackTests
 - ContractPolicy
-- ProjectRuntime
+- GitHubTestHarness
 - DirectoryPackSource
-- .Render
-- .BuildAsync
+- runStartupCheck
+- .RebaseOntoWorkspaceHeadAsync
 - MonteCarloRunner
 - GigaClaw.Core
 - ContractPolicyTests
@@ -82,7 +82,7 @@
 - AgentRunDrawer.razor
 - System.Text.RegularExpressions
 - PackCatalogSourceReader
-- .RunAsync
+- ClaudeRunner
 - BoardScrollPreservationTests
 - doc/index.md
 - SessionRegistry
@@ -94,7 +94,7 @@
 - normalizeParams
 - 4. Structured Evaluation & 1–5 Ranking Tables
 - SubTicketStatusTrigger
-- ActionExecutorFileLeaseTests
+- .EnsureBoardColumnsTableAsync
 - .Create
 - .BuildAsync
 - TemplateAutomationContractTests
@@ -108,7 +108,7 @@
 - GigaClaw vs. the Ecosystem — Agents, Teams, Patterns, Automations, Optimizations
 - ProcessJobObject
 - .TryParse
-- renderContent
+- GitHubPrFeedbackTests
 - PackLockSerializer
 - ProjectService
 - FileLeaseStore
@@ -117,26 +117,26 @@
 - Procedure
 - Pack infrastructure (O7) — design spec
 - AutomationConfig
-- .BuildAsync
+- .GetProjectAsync
 - PackFixture
 - PackBindingGateTests
-- .EvaluateAsync
+- IntervalTrigger
 - .FromSidecar
 - PackInstallerTests
 - properties
 - AllBoardsReturnNavigationTests
-- CatalogGenerator.cs
+- SystemCatalog
 - .Evaluate
 - EndpointsRefactorTests
 - .TryParse
-- RegistryDbContext
+- GigaClaw.Core.Models
 - Canned-ticket replay
 - JudgeRunnerTests
 - Procedure
 - required
 - GigaClaw
 - Opus48ModelSupportTests
-- GitRepositoryWatcher
+- ProjectRuntimeManager
 - getText
 - OpenApiDocumentationTests
 - RunConcurrencyGate
@@ -144,22 +144,22 @@
 - blog-reviewer Agent Skill
 - Code Janitor skill
 - Changelog
-- StatusChangeTrigger
+- .TryHandleExternalSignal
 - ActionExecutorChainSerializationTests
-- .BuildSutAsync
+- GigaClaw.Core.Packs
 - QA Tester skill
 - criterion
 - HyperlaneTravels → ZabalaZone migration runbook (Task 15 analysis)
 - .BuildSutAsync
 - HermesAgentServiceTests
 - ApiFactory
-- GigaClaw.Core.Packs
+- .Resolve
 - Baseline review — security-assurance pack agents
 - EvalFixture
 - GigaClaw.QaRunner
-- Fact
+- PackValidationException
 - Automation Drift Check
-- ConditionEvaluators
+- SP-3 gate — evidence
 - HomeAgentBadgeTests
 - AutomationConfigJsonTests
 - AgentsTemplateService
@@ -170,12 +170,12 @@
 - Executive conclusion
 - .Judge
 - .IsNewer
-- .Run
-- Fact
+- Harness
+- .BuildSutAsync
 - Program
 - OpenApiMarkdownGenerator
 - AuditParser
-- .DependenciesResolved
+- Baseline review — core judge baselines
 - Executable teams
 - Graphic charter
 - json
@@ -209,11 +209,11 @@
 - .Resolve
 - joinValues
 - convertToAnthropicMessagesPrompt
-- close
+- .Latest
 - media_contract.py
 - Lane CL — Claude Orchestration (collaborative, feedback-dependent)
 - Lane CX-R — Codex Runtime (surgical C# changes)
-- .Complete
+- .MapChat
 - "node_modules/ai/dist/index.mjs"
 - OnboardingGate.razor
 - AppSettings.razor
@@ -230,16 +230,16 @@
 - GigaClaw — Claude guide
 - Local models (Ollama)
 - Getting started with GigaClaw
-- Phase 4 — Packs (gated on SP-2 + O7)
-- Session handoff — 2026-07-30
+- roadmap/index.md
+- Session handoff — 2026-07-31 (addendum 2026-08-01)
 - 2. Docker Container Execution
 - .FindBindingGaps
-- AutomationEngine
+- DashboardScriptRunner
 - CostTracker
-- ActionExecutor
+- TriggerContext
 - Hyperlane Travels Content Engine Config
 - .BuildSut
-- TicketCommentAddedSignalPathTests
+- UnifiedDiff
 - .BuildAsync
 - CoreInitManifestTests
 - BoardEscTicketPanelTests
@@ -252,7 +252,7 @@
 - .Register
 - Architecture decisions
 - Implementation Plan: GigaClaw ↔ n8n ↔ PayloadCMS content pipeline
-- BoardIdleTrigger
+- TicketSummary
 - GigaClaw.Core.Tests
 - SharedRenderHelpers
 - Local media creation
@@ -261,11 +261,11 @@
 - $defs
 - convertPdfToMarkdown
 - .EnsureAsync
-- .BuildSutAsync
+- .Dedupe
 - .Run
 - buildWikiContext
 - .ShouldFireDailyAt
-- NodeRegistryTests
+- ClaudeRunnerMockIntegrationTests.cs
 - ConditionEditor.razor
 - EscapeKeyHost.razor
 - Secrets Reviewer skill
@@ -279,14 +279,14 @@
 - category
 - GameLiftEat — Brand File
 - Phase 4: Scale and harden
-- ClaudeHookSettings
+- Plan — remaining roadmap work (2026-08-01)
 - Dashboard
 - Binding Manifest — Team Preset Agents (Task G5)
-- GigaClaw Improvement Roadmap — Index
-- Lane CX-T — Codex Tooling (greenfield, isolated)
-- Verdict contract (v1)
+- VerdictGateTests
+- WorkflowGraph
 - .BuildSut
-- MergeQueueTests
+- .BuildSut
+- Lane CX-T — Codex Tooling (greenfield, isolated)
 - AgentInactivityTrigger
 - ReconnectModal.razor.js
 - Audit checklist
@@ -300,9 +300,9 @@
 - Hypothesis Investigator Skill
 - Hermes Agent chat
 - REST API
-- Lane GM — Gemini Volume (templates, markdown, high-volume authoring)
-- TriggerContext
-- BoardFilterStateIsolationTests
+- RunTokenUsageTests
+- buildEntry
+- .SyncAsync
 - .RunScript
 - UpdateCheckService
 - GigaClaw.Web
@@ -335,7 +335,7 @@
 - Telemetry
 - OpenApiTilesGuideTests
 - R2 hook-transport validation
-- runStartupCheck
+- createWikiLink
 - PolicyInventoryRunnerTests
 - App.razor
 - UpdateBanner.razor
@@ -347,14 +347,14 @@
 - decision-engine Agent Skill
 - design-researcher Agent Skill
 - growth-writer Agent Skill
-- .WriteSseAsync
+- .MapRuns
 - lint_prose.py
 - validate
-- .LoadManifestAsync
+- .Parse
 - Phase 2: Ingress path
 - Phase 1: Egress path — one venture, end to end
 - Agent dispatch
-- Handoff contract (v1)
+- isWatched
 - Ticket scheduling
 - Update check
 - AgentTeamService
@@ -371,9 +371,9 @@
 - Local media compositor skill
 - Local motion artist skill
 - cognitive_load.py
-- TeamDefinition
+- GigaClaw Improvement Roadmap — Index
 - properties
-- summary
+- .BuildSutAsync
 - trend-researcher Agent Skill
 - Author Voice & Editorial Style Profile
 - script.js
@@ -384,12 +384,12 @@
 - Hypothesis Investigator Memory Index
 - max
 - ticketId
-- .Push
+- .SpawnAndWaitAsync
 - Entries
 - ModelCriterionBindingTests
 - TicketCommentAddedTrigger
 - scan_privacy
-- .RunAsync
+- Fact
 - Workspace guide
 - new-venture.sh
 - check-automation-drift.sh
@@ -431,7 +431,7 @@
 - ui-designer/memory/MEMORY.md
 - wellness-coach/memory/MEMORY.md
 - run.sh
-- .Parse
+- agent
 - summary
 - venture-prep/README.md
 - GameLiftEat Trend Profile
@@ -443,22 +443,22 @@
 - Pedro Zabala — Personal Brand File
 - Entries
 - ZabsConsulting Trend Profile
-- .FilterMembersByTeam
+- .FinishLaneAsync
 - Entries
 - Hyperlane Travels — Brand File
 - Entries
 - Karalun — Activation Kit
 - ZabsConsulting — Brand File
-- IntervalTrigger
-- PackLockFile
+- GitHub surface
+- .FlattenJson
 - GameLiftEat — Content Engine Config
 - ZabsConsulting — Offer Brief: AI Visibility Audit (GEO/AEO)
 - TemplateVerdictContractTests
 - HandoffArtifactTests
-- .TryAcquireDispatchLeaseAsync
+- .BuildProcessStartInfo
 - .Source
-- BackgroundService
-- GigaClaw.Web.Api
+- enum
+- GigaClaw.Web.Services
 - loadSchema
 - .Format
 - Welcome to your LLM-Wiki
@@ -466,118 +466,69 @@
 - TestInstance
 - .MapTodoApi
 - TelemetryService
-- .InstallAsync
-- fetchModelsWithFallback
+- GigaClaw.Core.Github
+- .IsQuotaSignal
 - AppSettingsUpdateFieldsTests
 - TemplateHandoffContractTests
-- artifact
+- RepairLoop
 - ScenarioParseTests
-- .RunGitAsync
-- exitCode
-- Func
-- IHttpClientFactory
-- CancellationToken
-- List
-- stderr
-- stdout
-- .MapDashboard
-- Ticket
-- Dictionary
-- JsonElement
-- string
-- StringBuilder
-- TimeSpan
-- ClaudeRunContext
-- HashSet
-- long
-- TicketId
-- JsonSerializerOptions
-- CancellationTokenSource
-- char
-- ConcurrentDictionary
-- ConcurrentQueue
-- Exception
-- GeneratedRegex
-- HashSet
-- int
-- IReadOnlyDictionary
-- IReadOnlyList
-- JsonElement
-- List
-- long
-- ReadOnlySpan
-- Regex
-- SemaphoreSlim
-- string
-- ValueTask
-- Fact
-- HttpClient
-- HttpResponseMessage
-- InlineData
-- MemberData
-- Theory
-- TheoryData
-- .DependencyError
-- Endpoints
-- .OfNode
-- .BuildSut
+- GitHubIssueLinkStore
+- .SendAsync
+- Workflow graph
+- TileTemplate
+- GigaClaw.Web.Api
+- ActionEditorCoverageTests
+- CatalogGenerator.cs
 - ScreenshotUploader
-- ClaudeRunnerMockIntegrationTests.cs
-- ClaudeHookSettingsTests
-- .HasParent
-- ClaudeModelCatalog
-- Fact
-- List
-- ticketId
 
 ## God Nodes (most connected - your core abstractions)
-1. `Task` - 670 edges
-2. `GigaClaw.Core.Services` - 113 edges
+1. `Task` - 898 edges
+2. `GigaClaw.Core.Services` - 126 edges
 3. `normalizeParams()` - 93 edges
-4. `GigaClaw.Core.Automation` - 81 edges
-5. `ActionExecutor` - 81 edges
-6. `TicketService` - 73 edges
-7. `"node_modules/zod/v4/classic/schemas.js"()` - 69 edges
-8. `GigaClaw.Core.Tests.Helpers` - 65 edges
-9. `ProjectService` - 56 edges
-10. `GigaClaw.Core.Tests.Automation` - 55 edges
+4. `GigaClaw.Core.Automation` - 90 edges
+5. `ActionExecutor` - 84 edges
+6. `TicketService` - 84 edges
+7. `GigaClaw.Core.Tests.Helpers` - 73 edges
+8. `"node_modules/zod/v4/classic/schemas.js"()` - 69 edges
+9. `TriggerFiring` - 67 edges
+10. `ProjectService` - 65 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `$constructor()` --indirect_call--> `init()`  [INFERRED]
   .obsidian/plugins/karpathywiki/main.js → GigaClaw.Web/wwwroot/js/flow-dnd.js
-- `ActionExecutor` --references--> `IHttpClientFactory`  [EXTRACTED]
-  GigaClaw.Core/Automation/ActionExecutor.cs → GigaClaw.Web/Components/Pages/Dashboard.razor
-- `ActionExecutor` --references--> `LocalizationService`  [EXTRACTED]
-  GigaClaw.Core/Automation/ActionExecutor.cs → GigaClaw.Web/Components/Pages/Dashboard.razor
-- `ActionExecutor` --references--> `ProjectService`  [EXTRACTED]
-  GigaClaw.Core/Automation/ActionExecutor.cs → GigaClaw.Web/Components/Pages/Dashboard.razor
+- `ReplayRunner` --references--> `SystemCatalog`  [EXTRACTED]
+  GigaClaw.Eval/ReplayRunner.cs → GigaClaw.Catalog/CatalogGenerator.cs
+- `StaticEvalRunner` --references--> `SystemCatalog`  [EXTRACTED]
+  GigaClaw.Eval/StaticEvalRunner.cs → GigaClaw.Catalog/CatalogGenerator.cs
 - `Harness` --references--> `ActionExecutor`  [EXTRACTED]
   GigaClaw.Core.Tests/Automation/ActionExecutorFileLeaseTests.cs → GigaClaw.Core/Automation/ActionExecutor.cs
+- `Harness` --references--> `AgentRunRegistry`  [EXTRACTED]
+  GigaClaw.Core.Tests/Automation/ActionExecutorFileLeaseTests.cs → GigaClaw.Core/Automation/AgentRun.cs
 
 ## Import Cycles
 - None detected.
 
-## Communities (529 total, 111 thin omitted)
+## Communities (480 total, 60 thin omitted)
 
 ### Community 0 - "Board.razor"
 Cohesion: 0.01
 Nodes (156): Board, GigaClaw.Core.Extensions, AddColumn, AddComment, AddExistingLabel, ApplyFilter, ArmTrashEscape, CancelComment (+148 more)
 
 ### Community 1 - "RepairLoopTests"
-Cohesion: 0.06
-Nodes (34): Fresh, Func, HashSet, IReadOnlyList, JsonElement, Regex, string, AgentVerdict (+26 more)
+Cohesion: 0.18
+Nodes (7): VerdictComment, IReadOnlyList, Fact, int, List, string, RepairLoopTests
 
 ### Community 2 - "ActionExecutorHttpRequestTests"
 Cohesion: 0.07
-Nodes (29): Body, Fact, HttpStatusCode, InlineData, List, string, Theory, TimeSpan (+21 more)
+Nodes (25): Fact, List, string, TimeSpan, ActionExecutorFileLeaseTests, Fact, HttpStatusCode, InlineData (+17 more)
 
 ### Community 3 - "TicketService"
-Cohesion: 0.07
-Nodes (26): DbUpdateException, ConcurrentDictionary, Func, MigrationGate, DbContextOptionsBuilder, DbSet, string, TodoDbContext (+18 more)
+Cohesion: 0.11
+Nodes (16): ConcurrentDictionary, Func, MigrationGate, DbContextOptionsBuilder, DbSet, string, TodoDbContext, TicketPriority (+8 more)
 
 ### Community 4 - "LocalMediaJobService"
-Cohesion: 0.08
-Nodes (26): DateTime, Comment, string, CreateLocalMediaJobRequest, CreateLocalMediaJobResult, LocalMediaJob, LocalMediaJobActionRequest, LocalMediaJobStatuses (+18 more)
+Cohesion: 0.09
+Nodes (24): string, CreateLocalMediaJobRequest, CreateLocalMediaJobResult, LocalMediaJob, LocalMediaJobActionRequest, LocalMediaJobStatuses, ReviewLocalMediaJobRequest, CancellationToken (+16 more)
 
 ### Community 5 - "PackManifestParser"
 Cohesion: 0.09
@@ -596,44 +547,44 @@ Cohesion: 0.03
 Nodes (57): ActiveResponse, ChatMessage, ChatStartResponse, ChatTarget, ActiveResponse, ApprovalChoiceLabel, AskUserQuestionMessage, BackToSelection (+49 more)
 
 ### Community 9 - "AutomationConfig.cs"
-Cohesion: 0.13
-Nodes (33): Dictionary, List, string, ActionSpec, AddCommentActionSpec, AgentInactivityTriggerSpec, AssignTicketActionSpec, BoardIdleTriggerSpec (+25 more)
+Cohesion: 0.09
+Nodes (44): Dictionary, List, string, ActionSpec, AddCommentActionSpec, AgentInactivityTriggerSpec, AllSubTicketsInStatusConditionSpec, AssignedToConditionSpec (+36 more)
 
 ### Community 10 - "Dashboard.razor"
-Cohesion: 0.04
-Nodes (50): AgentRunDrawer, AgentRunsState, ChildContent, Dashboard, DashboardTileLayout, ErrorBoundary, GigaClaw.Core.Automation, GigaClaw.Core.Automation.Runners (+42 more)
+Cohesion: 0.03
+Nodes (58): Dashboard, DashboardTileLayout, GigaClaw.Core.Automation.Runners, AcceptTileConfig, AutoStartEmptyTiles, BuildTileChatSystemPrompt, CloseRunDrawer, CloseTileChat (+50 more)
 
 ### Community 11 - "ReplayRunner"
 Cohesion: 0.10
 Nodes (19): IReadOnlyList, string, ReplayConfig, ReplayEvent, ReplayExpectation, ReplayFixture, ReplayReport, ReplayRunResult (+11 more)
 
 ### Community 12 - "HandoffReader"
-Cohesion: 0.17
-Nodes (11): HashSet, IReadOnlyList, JsonElement, List, Regex, string, HandoffArtifact, HandoffCriterion (+3 more)
+Cohesion: 0.18
+Nodes (10): HashSet, IReadOnlyList, JsonElement, List, Regex, string, HandoffArtifact, HandoffCriterion (+2 more)
 
 ### Community 13 - "GigaClaw.Core.Services"
-Cohesion: 0.08
-Nodes (8): GigaClaw.Core.Services, GigaClaw.Core.Tests.Helpers, GigaClaw.Core.Tests.Services, GigaClaw.Core.Data, GigaClaw.Core.Models, GigaClaw.Core.Automation.Handoffs, TestSkillBuilder, TestTeamRuns
+Cohesion: 0.09
+Nodes (5): GigaClaw.Core.Services, GigaClaw.Core.Tests.Helpers, GigaClaw.Core.Tests.Services, GitCommitSignal, TestSkillBuilder
 
 ### Community 14 - "UnifiedBoard.razor"
 Cohesion: 0.04
 Nodes (49): BoardUpdateNotifier, ApplyFilter, CloseChatDrawer, CloseCreateTicket, CreateTicketFromLane, Dispose, FromAllBoards, GetPriorityClass (+41 more)
 
 ### Community 15 - "ConditionEvaluatorsTests"
-Cohesion: 0.11
-Nodes (8): AllSubTicketsInStatusConditionSpec, LabelsConditionSpec, MinDescriptionLengthConditionSpec, TicketAgeConditionSpec, DateTime, IReadOnlyCollection, Fact, ConditionEvaluatorsTests
+Cohesion: 0.06
+Nodes (13): IReadOnlyDictionary, ActionTemplate, DateTime, IReadOnlyCollection, ConditionEvaluators, Fact, ActionTemplateTests, Fact (+5 more)
 
 ### Community 16 - "JudgeRunner"
 Cohesion: 0.07
 Nodes (29): JsonSerializerOptions, AgentRubric, JudgeBaseline, JudgeBaselineEntry, JudgeCategory, JudgeConfig, JudgeEvidence, JudgeFixtureResult (+21 more)
 
-### Community 17 - "Task"
-Cohesion: 0.11
-Nodes (29): ActionSpec, ActionState, AddCommentActionSpec, agentName, AssignTicketActionSpec, Automation, CommitAgentMemoryActionSpec, ConsolidateAgentMemoryActionSpec (+21 more)
+### Community 17 - "ActionExecutor"
+Cohesion: 0.08
+Nodes (30): agentName, Action, CancellationToken, ConcurrentDictionary, DateTime, exitCode, Func, IHttpClientFactory (+22 more)
 
 ### Community 18 - "GigaClaw.Core.Automation"
-Cohesion: 0.08
-Nodes (8): GigaClaw.Core.Automation.Policy, GigaClaw.Core.Automation.Triggers, GigaClaw.Core.Automation, GigaClaw.Core.Tests.Automation, Automation, GitCommitSignal, ComposedFile, ActionExecutorSetLabelsTests
+Cohesion: 0.07
+Nodes (13): GigaClaw.Core.Automation.Policy, GigaClaw.Core.Automation.Runners, GigaClaw.Core.Automation.Triggers, GigaClaw.Core.Automation, GigaClaw.Core.Tests.Automation, GigaClaw.Core.Tests.Integration, GigaClaw.Core.Automation.Workflow, FileLeaseGateDecision (+5 more)
 
 ### Community 19 - "TicketReferenceExtensionTests"
 Cohesion: 0.07
@@ -653,7 +604,7 @@ Nodes (39): check_url(), frontmatter(), main(), Any, Path, schema_types(), self_
 
 ### Community 23 - "main.js"
 Cohesion: 0.01
-Nodes (184): addIssueToContext(), appendSuggestion(), applySchemaSuggestion(), asRecord(), asRecord2(), backupFilename(), badgeForKind(), bedrockMantleChatCompletionsUrl() (+176 more)
+Nodes (183): addIssueToContext(), appendSuggestion(), applySchemaSuggestion(), asRecord(), asRecord2(), backupFilename(), badgeForKind(), bedrockMantleChatCompletionsUrl() (+175 more)
 
 ### Community 24 - "TileRenderer"
 Cohesion: 0.15
@@ -672,51 +623,51 @@ Cohesion: 0.05
 Nodes (39): Appendix: External Dependencies & Contact Points, Completion Criteria (Task 17), Karalun Gaming — Venture Rollout Checklist, Phase 0: Pre-flight (Preparation), Phase 1: Project Scaffold (Live GigaClaw required), Phase 2: Brand & Voice (Local workspace only), Phase 3: Ventures Database & Ingress Setup (Live ZabsAIOS required), Phase 4: Full-Loop Verification (Live GigaClaw + n8n required) (+31 more)
 
 ### Community 29 - "PolicyHookToolCallAdapter"
-Cohesion: 0.14
-Nodes (10): char, GeneratedRegex, PolicyHookEvaluation, PolicyHookToolCallAdapter, IReadOnlyDictionary, IReadOnlyList, JsonElement, Match (+2 more)
+Cohesion: 0.12
+Nodes (12): PolicyToolCall, char, GeneratedRegex, HashSet, IReadOnlyDictionary, IReadOnlyList, JsonElement, List (+4 more)
 
 ### Community 30 - "PackInstaller"
-Cohesion: 0.18
-Nodes (13): Content, Destination, IReadOnlyList, PackComposition, Action, Dictionary, JsonArray, JsonNode (+5 more)
+Cohesion: 0.10
+Nodes (22): Content, Destination, IReadOnlyList, PackComposition, JsonNode, ReadOnlySpan, PackFileHash, Action (+14 more)
 
 ### Community 31 - "AgentRun"
-Cohesion: 0.12
-Nodes (12): CancellationTokenSource, Channel, IEnumerable, int, IReadOnlyList, LinkedList, object, AgentRun (+4 more)
+Cohesion: 0.06
+Nodes (31): BackgroundService, CancellationTokenSource, Channel, ConcurrentDictionary, DateTime, IEnumerable, int, IReadOnlyList (+23 more)
 
 ### Community 32 - "PolicyHookTransport"
-Cohesion: 0.09
-Nodes (21): byte, CancellationToken, CancellationTokenSource, ConcurrentDictionary, ConcurrentQueue, ContractPolicy, Task, Uri (+13 more)
+Cohesion: 0.08
+Nodes (21): byte, CancellationToken, CancellationTokenSource, ConcurrentDictionary, ConcurrentQueue, int, long, ReadOnlySpan (+13 more)
 
 ### Community 33 - "System.Text"
-Cohesion: 0.06
-Nodes (12): GigaClaw.Core.Automation.Verdicts, GigaClaw.Eval, GigaClaw.Catalog, GigaClaw.QaRunner, GigaClaw.Core.Automation.Runners, FileLeaseGateOutcome, OnInitialized, PageTitle (+4 more)
+Cohesion: 0.08
+Nodes (10): GigaClaw.Core.Automation.Verdicts, GigaClaw.Eval, GigaClaw.Catalog, GigaClaw.QaRunner, ProcessResult, ProcessRunner, OnInitialized, PageTitle (+2 more)
 
 ### Community 34 - "2. Scoped-Glob Agents (31 Agents)"
 Cohesion: 0.05
 Nodes (38): 10. `blog-translator`, 11. `blog-writer`, 12. `committer`, 13. `competitive-analyst`, 14. `content-series-planner`, 15. `data-analyst`, 16. `decision-engine`, 17. `design-researcher` (+30 more)
 
-### Community 35 - "GitCommitTrigger"
-Cohesion: 0.33
-Nodes (5): CancellationToken, DateTime, IReadOnlyList, GitCommitTrigger, GitCommitTriggerSpec
+### Community 35 - ".RunAsync"
+Cohesion: 0.14
+Nodes (15): branch, CancellationToken, DateTime, IReadOnlyList, GitCommitTrigger, CancellationToken, IReadOnlyDictionary, TimeSpan (+7 more)
 
-### Community 36 - "MemberService"
-Cohesion: 0.12
-Nodes (13): Member, List, DeleteMemberResult, MemberService, Runtime, string, Ticket, TriggerFiring (+5 more)
+### Community 36 - "Sut"
+Cohesion: 0.17
+Nodes (7): Action, CancellationToken, Fact, string, ParallelBranchDispatchGateTests, ParallelRunAgentsTests, Sut
 
-### Community 37 - "ProjectRuntimeManager"
-Cohesion: 0.10
-Nodes (16): ChannelReader, Channel, ConcurrentDictionary, DateTime, Dictionary, ILogger, ProjectRuntimeManager, UrgentEntry (+8 more)
+### Community 37 - "TeamDefinition"
+Cohesion: 0.09
+Nodes (18): string, ParallelRunPlan, IEnumerable, IReadOnlyList, TeamDefinition, TeamJoinMode, TeamPartialFailure, TeamRole (+10 more)
 
 ### Community 38 - "UnifiedBoardTests"
 Cohesion: 0.14
 Nodes (3): Fact, HashSet, UnifiedBoardTests
 
 ### Community 39 - "Endpoints"
-Cohesion: 0.12
-Nodes (15): BaseAgent, ChatImageDto, ChatService, int, IReadOnlyList, RouteGroupBuilder, StreamEvent, Task (+7 more)
+Cohesion: 0.14
+Nodes (11): BaseAgent, ChatImageDto, HashSet, int, IReadOnlyList, long, TicketId, Endpoints (+3 more)
 
 ### Community 40 - "TeamSeedTests"
-Cohesion: 0.17
+Cohesion: 0.16
 Nodes (6): Fact, IEnumerable, IReadOnlyList, JsonSerializerOptions, string, TeamSeedTests
 
 ### Community 41 - "HermesAgentService"
@@ -725,43 +676,43 @@ Nodes (13): CancellationToken, HttpClient, HttpRequestMessage, IHttpClientFactor
 
 ### Community 42 - ".CreateProjectAsync"
 Cohesion: 0.07
-Nodes (23): Fact, ClaudeRunnerPumpExceptionTests, Fact, ClaudeRunnerMockIntegrationTests, ClaudeRunContext, Fact, ClaudeRunnerPolicyHookTests, AgentRun (+15 more)
+Nodes (25): Fact, ClaudeRunnerPumpExceptionTests, Fact, ClaudeRunnerMockIntegrationTests, ClaudeRunContext, Fact, ClaudeRunnerPolicyHookTests, AgentRun (+17 more)
 
 ### Community 43 - ".Push"
 Cohesion: 0.11
 Nodes (16): Entry, Fact, EscapeKeyStackTests, Action, bool, IDisposable, List, object (+8 more)
 
 ### Community 44 - "TeamRunService"
-Cohesion: 0.06
-Nodes (35): DateTime, ActivityEntry, TeamJoinPolicy, IEnumerable, IReadOnlyList, TeamJoinEvaluator, TeamJoinVerdict, DateTime (+27 more)
+Cohesion: 0.08
+Nodes (28): DedupedFinding, RunHandoff, DateTime, ActivityEntry, DateTime, Comment, DateTime, IReadOnlyList (+20 more)
 
 ### Community 45 - "DashboardService"
-Cohesion: 0.22
-Nodes (8): Func, HashSet, JsonSerializerOptions, List, string, DashboardService, DashboardTileLayout, LegacyTileLayout
+Cohesion: 0.13
+Nodes (12): Action, DateTime, Func, HashSet, JsonSerializerOptions, List, string, DashboardService (+4 more)
 
 ### Community 46 - "resolveModelForTask"
 Cohesion: 0.03
 Nodes (163): apiDelay(), appendAliases(), appendContradictedByMarker(), appendToReviewedPage(), applyComplementaryAppends(), applySectionLabels(), assembleFinalContent(), buildActiveTagVocabularySection() (+155 more)
 
-### Community 47 - "Task"
-Cohesion: 0.22
-Nodes (12): ContractPolicy, Task, Uri, PolicyHookRunSessionLifecycleTests, PolicyHookTransportBenchmarkTests, PolicyHookTransportTests, HttpClient, HttpResponseMessage (+4 more)
+### Community 47 - ".LoadPolicyAsync"
+Cohesion: 0.08
+Nodes (22): CancellationToken, JsonElement, string, Uri, ClaudeHookSettings, PolicyToolOperation, Exception, Fact (+14 more)
 
 ### Community 48 - "CommentMarkdownPipelineTests"
 Cohesion: 0.12
 Nodes (10): GigaClaw.Web.Markdown, Fact, ChatMarkdownRendererTests, Fact, CommentMarkdownPipelineTests, MarkdownPipeline, ChatMarkdownRenderer, MarkdownPipeline (+2 more)
 
 ### Community 49 - "PolicyEnforcementModeTests"
-Cohesion: 0.25
-Nodes (5): PolicyEnforcementMode, Fact, InlineData, Theory, PolicyEnforcementModeTests
+Cohesion: 0.19
+Nodes (6): Fact, InlineData, string, Theory, PolicyEnforcementModeTests, TemplateEnforcementStateTests
 
 ### Community 50 - "TeamRunJoinTests"
-Cohesion: 0.27
-Nodes (4): Fact, IEnumerable, IReadOnlyList, TeamRunJoinTests
+Cohesion: 0.15
+Nodes (10): TeamJoinPolicy, IEnumerable, IReadOnlyList, TeamJoinEvaluator, TeamJoinVerdict, Fact, IEnumerable, IReadOnlyList (+2 more)
 
 ### Community 51 - "Contracts.cs"
 Cohesion: 0.06
-Nodes (32): AddCommentRequest, AddTicketDependencyRequest, BrowseFolderRequest, ChatImageDto, ChatMessageDto, ChatStartRequest, ChatTargetDto, ChatTargetsResponse (+24 more)
+Nodes (32): AddCommentRequest, AddTicketDependencyRequest, BrowseFolderRequest, ChatMessageDto, ChatStartRequest, ChatTargetDto, ChatTargetsResponse, CreateColumnRequest (+24 more)
 
 ### Community 52 - "CatalogGenerator"
 Cohesion: 0.12
@@ -772,72 +723,76 @@ Cohesion: 0.24
 Nodes (5): Fact, JsonDocument, JsonElement, string, SecurityAssurancePackTests
 
 ### Community 54 - "ContractPolicy"
-Cohesion: 0.21
-Nodes (11): HashSet, IReadOnlyDictionary, IReadOnlyList, string, ContractCapability, ContractPolicy, ContractPolicyDefaults, GitIgnoreGlobSet (+3 more)
+Cohesion: 0.16
+Nodes (14): HashSet, IReadOnlyDictionary, IReadOnlyList, string, ContractCapability, ContractPolicy, ContractPolicyDefaults, GitIgnoreGlobSet (+6 more)
 
-### Community 55 - "ProjectRuntime"
+### Community 55 - "GitHubTestHarness"
 Cohesion: 0.08
-Nodes (18): AllSubTicketsInStatusConditionSpec, AssignedToConditionSpec, ConditionSpec, DependenciesResolvedConditionSpec, FieldLengthConditionSpec, HasParentConditionSpec, LabelsConditionSpec, MinDescriptionLengthConditionSpec (+10 more)
+Nodes (24): Body, CancellationToken, ILogger, string, IOutboundReceiptSink, OutboundReceipt, TicketOutboundReceiptSink, CancellationToken (+16 more)
 
 ### Community 56 - "DirectoryPackSource"
 Cohesion: 0.13
 Nodes (7): Assembly, HashSet, IReadOnlyList, List, string, DirectoryPackSource, EmbeddedPackSource
 
-### Community 57 - ".Render"
-Cohesion: 0.18
-Nodes (7): Dictionary, IReadOnlyDictionary, string, ActionState, ActionTemplate, Fact, ActionTemplateTests
+### Community 57 - "runStartupCheck"
+Cohesion: 0.06
+Nodes (36): assessWelcomeNeed(), basenameNoExt(), cleanIncompletePages(), computeSlug(), createWelcomeNoteAsync(), decideOnboardingAction(), ensureWelcomeNote(), extractRawSourcesEntries() (+28 more)
 
-### Community 58 - ".BuildAsync"
-Cohesion: 0.25
-Nodes (9): executor, Fact, runs, runtime, ticketId, tickets, TimeSpan, ActionExecutorDeferredCommitTests (+1 more)
+### Community 58 - ".RebaseOntoWorkspaceHeadAsync"
+Cohesion: 0.13
+Nodes (15): arguments, error, fileName, CancellationToken, exitCode, int, IReadOnlyList, stderr (+7 more)
 
 ### Community 59 - "MonteCarloRunner"
-Cohesion: 0.11
-Nodes (15): double, MonteCarloConfig, MonteCarloCost, MonteCarloFixtureResult, MonteCarloReport, MonteCarloRequest, MonteCarloRunResult, MonteCarloSample (+7 more)
+Cohesion: 0.08
+Nodes (22): double, MonteCarloConfig, MonteCarloCost, MonteCarloFixtureResult, MonteCarloOptions, MonteCarloReport, MonteCarloRequest, MonteCarloRunResult (+14 more)
 
 ### Community 60 - "GigaClaw.Core"
 Cohesion: 0.17
 Nodes (12): GigaClaw.Core, net10.0, Markdig (1.3.2), Microsoft.EntityFrameworkCore.Sqlite (10.0.10), SQLitePCLRaw.bundle_e_sqlite3 (3.0.5), YamlDotNet (18.1.0), Microsoft.NET.Sdk, Microsoft.EntityFrameworkCore.Design (10.0.10) (+4 more)
 
 ### Community 61 - "ContractPolicyTests"
-Cohesion: 0.13
-Nodes (8): PolicyToolCall, Fact, InlineData, MemberData, string, Theory, TheoryData, ContractPolicyTests
+Cohesion: 0.15
+Nodes (8): CancellationToken, Fact, InlineData, MemberData, string, Theory, TheoryData, ContractPolicyTests
 
 ### Community 62 - "DashboardTileGate"
 Cohesion: 0.09
 Nodes (18): CancellationToken, DateTime, Dictionary, Func, IEnumerable, IReadOnlyList, LinkedList, object (+10 more)
 
 ### Community 63 - "Task"
-Cohesion: 0.07
-Nodes (21): DateTime, ApiFactory, Fact, HttpClient, TicketDependencyApiTests, Fact, projects, FileLeaseStoreTests (+13 more)
+Cohesion: 0.06
+Nodes (27): Fact, projects, FileLeaseStoreTests, Dictionary, Fact, Func, int, IReadOnlyDictionary (+19 more)
 
 ### Community 64 - "AgentRunDrawer.razor"
 Cohesion: 0.07
 Nodes (29): Close, DisposeAsync, FormatElapsed, GetMessageBody, GetRateLimitPreview, GetResultPreview, GetToolPreview, HandleEvent (+21 more)
 
 ### Community 65 - "System.Text.RegularExpressions"
-Cohesion: 0.12
-Nodes (8): GigaClaw.Core.Tests.Web, Fact, string, ActionEditorCoverageTests, Fact, string, ConditionEditorCoverageTests, System.Text.RegularExpressions
+Cohesion: 0.13
+Nodes (7): GigaClaw.Core.Tests.Web, Regex, DashboardRefreshScheduling, Fact, string, ConditionEditorCoverageTests, System.Text.RegularExpressions
 
 ### Community 66 - "PackCatalogSourceReader"
 Cohesion: 0.14
 Nodes (12): PackPermissionsView, IEnumerable, IReadOnlyDictionary, IReadOnlyList, JsonElement, string, PackCatalogSourceReader, IEnumerable (+4 more)
 
-### Community 67 - ".RunAsync"
-Cohesion: 0.05
-Nodes (35): Action, AgentRun, AgentRunRegistry, CancellationToken, ILogger, IReadOnlyList, SessionRegistry, StreamEvent (+27 more)
+### Community 67 - "ClaudeRunner"
+Cohesion: 0.12
+Nodes (13): Action, CancellationToken, ILogger, IReadOnlyList, string, StringBuilder, TimeSpan, ClaudeRunContext (+5 more)
 
 ### Community 68 - "BoardScrollPreservationTests"
 Cohesion: 0.25
 Nodes (3): Fact, string, BoardScrollPreservationTests
 
+### Community 69 - "doc/index.md"
+Cohesion: 0.13
+Nodes (15): Consumers, Handoff contract (v1), Shape, Transport, Validating, Architecture documentation, Features, Consumers (+7 more)
+
 ### Community 70 - "SessionRegistry"
-Cohesion: 0.14
-Nodes (9): Action, DateTime, Dictionary, IReadOnlyDictionary, JsonObject, object, SessionRegistry, Fact (+1 more)
+Cohesion: 0.09
+Nodes (18): Action, DateTime, Dictionary, IReadOnlyDictionary, JsonObject, object, SessionRegistry, executor (+10 more)
 
 ### Community 71 - "PackComposer"
-Cohesion: 0.13
-Nodes (20): IPackSource, Dictionary, Func, IEnumerable, IReadOnlyDictionary, IReadOnlyList, IReadOnlySet, JsonArray (+12 more)
+Cohesion: 0.14
+Nodes (19): IPackSource, Dictionary, Func, IEnumerable, IReadOnlyDictionary, IReadOnlyList, IReadOnlySet, JsonArray (+11 more)
 
 ### Community 72 - "ProjectCreation.razor"
 Cohesion: 0.07
@@ -849,11 +804,11 @@ Nodes (17): description, items, type, description, items, type, $ref, descriptio
 
 ### Community 74 - "generateText"
 Cohesion: 0.03
-Nodes (135): addAdditionalPropertiesToJsonSchema(), addImageModelUsage(), addLanguageModelUsage(), addTokenCounts(), asArray(), asContent(), asEmbeddingModelV3(), asImageModelV3() (+127 more)
+Nodes (112): addImageModelUsage(), addLanguageModelUsage(), addTokenCounts(), asArray(), asContent(), asEmbeddingModelV3(), asImageModelV3(), asLanguageModelUsage() (+104 more)
 
 ### Community 75 - "analyzeSource"
-Cohesion: 0.05
-Nodes (44): adjustBatchSizeForResponse(), analyzeSource(), appendGranularityToPrompt(), basenameNoExt(), buildAnalysisPrompt(), buildCompactSlugList(), buildSourceAnalysis(), calculateBatchLimits() (+36 more)
+Cohesion: 0.06
+Nodes (32): adjustBatchSizeForResponse(), analyzeSource(), appendGranularityToPrompt(), buildAnalysisPrompt(), buildCompactSlugList(), buildSourceAnalysis(), calculateBatchLimits(), calculateBatchStats() (+24 more)
 
 ### Community 76 - "normalizeParams"
 Cohesion: 0.02
@@ -864,12 +819,12 @@ Cohesion: 0.07
 Nodes (26): 1.1 Agent Inventory & Roles, 1.2 Organization & Storage Model, 1.3 Automation Engine & Dispatch Mechanisms, 1.4 Inter-Agent Linking & Handoffs, 1. Deep Dive: GigaClaw Architecture & Capabilities, 2.1 `awesome-claude-code` (`Filimindji/awesome-claude-code`), 2.2 `wshobson/agents` (`wshobson/agents`), 2.3 `aaron-marketing-skills` (`aaron-he-zhu/aaron-marketing-skills`) (+18 more)
 
 ### Community 78 - "SubTicketStatusTrigger"
-Cohesion: 0.17
-Nodes (9): CancellationToken, ConcurrentQueue, DateTime, IEnumerable, IReadOnlyList, SubTicketStatusTrigger, Fact, SubTicketStatusTriggerTests (+1 more)
+Cohesion: 0.18
+Nodes (8): CancellationToken, ConcurrentQueue, DateTime, IReadOnlyList, SubTicketStatusTrigger, Fact, SubTicketStatusTriggerTests, SubTicketStatusTriggerSpec
 
-### Community 79 - "ActionExecutorFileLeaseTests"
-Cohesion: 0.35
-Nodes (5): Fact, List, string, TimeSpan, ActionExecutorFileLeaseTests
+### Community 79 - ".EnsureBoardColumnsTableAsync"
+Cohesion: 0.15
+Nodes (10): DbUpdateException, BoardColumn, List, string, ColumnService, columns, Fact, ScheduledColumnTests (+2 more)
 
 ### Community 81 - ".BuildAsync"
 Cohesion: 0.16
@@ -896,8 +851,8 @@ Cohesion: 0.26
 Nodes (9): AgentRun, AgentRunRegistry, Fact, List, ProjectRuntime, RunAgentActionSpec, RunStateManager, TriggerFiring (+1 more)
 
 ### Community 87 - "MergeQueueStore"
-Cohesion: 0.06
-Nodes (33): arguments, error, fileName, CancellationToken, exitCode, int, IReadOnlyList, stderr (+25 more)
+Cohesion: 0.12
+Nodes (18): Func, MergeApprovalGate, CancellationToken, DateTime, IReadOnlyList, SqliteConnection, SqliteDataReader, string (+10 more)
 
 ### Community 88 - ".UninstallAsync"
 Cohesion: 0.28
@@ -915,25 +870,25 @@ Nodes (15): DllImport, int, long, Process, IO_COUNTERS, JOBOBJECT_BASIC_LIMIT_IN
 Cohesion: 0.18
 Nodes (6): IReadOnlyDictionary, JsonSerializerOptions, DraftFrontmatter, Fact, string, DraftFrontmatterTests
 
-### Community 93 - "renderContent"
-Cohesion: 0.08
-Nodes (34): buildEntry(), classifyOperation(), classifySectionKind(), createWikiLink(), defaultSeverityForKind(), deltaChip(), extractWikiLinks(), llmSeverityFor() (+26 more)
+### Community 93 - "GitHubPrFeedbackTests"
+Cohesion: 0.06
+Nodes (26): IReadOnlyList, Regex, string, OwnerFeedback, OwnerFeedbackItem, Fact, string, GitHubCheckStatusTests (+18 more)
 
 ### Community 94 - "PackLockSerializer"
-Cohesion: 0.26
-Nodes (7): Dictionary, IReadOnlyDictionary, IReadOnlyList, JsonArray, JsonObject, JsonSerializerOptions, PackLockSerializer
+Cohesion: 0.17
+Nodes (9): Dictionary, IReadOnlyDictionary, IReadOnlyList, JsonArray, JsonObject, JsonSerializerOptions, PackLockSerializer, Fact (+1 more)
 
 ### Community 95 - "ProjectService"
 Cohesion: 0.06
-Nodes (33): ConcurrentDictionary, TimeSpan, AgentRunRegistry, Dictionary, ProjectRuntime, CancellationToken, ILogger, RunCostRecorder (+25 more)
+Nodes (31): Member, List, DeleteMemberResult, MemberService, bool, ConcurrentDictionary, GeneratedRegex, Regex (+23 more)
 
 ### Community 96 - "FileLeaseStore"
 Cohesion: 0.09
 Nodes (25): CancellationToken, char, DateTime, IReadOnlyList, List, SqliteConnection, SqliteDataReader, string (+17 more)
 
 ### Community 97 - "TriggerEditor.razor"
-Cohesion: 0.09
-Nodes (22): AddTime, ApplySchedule, ChangeMode, FormatTime, OnTypeChanged, ParseAuthors, ParseDayField, ParseIgnoreAuthors (+14 more)
+Cohesion: 0.08
+Nodes (24): AddTime, ApplySchedule, ChangeMode, FormatTime, OnTypeChanged, ParseAuthors, ParseConclusions, ParseDayField (+16 more)
 
 ### Community 98 - "http"
 Cohesion: 0.09
@@ -948,12 +903,12 @@ Cohesion: 0.09
 Nodes (22): 10. Owner decisions (Approved 2026-07-30), 11. Implementation status (T6), 1. What a pack is, 2. On-disk layout, 3. Manifest schema (`pack.json`, schemaVersion 1), 4. Composition, 5. Versioning and compatibility, 6. Core-pack extraction — the invariant T6 must prove (+14 more)
 
 ### Community 101 - "AutomationConfig"
-Cohesion: 0.09
-Nodes (18): Config, ConfigPath, AutomationConfig, Action, ConcurrentDictionary, FileSystemWatcher, JsonSerializerOptions, object (+10 more)
+Cohesion: 0.17
+Nodes (8): AutomationConfig, ConcurrentDictionary, IReadOnlyDictionary, IReadOnlyList, PackQuarantine, Fact, int, PackQuarantineTests
 
-### Community 102 - ".BuildAsync"
+### Community 102 - ".GetProjectAsync"
 Cohesion: 0.12
-Nodes (12): DateTime, Project, executor, Fact, Project, runs, TimeSpan, OllamaLocalModelTests (+4 more)
+Nodes (14): DateTime, Project, executor, Fact, Project, runs, TimeSpan, OllamaLocalModelTests (+6 more)
 
 ### Community 103 - "PackFixture"
 Cohesion: 0.19
@@ -963,25 +918,25 @@ Nodes (4): JsonArray, JsonObject, string, PackFixture
 Cohesion: 0.25
 Nodes (7): CatalogBuild, Fact, IReadOnlyList, List, string, PackBindingGateTests, PackRepo
 
-### Community 105 - ".EvaluateAsync"
-Cohesion: 0.20
-Nodes (7): CancellationToken, IReadOnlyList, DateTime, Dictionary, Fact, FakeStateStore, IntervalTriggerPersistenceTests
+### Community 105 - "IntervalTrigger"
+Cohesion: 0.12
+Nodes (13): CrontabSchedule, CancellationToken, DateTime, IReadOnlyList, ITriggerStateStore, string, IntervalTrigger, DateTime (+5 more)
 
 ### Community 106 - ".FromSidecar"
-Cohesion: 0.17
-Nodes (11): TileFrequency, TileFrequencyKind, Fact, InlineData, Theory, TileFrequencyMappingTests, Kind, RefreshAt (+3 more)
+Cohesion: 0.18
+Nodes (10): TileFrequency, TileFrequencyKind, Fact, InlineData, Theory, TileFrequencyMappingTests, Kind, RefreshAt (+2 more)
 
 ### Community 108 - "properties"
-Cohesion: 0.10
-Nodes (21): description, pattern, type, properties, agent, reviewCycle, reviewedAtUtc, schemaVersion (+13 more)
+Cohesion: 0.11
+Nodes (18): properties, reviewCycle, reviewedAtUtc, schemaVersion, summary, verdict, description, $ref (+10 more)
 
 ### Community 109 - "AllBoardsReturnNavigationTests"
 Cohesion: 0.20
 Nodes (6): GigaClaw.Web, Fact, InlineData, Theory, AllBoardsReturnNavigationTests, NavigationReturn
 
-### Community 110 - "CatalogGenerator.cs"
-Cohesion: 0.12
-Nodes (8): AutomationCatalogEntry, BindingGap, CatalogSummary, PackCatalogEntry, PackPolicyViolation, SystemCatalog, List, Program
+### Community 110 - "SystemCatalog"
+Cohesion: 0.17
+Nodes (4): BindingGap, SystemCatalog, List, Program
 
 ### Community 111 - ".Evaluate"
 Cohesion: 0.21
@@ -992,20 +947,20 @@ Cohesion: 0.17
 Nodes (8): ApiFactory, Dictionary, Fact, HashSet, HttpClient, InlineData, Theory, EndpointsRefactorTests
 
 ### Community 113 - ".TryParse"
-Cohesion: 0.12
-Nodes (12): Action, Regex, Dto, TileSidecar, TileSidecarSerializer, TileSidecarTests, Fact, InlineData (+4 more)
+Cohesion: 0.14
+Nodes (11): Regex, Dto, TileSidecar, TileSidecarSerializer, TileSidecarTests, Fact, InlineData, Theory (+3 more)
 
-### Community 114 - "RegistryDbContext"
-Cohesion: 0.29
-Nodes (5): DbContext, DbContextOptionsBuilder, DbSet, string, RegistryDbContext
+### Community 114 - "GigaClaw.Core.Models"
+Cohesion: 0.08
+Nodes (17): GigaClaw.Core.Data, GigaClaw.Core.Models, DbContext, ParallelRunPlanException, DbContextOptionsBuilder, DbSet, string, RegistryDbContext (+9 more)
 
 ### Community 115 - "Canned-ticket replay"
 Cohesion: 0.10
 Nodes (20): Baselines, Canned-ticket replay, Costed sampling, Determinism, GigaClaw agent eval, How a replay stays hermetic and deterministic, Judge, Monte Carlo (+12 more)
 
 ### Community 116 - "JudgeRunnerTests"
-Cohesion: 0.14
-Nodes (10): ExitCode, Fact, IReadOnlyList, JudgeFixtureResult, Output, ReplayFixture, string, JudgeRunnerTests (+2 more)
+Cohesion: 0.09
+Nodes (14): string, JudgeStreamEvidence, ExitCode, Fact, IReadOnlyList, JudgeFixtureResult, JudgeRunner, Output (+6 more)
 
 ### Community 117 - "Procedure"
 Cohesion: 0.10
@@ -1019,13 +974,13 @@ Nodes (12): agent, schemaVersion, ticketId, required, acceptanceCriteria, assump
 Cohesion: 0.10
 Nodes (20): API, Architecture, Automation model, Conventions, Creating a project, Dashboard, Data Storage, Folder layout (+12 more)
 
-### Community 121 - "GitRepositoryWatcher"
-Cohesion: 0.16
-Nodes (11): FileSystemEventArgs, CancellationToken, ConcurrentDictionary, FileSystemWatcher, ILogger, int, object, string (+3 more)
+### Community 121 - "ProjectRuntimeManager"
+Cohesion: 0.04
+Nodes (44): ChannelReader, Config, ConfigPath, FileSystemEventArgs, CancellationToken, DateTime, Dictionary, ILogger (+36 more)
 
 ### Community 122 - "getText"
 Cohesion: 0.03
-Nodes (139): activateQueryView(), applyCodexModelPolicy(), applySettingsMigrations(), beginOpenAICodexDeviceLogin(), bindModelCatalog(), buildIngestStatusBarText(), buildRangeSliderDesc(), cancelIngestion() (+131 more)
+Nodes (138): accessFrom(), activateQueryView(), applyCodexModelPolicy(), applySettingsMigrations(), beginOpenAICodexDeviceLogin(), bindModelCatalog(), buildIngestStatusBarText(), buildRangeSliderDesc() (+130 more)
 
 ### Community 123 - "OpenApiDocumentationTests"
 Cohesion: 0.27
@@ -1051,29 +1006,25 @@ Nodes (16): 1. Health report (always first), 2. Patterns to detect (signal only,
 Cohesion: 0.04
 Nodes (46): Added, Added, Added, Added, Added, Added, Added, Added (+38 more)
 
-### Community 129 - "StatusChangeTrigger"
-Cohesion: 0.17
-Nodes (8): CancellationToken, DateTime, IReadOnlyList, StatusChangeSignal, StatusChangeTrigger, Fact, StatusChangeTriggerTests, StatusChangeTriggerSpec
-
-### Community 131 - ".BuildSutAsync"
-Cohesion: 0.31
-Nodes (6): Fact, Projects, Slug, Tickets, TeamStoreTests, Teams
+### Community 131 - "GigaClaw.Core.Packs"
+Cohesion: 0.13
+Nodes (4): GigaClaw.Core.Packs, GigaClaw.Core.Tests.Packs, ComposedFile, PackComposeOptions
 
 ### Community 132 - "QA Tester skill"
 Cohesion: 0.11
 Nodes (15): 1. Read the ticket, 2. Inspect the code, 3. Verify — by actually running the change, 3b. Try to break it — the sneaky scenarios, Procedure, 4. Post the verdict report, 5. Act on the verdict, Machine-Checkable Veto Items (+7 more)
 
 ### Community 133 - "criterion"
-Cohesion: 0.20
-Nodes (11): additionalProperties, required, type, $defs, criterion, openLoop, statement, additionalProperties (+3 more)
+Cohesion: 0.14
+Nodes (14): description, type, additionalProperties, required, type, criterion, openLoop, statement (+6 more)
 
 ### Community 134 - "HyperlaneTravels → ZabalaZone migration runbook (Task 15 analysis)"
 Cohesion: 0.11
 Nodes (17): 1. Live CMS inventory (19 posts), 2. The 40 event posts (`lib/events.js`), 3. CMS post field mapping table (the 19), 4. Media manifest, 5. Importer port design: `ZabalaZone/scripts/import-hyperlane-posts.mjs`, 6. Slug-collision policy, 7. Pre-flight checklist (must be true before the importer can run), 8. Cutover checklist and rollback plan (+9 more)
 
 ### Community 135 - ".BuildSutAsync"
-Cohesion: 0.13
-Nodes (14): DateTime, List, SubTicketInfo, TicketDependencyInfo, TicketSummary, IReadOnlyList, ITicketDependencyQuery, Fact (+6 more)
+Cohesion: 0.25
+Nodes (7): Fact, Func, Projects, Slug, TicketDependencyInfo, Tickets, TicketDependencyTests
 
 ### Community 136 - "HermesAgentServiceTests"
 Cohesion: 0.12
@@ -1082,6 +1033,10 @@ Nodes (14): HttpClient, FakeHttpClientFactory, CancellationToken, Fact, HttpClie
 ### Community 137 - "ApiFactory"
 Cohesion: 0.22
 Nodes (8): string, ApiFactory, string, ApiFactory, string, ApiFactory, CreateProjectRequest, WebApplicationFactory
+
+### Community 138 - ".Resolve"
+Cohesion: 0.14
+Nodes (15): Fresh, Func, HashSet, IReadOnlyList, JsonElement, Regex, string, AgentVerdict (+7 more)
 
 ### Community 139 - "Baseline review — security-assurance pack agents"
 Cohesion: 0.20
@@ -1095,17 +1050,17 @@ Nodes (6): Dictionary, Fact, int, List, EvalFixture, StaticEvalRunnerTests
 Cohesion: 0.12
 Nodes (16): API action (`type: "api"`), `assertJson`, `assignTicket`, Browser, Browser actions, Convenience shortcuts, `createTicket`, Design principle: API for setup, Playwright for visuals (+8 more)
 
-### Community 142 - "Fact"
-Cohesion: 0.20
-Nodes (6): Exception, Fact, IReadOnlyList, PackValidationException, PolicyHookTransportShutdownRaceTests, PolicyInventoryArtifactTests
+### Community 142 - "PackValidationException"
+Cohesion: 0.50
+Nodes (3): Exception, IReadOnlyList, PackValidationException
 
 ### Community 143 - "Automation Drift Check"
 Cohesion: 0.12
 Nodes (15): Allowlist: automation-overrides.json, Automation Drift Check, Common Scenarios, Example, Exit Codes, Implementation Details, Output Format, Purpose (+7 more)
 
-### Community 144 - "ConditionEvaluators"
-Cohesion: 0.20
-Nodes (5): AssignedToConditionSpec, FieldLengthConditionSpec, ConditionEvaluators, InlineData, Theory
+### Community 144 - "SP-3 gate — evidence"
+Cohesion: 0.11
+Nodes (19): 1. Ownership conflict inside a parallel team run, 1a — exactly one branch dispatches, the loser is serialized not lost, 1b — a refused lane is named in the synthesis, and the run fails with gaps, 2. Lease expiry mid-run — and conservative reaping, 3. Dependency cycle across team-run sub-tickets, 4. Merge-queue composition behind two worktree-isolated runs, 4a — two candidates land one at a time behind the owner gate, 4b — disjoint leases do not prevent a real conflict; the queue bounces it (+11 more)
 
 ### Community 146 - "AutomationConfigJsonTests"
 Cohesion: 0.22
@@ -1139,9 +1094,13 @@ Nodes (11): Errors, JudgeModelRecord, int, IReadOnlyList, LlmJudgeDispatch, stri
 Cohesion: 0.11
 Nodes (15): VersionCompare, Fact, InlineData, Theory, VersionCompareTests, author, authorUrl, description (+7 more)
 
-### Community 155 - ".Run"
-Cohesion: 0.23
-Nodes (7): MonteCarloOptions, Fact, IReadOnlyList, MonteCarloSample, string, MonteCarloRunnerTests, MonteCarloRunner
+### Community 155 - "Harness"
+Cohesion: 0.19
+Nodes (5): Fact, string, TriggerFiring, Harness, TemplateVerdictGateTests
+
+### Community 156 - ".BuildSutAsync"
+Cohesion: 0.29
+Nodes (6): Fact, Projects, Slug, Tickets, TeamStoreTests, Teams
 
 ### Community 158 - "OpenApiMarkdownGenerator"
 Cohesion: 0.31
@@ -1151,9 +1110,13 @@ Nodes (6): Dictionary, JsonDocument, JsonElement, string, StringBuilder, OpenApi
 Cohesion: 0.22
 Nodes (9): HTMLParser, AuditParser, contrast(), luminance(), main(), parse_hex(), Path, self_test() (+1 more)
 
+### Community 160 - "Baseline review — core judge baselines"
+Cohesion: 0.13
+Nodes (14): Baseline review — core judge baselines, Finding A — `approval-gatekeeper` records SHIP 100/100 for a run that breaks its SKILL four ways, Finding B — `growth-writer` records SHIP 100/100 for work in another agent's discipline, Finding C — `local-media-director` records SHIP 100/100 without the SKILL's required artifacts, Finding D — `blog-writer` pins the wrong artifact path and misses its own receipt, Finding E — `qa-tester` reaches a non-SHIP verdict for the wrong reason, Finding F — the "No placeholder handoff" check fires on `Todo`, the board's own column name, Findings (+6 more)
+
 ### Community 161 - "Executable teams"
-Cohesion: 0.14
-Nodes (14): Dependencies between tasks, Entry points, Executable teams, Joining, Key components, Not implemented yet, Purpose, Resumability (+6 more)
+Cohesion: 0.13
+Nodes (15): Dependencies between tasks, Entry points, Executable teams, Joining, Key components, Not implemented yet, Purpose, Resumability (+7 more)
 
 ### Community 162 - "Graphic charter"
 Cohesion: 0.14
@@ -1161,23 +1124,23 @@ Nodes (13): Accents (semantic), Animations, Borders, Buttons, Chart palette (cat
 
 ### Community 163 - "json"
 Cohesion: 0.04
-Nodes (73): abortError(), abortError2(), abortError3(), accessFrom(), _boolean(), boolean2(), buildAuthorizationUrl(), cancelResponseBody2() (+65 more)
+Nodes (66): abortError(), abortError2(), abortError3(), _boolean(), boolean2(), buildAuthorizationUrl(), cancelResponseBody2(), completeDeviceAuthorization() (+58 more)
 
 ### Community 164 - "PolicyGitGuardTests"
 Cohesion: 0.30
 Nodes (5): Fact, InlineData, IReadOnlyList, Theory, PolicyGitGuardTests
 
 ### Community 166 - "ReplayRunnerNormalizeTests"
-Cohesion: 0.14
-Nodes (8): GigaClaw.Eval.Tests, Fact, MemberData, string, Theory, TheoryData, ReplayRunnerNormalizeTests, ReplayCollection
+Cohesion: 0.10
+Nodes (12): GigaClaw.Eval.Tests.Helpers, GigaClaw.Eval.Tests, FactAttribute, string, KnownWindowsFailureFactAttribute, Fact, MemberData, string (+4 more)
 
 ### Community 167 - "ReceiptChainTests"
 Cohesion: 0.25
 Nodes (7): Dictionary, Fact, HashSet, IReadOnlyDictionary, Regex, string, ReceiptChainTests
 
 ### Community 168 - "WorkspaceMergeTransaction"
-Cohesion: 0.18
-Nodes (11): CancellationToken, IEnumerable, IReadOnlyDictionary, List, PackInstaller, PackLockEntry, CancellationToken, IReadOnlyList (+3 more)
+Cohesion: 0.16
+Nodes (12): JsonObject, CancellationToken, IEnumerable, IReadOnlyDictionary, List, PackInstaller, PackLockEntry, CancellationToken (+4 more)
 
 ### Community 170 - "_Imports.razor"
 Cohesion: 0.14
@@ -1200,24 +1163,24 @@ Cohesion: 0.17
 Nodes (7): GigaClaw.Core.Platform, CancellationToken, IFolderPicker, CancellationToken, WindowsFolderPicker, RouteGroupBuilder, Endpoints
 
 ### Community 176 - "onOpen"
-Cohesion: 0.05
-Nodes (58): addCopyButton(), addRetrievalLabel(), addTag(), appendChip(), appendCustomQueryInstructions(), applyCustomInstructions(), applyDiffModalClasses(), armDisplay() (+50 more)
+Cohesion: 0.03
+Nodes (86): addCopyButton(), addRetrievalLabel(), addTag(), appendChip(), appendCustomQueryInstructions(), applyCustomInstructions(), applyDiffModalClasses(), armDisplay() (+78 more)
 
 ### Community 177 - "AppSettingsService"
-Cohesion: 0.15
-Nodes (10): AppSettingsData, DateTime, IReadOnlyCollection, JsonSerializerOptions, List, string, AppSettingsData, AppSettingsService (+2 more)
+Cohesion: 0.09
+Nodes (19): AppSettingsData, IReadOnlyList, GitHubProjectConfig, DateTime, Dictionary, GitHubProjectConfig, IReadOnlyCollection, JsonSerializerOptions (+11 more)
 
 ### Community 178 - ""node_modules/@ai-sdk/provider-utils/dist/index.mjs""
 Cohesion: 0.06
 Nodes (48): addFormat(), addPattern(), callCompletionApi(), createAbortError(), decideAdditionalProperties(), delay(), emoji(), escapeLiteralCheckValue() (+40 more)
 
 ### Community 179 - "DashboardRefreshService"
-Cohesion: 0.15
-Nodes (15): ClaudeRunContext, AgentRun, CancellationToken, Task, IAgentRunner, CancellationToken, ConcurrentDictionary, ILogger (+7 more)
+Cohesion: 0.26
+Nodes (6): ConfigError, CancellationToken, ConcurrentDictionary, ILogger, DashboardRefreshService, Path
 
 ### Community 180 - "ActionEditor.razor"
-Cohesion: 0.15
-Nodes (12): JoinGroups, JoinHeaders, OnInitializedAsync, OnTypeChanged, ActionSpec, GigaClaw.Core.Automation, IHttpClientFactory, LocalizationService (+4 more)
+Cohesion: 0.14
+Nodes (13): JoinGroups, JoinHeaders, NewBranch, OnInitializedAsync, OnTypeChanged, ActionSpec, GigaClaw.Core.Automation, IHttpClientFactory (+5 more)
 
 ### Community 181 - ".BuildSut"
 Cohesion: 0.43
@@ -1268,12 +1231,12 @@ Cohesion: 0.08
 Nodes (45): assertNever(), getBelarusianPlural(), getRussianPlural(), joinValues(), "node_modules/zod/v3/locales/en.js"(), "node_modules/zod/v4/locales/ar.js"(), "node_modules/zod/v4/locales/az.js"(), "node_modules/zod/v4/locales/be.js"() (+37 more)
 
 ### Community 193 - "convertToAnthropicMessagesPrompt"
-Cohesion: 0.05
-Nodes (47): asGatewayError(), convertToAnthropicMessagesPrompt(), convertToBase64(), convertToModelMessages(), convertToOpenAIChatMessages(), convertToOpenAIResponsesInput(), createAgentUIStream(), createAgentUIStreamResponse() (+39 more)
+Cohesion: 0.04
+Nodes (70): asGatewayError(), asSchema(), buildPayload(), canonicalJSON(), convertToAnthropicMessagesPrompt(), convertToBase64(), convertToModelMessages(), convertToOpenAIChatMessages() (+62 more)
 
-### Community 194 - "close"
-Cohesion: 0.11
-Nodes (22): close(), consumeStream(), createAsyncIterableStream(), createIdMap(), createResolvablePromise(), createStitchableStream(), createStreamingUIMessageState(), createUIMessageStream() (+14 more)
+### Community 194 - ".Latest"
+Cohesion: 0.23
+Nodes (7): IReadOnlyList, Regex, string, ArbitrationDecision, ArbitrationReader, Fact, ArbitrationReaderTests
 
 ### Community 195 - "media_contract.py"
 Cohesion: 0.39
@@ -1287,13 +1250,13 @@ Nodes (11): Lane CL — Claude Orchestration (collaborative, feedback-dependent)
 Cohesion: 0.18
 Nodes (10): Lane CX-R — Codex Runtime (surgical C# changes), Task R1: Policy chokepoint — read contracts at the runner boundary (P3), Task R2: Shadow-mode enforcement + violation receipts (P3), Task R3: Block mode + git/outbound guards (P3 + U18 + U17), Task R4: File-ownership leases for parallel runs (T11), Task R5: Worktree-per-ticket execution (U6, part 1), Task R6: Merge queue + integration gate (U6, part 2), Task R7: Host-neutral runner interface (P13, part 1) (+2 more)
 
-### Community 198 - ".Complete"
-Cohesion: 0.13
-Nodes (10): DateTime, JsonSerializerOptions, List, string, AgentRunSnapshot, AgentRunStatus, RunLogStore, StreamEvent (+2 more)
+### Community 198 - ".MapChat"
+Cohesion: 0.27
+Nodes (4): ChatMessageRow, List, ChatService, RouteGroupBuilder
 
 ### Community 199 - ""node_modules/ai/dist/index.mjs""
 Cohesion: 0.08
-Nodes (40): cancelResponseBody(), createAnthropic(), createDownload(), createGatewayProvider(), createOpenAI(), createOpenAICompatible(), createProviderToolFactory(), createProviderToolFactoryWithOutputSchema() (+32 more)
+Nodes (39): addAdditionalPropertiesToJsonSchema(), cancelResponseBody(), createDownload(), createProviderToolFactory(), createProviderToolFactoryWithOutputSchema(), downloadBlob(), fetchWithValidatedRedirects(), fileToBlob() (+31 more)
 
 ### Community 200 - "OnboardingGate.razor"
 Cohesion: 0.18
@@ -1351,29 +1314,29 @@ Nodes (10): Architecture note, Assigning a member to use an Ollama model, Config
 Cohesion: 0.20
 Nodes (10): Agents and automation, Automations page, Create your first project, Dashboard, First launch, Getting started with GigaClaw, Next steps, Sending an ad-hoc instruction (+2 more)
 
-### Community 215 - "Phase 4 — Packs (gated on SP-2 + O7)"
-Cohesion: 0.20
-Nodes (10): Do-not-build (owner-confirmed 2026-07-30), Later pilots (post-SP-4, shadow mode, each individually gated), Pack 1: Security Assurance (A3/T3) — proves the pack infra, Pack 2: Incident & Debug (A5/T6), Pack 3: Architecture & Data (A7), Pack 4: Language specialists (A9), Pack 5: Truth registries (P7/P12) — pattern port, prerequisite for Pack 6, Pack 6: Marketing — optimized pack (A8, owner-selected scope) (+2 more)
+### Community 215 - "roadmap/index.md"
+Cohesion: 0.10
+Nodes (17): Lane GM — Gemini Volume (templates, markdown, high-volume authoring), Task G1: The two cheap defects (T17 + P22) — hours, do first, Task G2: Reviewer SKILL.md rewrites to typed verdicts (A11) — five agents, Task G3: Handoff artifact templates (P9), Task G4: Progressive disclosure on the seven largest skills (P21), Task G5: Team-preset agent prose (T5/T6 support), Task G6: Pack content authoring (Phase 4 — the volume phase), Do-not-build (owner-confirmed 2026-07-30) (+9 more)
 
-### Community 216 - "Session handoff — 2026-07-30"
-Cohesion: 0.14
-Nodes (14): CI now builds on three platforms, Gate state, Hard-won lessons worth not relearning, One test is still exempted on Windows, Outstanding work, Parked by owner call — R3 is done, R4–R7 are not, Session handoff — 2026-07-30, Smaller carried-forward items (+6 more)
+### Community 216 - "Session handoff — 2026-07-31 (addendum 2026-08-01)"
+Cohesion: 0.22
+Nodes (9): Addendum — 2026-08-01: C5, C7, C8 landed on a PR branch, Gate state, Hard-won lessons, appended, Outstanding, Session handoff — 2026-07-31 (addendum 2026-08-01), The Windows exemption: narrowed, disproven once, and back on, Verification on `4082184`, What landed this session (2026-07-31, owner away, per-task merges) (+1 more)
 
 ### Community 217 - "2. Docker Container Execution"
 Cohesion: 0.20
 Nodes (9): 1. Direct Execution on a Linux Server, 2. Docker Container Execution, 3. Compatibility Summary Matrix, `docker-compose.yml`, `Dockerfile`, Quick Start (Bare Metal / VM), Running GigaClaw on Linux Servers & Docker Containers, Running with Docker Compose: (+1 more)
 
-### Community 219 - "AutomationEngine"
+### Community 219 - "DashboardScriptRunner"
 Cohesion: 0.18
-Nodes (9): Dictionary, AgentRunRegistry, CancellationToken, DateTime, ILogger, Task, AutomationEngine, ProjectRuntimeManager (+1 more)
+Nodes (6): HashSet, ILogger, DashboardScriptRunner, ShellResolver, InlineData, Theory
 
 ### Community 220 - "CostTracker"
 Cohesion: 0.31
 Nodes (4): DateTime, object, CostLogEntry, CostTracker
 
-### Community 221 - "ActionExecutor"
-Cohesion: 0.08
-Nodes (23): CostTracker, FileLeaseStore, Action, AgentRunRegistry, ConcurrentDictionary, ILogger, int, SessionRegistry (+15 more)
+### Community 221 - "TriggerContext"
+Cohesion: 0.03
+Nodes (62): BoardIdleTriggerSpec, CheckRun, CancellationToken, IReadOnlyList, NullTrigger, CancellationToken, IReadOnlyList, bool (+54 more)
 
 ### Community 222 - "Hyperlane Travels Content Engine Config"
 Cohesion: 0.20
@@ -1383,9 +1346,9 @@ Nodes (9): Cost Policy, Explicit Non-Goals, Hyperlane Travels Content Engine Con
 Cohesion: 0.33
 Nodes (5): Fact, projects, tickets, MemberServiceTests, members
 
-### Community 224 - "TicketCommentAddedSignalPathTests"
-Cohesion: 0.22
-Nodes (6): Fact, TicketCommentAddedSignalPathTests, RouteGroupBuilder, Endpoints, Handler, Manager
+### Community 224 - "UnifiedDiff"
+Cohesion: 0.27
+Nodes (8): List, StringBuilder, Hunk, Op, OpKind, UnifiedDiff, Hunk, Op
 
 ### Community 225 - ".BuildAsync"
 Cohesion: 0.41
@@ -1416,8 +1379,8 @@ Cohesion: 0.20
 Nodes (9): AD-7: the ticket description IS the draft, content-writer Agent Skill, Handoff Contract, `imagePrompt` is never optional (AD-8), Never, Operating procedure, Revisions replace, never append, The exact shape (+1 more)
 
 ### Community 234 - ".Register"
-Cohesion: 0.40
-Nodes (4): AgentRun, AgentRunRegistry, Fact, ConcurrencyLockReaperTests
+Cohesion: 0.23
+Nodes (6): Fact, AgentRunRegistryTests, AgentRun, AgentRunRegistry, Fact, ConcurrencyLockReaperTests
 
 ### Community 235 - "Architecture decisions"
 Cohesion: 0.20
@@ -1427,16 +1390,16 @@ Nodes (10): AD-1: One CMS, not two, AD-2: GigaClaw gains an `httpRequest` action
 Cohesion: 0.20
 Nodes (10): Dependency graph, Deployment topology, Explicitly out of scope, Implementation Plan: GigaClaw ↔ n8n ↔ PayloadCMS content pipeline, Open questions, Overview, Resolved, Risks and mitigations (+2 more)
 
-### Community 237 - "BoardIdleTrigger"
-Cohesion: 0.25
-Nodes (6): BoardIdleTriggerSpec, bool, CancellationToken, DateTime, IReadOnlyList, BoardIdleTrigger
+### Community 237 - "TicketSummary"
+Cohesion: 0.20
+Nodes (8): IEnumerable, DateTime, List, SubTicketInfo, TicketDependencyInfo, TicketSummary, IReadOnlyList, ITicketDependencyQuery
 
 ### Community 238 - "GigaClaw.Core.Tests"
 Cohesion: 0.22
 Nodes (9): GigaClaw.Core.Tests, net10.0, Markdig (1.3.2), Microsoft.NET.Test.Sdk (18.8.1), xunit (2.9.3), xunit.runner.visualstudio (3.1.5), Microsoft.NET.Sdk, coverlet.collector (10.0.1) (+1 more)
 
 ### Community 239 - "SharedRenderHelpers"
-Cohesion: 0.28
+Cohesion: 0.24
 Nodes (3): GigaClaw.Web.Components, Regex, SharedRenderHelpers
 
 ### Community 240 - "Local media creation"
@@ -1460,12 +1423,12 @@ Cohesion: 0.09
 Nodes (23): buildUserText(), bytesToBase64(), bytesToHex(), convertPdfToMarkdown(), createPdfCache(), decodeBytesIfUtf16(), errorToString(), extractHexString() (+15 more)
 
 ### Community 245 - ".EnsureAsync"
-Cohesion: 0.07
-Nodes (24): CancellationToken, ConcurrentDictionary, exitCode, stderr, stdout, TimeSpan, WorktreeCleanupOutcome, WorktreeCleanupResult (+16 more)
+Cohesion: 0.09
+Nodes (18): CancellationToken, ConcurrentDictionary, exitCode, stderr, stdout, TimeSpan, WorktreeCleanupOutcome, WorktreeCleanupResult (+10 more)
 
-### Community 246 - ".BuildSutAsync"
-Cohesion: 0.43
-Nodes (4): Fact, Slug, Tickets, TicketTransitionTests
+### Community 246 - ".Dedupe"
+Cohesion: 0.17
+Nodes (9): HashSet, IEnumerable, IReadOnlyList, Regex, string, FindingDeduplicator, LaneFinding, Fact (+1 more)
 
 ### Community 247 - ".Run"
 Cohesion: 0.24
@@ -1476,8 +1439,12 @@ Cohesion: 0.08
 Nodes (33): assembleWikiContext(), buildSeedSelectionUserPrompt(), buildWikiContext(), countTotalDegree(), detectHubs(), emptyWikiHint(), filterSeedsToGraph(), formatPageRefSummary() (+25 more)
 
 ### Community 249 - ".ShouldFireDailyAt"
-Cohesion: 0.26
-Nodes (5): DateTime, Regex, DashboardRefreshScheduling, Fact, DashboardRefreshSchedulingTests
+Cohesion: 0.44
+Nodes (3): DateTime, Fact, DashboardRefreshSchedulingTests
+
+### Community 250 - "ClaudeRunnerMockIntegrationTests.cs"
+Cohesion: 0.20
+Nodes (5): MockClaudeBinFixture, MockClaudeCollection, Fact, NodeRegistryTests, ICollectionFixture
 
 ### Community 251 - "ConditionEditor.razor"
 Cohesion: 0.22
@@ -1531,9 +1498,9 @@ Nodes (9): Audience, Channels & KPIs, Content hubs (manual, scope-resolved), Gam
 Cohesion: 0.22
 Nodes (9): CHECKPOINT D — complete, Phase 4: Scale and harden, Task 12: Template drift check, Task 13: Discord capture, Task 14: Operational alerting, Task 15: HyperlaneTravels CMS migration, Task 16: Draft archival to Obsidian / Google Drive, Task 17: `karalungaming` rollout (+1 more)
 
-### Community 264 - "ClaudeHookSettings"
-Cohesion: 0.32
-Nodes (5): CancellationToken, JsonElement, string, Uri, ClaudeHookSettings
+### Community 264 - "Plan — remaining roadmap work (2026-08-01)"
+Cohesion: 0.20
+Nodes (10): 1. SP-3 gate — the next session (CX-R + CL, owner decision at the end), 2. Verdict close-out — A11's GM half (GM + CL), 3. Cheap standing debts (any session, mostly CX-T), 4. C5 follow-up — workflow-graph walker (CL, after SP-3), 5. GM volume (parallel to everything above), 6. Phase 3 completion → SP-4 (CX-R), 7. Phase 4 — packs (CX-T infra, GM volume, CL wiring), 8. Post-SP-4 pilots (+2 more)
 
 ### Community 265 - "Dashboard"
 Cohesion: 0.25
@@ -1543,29 +1510,29 @@ Nodes (8): Content pipeline, Dashboard, Entry points, External dependencies, Fol
 Cohesion: 0.25
 Nodes (7): 1. `contracts.json` Entries, 2. `models.json` Mappings, 3. Team Membership Definitions, 4. `automations.json` Dispatching Automations, 5. Eval Fixtures & Baseline Requirements, Binding Manifest — Team Preset Agents (Task G5), Roster Summary
 
-### Community 267 - "GigaClaw Improvement Roadmap — Index"
-Cohesion: 0.25
-Nodes (8): Codebase validation (2026-07-30), Decision log (owner-approved 2026-07-30), Dependency graph, GigaClaw Improvement Roadmap — Index, Lane model, Lane status (living — updated by CL as the merge-queue owner), Phases and sync points, Risks
+### Community 267 - "VerdictGateTests"
+Cohesion: 0.21
+Nodes (5): VerdictOutcome, Fact, List, string, VerdictGateTests
 
-### Community 268 - "Lane CX-T — Codex Tooling (greenfield, isolated)"
-Cohesion: 0.25
-Nodes (8): Lane CX-T — Codex Tooling (greenfield, isolated), Task T1: Typed system catalog generator (P20, part 1), Task T2: CI enforcement of catalog invariants (P20, part 2), Task T3: blockedBy / blocks dependency edges (P4), Task T4: Eval harness — static layer (O6, part 1), Task T5: Eval harness — replay + LLM judge (O6, part 2), Task T6: Pack infrastructure implementation (O7 — spec from lane CL), Validated catalog/eval definitions
+### Community 268 - "WorkflowGraph"
+Cohesion: 0.06
+Nodes (29): EventId, Action, FileSystemWatcher, object, ProjectEntry, ConditionSpec, IEnumerable, int (+21 more)
 
-### Community 269 - "Verdict contract (v1)"
-Cohesion: 0.25
-Nodes (8): Consumers, Gating with `verdictIs`, Shape, The bounded repair loop, Transport, Validating, Verdict contract (v1), Wiring
+### Community 269 - ".BuildSut"
+Cohesion: 0.40
+Nodes (4): Fact, tickets, TicketLabelTests, labels
 
 ### Community 270 - ".BuildSut"
 Cohesion: 0.53
 Nodes (3): Fact, tickets, TicketReorderTests
 
-### Community 271 - "MergeQueueTests"
-Cohesion: 0.43
-Nodes (4): branch, MergeQueueTests, Task, worktreePath
+### Community 271 - "Lane CX-T — Codex Tooling (greenfield, isolated)"
+Cohesion: 0.22
+Nodes (8): Lane CX-T — Codex Tooling (greenfield, isolated), Task T1: Typed system catalog generator (P20, part 1), Task T2: CI enforcement of catalog invariants (P20, part 2), Task T3: blockedBy / blocks dependency edges (P4), Task T4: Eval harness — static layer (O6, part 1), Task T5: Eval harness — replay + LLM judge (O6, part 2), Task T6: Pack infrastructure implementation (O7 — spec from lane CL), Validated catalog/eval definitions
 
 ### Community 272 - "AgentInactivityTrigger"
-Cohesion: 0.29
-Nodes (5): AgentInactivityTriggerSpec, CancellationToken, DateTime, IReadOnlyList, AgentInactivityTrigger
+Cohesion: 0.50
+Nodes (3): AgentInactivityTriggerSpec, DateTime, AgentInactivityTrigger
 
 ### Community 273 - "ReconnectModal.razor.js"
 Cohesion: 0.32
@@ -1580,8 +1547,8 @@ Cohesion: 0.22
 Nodes (8): If there is nothing to learn, Memory consolidation pass, Memory layout (read this carefully), Migration (when a legacy flat `memory.md` is still present), Output rules, Style, What just happened, Your task (steady state)
 
 ### Community 276 - "statement"
-Cohesion: 0.13
-Nodes (15): description, type, properties, description, minLength, type, type, properties (+7 more)
+Cohesion: 0.18
+Nodes (11): properties, description, minLength, type, type, evidenceRef, met, statement (+3 more)
 
 ### Community 277 - "validate"
 Cohesion: 0.57
@@ -1615,20 +1582,24 @@ Nodes (7): Configuration, External dependencies, Hermes Agent chat, Key componen
 Cohesion: 0.29
 Nodes (7): Conventions, Entry points, External dependencies, Key components, Member deletion, Purpose, REST API
 
-### Community 285 - "Lane GM — Gemini Volume (templates, markdown, high-volume authoring)"
-Cohesion: 0.29
-Nodes (7): Lane GM — Gemini Volume (templates, markdown, high-volume authoring), Task G1: The two cheap defects (T17 + P22) — hours, do first, Task G2: Reviewer SKILL.md rewrites to typed verdicts (A11) — five agents, Task G3: Handoff artifact templates (P9), Task G4: Progressive disclosure on the seven largest skills (P21), Task G5: Team-preset agent prose (T5/T6 support), Task G6: Pack content authoring (Phase 4 — the volume phase)
+### Community 285 - "RunTokenUsageTests"
+Cohesion: 0.36
+Nodes (4): AgentRun, Fact, string, RunTokenUsageTests
 
-### Community 286 - "TriggerContext"
-Cohesion: 0.08
-Nodes (27): CancellationToken, IReadOnlyList, NullTrigger, AgentRunRegistry, Automation, CancellationToken, DateTime, IReadOnlyList (+19 more)
+### Community 286 - "buildEntry"
+Cohesion: 0.28
+Nodes (9): buildEntry(), classifySectionKind(), defaultSeverityForKind(), extractWikiLinks(), llmSeverityFor(), parseCountFromHeading(), parseDetailRows(), parseKpiSummary() (+1 more)
+
+### Community 287 - ".SyncAsync"
+Cohesion: 0.20
+Nodes (9): Closed, Commented, CancellationToken, ILogger, List, GitHubIssue, GitHubIssueSyncService, GitHubSyncResult (+1 more)
 
 ### Community 288 - ".RunScript"
 Cohesion: 0.16
 Nodes (10): Fact, MemberData, string, Theory, TheoryData, TemplateScriptEncodingTests, ExitCode, Lazy (+2 more)
 
 ### Community 289 - "UpdateCheckService"
-Cohesion: 0.18
+Cohesion: 0.20
 Nodes (6): CancellationToken, IHttpClientFactory, ILogger, string, GitHubRelease, UpdateCheckService
 
 ### Community 290 - "GigaClaw.Web"
@@ -1696,8 +1667,8 @@ Cohesion: 0.62
 Nodes (6): main(), parse_frontmatter(), Path, section(), self_test(), validate()
 
 ### Community 306 - "handoff.schema.json"
-Cohesion: 0.29
-Nodes (6): additionalProperties, description, $id, $schema, title, type
+Cohesion: 0.14
+Nodes (13): additionalProperties, additionalProperties, required, type, $defs, artifact, description, $id (+5 more)
 
 ### Community 307 - "required"
 Cohesion: 0.12
@@ -1751,9 +1722,9 @@ Nodes (7): ApiFactory, Fact, HttpClient, InlineData, string, Theory, OpenApiTile
 Cohesion: 0.33
 Nodes (5): R2 hook-transport validation, Recorded result, Reproduce, Settings acknowledgement and shadow semantics, Shared ticket-comment handoff
 
-### Community 320 - "runStartupCheck"
+### Community 320 - "createWikiLink"
 Cohesion: 0.11
-Nodes (21): appendIngest(), appendLintFix(), assessWelcomeNeed(), buildLogHeader(), cleanIncompletePages(), createWelcomeNoteAsync(), dedupPages(), extractRawSourcesEntries() (+13 more)
+Nodes (26): appendIngest(), appendLintFix(), buildLogHeader(), createWikiLink(), dedupPages(), deltaChip(), formatBytes(), formatIngestMetricsSuffix() (+18 more)
 
 ### Community 321 - "PolicyInventoryRunnerTests"
 Cohesion: 0.33
@@ -1799,9 +1770,9 @@ Nodes (5): Core Responsibilities, Delivery & exit, design-researcher Agent Skill
 Cohesion: 0.33
 Nodes (5): Core Responsibilities, Delivery & exit, growth-writer Agent Skill, Handoff Contract, Operating Procedure
 
-### Community 332 - ".WriteSseAsync"
-Cohesion: 0.33
-Nodes (7): CancellationToken, RouteGroupBuilder, StreamEvent, Task, Endpoints, HttpResponse, JsonSerializerOptions
+### Community 332 - ".MapRuns"
+Cohesion: 0.43
+Nodes (5): CancellationToken, JsonSerializerOptions, RouteGroupBuilder, Endpoints, HttpResponse
 
 ### Community 333 - "lint_prose.py"
 Cohesion: 0.53
@@ -1810,10 +1781,6 @@ Nodes (5): analyze_prose(), count_syllables(), main(), Drop frontmatter, fenced 
 ### Community 334 - "validate"
 Cohesion: 0.73
 Nodes (5): main(), Path, sections(), self_test(), validate()
-
-### Community 335 - ".LoadManifestAsync"
-Cohesion: 0.22
-Nodes (6): CancellationToken, GlobRule, PathCaseSensitivity, string, TemplateEnforcementStateTests, GlobRule
 
 ### Community 336 - "Phase 2: Ingress path"
 Cohesion: 0.33
@@ -1827,9 +1794,9 @@ Nodes (7): CHECKPOINT A — egress proven, Phase 1: Egress path — one venture,
 Cohesion: 0.40
 Nodes (5): Agent dispatch, Entry points, External dependencies, Key components, Purpose
 
-### Community 339 - "Handoff contract (v1)"
-Cohesion: 0.40
-Nodes (5): Consumers, Handoff contract (v1), Shape, Transport, Validating
+### Community 339 - "isWatched"
+Cohesion: 0.28
+Nodes (9): hasSourceFilesChanged(), isWatched(), markRecentWrite(), onFileChanged(), processBatch(), runLint(), schedulePeriodicLint(), startWatching() (+1 more)
 
 ### Community 340 - "Ticket scheduling"
 Cohesion: 0.40
@@ -1840,8 +1807,8 @@ Cohesion: 0.40
 Nodes (5): Entry points, External dependencies, Key components, Purpose, Update check
 
 ### Community 342 - "AgentTeamService"
-Cohesion: 0.19
-Nodes (7): AgentTeam, Assembly, ConcurrentDictionary, IReadOnlyList, Lazy, string, AgentTeamService
+Cohesion: 0.14
+Nodes (11): AgentTeam, Assembly, ConcurrentDictionary, IEnumerable, IReadOnlyList, Lazy, List, string (+3 more)
 
 ### Community 343 - "Routes.razor"
 Cohesion: 0.40
@@ -1891,17 +1858,17 @@ Nodes (4): Exit, Local motion artist skill, Procedure, Strict rules
 Cohesion: 0.60
 Nodes (4): analyze_cognitive_load(), main(), Drop frontmatter, fenced code, embedded scripts, and table rows so paragraph…, strip_non_prose()
 
-### Community 356 - "TeamDefinition"
-Cohesion: 0.23
-Nodes (7): IEnumerable, IReadOnlyList, TeamDefinition, TeamJoinMode, TeamRole, TeamTaskTemplate, IEnumerable
+### Community 356 - "GigaClaw Improvement Roadmap — Index"
+Cohesion: 0.25
+Nodes (8): Codebase validation (2026-07-30), Decision log (owner-approved 2026-07-30), Dependency graph, GigaClaw Improvement Roadmap — Index, Lane model, Lane status (living — updated by CL as the merge-queue owner), Phases and sync points, Risks
 
 ### Community 357 - "properties"
 Cohesion: 0.12
 Nodes (16): description, pattern, type, pattern, type, properties, agent, producedAtUtc (+8 more)
 
-### Community 358 - "summary"
-Cohesion: 0.40
-Nodes (5): summary, description, maxLength, minLength, type
+### Community 358 - ".BuildSutAsync"
+Cohesion: 0.43
+Nodes (4): Fact, Slug, Tickets, TicketTransitionTests
 
 ### Community 359 - "trend-researcher Agent Skill"
 Cohesion: 0.40
@@ -1943,25 +1910,25 @@ Nodes (7): minimum, type, minimum, type, current, max, properties
 Cohesion: 0.29
 Nodes (7): integer, string, ticketId, description, minimum, pattern, type
 
-### Community 369 - ".Push"
-Cohesion: 0.27
-Nodes (4): CancellationToken, JsonElement, Process, ClaudeStreamPump
+### Community 369 - ".SpawnAndWaitAsync"
+Cohesion: 0.28
+Nodes (5): CancellationToken, JsonElement, Process, ClaudeStreamPump, SpawnResult
 
 ### Community 370 - "Entries"
 Cohesion: 0.22
 Nodes (8): Entries, G FUEL, GameLiftEat Intel Watchlist, Gamer Supps, Garage Gym Reviews, Gymshark, kindafitkindafat, New Rockstars
 
 ### Community 372 - "TicketCommentAddedTrigger"
-Cohesion: 0.15
-Nodes (9): CancellationToken, DateTime, Dictionary, IReadOnlyList, TicketCommentAddedTriggerSpec, CommentAddedSignal, TicketCommentAddedTrigger, Fact (+1 more)
+Cohesion: 0.17
+Nodes (8): CancellationToken, DateTime, Dictionary, IReadOnlyList, TicketCommentAddedTriggerSpec, TicketCommentAddedTrigger, Fact, TicketCommentAddedTriggerTests
 
 ### Community 374 - "scan_privacy"
 Cohesion: 0.67
 Nodes (3): main(), Return [(label, line_number, match_excerpt)] for every hit., scan_privacy()
 
-### Community 375 - ".RunAsync"
-Cohesion: 0.12
-Nodes (9): CancellationToken, HashSet, ILogger, DashboardScriptRunner, ScriptResult, ShellResolver, InlineData, Theory (+1 more)
+### Community 375 - "Fact"
+Cohesion: 0.18
+Nodes (5): CancellationToken, ScriptResult, Fact, DashboardScriptRunnerTests, DashboardServicePathTests
 
 ### Community 376 - "Workspace guide"
 Cohesion: 0.50
@@ -1978,6 +1945,10 @@ Nodes (3): Coverage Reviewer Memory Index, Lessons learned, Performance (last ev
 ### Community 380 - "Performance Reviewer Memory Index"
 Cohesion: 0.50
 Nodes (3): Lessons learned, Performance (last evaluated: N/A), Performance Reviewer Memory Index
+
+### Community 423 - "agent"
+Cohesion: 0.50
+Nodes (4): description, pattern, type, agent
 
 ### Community 424 - "summary"
 Cohesion: 0.40
@@ -2023,9 +1994,9 @@ Nodes (7): Entries, Julian Goldie, Nate Herk, OctopusAI, Tina Huang, UppitAI, Za
 Cohesion: 0.25
 Nodes (7): Cadence Notes, Competitors, Content Angle, Excluded Topics, Keywords / Queries, Sources to Watch, ZabsConsulting Trend Profile
 
-### Community 435 - ".FilterMembersByTeam"
-Cohesion: 0.32
-Nodes (4): IEnumerable, List, Fact, AgentTeamServiceTests
+### Community 435 - ".FinishLaneAsync"
+Cohesion: 0.36
+Nodes (5): Blocking, Fact, IEnumerable, TeamPresetsTests, Statement
 
 ### Community 436 - "Entries"
 Cohesion: 0.29
@@ -2047,13 +2018,13 @@ Nodes (6): Bios, Definition of "living" (sprint exit criteria), First content se
 Cohesion: 0.29
 Nodes (6): Admin cadence (the system maintains in `10-ZabsConsulting/admin-calendar.md`), Identity & structure, Voice (if/when consulting activates), Watch-topics (feeds `/trend-watch`, low priority), What this venture actually is (two hats), ZabsConsulting — Brand File
 
-### Community 448 - "IntervalTrigger"
-Cohesion: 0.27
-Nodes (6): CrontabSchedule, DateTime, ITriggerStateStore, string, IntervalTrigger, IntervalTriggerSpec
+### Community 448 - "GitHub surface"
+Cohesion: 0.14
+Nodes (14): CI status as a gitCommit-family trigger, Entry points, External dependencies, GitHub surface, Issue import, Key components, PR review comments as owner feedback, Purpose (+6 more)
 
-### Community 449 - "PackLockFile"
-Cohesion: 0.24
-Nodes (4): string, PackLockFile, Fact, PackLockSerializerTests
+### Community 449 - ".FlattenJson"
+Cohesion: 0.23
+Nodes (7): JsonElement, Fact, JsonElement, ClaudeRunnerFlattenJsonRegressionTests, Fact, JsonElement, ClaudeRunnerFlattenJsonTests
 
 ### Community 450 - "GameLiftEat — Content Engine Config"
 Cohesion: 0.33
@@ -2071,28 +2042,28 @@ Nodes (5): ExitCode, Fact, Output, string, TemplateVerdictContractTests
 Cohesion: 0.37
 Nodes (3): Fact, string, HandoffArtifactTests
 
-### Community 454 - ".TryAcquireDispatchLeaseAsync"
-Cohesion: 0.40
-Nodes (4): FileLease, IReadOnlyList, FileLeaseGateDecision, PolicyEnforcementMode
+### Community 454 - ".BuildProcessStartInfo"
+Cohesion: 0.22
+Nodes (6): IList, Lazy, ProcessLifecycleManager, Fact, ProcessLifecycleManagerTests, ProcessStartInfo
 
 ### Community 455 - ".Source"
 Cohesion: 0.29
 Nodes (5): Assembly, string, CorePack, Fact, CorePackEnumerationTests
 
-### Community 456 - "BackgroundService"
-Cohesion: 0.33
-Nodes (5): BackgroundService, CancellationToken, ILogger, TimeSpan, ConcurrencyLockReaper
+### Community 456 - "enum"
+Cohesion: 0.50
+Nodes (4): enum, BLOCK, FIX, SHIP
 
-### Community 457 - "GigaClaw.Web.Api"
-Cohesion: 0.05
-Nodes (17): GigaClaw.Core.Tests.Api, GigaClaw.Web.Services, GigaClaw.Web.Api, ApiFactory, Fact, HttpClient, ProjectInitializeModelSeedTests, Endpoints (+9 more)
+### Community 457 - "GigaClaw.Web.Services"
+Cohesion: 0.08
+Nodes (7): GigaClaw.Web.Services, Fact, BoardFilterStateIsolationTests, BoardFilterState, BoardUpdateNotifier, HermesConversationMessage, TokenDisplay
 
 ### Community 458 - "loadSchema"
 Cohesion: 0.22
 Nodes (10): buildDefaultSchemaBody(), ensureSchemaExists(), getSchemaContext(), getSchemaPath(), loadSchema(), parseConfigFile(), parseSections(), regenerateDefaultSchema() (+2 more)
 
 ### Community 459 - ".Format"
-Cohesion: 0.35
+Cohesion: 0.27
 Nodes (3): Fact, VersionFormatterTests, VersionFormatter
 
 ### Community 460 - "Welcome to your LLM-Wiki"
@@ -2104,92 +2075,80 @@ Cohesion: 0.24
 Nodes (6): bool, CancellationToken, Process, TimeSpan, ValueTask, TestInstance
 
 ### Community 463 - ".MapTodoApi"
-Cohesion: 0.11
-Nodes (13): List, Label, List, LabelService, Fact, tickets, TicketLabelTests, RouteGroupBuilder (+5 more)
+Cohesion: 0.17
+Nodes (9): List, Label, List, LabelService, RouteGroupBuilder, Endpoints, RouteGroupBuilder, Endpoints (+1 more)
 
 ### Community 464 - "TelemetryService"
-Cohesion: 0.29
+Cohesion: 0.33
 Nodes (5): CancellationToken, IHttpClientFactory, ILogger, string, TelemetryService
 
-### Community 465 - ".InstallAsync"
-Cohesion: 0.28
-Nodes (5): CancellationToken, IReadOnlyList, PackInstallOptions, PackInstallResult, PackUninstallResult
+### Community 465 - "GigaClaw.Core.Github"
+Cohesion: 0.12
+Nodes (3): GigaClaw.Core.Github, GigaClaw.Core.Tests.Github, GigaClaw.Core.Automation.Handoffs
 
-### Community 466 - "fetchModelsWithFallback"
-Cohesion: 0.31
-Nodes (9): buildModelsPaths(), cacheResolvedUrl(), delay2(), deriveBaseUrlFromModelsUrl(), fetchModelsWithFallback(), generateUrlCandidates(), getCachedUrl(), hasV1Segment() (+1 more)
+### Community 466 - ".IsQuotaSignal"
+Cohesion: 0.43
+Nodes (3): StreamEvent, Fact, ClaudeRunnerQuotaSignalTests
 
 ### Community 468 - "TemplateHandoffContractTests"
 Cohesion: 0.39
 Nodes (3): Fact, string, TemplateHandoffContractTests
 
-### Community 469 - "artifact"
-Cohesion: 0.33
-Nodes (6): additionalProperties, required, type, artifact, kind, ref
+### Community 469 - "RepairLoop"
+Cohesion: 0.23
+Nodes (7): int, Regex, string, StringBuilder, RepairCycle, RepairLoop, RepairLoopState
 
 ### Community 470 - "ScenarioParseTests"
 Cohesion: 0.33
 Nodes (4): GigaClaw.Core.Tests.QaRunner, Fact, JsonSerializerOptions, ScenarioParseTests
 
-### Community 471 - ".RunGitAsync"
-Cohesion: 0.50
-Nodes (3): exitCode, stderr, stdout
+### Community 475 - "GitHubIssueLinkStore"
+Cohesion: 0.35
+Nodes (5): IReadOnlyList, SqliteConnection, SqliteDataReader, GitHubIssueLink, GitHubIssueLinkStore
 
-### Community 480 - ".MapDashboard"
-Cohesion: 0.14
-Nodes (6): ConfigError, Path, string, TileTemplate, RouteGroupBuilder, Endpoints
+### Community 478 - ".SendAsync"
+Cohesion: 0.24
+Nodes (7): CancellationToken, IHttpClientFactory, ILogger, string, GitHubApiClient, GitHubRequest, GitHubResponse
 
-### Community 517 - ".DependencyError"
-Cohesion: 0.29
-Nodes (6): TeamDefinitionException, TeamStoreException, TicketDependencyException, TicketTransitionConflictException, InvalidOperationException, IResult
+### Community 479 - "Workflow graph"
+Cohesion: 0.22
+Nodes (9): Entry points, How errors are reported, Key components, Not implemented yet, Purpose, The model, Validation, Where the graph lives (+1 more)
 
-### Community 518 - "Endpoints"
+### Community 481 - "GigaClaw.Web.Api"
+Cohesion: 0.05
+Nodes (20): GigaClaw.Core.Tests.Api, GigaClaw.Web.Api, ApiFactory, Fact, HttpClient, ProjectInitializeModelSeedTests, ApiFactory, Fact (+12 more)
+
+### Community 482 - "ActionEditorCoverageTests"
+Cohesion: 0.31
+Nodes (4): Fact, string, ActionEditorCoverageTests, Type
+
+### Community 492 - "CatalogGenerator.cs"
 Cohesion: 0.33
-Nodes (4): long, ReadOnlySpan, RouteGroupBuilder, Endpoints
-
-### Community 519 - ".OfNode"
-Cohesion: 0.47
-Nodes (3): JsonNode, ReadOnlySpan, PackFileHash
-
-### Community 520 - ".BuildSut"
-Cohesion: 0.53
-Nodes (3): columns, Fact, ScheduledColumnTests
+Nodes (4): AutomationCatalogEntry, CatalogSummary, PackCatalogEntry, PackPolicyViolation
 
 ### Community 521 - "ScreenshotUploader"
 Cohesion: 0.33
 Nodes (4): CancellationToken, HttpClient, string, ScreenshotUploader
 
-### Community 522 - "ClaudeRunnerMockIntegrationTests.cs"
-Cohesion: 0.50
-Nodes (3): MockClaudeBinFixture, MockClaudeCollection, ICollectionFixture
-
-### Community 523 - "ClaudeHookSettingsTests"
-Cohesion: 0.40
-Nodes (3): ClaudeHookSettingsTests, MemberData, TheoryData
-
-### Community 525 - "ClaudeModelCatalog"
-Cohesion: 0.50
-Nodes (3): IReadOnlyList, string, ClaudeModelCatalog
-
 ## Knowledge Gaps
-- **1989 isolated node(s):** `HttpRequest`, `FileLeaseGateOutcome`, `SpawnResult`, `Markdig`, `GigaClaw.Core.Automation.Runners` (+1984 more)
+- **2061 isolated node(s):** `id`, `name`, `minAppVersion`, `description`, `author` (+2056 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **111 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **60 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Task` connect `Task` to `Board.razor`, `RepairLoopTests`, `ActionExecutorHttpRequestTests`, `TicketService`, `LocalMediaJobService`, `ScenarioRunner`, `.BuildSut`, `ScreenshotUploader`, `GitCommitTrigger`, `MemberService`, `ProjectRuntimeManager`, `TeamSeedTests`, `HermesAgentService`, `.CreateProjectAsync`, `TeamRunService`, `DashboardService`, `PolicyEnforcementModeTests`, `TeamRunJoinTests`, `.BuildAsync`, `ContractPolicyTests`, `DashboardTileGate`, `.RunAsync`, `SubTicketStatusTrigger`, `ActionExecutorFileLeaseTests`, `.BuildAsync`, `.BuildSut`, `GigaClaw.ClaudeMock`, `RunStateManagerTests`, `MergeQueueStore`, `.UninstallAsync`, `ProjectService`, `FileLeaseStore`, `AutomationConfig`, `.BuildAsync`, `.EvaluateAsync`, `PackInstallerTests`, `EndpointsRefactorTests`, `.TryParse`, `GitRepositoryWatcher`, `OpenApiDocumentationTests`, `RunConcurrencyGate`, `StatusChangeTrigger`, `.BuildSutAsync`, `.BuildSutAsync`, `HermesAgentServiceTests`, `AgentsTemplateService`, `Fact`, `.DependenciesResolved`, `PolicyGitGuardTests`, `WorkspaceMergeTransaction`, `.PickFolderAsync`, `.BuildSut`, `.BuildSut`, `TicketCommentAddedSignalPathTests`, `.BuildAsync`, `CoreInitManifestTests`, `BoardIdleTrigger`, `.EnsureAsync`, `.BuildSutAsync`, `ClaudeHookSettings`, `.BuildSut`, `AgentInactivityTrigger`, `TriggerContext`, `UpdateCheckService`, `OpenApiTilesGuideTests`, `.LoadManifestAsync`, `TeamDefinition`, `.Push`, `TicketCommentAddedTrigger`, `.RunAsync`, `IntervalTrigger`, `HandoffArtifactTests`, `BackgroundService`, `GigaClaw.Web.Api`, `TestInstance`, `.MapTodoApi`, `TelemetryService`, `.InstallAsync`, `.MapDashboard`?**
-  _High betweenness centrality (0.135) - this node is a cross-community bridge._
-- **Why does `System.Text.RegularExpressions` connect `System.Text.RegularExpressions` to `System.Text`, `ActionExecutorChainSerializationTests`, `GigaClaw.Web.Api`, `GigaClaw.Core.Packs`, `Dashboard.razor`, `GigaClaw.Core.Services`, `SharedRenderHelpers`, `.TryParse`, `GigaClaw.ClaudeMock`, `ContractPolicy`, `.ShouldFireDailyAt`, `ReadmeDashboardSectionTests`?**
-  _High betweenness centrality (0.044) - this node is a cross-community bridge._
-- **Why does `GigaClaw.Core.Services` connect `GigaClaw.Core.Services` to `Endpoints`, `ClaudeRunnerMockIntegrationTests.cs`, `GigaClaw.Core.Packs`, `GigaClaw.Core.Automation`, `.IsNewer`, `TriggerContext`, `System.Text`, `AppSettingsService`, `DashboardTileGate`, `GigaClaw.Web.Api`, `.BuildSut`, `MergeQueueStore`, `FileLeaseStore`, `.MapDashboard`, `.FromSidecar`, `CatalogGenerator.cs`, `.TryParse`, `.EnsureAsync`, `.RunAsync`, `.ShouldFireDailyAt`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
-- **What connects `HttpRequest`, `FileLeaseGateOutcome`, `SpawnResult` to the rest of the system?**
-  _1989 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `Task` connect `Task` to `Board.razor`, `RepairLoopTests`, `ActionExecutorHttpRequestTests`, `TicketService`, `LocalMediaJobService`, `ScenarioRunner`, `AutomationConfig.cs`, `ScreenshotUploader`, `ConditionEvaluatorsTests`, `ActionExecutor`, `PackInstaller`, `AgentRun`, `PolicyHookTransport`, `.RunAsync`, `Sut`, `TeamDefinition`, `Endpoints`, `TeamSeedTests`, `HermesAgentService`, `.CreateProjectAsync`, `TeamRunService`, `DashboardService`, `.LoadPolicyAsync`, `PolicyEnforcementModeTests`, `TeamRunJoinTests`, `GitHubTestHarness`, `.RebaseOntoWorkspaceHeadAsync`, `ContractPolicyTests`, `DashboardTileGate`, `ClaudeRunner`, `SessionRegistry`, `SubTicketStatusTrigger`, `.EnsureBoardColumnsTableAsync`, `.BuildAsync`, `.BuildSut`, `GigaClaw.ClaudeMock`, `RunStateManagerTests`, `MergeQueueStore`, `.UninstallAsync`, `GitHubPrFeedbackTests`, `ProjectService`, `FileLeaseStore`, `AutomationConfig`, `.GetProjectAsync`, `IntervalTrigger`, `PackInstallerTests`, `EndpointsRefactorTests`, `.TryParse`, `ProjectRuntimeManager`, `OpenApiDocumentationTests`, `RunConcurrencyGate`, `.BuildSutAsync`, `HermesAgentServiceTests`, `AgentsTemplateService`, `Harness`, `.BuildSutAsync`, `PolicyGitGuardTests`, `WorkspaceMergeTransaction`, `.PickFolderAsync`, `DashboardRefreshService`, `.BuildSut`, `.MapChat`, `TriggerContext`, `.BuildSut`, `.BuildAsync`, `CoreInitManifestTests`, `TicketSummary`, `.EnsureAsync`, `WorkflowGraph`, `.BuildSut`, `.BuildSut`, `RunTokenUsageTests`, `.SyncAsync`, `UpdateCheckService`, `OpenApiTilesGuideTests`, `.MapRuns`, `.BuildSutAsync`, `.SpawnAndWaitAsync`, `TicketCommentAddedTrigger`, `Fact`, `.FinishLaneAsync`, `HandoffArtifactTests`, `TestInstance`, `.MapTodoApi`, `TelemetryService`, `GitHubIssueLinkStore`, `.SendAsync`, `GigaClaw.Web.Api`?**
+  _High betweenness centrality (0.189) - this node is a cross-community bridge._
+- **Why does `System.Text.RegularExpressions` connect `System.Text.RegularExpressions` to `System.Text`, `.Latest`, `GigaClaw.Core.Packs`, `GigaClaw.Web.Api`, `ActionExecutorChainSerializationTests`, `Dashboard.razor`, `SharedRenderHelpers`, `.TryParse`, `GigaClaw.Core.Models`, `GigaClaw.ClaudeMock`, `ContractPolicy`, `.Dedupe`, `ReadmeDashboardSectionTests`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **Why does `GigaClaw.Core.Automation` connect `GigaClaw.Core.Automation` to `GigaClaw.Core.Packs`, `AutomationConfig.cs`, `GigaClaw.Core.Services`, `AgentRun`, `System.Text`, `TeamDefinition`, `ReplayRunnerNormalizeTests`, `.RebaseOntoWorkspaceHeadAsync`, `System.Text.RegularExpressions`, `SessionRegistry`, `GigaClaw.Web.Services`, `GigaClaw.Core.Github`, `TeamSeed`, `.TryParse`, `CostTracker`, `GigaClaw.Web.Api`, `ActionEditorCoverageTests`, `AutomationConfig`, `SharedRenderHelpers`, `GigaClaw.Core.Models`, `.EnsureAsync`, `ClaudeRunnerMockIntegrationTests.cs`, `RunConcurrencyGate`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
+- **What connects `id`, `name`, `minAppVersion` to the rest of the system?**
+  _2061 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Board.razor` be split into smaller, more focused modules?**
   _Cohesion score 0.012738853503184714 - nodes in this community are weakly interconnected._
-- **Should `RepairLoopTests` be split into smaller, more focused modules?**
-  _Cohesion score 0.05542283803153368 - nodes in this community are weakly interconnected._
 - **Should `ActionExecutorHttpRequestTests` be split into smaller, more focused modules?**
-  _Cohesion score 0.07194392908678623 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07051282051282051 - nodes in this community are weakly interconnected._
+- **Should `TicketService` be split into smaller, more focused modules?**
+  _Cohesion score 0.10701484895033282 - nodes in this community are weakly interconnected._

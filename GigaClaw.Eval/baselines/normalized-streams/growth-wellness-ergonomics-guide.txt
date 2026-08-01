@@ -1,0 +1,7 @@
+0	launch	wellness-coach (new) session={{session_id}} cwd={{workspace}} skill=wellness-coach/SKILL.md
+1	system	{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
+2	assistant	[assistant] Routine topic (general ergonomics, no elevated-risk content). Drafting the guide with the required section skeleton, then validating the source inventory.
+3	tool_use	Bash
+4	user	[user] source_inventory: PASS — 6 claims, 6 rows, evidence types: 4 professional-body, 2 systematic-review
+5	assistant	[assistant] Wrote content/health/desk-ergonomics-remote-engineers.md with the medical-advice disclaimer, Who this is for/not for, Evidence and uncertainty, the mobility protocol with conservative ranges and stop conditions, Contraindications and red flags (persistent numbness or radiating pain -> stop and seek prompt qualified care), and the claim-to-source map. Receipt: <!-- wellness-coach:v1 ticket=5028 input-sha256={{session_id}}{{session_id}} reviewed=2026-08-01 -->. The ticket asked for a draft only, so posted the summary comment and moved status to Review rather than handing off to blog-writer.
+6	result	{"type":"result","subtype":"success","is_error":false,"duration_ms":215,"num_turns":2,"total_cost_usd":0.0745,"usage":{"input_tokens":470,"output_tokens":1000,"cache_read_input_tokens":19000,"cache_creation_input_tokens":1550}}
