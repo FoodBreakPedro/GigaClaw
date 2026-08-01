@@ -117,6 +117,8 @@ builder.Services.AddSingleton<
 builder.Services.AddSingleton<GigaClaw.Core.Github.GitHubApiClient>();
 builder.Services.AddSingleton<GigaClaw.Core.Github.GitHubIssueLinkStore>();
 builder.Services.AddSingleton<GigaClaw.Core.Github.GitHubIssueSyncService>();
+// U6: pushes a ticket's R5 worktree branch and opens its pull request. Same gate, same receipts.
+builder.Services.AddSingleton<GigaClaw.Core.Github.GitHubPullRequestService>();
 builder.Services.AddSingleton<GigaClaw.Web.Services.UpdateCheckService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GigaClaw.Web.Services.UpdateCheckService>());
 // Anonymous daily usage heartbeat (see README "Telemetry" and doc/telemetry.md).

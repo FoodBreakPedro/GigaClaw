@@ -47,6 +47,17 @@ public sealed record GitHubProjectConfig
     /// <summary>API root. Overridable for GitHub Enterprise; also what tests point at a fake.</summary>
     public string ApiBaseUrl { get; init; } = "https://api.github.com";
 
+    /// <summary>
+    /// U6: the git remote <see cref="GitHubPullRequestService"/> pushes a ticket branch to before
+    /// opening its pull request. A name (resolved through <c>git remote get-url</c>) rather than a
+    /// URL, so the credentials git already has for that remote stay in git's own configuration and
+    /// never pass through GigaClaw.
+    /// </summary>
+    public string GitRemote { get; init; } = "origin";
+
+    /// <summary>U6: the branch a ticket's pull request targets.</summary>
+    public string PullRequestBase { get; init; } = "main";
+
     /// <summary>True once the repository coordinates are usable.</summary>
     public bool HasRepository =>
         !string.IsNullOrWhiteSpace(Owner) && !string.IsNullOrWhiteSpace(Repo);
