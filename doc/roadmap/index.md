@@ -96,26 +96,28 @@ Validated against `origin/main` at `fe98829`. These findings are requirements, n
 
 ## Dependency graph
 
+Regenerated **2026-08-01** with per-node status: ✓ done · ⬒ done on the PR branch (`worktree-c5-c7-c8`, PR #11, owner merges) · ◐ partially done · ✕ blocked · unmarked = open.
+
 ```mermaid
 flowchart TD
-    P3["P3+U18+U17 Runtime policy chokepoint (CX-R)"]
-    P20["P20 Typed catalog + CI (CX-T)"]
-    QF["T17+P22 Cheap defects (GM)"]
-    A11["A11/P8 Typed verdicts (CL schema + GM rewrites)"]
-    U10["U10 Bounded repair loop (CL)"]
-    O6["O6 Eval harness (CX-T)"]
-    P4["P4 blockedBy/blocks edges (CX-T)"]
-    T2["T2 Executable teams (CL)"]
-    T11["T11 File-ownership enforcement (CX-R)"]
-    U7["U7/P10 Parallel branches + workflow graph (CL)"]
-    U6["U6 Worktree→PR→CI→merge lane (CX-R)"]
-    P13["P13 Runner adapter + Codex harness (CX-R)"]
-    U5["U5 GitHub surface (CL)"]
-    P9["P9 Handoff artifacts (CL schema + GM templates)"]
-    O7["O7 Pack infrastructure (CL+CX)"]
-    PACKS["Specialist + marketing packs (GM authoring)"]
-    P7["P7/P12 Truth registries (CL)"]
-    PILOTS["P16 / O3-O4 / O5 shadow pilots"]
+    P3["✓ P3+U18+U17 Runtime policy chokepoint (CX-R R1–R3)"]:::done
+    P20["✓ P20 Typed catalog + CI (CX-T T1–T2)"]:::done
+    QF["✓ T17+P22 Cheap defects (GM G1)"]:::done
+    A11["◐ A11/P8 Typed verdicts — CL schema ✓ frozen; GM G2 rewrites still in CL review (2 rubric findings)"]:::partial
+    U10["✓ U10 Bounded repair loop (CL C3)"]:::done
+    O6["✓ O6 Eval harness (CX-T T4–T5; 38/38 replay+judge)"]:::done
+    P4["✓ P4 blockedBy/blocks edges (CX-T + CL condition)"]:::done
+    T2["✓ T2 Executable teams (CL C4; C8 presets on PR #11)"]:::done
+    T11["✓ T11 File-ownership enforcement (CX-R R4 leases)"]:::done
+    U7["⬒ U7/P10 Parallel branches + workflow graph (CL C5, PR #11 — graph walker future work)"]:::pr
+    U6["◐ U6 Worktree→PR→CI→merge lane — R5+R6 machinery landed, opt-in; end-to-end demo + default-on = SP-3/SP-4"]:::partial
+    P13["◐ P13 Runner adapter ✓ (R7 IAgentRunner) + ✕ R8 Codex harness (blocked: usage cap)"]:::blocked
+    U5["⬒ U5 GitHub surface (CL C7, PR #11)"]:::pr
+    P9["◐ P9 Handoff artifacts — CL schema+plumbing ✓ (C6); GM G3 templates open"]:::partial
+    O7["◐ O7 Pack infrastructure — C9 spec approved ✓; T6 impl partial (strict-packs gate + Security manifest exist)"]:::partial
+    PACKS["Packs 1–6 (GM authoring + CL wiring) — Pack 1 partially proven (fixtures execute)"]:::open
+    P7["P7/P12 Truth registries (CL) — open"]:::open
+    PILOTS["P16 / O3-O4 / O5 shadow pilots — gated on SP-4"]:::open
 
     P3 --> T11 --> U6
     P3 --> U6
@@ -131,6 +133,12 @@ flowchart TD
     O7 --> PACKS
     P7 --> PACKS
     P9 --> T2
+
+    classDef done fill:#1e7e34,stroke:#14532d,color:#ffffff
+    classDef pr fill:#0d6efd,stroke:#0a3d91,color:#ffffff
+    classDef partial fill:#b58900,stroke:#7a5c00,color:#ffffff
+    classDef blocked fill:#b02a37,stroke:#7a1d26,color:#ffffff
+    classDef open fill:#6c757d,stroke:#43484d,color:#ffffff
 ```
 
 ## Phases and sync points
