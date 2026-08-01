@@ -174,6 +174,8 @@ public class AppSettingsService
             DoneStatuses = stored.DoneStatuses is { Count: > 0 } ? stored.DoneStatuses : ["Done"],
             OwnerLogins = stored.OwnerLogins ?? [],
             ApiBaseUrl = string.IsNullOrWhiteSpace(stored.ApiBaseUrl) ? "https://api.github.com" : stored.ApiBaseUrl,
+            GitRemote = string.IsNullOrWhiteSpace(stored.GitRemote) ? "origin" : stored.GitRemote,
+            PullRequestBase = string.IsNullOrWhiteSpace(stored.PullRequestBase) ? "main" : stored.PullRequestBase,
         };
     }
 
@@ -226,6 +228,8 @@ public class AppSettingsService
         stored.DoneStatuses = config.DoneStatuses?.ToList() ?? ["Done"];
         stored.OwnerLogins = config.OwnerLogins?.ToList() ?? [];
         stored.ApiBaseUrl = config.ApiBaseUrl?.Trim() ?? "https://api.github.com";
+        stored.GitRemote = string.IsNullOrWhiteSpace(config.GitRemote) ? "origin" : config.GitRemote.Trim();
+        stored.PullRequestBase = string.IsNullOrWhiteSpace(config.PullRequestBase) ? "main" : config.PullRequestBase.Trim();
         if (!string.IsNullOrWhiteSpace(token))
             stored.Token = token.Trim();
         Save();
@@ -290,6 +294,8 @@ public class AppSettingsService
         public List<string>? DoneStatuses { get; set; }
         public List<string>? OwnerLogins { get; set; }
         public string? ApiBaseUrl { get; set; }
+        public string? GitRemote { get; set; }
+        public string? PullRequestBase { get; set; }
         public string? Token { get; set; }
     }
 }

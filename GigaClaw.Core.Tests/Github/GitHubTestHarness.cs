@@ -37,6 +37,7 @@ internal sealed class GitHubTestHarness : IDisposable
     public required GitHubApiClient Client { get; init; }
     public required GitHubIssueLinkStore Links { get; init; }
     public required GitHubIssueSyncService Sync { get; init; }
+    public required GitHubPullRequestService PullRequests { get; init; }
     public required RecordingReceiptSink ReceiptSink { get; init; }
     public required FakeHttpMessageHandler Handler { get; init; }
     public required string Slug { get; init; }
@@ -56,7 +57,9 @@ internal sealed class GitHubTestHarness : IDisposable
         string label = "gigaclaw",
         bool commentOnDone = false,
         bool closeOnDone = false,
-        IReadOnlyList<string>? ownerLogins = null) => new()
+        IReadOnlyList<string>? ownerLogins = null,
+        string gitRemote = "origin",
+        string pullRequestBase = "main") => new()
         {
             Enabled = enabled,
             Owner = "acme",
@@ -68,6 +71,8 @@ internal sealed class GitHubTestHarness : IDisposable
             DoneStatuses = ["Done"],
             OwnerLogins = ownerLogins ?? [],
             ApiBaseUrl = ApiBase,
+            GitRemote = gitRemote,
+            PullRequestBase = pullRequestBase,
         };
 
     /// <summary>
@@ -130,11 +135,9 @@ internal sealed class GitHubTestHarness : IDisposable
         var tickets = new TicketService(projects, members);
         var settings = new AppSettingsService(tmp.Path);
         var receipts = new RecordingReceiptSink();
+        var gate = new OutboundApprovalGate(settings.GetApprovedOutboundHosts);
         var client = new GitHubApiClient(
-            new FakeHttpClientFactory(handler),
-            new OutboundApprovalGate(settings.GetApprovedOutboundHosts),
-            receipts,
-            NullLogger<GitHubApiClient>.Instance);
+            new FakeHttpClientFactory(handler), gate, receipts, NullLogger<GitHubApiClient>.Instance);
         var links = new GitHubIssueLinkStore(projects);
 
         return new GitHubTestHarness
@@ -147,6 +150,9 @@ internal sealed class GitHubTestHarness : IDisposable
             Client = client,
             Links = links,
             Sync = new GitHubIssueSyncService(settings, client, links, tickets, NullLogger<GitHubIssueSyncService>.Instance),
+            PullRequests = new GitHubPullRequestService(
+                settings, client, projects, tickets, gate, receipts,
+                NullLogger<GitHubPullRequestService>.Instance),
             ReceiptSink = receipts,
             Handler = handler,
             Slug = slug,
