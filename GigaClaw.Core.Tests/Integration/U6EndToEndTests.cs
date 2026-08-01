@@ -208,15 +208,17 @@ public sealed class U6EndToEndTests
         Assert.Null(await h.Processor.ProcessProjectAsync(h.Slug, CancellationToken.None));
         Assert.Equal("base\n", await File.ReadAllTextAsync(Path.Combine(h.Workspace, "src", "exporter.txt")));
 
-        // The record on the ticket. Note what it can and cannot say: once a firing is bound to a
-        // ticket the check-run's own name is no longer in the firing, so `addComment`'s
-        // {ticketTitle} placeholder renders the ticket, not the check. Naming the failing check on
-        // the ticket would need a placeholder the action vocabulary does not have — recorded in
-        // doc/roadmap/U6-EVIDENCE.md rather than papered over here.
+        // The record on the ticket — and now the proof of what was previously impossible: naming
+        // the failing check. Once a githubCheckStatus firing binds to a ticket, {checkName} and
+        // {checkConclusion} (U6 follow-up (c)) still carry the check's own identity, so the comment
+        // says not just that a check failed but which one and how — "build" concluded "failure",
+        // exactly the scripted check-run's own fields, not just the ticket's.
         var comments = await h.CommentsAsync(ticket.Id);
         Assert.Contains(comments, c => c.Contains(U6Harness.RedMarker, StringComparison.Ordinal));
         Assert.Contains(comments, c => c.Contains($"ticket-{ticket.Id}", StringComparison.Ordinal)
-                                    && c.Contains("NOT enqueued", StringComparison.Ordinal));
+                                    && c.Contains("NOT enqueued", StringComparison.Ordinal)
+                                    && c.Contains("\"build\"", StringComparison.Ordinal)
+                                    && c.Contains("concluded failure", StringComparison.Ordinal));
         Assert.DoesNotContain(comments, c => c.Contains("merge-held/v1", StringComparison.Ordinal));
         Assert.DoesNotContain(comments, c => c.Contains("merge-completed/v1", StringComparison.Ordinal));
     }
@@ -526,8 +528,10 @@ internal sealed class U6Harness : IDisposable
 
     /// <summary>
     /// The failure automation, built from the vocabulary that already exists: it comments and it
-    /// does not enqueue. Nothing more is needed for the leg U6 has to prove — that a red check
-    /// leaves a record and reaches no queue.
+    /// does not enqueue. Names the failing check via U6 follow-up (c)'s {checkName}/{checkConclusion}
+    /// placeholders — before that vocabulary addition, once a githubCheckStatus firing bound to a
+    /// ticket the check's own name was gone, so this comment could only say a check failed and not
+    /// which one.
     /// </summary>
     public AutomationRule RedRule(int ticketId) => new()
     {
@@ -545,7 +549,7 @@ internal sealed class U6Harness : IDisposable
             new AddCommentActionSpec
             {
                 Author = "automation",
-                Content = RedMarker + " ticket-{ticketId} — {ticketTitle}: a check on this branch did not conclude successfully, so the branch was NOT enqueued for merge. Fix the failure and push again.",
+                Content = RedMarker + " ticket-{ticketId} — {ticketTitle}: check \"{checkName}\" concluded {checkConclusion}, so the branch was NOT enqueued for merge. Fix the failure and push again.",
             },
         ],
     };

@@ -118,6 +118,8 @@ A check run that has not concluded (`queued`, `in_progress`) fires nothing — i
 
 **Ticket binding** is best-effort and free: the commit's own message is read for a `ticket-<id>` reference. When one is found the firing carries that ticket; otherwise it is ticketless, which is `gitCommit`'s normal shape rather than a failure.
 
+**Naming the check** (U6 follow-up (c)): the firing carries `{checkName}`/`{checkConclusion}` — the concluded check-run's own name and conclusion — whether or not it resolved to a ticket, so a downstream `addComment` can say which check failed and how, not only that a check on the ticket's branch did. Every other trigger leaves both placeholders blank.
+
 ## Pull requests
 
 U6 (`doc/roadmap/U6-EVIDENCE.md`) added the missing leg between R5 (a ticket's work lives on its own `ticket/<id>` branch in a worktree) and CI status above: something has to put the branch where GitHub can see it. `GitHubPullRequestService.OpenForTicketAsync` follows C7's rules rather than inventing new ones — settings-only PAT, every HTTP call through the same P3 gate, a `git push` gated on the remote's host the same way, and idempotence by asking GitHub whether a pull request already exists rather than keeping its own table.

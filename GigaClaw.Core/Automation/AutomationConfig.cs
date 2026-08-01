@@ -412,7 +412,8 @@ public sealed class AssignTicketActionSpec : ActionSpec
 public sealed class AddCommentActionSpec : ActionSpec
 {
     public override string UiTypeKey => "addComment";
-    /// <summary>Comment content. Supports placeholders: {ticketId}, {ticketTitle}, {assignee}.</summary>
+    /// <summary>Comment content. Supports placeholders: {ticketId}, {ticketTitle}, {assignee}, plus
+    /// {checkName}/{checkConclusion} on a firing produced by the githubCheckStatus trigger.</summary>
     public string Content { get; set; } = "";
     /// <summary>Author of the comment (member slug).</summary>
     public string Author { get; set; } = "";

@@ -143,12 +143,13 @@ claim is that the *red result* is what stops the merge, not a missing approval.
 - `Queue.ListAsync` is **empty** — not held, not queued, not bounced, *nothing* — the processor
   returns `null`, and the workspace file is unchanged. No `merge-held/v1`, no `merge-completed/v1`.
 
-**Vocabulary limit found, not papered over.** Once a `githubCheckStatus` firing is bound to a
-ticket, the check-run's own name is no longer carried in the `TriggerFiring`, so `addComment`'s
-`{ticketTitle}` placeholder renders the *ticket*, not the failing check. The failure comment can
-therefore say *that* a check failed and which ticket it belongs to, but not *which* check. Naming
-the check would need a placeholder the action vocabulary does not have. The test asserts what the
-existing vocabulary actually supports and this note records the gap.
+**Vocabulary gap found, then closed.** Once a `githubCheckStatus` firing was bound to a ticket, the
+check-run's own name used to be lost from the `TriggerFiring`, so `addComment`'s `{ticketTitle}`
+placeholder could render the *ticket* but nothing named *which* check failed. U6 follow-up (c) closed
+it: `TriggerFiring.CheckName`/`CheckConclusion` are now populated on every `githubCheckStatus` firing,
+ticket-bound or not, and `{checkName}`/`{checkConclusion}` are new `ActionTemplate` placeholders. The
+assertion below, previously limited to what the vocabulary could prove, now asserts the failure
+comment names the check that failed and how — the previously impossible assertion is the proof.
 
 ### Leg 6 — a restart between the PR and CI
 
@@ -226,8 +227,11 @@ commit `4082184`, where Windows' default silently rewrote LF blobs on `git workt
    `GitHubPullRequestService.OpenForTicketAsync` for the firing ticket and fails closed — a project
    with no GitHub configuration gets a ticket note rather than a thrown exception — proved by
    `ActionExecutorOpenPullRequestTests`.
-3. **The failure comment cannot name the failing check** (see leg 5). A `{checkName}` /
-   `{checkConclusion}` placeholder on ticket-bound `githubCheckStatus` firings would close it.
+3. **Closed.** `TriggerFiring` now carries `CheckName`/`CheckConclusion`, populated by
+   `GitHubCheckStatusTrigger` on every firing — ticket-bound or not — and rendered by
+   `ActionTemplate.Render` as `{checkName}`/`{checkConclusion}`. Leg 5's assertion, previously
+   weakened to what the vocabulary could prove, now asserts the failure comment names the check by
+   its own name and conclusion (`GitHubCheckStatusTests`, `U6EndToEndTests`).
 4. **`main` is never pushed back.** The merge lands in the local workspace; the bare remote keeps the
    ticket branch only. A real deployment would want the landed `main` pushed, and the branch deleted
    on the remote — neither exists yet, in code or in test.
