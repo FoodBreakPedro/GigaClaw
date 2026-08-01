@@ -8,7 +8,7 @@
 {"agent":"committer","exerciseState":"exercised","observedViolationCount":1,"allowedWriteGlobs":[".git/**"]}
 {"agent":"competitive-analyst","exerciseState":"exercised","observedViolationCount":1,"allowedWriteGlobs":["research/**"]}
 {"agent":"content-series-planner","exerciseState":"exercised","observedViolationCount":1,"allowedWriteGlobs":["content/series/**"]}
-{"agent":"content-writer","exerciseState":"exercised","observedViolationCount":1,"allowedWriteGlobs":[]}
+{"agent":"content-writer","exerciseState":"exercised","observedViolationCount":1,"allowedWriteGlobs":["cw-draft.md","cw-description.json","cw-resp.json","cw-report.md"]}
 {"agent":"data-analyst","exerciseState":"exercised","observedViolationCount":1,"allowedWriteGlobs":["data/reports/**"]}
 {"agent":"decision-engine","exerciseState":"exercised","observedViolationCount":1,"allowedWriteGlobs":["doc/decisions/**","doc/index.md",".git/**"]}
 {"agent":"design-researcher","exerciseState":"exercised","observedViolationCount":1,"allowedWriteGlobs":["design/specs/**"]}
