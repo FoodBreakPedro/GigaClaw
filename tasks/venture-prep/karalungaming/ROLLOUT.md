@@ -267,11 +267,13 @@ This step ensures the karalungaming project's automations stay in sync with the 
 - [ ] Ensure GigaClaw is still running (or run a fresh instance)
 - [ ] Run:
   ```bash
-  /Users/pedrozabala/Documents/Development/Github Repos/GigaClaw/tools/check-automation-drift.sh <workspace>/.agents
+  cd "/Users/pedrozabala/Documents/Development/Github Repos/GigaClaw" && dotnet run --project GigaClaw.Catalog -c Release -- check --project <workspace>
   ```
-- [ ] Script should report:
+- [ ] Should report:
   ```
-  DRIFT: missing=0 extra=0 changed=0 allowlisted=0
+  No drift.
+
+  DRIFT: missing=0 modified=0 extra=0 allowlisted=0
   ```
   (or list any intentional overrides in `allowlisted` count)
 
@@ -420,7 +422,7 @@ Karalun Gaming is **live** when all of the following are true:
 - **ZabsAIOS Brand**: `/Users/pedrozabala/Documents/Development/Github Repos/ZabsAIOS/ventures/karalungaming/brand.md`
 - **Obsidian Vault**: `/Users/pedrozabala/Documents/Development/Projects/Obsidian Vault/50-KaralunGaming/`
 - **ProjectTemplate**: `/Users/pedrozabala/Documents/Development/Github Repos/GigaClaw/ProjectTemplate/`
-- **Automation Drift Check**: `/Users/pedrozabala/Documents/Development/Github Repos/GigaClaw/tools/check-automation-drift.sh`
+- **Automation Drift Check**: `dotnet run --project GigaClaw.Catalog -- check --project <workspace>` (doc/automation-drift-check.md) — `tools/check-automation-drift.sh` was retired 2026-08-01
 
 ---
 

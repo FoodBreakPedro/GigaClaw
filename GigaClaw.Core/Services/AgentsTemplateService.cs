@@ -27,6 +27,12 @@ public sealed class AgentsTemplateService
         return list;
     }
 
+    /// <summary>Raw bytes of one <c>.agents/</c>-destined template file, by the path <see cref="RelativePaths"/> reports.</summary>
+    public byte[] ReadAgentAsset(string relativePath) => ReadAsset(AgentsPrefix, relativePath);
+
+    /// <summary>Raw bytes of one workspace-root-destined template file, by the path <see cref="RootRelativePaths"/> reports.</summary>
+    public byte[] ReadRootAsset(string relativePath) => ReadAsset(RootPrefix, relativePath);
+
     private byte[] ReadAsset(string prefix, string relativePath)
     {
         var allNames = _assembly.GetManifestResourceNames();
