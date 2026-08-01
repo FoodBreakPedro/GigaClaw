@@ -23,10 +23,14 @@ public sealed class CatalogGeneratorTests
         // hypothesis-debug-on-qa-block) = 45 core + 7 pack, plus the SP-3 worktree-isolated twins split
         // out of assignee-dispatch/assignee-resume/owner-feedback so isolation can be set on the
         // programmer/qa-tester binding without touching every other agent sharing that automation
-        // (assignee-dispatch-code, assignee-resume-code, owner-feedback-code) = 48 core + 7 pack.
-        // Enabled trails by one: `weekly-ticket-example` is a shipped-off sample, not a gate, and
-        // every pack automation is enabled by the binding rule.
-        Assert.Equal(55, catalog.Summary.Automations);
+        // (assignee-dispatch-code, assignee-resume-code, owner-feedback-code) = 48 core + 7 pack, plus
+        // the U6 follow-up's three GitHub automations (github-ci-success-enqueues-merge,
+        // github-ci-failure-records-check, verdict-gate-qa-ship-open-pull-request) = 51 core + 7 pack.
+        // Enabled trails total by four: `weekly-ticket-example` is a shipped-off sample, not a gate,
+        // and the three GitHub automations ship wired but disabled (owner decision 2026-08-01 — off
+        // unless a project configures a GitHub remote/token) — every pack automation is still enabled
+        // by the binding rule.
+        Assert.Equal(58, catalog.Summary.Automations);
         Assert.Equal(54, catalog.Summary.EnabledAutomations);
         Assert.Equal(37, catalog.Summary.ExplicitModelMappings);
         // 9 filter-only core teams + the two C8 presets (parallel-review, hypothesis-debug) + the
@@ -45,8 +49,9 @@ public sealed class CatalogGeneratorTests
         Assert.NotEmpty(contentWriter.EnabledDispatchingAutomations);
         Assert.Contains("scripts/content_contract.py", catalog.Scripts);
         Assert.Equal(12, catalog.Teams.Count);
-        // 48 core (45 + the three SP-3 worktree-isolated twins) + the pack's 7.
-        Assert.Equal(55, catalog.Automations.Count);
+        // 51 core (45 + the three SP-3 worktree-isolated twins + the three U6 GitHub automations)
+        // + the pack's 7.
+        Assert.Equal(58, catalog.Automations.Count);
         // Core only. A baseline is the *reviewed* static-check snapshot and §9 keeps it a
         // core-owned artifact about pack content, so a pack's baselines appear when someone
         // reviews them — not when the pack lands. The binding rule requires a fixture, which the

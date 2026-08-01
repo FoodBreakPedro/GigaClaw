@@ -215,11 +215,14 @@ commit `4082184`, where Windows' default silently rewrote LF blobs on `git workt
 
 ### For U6 itself
 
-1. **No `githubCheckStatus` automation ships in the template.** `ProjectTemplate/Agents/automations.json`
-   contains no `githubCheckStatus` (or `githubPrComment`) automation at all — neither a success path
-   nor a failure path. Both automations U6 exercises are declared **in the test**, in the same
-   vocabulary a template automation would use. Shipping them means deciding what an initialized
-   project should poll by default, which is an owner decision and is why it was not taken here.
+1. **Closed (owner decision 2026-08-01).** `ProjectTemplate/Agents/automations.json` now ships three
+   GitHub automations — `github-ci-success-enqueues-merge`, `github-ci-failure-records-check`, and
+   `verdict-gate-qa-ship-open-pull-request` — in the same vocabulary U6's test harness used, all
+   `enabled: false`: GitHub automations ship **wired but disabled**, off unless a project configures
+   a GitHub remote and token, consistent with local-first. `TemplateAutomationContractTests` pins
+   that all three ship off and that the enabled-automation count is unchanged by them;
+   `CatalogGeneratorTests` pins the regenerated `catalog.json`/`doc/catalog.md` counts
+   (Automations 55 → 58, EnabledAutomations unchanged at 54).
 2. **Closed.** `OpenPullRequestActionSpec` (`openPullRequest`) is now the vocabulary addition this
    note called for: an `ActionSpec`, its discriminator, and `ActionExecutor.ExecuteOpenPullRequestActionAsync`,
    mirrored across every surface `enqueueMerge`/`startWorkflow` have (editor, palette,

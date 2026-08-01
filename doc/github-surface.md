@@ -126,6 +126,16 @@ U6 (`doc/roadmap/U6-EVIDENCE.md`) added the missing leg between R5 (a ticket's w
 
 The `openPullRequest` automation action is the executor's arm around it — the natural home is beside `enqueueMerge` in a `verdict-gate-*` chain: *verdict SHIP → open PR → wait for CI → enqueue merge*. Like `enqueueMerge` it only records intent: it pushes the branch and opens (or re-finds) the pull request, once, and returns — CI and review are driven by their own triggers. An unconfigured project (no remote, no token, a ticket never dispatched with `isolation: "worktree"`) is not an error: the service returns rather than throws, and the action writes a note on the ticket explaining why instead of letting the outcome vanish silently. Any policy-gate refusal (push host or API host not approved) already carries its own `outbound-denial/v1` receipt from the service, so the action does not duplicate it.
 
+### Shipped disabled by default
+
+Owner decision (2026-08-01): the whole GitHub automation surface ships in `ProjectTemplate/Agents/automations.json` **wired but disabled** — consistent with local-first, a project opts in rather than having it on by default. Three automations, all `enabled: false`:
+
+- `github-ci-success-enqueues-merge` — a `githubCheckStatus` success conclusion enqueues the dev pipeline's merge.
+- `github-ci-failure-records-check` — a failing conclusion records which check failed (`{checkName}`/`{checkConclusion}`) and does not enqueue.
+- `verdict-gate-qa-ship-open-pull-request` — a qa-tester SHIP verdict opens a pull request, beside `verdict-gate-qa-ship-to-done`'s always-on `enqueueMerge` gate rather than inside it.
+
+Enabling any of them (and giving the project a GitHub remote and token) is the only step; the vocabulary and the actions underneath are identical to what a hand-written project-level automation would use.
+
 ## Entry points
 
 | Route | Purpose |
