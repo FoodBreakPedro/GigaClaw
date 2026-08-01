@@ -1222,6 +1222,7 @@
           "concurrencyGroup": "content-writer",
           "mutuallyExclusiveWith": [],
           "env": {},
+          "model": "claude-sonnet-4-6",
           "restoreStatusOnFail": true
         },
         {
@@ -1260,6 +1261,7 @@
           "concurrencyGroup": "content-writer",
           "mutuallyExclusiveWith": [],
           "env": {},
+          "model": "claude-sonnet-4-6",
           "restoreStatusOnFail": false
         },
         {
@@ -1297,6 +1299,7 @@
           "concurrencyGroup": "blog-reviewer",
           "mutuallyExclusiveWith": [],
           "env": {},
+          "model": "claude-sonnet-4-6",
           "restoreStatusOnFail": false
         },
         {
@@ -2145,6 +2148,7 @@
           "maxTurns": 150,
           "mutuallyExclusiveWith": [],
           "env": {},
+          "model": "claude-sonnet-4-6",
           "restoreStatusOnFail": false
         },
         {

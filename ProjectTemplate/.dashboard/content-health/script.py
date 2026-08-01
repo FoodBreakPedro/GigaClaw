@@ -18,10 +18,21 @@ def geo_score(path):
             [sys.executable, ".agents/scripts/ai_citation_score.py", path],
             capture_output=True, text=True, timeout=30,
         )
-        m = re.search(r"Overall GEO Score:\s*(\d+)\s*/\s*100", proc.stdout)
-        return int(m.group(1)) if m else None
-    except Exception:
+    except subprocess.TimeoutExpired:
+        print(f"geo_score: timed out scoring {path}", file=sys.stderr)
         return None
+    except (OSError, subprocess.SubprocessError) as error:
+        print(f"geo_score: error running ai_citation_score.py for {path}: {error}", file=sys.stderr)
+        return None
+
+    if proc.returncode != 0:
+        print(f"geo_score: ai_citation_score.py failed for {path} (exit {proc.returncode}): {proc.stderr.strip()}", file=sys.stderr)
+        return None
+
+    m = re.search(r"Overall GEO Score:\s*(\d+)\s*/\s*100", proc.stdout)
+    if m is None:
+        print(f"geo_score: no score found in output for {path}", file=sys.stderr)
+    return int(m.group(1)) if m else None
 
 
 def main():

@@ -10,12 +10,17 @@ Evaluates content structure for LLM retrieval and citation:
   - Direct Q&A FAQ headers
 """
 
-import sys
-import re
+from __future__ import annotations
 
-def evaluate_geo_citability(text):
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+
+def evaluate_geo_citability(text: str) -> dict[str, Any]:
     score = 0
-    breakdown = {}
+    breakdown: dict[str, str] = {}
     
     # 1. Heading Hierarchy & Clarity (20 pts)
     headers = re.findall(r'^#{1,4}\s+(.+)$', text, re.MULTILINE)
@@ -71,15 +76,15 @@ def evaluate_geo_citability(text):
         "breakdown": breakdown
     }
 
-def main():
+
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python3 ai_citation_score.py <path-to-markdown-file>")
         sys.exit(1)
-        
+
     filepath = sys.argv[1]
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
+        content = Path(filepath).read_text(encoding='utf-8')
     except Exception as e:
         print(f"Error reading file {filepath}: {e}")
         sys.exit(1)
@@ -90,6 +95,7 @@ def main():
     print("\nBreakdown:")
     for k, v in res['breakdown'].items():
         print(f"  - {k.capitalize()}: {v}")
+
 
 if __name__ == "__main__":
     main()

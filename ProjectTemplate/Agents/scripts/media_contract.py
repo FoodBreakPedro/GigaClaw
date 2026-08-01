@@ -11,17 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-
-def load_object(path: Path, description: str) -> dict[str, Any]:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as error:
-        raise ValueError(f"{description} does not exist: {path}") from error
-    except json.JSONDecodeError as error:
-        raise ValueError(f"{description} is not valid JSON: {error}") from error
-    if not isinstance(value, dict):
-        raise ValueError(f"{description} must contain one JSON object")
-    return value
+from media_common import load_object
 
 
 def ffprobe(path: Path, executable: str) -> dict[str, Any]:

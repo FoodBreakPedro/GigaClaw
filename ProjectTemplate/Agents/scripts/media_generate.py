@@ -20,6 +20,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from media_common import load_object
+
 
 def atomic_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -34,18 +36,6 @@ def atomic_json(path: Path, value: dict[str, Any]) -> None:
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
-
-
-def load_object(path: Path, description: str) -> dict[str, Any]:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as error:
-        raise ValueError(f"{description} does not exist: {path}") from error
-    except json.JSONDecodeError as error:
-        raise ValueError(f"{description} is not valid JSON: {error}") from error
-    if not isinstance(value, dict):
-        raise ValueError(f"{description} must contain one JSON object")
-    return value
 
 
 def required_string(value: dict[str, Any], name: str) -> str:
