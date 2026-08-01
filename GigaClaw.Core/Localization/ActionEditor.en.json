@@ -97,5 +97,8 @@
   "ActionStartWorkflow": "Start workflow walk",
   "SwAt": "Start at state",
   "SwAtPlaceholder": "draft (blank = the graph\u2019s entry state)",
-  "SwHint": "Opens a walk of this workspace\u2019s .agents/workflow.json on the firing ticket. The action only records the intent \u2014 the engine\u2019s own poll enters the states, dispatches each task state as a sub-ticket, routes the gates through the ordinary conditions and bounds the cycles. Idempotent per ticket: firing again while a walk is running re-attaches instead of restarting it."
+  "SwHint": "Opens a walk of this workspace\u2019s .agents/workflow.json on the firing ticket. The action only records the intent \u2014 the engine\u2019s own poll enters the states, dispatches each task state as a sub-ticket, routes the gates through the ordinary conditions and bounds the cycles. Idempotent per ticket: firing again while a walk is running re-attaches instead of restarting it.",
+
+  "ActionOpenPullRequest": "Open pull request",
+  "OprHint": "Pushes the firing ticket's worktree branch (dispatched with isolation: \"worktree\") and opens \u2014 or re-finds \u2014 its pull request against the project's configured GitHub remote and base branch. Nothing to configure here: the remote, base, and token live in the project's GitHub settings. A project with no GitHub configuration is not an error \u2014 the ticket gets a note explaining why, and nothing is pushed."
 }

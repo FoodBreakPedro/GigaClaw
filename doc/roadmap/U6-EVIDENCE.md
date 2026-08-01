@@ -219,11 +219,13 @@ commit `4082184`, where Windows' default silently rewrote LF blobs on `git workt
    nor a failure path. Both automations U6 exercises are declared **in the test**, in the same
    vocabulary a template automation would use. Shipping them means deciding what an initialized
    project should poll by default, which is an owner decision and is why it was not taken here.
-2. **No action wires the pull request.** `GitHubPullRequestService` is registered in DI and fully
-   tested, but there is no `openPullRequest` automation action, so today it can only be called from
-   code. The natural home is beside `enqueueMerge` in the `verdict-gate-*` chains: *verdict SHIP →
-   open PR → wait for CI → enqueue merge*. That is a vocabulary addition (an `ActionSpec`, its
-   discriminator, and its executor branch), deliberately out of scope for a proof.
+2. **Closed.** `OpenPullRequestActionSpec` (`openPullRequest`) is now the vocabulary addition this
+   note called for: an `ActionSpec`, its discriminator, and `ActionExecutor.ExecuteOpenPullRequestActionAsync`,
+   mirrored across every surface `enqueueMerge`/`startWorkflow` have (editor, palette,
+   `DescribeAction`, en/fr/es localization, the generated API action table). It calls
+   `GitHubPullRequestService.OpenForTicketAsync` for the firing ticket and fails closed — a project
+   with no GitHub configuration gets a ticket note rather than a thrown exception — proved by
+   `ActionExecutorOpenPullRequestTests`.
 3. **The failure comment cannot name the failing check** (see leg 5). A `{checkName}` /
    `{checkConclusion}` placeholder on ticket-bound `githubCheckStatus` firings would close it.
 4. **`main` is never pushed back.** The merge lands in the local workspace; the bare remote keeps the

@@ -56,5 +56,7 @@
   "PalActStartTeamRun": "Iniciar ejecución de equipo",
   "PalActStartTeamRunHint": "Despliega la definición de un equipo en sub-tickets bajo el ticket activador, vinculados con dependencias",
   "PalActStartWorkflow": "Iniciar recorrido de flujo",
-  "PalActStartWorkflowHint": "Recorre el ticket activador por el grafo de flujo declarado del espacio de trabajo: estados de tarea, puertas, ramificación y unión, acotado por maxCycles"
+  "PalActStartWorkflowHint": "Recorre el ticket activador por el grafo de flujo declarado del espacio de trabajo: estados de tarea, puertas, ramificación y unión, acotado por maxCycles",
+  "PalActOpenPullRequest": "Abrir pull request",
+  "PalActOpenPullRequestHint": "Envía la rama del worktree del ticket activador y abre (o reencuentra) su pull request contra el remoto de GitHub configurado del proyecto"
 }
