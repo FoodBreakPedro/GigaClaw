@@ -57,6 +57,7 @@
       "scripts/handoff_contract.py",
       "scripts/html_contract.py",
       "scripts/lint_prose.py",
+      "scripts/media_common.py",
       "scripts/media_contract.py",
       "scripts/media_generate.py",
       "scripts/privacy_guard.py",
