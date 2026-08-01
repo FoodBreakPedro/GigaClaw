@@ -14,8 +14,8 @@ The prerequisites (R4 leases, R5 worktrees, R6 queue, P4 edges, C4/C5 joins) all
 
 ## 2. Verdict close-out — A11's GM half (GM + CL)
 
-4. **G2**: resolve the two outstanding rubric findings, merge `lane/gemini-vol`. (CL review already cleared receipt-chain, cycle-counter, evaluator-transport.)
-5. **C2 wiring**: as each rewritten reviewer lands, wire its `verdictIs` gate into `ProjectTemplate/Agents/automations.json` (the edit deliberately deferred since C2 — wiring earlier would Block every ticket).
+4. ~~**G2**~~ **Was already done** — this plan inherited a stale lane status (owner caught it 2026-08-01). `a9a2e2e` + merge `2e6405f` landed the rewrites on `main`; four reviewers (`blog-reviewer`, `ui-auditor`, `qa-tester`, `local-media-reviewer`) emit `GIGACLAW-VERDICT` in the shipped template.
+5. ~~**C2 wiring**~~ **Was already done** — the shipped template carries `verdict-gate-{qa,ui,blog,media}-*` plus the `content-verdict-gate-*` family and repair rounds. **Open sliver:** `evaluator` (the fifth reviewer) emits no `GIGACLAW-VERDICT` marker — check whether that is intentional (it may report through the eval layer rather than tickets) or unfinished; folded into item 12b's slice.
 
 ## 3. Cheap standing debts (any session, mostly CX-T)
 
@@ -29,18 +29,19 @@ The prerequisites (R4 leases, R5 worktrees, R6 queue, P4 edges, C4/C5 joins) all
 
 ## 5. GM volume (parallel to everything above)
 
-10. **G3** handoff templates (unblocked by C6 since 2026-07-31).
-11. **G4** progressive disclosure on the seven largest skills.
-12. **G5** team-preset prose: the C8 presets run today on stand-in agents (`ui-auditor`, `qa-tester`, `producer`) with placeholder prompts; G5 authors the real investigator/lead/reviewer prose. Specialist swap-in stays a one-line `teams.json` edit per reserved role ID.
+10. ~~**G3** handoff templates~~ **Was already done** (`f48360f` — stale lane status, caught by the owner 2026-08-01).
+11. ~~**G4** progressive disclosure~~ **Was already done** (`fdc1a50`, five largest skills).
+12. ~~**G5** team-preset prose~~ **Was already done as staged drafts** (`4fce091`): six agents (`accessibility-reviewer`, `architecture-reviewer`, `coverage-reviewer`, `performance-reviewer`, `hypothesis-investigator`, `debug-lead`) with SKILL.md + memory stubs and a `BINDINGS.md` manifest sit in `doc/drafts/g5-team-presets/` — authored but NOT installed as template agents, which is why C8's presets still run on stand-ins.
+12b. **NEW — promote the G5 drafts** (CL, next slice): install the six agents into `ProjectTemplate/Agents/` per `BINDINGS.md`, give each the full five bindings (contract + model + team + automation + eval fixture — the T6 gate now enforces this), swap the C8 preset roles off the stand-ins (one-line `teams.json` role-ID edits by design), un-defer the performance/architecture/accessibility lanes in `parallel-review`, and settle the `evaluator` verdict question from item 5.
 
 ## 6. Phase 3 completion → SP-4 (CX-R)
 
-13. ~~**U6 end-to-end demo**~~ **Proven hermetically 2026-08-01** (`73c261b` + `2d962b0`, [`U6-EVIDENCE.md`](U6-EVIDENCE.md)): one ticket worktree → PR (new `GitHubPullRequestService`, C7 patterns: PAT settings-only, P3-gated, `github-pull-request/v1` receipt, idempotent by asking GitHub) → CI (`gitHubCheckStatus` fires `enqueueMerge` — first proof of C7×R6 composing) → owner-gated ff merge, plus failure and restart legs. Real git/queue/triggers, faked GitHub HTTP only. **New small follow-ups it surfaced**: (a) the template ships no `gitHubCheckStatus` automation — what a project polls by default is an owner call; (b) no `openPullRequest` ActionSpec yet, the service is code-callable only — natural home beside `enqueueMerge` in the verdict-gate chains; (c) a check-status firing cannot name the failing check in an `addComment` — vocabulary gap recorded in the evidence doc.
+13. ~~**U6 end-to-end demo**~~ **Proven hermetically 2026-08-01** (`73c261b` + `2d962b0`, [`U6-EVIDENCE.md`](U6-EVIDENCE.md)): one ticket worktree → PR (new `GitHubPullRequestService`, C7 patterns: PAT settings-only, P3-gated, `github-pull-request/v1` receipt, idempotent by asking GitHub) → CI (`gitHubCheckStatus` fires `enqueueMerge` — first proof of C7×R6 composing) → owner-gated ff merge, plus failure and restart legs. Real git/queue/triggers, faked GitHub HTTP only. ~~New small follow-ups it surfaced~~ **All three closed 2026-08-01** (`11bd29a`, `39dbd3c`, `bcc313a`): (a) the template ships `github-ci-success-enqueues-merge`, `github-ci-failure-records-check`, and `verdict-gate-qa-ship-open-pull-request` — **wired but `enabled: false`** (owner-decided: off unless a project opts in, consistent with local-first); (b) `openPullRequest` is a full automation action on every surface, failing closed with a note when the project has no GitHub config; (c) `{checkName}`/`{checkConclusion}` render in comments, and the previously weakened U6 failure-leg assertion is restored to prove it.
 14. **R8 Codex harness** — *when the usage cap lifts*: second `IAgentRunner` implementation against real `codex exec --json` fixtures, parity checklist from P13 (streaming/resume/policy for one agent, usage/cost or explicit unsupported).
 
 ## 7. Phase 4 — packs (CX-T infra, GM volume, CL wiring)
 
-15. **T6 completion** per the approved C9 spec: staged install/uninstall + `packs.lock.json`, quarantine-on-incompatibility, and the five-binding CI gate. Note: the 2026-07-30 structural blocker (teams as compiled constants) is materially changed — C4/C8 moved teams to data (`teams.json` + `TeamSeed`), so the team-binding rule should now be enforceable; verify and close that finding.
+15. ~~**T6 completion**~~ **Done 2026-08-01** (`d25474d`, `d2b0384`, `546daf6`, `75a4529`): the survey found most of the C9 spec already implemented (staged install/rollback, lock hashes, hash-guarded uninstall, quarantine, five-binding gate in CI); the four real gaps are closed — packs now embedded in `GigaClaw.Core.dll` (the production install path), the per-project drift checker no longer misreads an installed pack as drift (lockfile-vouched, falsified both ways), a 12-test real-Security-pack install→verify→uninstall round trip, and teams-as-data proven end-to-end for a pack team — the 2026-07-30 structural finding is closed in `doc/roadmap/index.md`.
 16. **Packs in order** (`packs-and-later.md`): Security Assurance proves the infra (its fixtures already execute), then Incident & Debug (real `hypothesis-investigator`/`debug-lead` into the C8 preset), Architecture & Data (`performance-engineer` as the planned optional parallel-review lane), Language specialists, P7/P12 registries, then Marketing.
 
 ## 8. Post-SP-4 pilots
