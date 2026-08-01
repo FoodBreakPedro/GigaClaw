@@ -8,8 +8,12 @@ Audits:
   - Heading spacing
 """
 
-import sys
+from __future__ import annotations
+
 import re
+import sys
+from pathlib import Path
+from typing import Any
 
 # These scripts print non-ASCII (arrows, middots, dashes, accents) and the host reads their
 # stdout as UTF-8. Python on Windows still defaults stdout to the ANSI code page (cp1252), where
@@ -19,7 +23,8 @@ for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8")
 
-def strip_non_prose(text):
+
+def strip_non_prose(text: str) -> str:
     """Drop frontmatter, fenced code, embedded scripts, and table rows so
     paragraph metrics reflect the prose only."""
     text = re.sub(r'\A---\n.*?\n---\n', '', text, flags=re.DOTALL)
@@ -31,7 +36,8 @@ def strip_non_prose(text):
              and not re.match(r'^\s*(?:[-*+]|\d{1,3}\.)\s+', ln)]
     return '\n'.join(lines)
 
-def analyze_cognitive_load(text):
+
+def analyze_cognitive_load(text: str) -> dict[str, Any]:
     text = strip_non_prose(text)
     paragraphs = [p.strip() for p in text.split('\n\n') if p.strip() and not p.strip().startswith('#')]
     
@@ -55,15 +61,15 @@ def analyze_cognitive_load(text):
         "issues": long_paragraphs
     }
 
-def main():
+
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python3 cognitive_load.py <path-to-markdown-file>")
         sys.exit(1)
-        
+
     filepath = sys.argv[1]
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
+        content = Path(filepath).read_text(encoding='utf-8')
     except Exception as e:
         print(f"Error reading file {filepath}: {e}")
         sys.exit(1)
@@ -82,6 +88,7 @@ def main():
             print(f"  - Paragraph #{issue['paragraph_num']}: {issue['sentences']} sentences, {issue['words']} words ('{issue['snippet']}')")
     else:
         print("\n[OK] Excellent paragraph pacing! No reading fatigue detected.")
+
 
 if __name__ == "__main__":
     main()

@@ -9,9 +9,13 @@ Audits:
   - Flesch Reading Ease score estimation
 """
 
-import sys
-import re
+from __future__ import annotations
+
 import math
+import re
+import sys
+from pathlib import Path
+from typing import Any
 
 # These scripts print non-ASCII (arrows, middots, dashes, accents) and the host reads their
 # stdout as UTF-8. Python on Windows still defaults stdout to the ANSI code page (cp1252), where
@@ -49,7 +53,7 @@ PASSIVE_PATTERNS = [
     r"\bwas [a-z]+ed by\b",
 ]
 
-def count_syllables(word):
+def count_syllables(word: str) -> int:
     word = word.lower()
     if len(word) <= 3:
         return 1
@@ -58,7 +62,8 @@ def count_syllables(word):
     matches = re.findall(r'[aeiouy]{1,2}', word)
     return max(1, len(matches))
 
-def strip_non_prose(text):
+
+def strip_non_prose(text: str) -> str:
     """Drop frontmatter, fenced code, embedded scripts, and table rows so
     readability metrics reflect the prose only."""
     text = re.sub(r'\A---\n.*?\n---\n', '', text, flags=re.DOTALL)
@@ -67,7 +72,8 @@ def strip_non_prose(text):
     lines = [ln for ln in text.splitlines() if not ln.lstrip().startswith('|')]
     return '\n'.join(lines)
 
-def analyze_prose(text):
+
+def analyze_prose(text: str) -> dict[str, Any]:
     text = strip_non_prose(text)
     sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
     words = re.findall(r'\b[A-Za-z]+\b', text)
@@ -111,15 +117,15 @@ def analyze_prose(text):
         "passive_indicators": passive_matches
     }
 
-def main():
+
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python3 lint_prose.py <path-to-markdown-file>")
         sys.exit(1)
-        
+
     filepath = sys.argv[1]
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
+        content = Path(filepath).read_text(encoding='utf-8')
     except Exception as e:
         print(f"Error reading file {filepath}: {e}")
         sys.exit(1)
@@ -145,6 +151,7 @@ def main():
             print(f"  - '{phrase}': {count} instance(s)")
     else:
         print("\n[OK] Zero Banned AI Clichés Found!")
+
 
 if __name__ == "__main__":
     main()

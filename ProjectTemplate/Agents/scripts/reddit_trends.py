@@ -3,11 +3,14 @@
 reddit_trends.py - API-free Reddit trend & pain point research helper for GigaClaw agents.
 """
 
-import sys
-import json
-import urllib.request
+from __future__ import annotations
 
-NICHE_SUBREDDIT_MAP = {
+import json
+import sys
+import urllib.request
+from typing import Any
+
+NICHE_SUBREDDIT_MAP: dict[str, list[str]] = {
     "solopreneur": ["entrepreneur", "freelance", "sidehustle", "smallbusiness"],
     "marketing": ["marketing", "socialmedia", "content_marketing", "entrepreneur"],
     "ai": ["artificial", "ChatGPT", "automation", "MachineLearning"],
@@ -16,7 +19,8 @@ NICHE_SUBREDDIT_MAP = {
     "career": ["careerguidance", "antiwork", "findapath", "Entrepreneur"]
 }
 
-def fetch_subreddit_top(subreddit):
+
+def fetch_subreddit_top(subreddit: str) -> list[dict[str, Any]]:
     url = f"https://www.reddit.com/r/{subreddit}/top.json?t=month&limit=25"
     req = urllib.request.Request(
         url,
@@ -41,7 +45,8 @@ def fetch_subreddit_top(subreddit):
         print(f"  [FETCH ERROR] r/{subreddit}: {e}")
     return []
 
-def main():
+
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python3 reddit_trends.py <niche-or-subreddit>")
         sys.exit(1)
@@ -78,6 +83,7 @@ def main():
     for idx, p in enumerate(sorted_by_comments[:5], 1):
         print(f"{idx}. {p['title']} ({p['num_comments']} comments, {p['score']} upvotes)")
         print(f"   source: {p['permalink']}")
+
 
 if __name__ == "__main__":
     main()
