@@ -35,7 +35,7 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 
 ## Lane status (living — updated by CL as the merge-queue owner)
 
-**Last updated 2026-08-01.** The orchestration lane C5, C7 and C8 landed on branch `worktree-c5-c7-c8` (draft PR, owner merges — this session could not push `main`): `parallelRunAgents` + the validated workflow graph, the GitHub surface (issue import / PR owner feedback / CI check trigger), and the two executable team presets. Verified on the branch head: Core **1246/0**, Eval **39/0**, catalog `--strict` and `--strict-packs` **0**, replay **38/38**, judge **38/38 zero drift**. Scope notes live in the lane doc: the workflow graph is declared and validated but not yet executed, and the presets' specialist lanes (security/performance/architecture, investigator/lead) bind to real core agents until their packs land. The paragraph below is the 2026-07-31 state, kept for history.
+**Last updated 2026-08-01.** The orchestration lane C5, C7 and C8 landed via PR #11, **merged to `main` as `d1cce5d`**: `parallelRunAgents` + the validated workflow graph, the GitHub surface (issue import / PR owner feedback / CI check trigger), and the two executable team presets. Verified on the branch head: Core **1246/0**, Eval **39/0**, catalog `--strict` and `--strict-packs` **0**, replay **38/38**, judge **38/38 zero drift**. Scope notes live in the lane doc: the workflow graph is declared and validated but not yet executed, and the presets' specialist lanes (security/performance/architecture, investigator/lead) bind to real core agents until their packs land. The paragraph below is the 2026-07-31 state, kept for history.
 
 The runtime lane R3–R7 landed in full that session (owner unparked R4–R7; every task merged to `main` individually — see [`SESSION-HANDOFF.md`](SESSION-HANDOFF.md) for the commit map, verification numbers, and the closure of the Windows exemption list). R8 remains gated on the Codex usage cap. Earlier Phase-0 status below is kept for history. All Phase 0 foundation gates passed and approved: `lane/claude-orch` (C1, C2, C3, C4 parts 1-3, C6, C9 spec), `lane/cx-tooling` (T1–T5 judge & Monte Carlo), `lane/cx-runtime` (R1, R2, SP-1 inventory), and `lane/gemini-vol` (G1, G2 reviewer rewrites & UI-AUDIT chain). All branches pushed to origin.
 
@@ -65,9 +65,9 @@ The runtime lane R3–R7 landed in full that session (owner unparked R4–R7; ev
 | C6 handoff artifacts | CL | Landed — schema v1 frozen, dispatch injection wired, `ownedFiles` is the interface R4 leases consume | `lane/claude-orch` |
 | C3 repair loop | CL | Landed | `claude-orch/c3-repair-loop` |
 | C4 executable teams | CL | **Landed** — parts 1–3 complete (join + synthesizer included) | `main` |
-| C5 parallel branches + workflow graph | CL | **Landed** `2ade596`+`ab268a1` — `parallelRunAgents` drives C4's team machinery via an ad-hoc definition; typed graph validated at config load (walker is future work) | `worktree-c5-c7-c8` (PR) |
-| C7 GitHub surface | CL | **Landed** `394cdb3`, `19209c2`, `59e40fe` — labeled issue import (idempotent), PR owner feedback → re-dispatch, CI check-status trigger; PAT settings-only, all calls behind the P3 gate | `worktree-c5-c7-c8` (PR) |
-| C8 team presets | CL | **Landed** `9cd8732`+`9fd04e0` — `parallel-review` (synthesizer finding dedup) + `hypothesis-debug` (host-enforced evidence-citing arbitration); specialist lanes deferred to their packs | `worktree-c5-c7-c8` (PR) |
+| C5 parallel branches + workflow graph | CL | **Landed** `2ade596`+`ab268a1` — `parallelRunAgents` drives C4's team machinery via an ad-hoc definition; typed graph validated at config load (walker is future work) | `main` (PR #11, `d1cce5d`) |
+| C7 GitHub surface | CL | **Landed** `394cdb3`, `19209c2`, `59e40fe` — labeled issue import (idempotent), PR owner feedback → re-dispatch, CI check-status trigger; PAT settings-only, all calls behind the P3 gate | `main` (PR #11, `d1cce5d`) |
+| C8 team presets | CL | **Landed** `9cd8732`+`9fd04e0` — `parallel-review` (synthesizer finding dedup) + `hypothesis-debug` (host-enforced evidence-citing arbitration); specialist lanes deferred to their packs | `main` (PR #11, `d1cce5d`) |
 | T5 judge | CX-T | In flight on an integration branch that merges the verdict contract into lane CX-T | `cx-tooling/t5-judge` |
 | G1 cheap defects | GM | Landed | `lane/gemini-vol` |
 | G2 reviewer rewrites | GM | Under CL review — receipt-chain, cycle-counter and evaluator-transport findings fixed; two rubric findings outstanding | `lane/gemini-vol` |
@@ -96,26 +96,28 @@ Validated against `origin/main` at `fe98829`. These findings are requirements, n
 
 ## Dependency graph
 
+Regenerated **2026-08-01** with per-node status (PR #11 merged as `d1cce5d`): ✓ done · ◐ partially done · ✕ blocked · unmarked = open. The remaining-work plan is [`PLAN-remaining.md`](PLAN-remaining.md).
+
 ```mermaid
 flowchart TD
-    P3["P3+U18+U17 Runtime policy chokepoint (CX-R)"]
-    P20["P20 Typed catalog + CI (CX-T)"]
-    QF["T17+P22 Cheap defects (GM)"]
-    A11["A11/P8 Typed verdicts (CL schema + GM rewrites)"]
-    U10["U10 Bounded repair loop (CL)"]
-    O6["O6 Eval harness (CX-T)"]
-    P4["P4 blockedBy/blocks edges (CX-T)"]
-    T2["T2 Executable teams (CL)"]
-    T11["T11 File-ownership enforcement (CX-R)"]
-    U7["U7/P10 Parallel branches + workflow graph (CL)"]
-    U6["U6 Worktree→PR→CI→merge lane (CX-R)"]
-    P13["P13 Runner adapter + Codex harness (CX-R)"]
-    U5["U5 GitHub surface (CL)"]
-    P9["P9 Handoff artifacts (CL schema + GM templates)"]
-    O7["O7 Pack infrastructure (CL+CX)"]
-    PACKS["Specialist + marketing packs (GM authoring)"]
-    P7["P7/P12 Truth registries (CL)"]
-    PILOTS["P16 / O3-O4 / O5 shadow pilots"]
+    P3["✓ P3+U18+U17 Runtime policy chokepoint (CX-R R1–R3)"]:::done
+    P20["✓ P20 Typed catalog + CI (CX-T T1–T2)"]:::done
+    QF["✓ T17+P22 Cheap defects (GM G1)"]:::done
+    A11["◐ A11/P8 Typed verdicts — CL schema ✓ frozen; GM G2 rewrites still in CL review (2 rubric findings)"]:::partial
+    U10["✓ U10 Bounded repair loop (CL C3)"]:::done
+    O6["✓ O6 Eval harness (CX-T T4–T5; 38/38 replay+judge)"]:::done
+    P4["✓ P4 blockedBy/blocks edges (CX-T + CL condition)"]:::done
+    T2["✓ T2 Executable teams (CL C4; C8 presets merged d1cce5d)"]:::done
+    T11["✓ T11 File-ownership enforcement (CX-R R4 leases)"]:::done
+    U7["✓ U7/P10 Parallel branches + workflow graph (CL C5, merged d1cce5d — graph walker future work)"]:::done
+    U6["◐ U6 Worktree→PR→CI→merge lane — R5+R6 machinery landed, opt-in; end-to-end demo + default-on = SP-3/SP-4"]:::partial
+    P13["◐ P13 Runner adapter ✓ (R7 IAgentRunner) + ✕ R8 Codex harness (blocked: usage cap)"]:::blocked
+    U5["✓ U5 GitHub surface (CL C7, merged d1cce5d)"]:::done
+    P9["◐ P9 Handoff artifacts — CL schema+plumbing ✓ (C6); GM G3 templates open"]:::partial
+    O7["◐ O7 Pack infrastructure — C9 spec approved ✓; T6 impl partial (strict-packs gate + Security manifest exist)"]:::partial
+    PACKS["Packs 1–6 (GM authoring + CL wiring) — Pack 1 partially proven (fixtures execute)"]:::open
+    P7["P7/P12 Truth registries (CL) — open"]:::open
+    PILOTS["P16 / O3-O4 / O5 shadow pilots — gated on SP-4"]:::open
 
     P3 --> T11 --> U6
     P3 --> U6
@@ -131,6 +133,11 @@ flowchart TD
     O7 --> PACKS
     P7 --> PACKS
     P9 --> T2
+
+    classDef done fill:#1e7e34,stroke:#14532d,color:#ffffff
+    classDef partial fill:#b58900,stroke:#7a5c00,color:#ffffff
+    classDef blocked fill:#b02a37,stroke:#7a1d26,color:#ffffff
+    classDef open fill:#6c757d,stroke:#43484d,color:#ffffff
 ```
 
 ## Phases and sync points
