@@ -57,7 +57,7 @@ What the next session inherits: the differing bytes live somewhere in the normal
 
 - **SP-1** — enforced; 31 agents block, `programmer`/`code-janitor` warn (both declare `**`).
 - **SP-2** — closed.
-- **SP-3** — the combined-semantics integration suite exists as of 2026-08-01: `GigaClaw.Core.Tests/Integration/Sp3GateTests.cs` (10 tests, green in Release and Debug) proves cycle detection, lease expiry, join semantics and ownership conflicts failing closed *together*, each with its receipt. Evidence and the two open owner decisions are in [`SP3-EVIDENCE.md`](SP3-EVIDENCE.md). **Still open before the gate closes:** the owner's call on default-on `enqueueMerge` / worktree isolation, the two findings the suite recorded (the merge queue does not consult file leases; a lease denial is re-written on every refused poll), and the Board-drag bypass from `PLAN-remaining.md` §1 item 3 — which this suite does **not** cover.
+- **SP-3** — the combined-semantics integration suite exists as of 2026-08-01: `GigaClaw.Core.Tests/Integration/Sp3GateTests.cs` (10 tests, green in Release and Debug) proves cycle detection, lease expiry, join semantics and ownership conflicts failing closed *together*, each with its receipt. Evidence and the two open owner decisions are in [`SP3-EVIDENCE.md`](SP3-EVIDENCE.md). **Still open before the gate closes:** the owner's call on default-on `enqueueMerge` / worktree isolation, the two findings the suite recorded (the merge queue does not consult file leases; a lease denial is re-written on every refused poll), The Board-drag bypass from `PLAN-remaining.md` §1 item 3 is closed on the same branch (`3b6b108` — cleanup relocated to the `TicketService` choke point both entry paths share).
 - **SP-4** — needs the U6 end-to-end demo (worktree→PR→CI→owner merge) and R8.
 
 ## Outstanding
@@ -65,7 +65,7 @@ What the next session inherits: the differing bytes live somewhere in the normal
 - **R8 Codex harness** — now unblocked by R7, still gated on Codex CLI usage cap and real `codex exec --json` fixtures.
 - ~~**C5 / C7 / C8** — unparked by R4/R5 landing; not started tonight (owner unparked R4–R7 explicitly; the C-lane items were not named).~~ Landed 2026-08-01 on the `worktree-c5-c7-c8` PR branch — see the addendum at the top.
 - **Judge baselines for the 31 new fixtures were recorded, not reviewed** — same §9 posture the security four were in before G6. A G6-style review pass over the core judge baselines is cheap and closes the loop.
-- **Manual Board drags to Done skip worktree cleanup** — R5 cleanup triggers only through `ActionExecutor`'s `moveTicketStatus`; a UI-path drag bypasses it. Small, known, documented in the R5 commit.
+- ~~**Manual Board drags to Done skip worktree cleanup** — R5 cleanup triggers only through `ActionExecutor`'s `moveTicketStatus`; a UI-path drag bypasses it. Small, known, documented in the R5 commit.~~ Fixed 2026-08-01 (`3b6b108`): one cleanup implementation at the `TicketService` status transition, both entry paths covered.
 - **Judge-drift stream dump** — the one remaining Windows exemption needs line-level evidence: make the test print the normalized stream of one drifting fixture on failure and commit a macOS reference dump to diff against. The interrogation CI step is back in `ci.yml`; read its **log**, never its conclusion.
 - **MergeQueueTests CRLF fix (`4082184`)** — its Windows leg passed in run 30673464742's Core.Tests (1131/0 there; the run's only red was the re-blocking judge test). Confirmed.
 

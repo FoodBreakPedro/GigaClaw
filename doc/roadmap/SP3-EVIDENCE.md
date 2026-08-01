@@ -219,12 +219,15 @@ only on the **first** hold for exactly this reason; R4 has no equivalent guard. 
 the synthesizer will later read, not a correctness break. Left unfixed because suppressing repeat
 receipts changes what the audit trail records, which is the owner's call.
 
-### F3 — the Board-drag bypass is still open
+### F3 — the Board-drag bypass: not covered by this suite, closed on this branch separately
 
 `PLAN-remaining.md` §1 item 3 (UI drag to Done skips R5 worktree cleanup because it bypasses
-`ActionExecutor.moveTicketStatus`) is **not** addressed by this suite and remains open. It is a UI
-entry-point hole rather than a combined-semantics one, and nothing here should be read as evidence
-that it is closed.
+`ActionExecutor.moveTicketStatus`) is **not** addressed by this suite — it is a UI entry-point hole
+rather than a combined-semantics one. It was fixed on this same branch in `3b6b108`: the single
+cleanup implementation now lives at the `TicketService` status-transition choke point both paths
+share (`ActionExecutor`'s private copy deleted), with UI-path regressions in
+`TicketServiceWorktreeCleanupTests` (clean removed, dirty flagged-never-deleted, second entry into
+Done idempotent).
 
 ---
 
