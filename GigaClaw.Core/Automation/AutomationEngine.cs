@@ -34,7 +34,8 @@ public sealed class AutomationEngine : BackgroundService
         MergeQueueStore mergeQueue,
         ILogger<AutomationEngine> logger,
         Github.GitHubApiClient? github = null,
-        Github.GitHubIssueLinkStore? githubLinks = null)
+        Github.GitHubIssueLinkStore? githubLinks = null,
+        Github.GitHubPullRequestService? pullRequests = null)
     {
         _runs = runs;
         _logger = logger;
@@ -58,7 +59,10 @@ public sealed class AutomationEngine : BackgroundService
         // R6: same trust-anchor pattern as outboundGate above, but for the merge queue — read fresh
         // from the owner's settings.json on every enqueue (see MergeApprovalGate).
         var mergeApproval = new MergeApprovalGate(appSettings.GetApprovedMergeProjects);
-        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger, outboundGate, leases, mergeQueue, mergeApproval);
+        // U6 follow-up: optional for the same reason `github` above is — a host that never
+        // registered the GitHub surface still constructs the engine, and openPullRequest becomes a
+        // logged no-op rather than a missing-service crash.
+        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, httpClientFactory, teamRuns, logger, outboundGate, leases, mergeQueue, mergeApproval, pullRequests);
         // C5 follow-up: the walker gates through the executor's own condition path, so verdictIs is
         // the gate language rather than a second one. Wired as a delegate rather than a reference
         // because the executor never calls the walker back — startWorkflow only writes a receipt.

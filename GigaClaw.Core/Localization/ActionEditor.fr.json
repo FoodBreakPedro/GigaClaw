@@ -95,5 +95,8 @@
   "ActionStartWorkflow": "D\u00e9marrer un parcours de workflow",
   "SwAt": "\u00c9tat de d\u00e9part",
   "SwAtPlaceholder": "draft (vide = l\u2019\u00e9tat d\u2019entr\u00e9e du graphe)",
-  "SwHint": "Ouvre un parcours du .agents/workflow.json de cet espace de travail sur le ticket d\u00e9clencheur. L\u2019action n\u2019enregistre que l\u2019intention \u2014 le sondage du moteur entre dans les \u00e9tats, d\u00e9ploie chaque \u00e9tat de t\u00e2che en sous-ticket, route les portes via les conditions ordinaires et borne les cycles. Idempotent par ticket : un nouveau d\u00e9clenchement pendant un parcours en cours s\u2019y rattache au lieu de le red\u00e9marrer."
+  "SwHint": "Ouvre un parcours du .agents/workflow.json de cet espace de travail sur le ticket d\u00e9clencheur. L\u2019action n\u2019enregistre que l\u2019intention \u2014 le sondage du moteur entre dans les \u00e9tats, d\u00e9ploie chaque \u00e9tat de t\u00e2che en sous-ticket, route les portes via les conditions ordinaires et borne les cycles. Idempotent par ticket : un nouveau d\u00e9clenchement pendant un parcours en cours s\u2019y rattache au lieu de le red\u00e9marrer.",
+
+  "ActionOpenPullRequest": "Ouvrir une pull request",
+  "OprHint": "Pousse (push) la branche worktree du ticket d\u00e9clencheur (d\u00e9ploy\u00e9 avec isolation : \"worktree\") et ouvre \u2014 ou retrouve \u2014 sa pull request sur le remote et la branche de base configur\u00e9s du projet. Rien \u00e0 configurer ici : le remote, la base et le jeton vivent dans les param\u00e8tres GitHub du projet. Un projet sans configuration GitHub n\u2019est pas une erreur : le ticket re\u00e7oit une note expliquant pourquoi, et rien n\u2019est pouss\u00e9."
 }

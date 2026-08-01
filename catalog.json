@@ -3,7 +3,7 @@
   "Summary": {
     "Agents": 37,
     "Contracts": 37,
-    "Automations": 55,
+    "Automations": 58,
     "EnabledAutomations": 54,
     "ExplicitModelMappings": 37,
     "Teams": 12,
@@ -1421,6 +1421,24 @@
     {
       "Id": "verdict-gate-qa-ship-to-done",
       "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-qa-ship-open-pull-request",
+      "Enabled": false,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "github-ci-success-enqueues-merge",
+      "Enabled": false,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "github-ci-failure-records-check",
+      "Enabled": false,
       "Agents": [],
       "Models": []
     },

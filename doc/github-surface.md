@@ -2,11 +2,12 @@
 
 Optional, per-project GitHub integration (roadmap task C7 / U5). It is **additive**: GigaClaw stays local-first, and a project that never configures a repository never opens a socket. Everything below is inert until an owner writes a configuration and a token into app settings.
 
-The surface has three parts, each usable on its own:
+The surface has four parts, each usable on its own:
 
 1. **Issue import** — issues carrying a configured label become tickets, synced idempotently, with an optional round trip that comments on and/or closes the issue when its ticket is done.
 2. **PR review comments → owner feedback** — a pull-request comment from a configured GitHub login re-dispatches the ticket's assignee with the comment injected as steering input.
 3. **CI status → trigger** — check-run conclusions for the workspace's commits surface as a trigger in the `gitCommit` family.
+4. **Pull requests** — U6's `openPullRequest` automation action pushes a ticket's R5 worktree branch and opens (or re-finds) its pull request, the natural home beside `enqueueMerge` in a verdict-gate chain.
 
 ## Purpose
 
@@ -25,6 +26,7 @@ A repo with a remote already has a place where humans file work and review it. C
 | `GigaClaw.Core/Automation/Triggers/GitHubCheckStatusTrigger.cs` | The `githubCheckStatus` trigger, in the `gitCommit` family. |
 | `GigaClaw.Core/Automation/Triggers/GitHubTriggerServices.cs` | The optional dependency bundle the GitHub triggers need. |
 | `GigaClaw.Core/Automation/Policy/OutboundReceipt.cs` | The shared `outbound-denial/v1` receipt shape and the sink that writes it. |
+| `GigaClaw.Core/Github/GitHubPullRequestService.cs` | Pushes a ticket's R5 worktree branch and opens (or re-finds) its pull request. The `github-pull-request/v1` ticket-comment receipt. |
 | `GigaClaw.Web/Api/Endpoints.GitHub.cs` | REST configuration and manual sync. |
 
 ## Where the token lives
@@ -115,6 +117,24 @@ It belongs to the **`gitCommit` family**, and that is a design claim, not a labe
 A check run that has not concluded (`queued`, `in_progress`) fires nothing — it has not concluded anything.
 
 **Ticket binding** is best-effort and free: the commit's own message is read for a `ticket-<id>` reference. When one is found the firing carries that ticket; otherwise it is ticketless, which is `gitCommit`'s normal shape rather than a failure.
+
+**Naming the check** (U6 follow-up (c)): the firing carries `{checkName}`/`{checkConclusion}` — the concluded check-run's own name and conclusion — whether or not it resolved to a ticket, so a downstream `addComment` can say which check failed and how, not only that a check on the ticket's branch did. Every other trigger leaves both placeholders blank.
+
+## Pull requests
+
+U6 (`doc/roadmap/U6-EVIDENCE.md`) added the missing leg between R5 (a ticket's work lives on its own `ticket/<id>` branch in a worktree) and CI status above: something has to put the branch where GitHub can see it. `GitHubPullRequestService.OpenForTicketAsync` follows C7's rules rather than inventing new ones — settings-only PAT, every HTTP call through the same P3 gate, a `git push` gated on the remote's host the same way, and idempotence by asking GitHub whether a pull request already exists rather than keeping its own table.
+
+The `openPullRequest` automation action is the executor's arm around it — the natural home is beside `enqueueMerge` in a `verdict-gate-*` chain: *verdict SHIP → open PR → wait for CI → enqueue merge*. Like `enqueueMerge` it only records intent: it pushes the branch and opens (or re-finds) the pull request, once, and returns — CI and review are driven by their own triggers. An unconfigured project (no remote, no token, a ticket never dispatched with `isolation: "worktree"`) is not an error: the service returns rather than throws, and the action writes a note on the ticket explaining why instead of letting the outcome vanish silently. Any policy-gate refusal (push host or API host not approved) already carries its own `outbound-denial/v1` receipt from the service, so the action does not duplicate it.
+
+### Shipped disabled by default
+
+Owner decision (2026-08-01): the whole GitHub automation surface ships in `ProjectTemplate/Agents/automations.json` **wired but disabled** — consistent with local-first, a project opts in rather than having it on by default. Three automations, all `enabled: false`:
+
+- `github-ci-success-enqueues-merge` — a `githubCheckStatus` success conclusion enqueues the dev pipeline's merge.
+- `github-ci-failure-records-check` — a failing conclusion records which check failed (`{checkName}`/`{checkConclusion}`) and does not enqueue.
+- `verdict-gate-qa-ship-open-pull-request` — a qa-tester SHIP verdict opens a pull request, beside `verdict-gate-qa-ship-to-done`'s always-on `enqueueMerge` gate rather than inside it.
+
+Enabling any of them (and giving the project a GitHub remote and token) is the only step; the vocabulary and the actions underneath are identical to what a hand-written project-level automation would use.
 
 ## Entry points
 

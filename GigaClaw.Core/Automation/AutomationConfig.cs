@@ -351,6 +351,7 @@ public sealed class TicketAgeConditionSpec : ConditionSpec
 [JsonDerivedType(typeof(ParallelRunAgentsActionSpec), "parallelRunAgents")]
 [JsonDerivedType(typeof(EnqueueMergeActionSpec), "enqueueMerge")]
 [JsonDerivedType(typeof(StartWorkflowActionSpec), "startWorkflow")]
+[JsonDerivedType(typeof(OpenPullRequestActionSpec), "openPullRequest")]
 public abstract class ActionSpec
 {
     public abstract string UiTypeKey { get; }
@@ -411,7 +412,8 @@ public sealed class AssignTicketActionSpec : ActionSpec
 public sealed class AddCommentActionSpec : ActionSpec
 {
     public override string UiTypeKey => "addComment";
-    /// <summary>Comment content. Supports placeholders: {ticketId}, {ticketTitle}, {assignee}.</summary>
+    /// <summary>Comment content. Supports placeholders: {ticketId}, {ticketTitle}, {assignee}, plus
+    /// {checkName}/{checkConclusion} on a firing produced by the githubCheckStatus trigger.</summary>
     public string Content { get; set; } = "";
     /// <summary>Author of the comment (member slug).</summary>
     public string Author { get; set; } = "";
@@ -744,4 +746,30 @@ public sealed class EnqueueMergeActionSpec : ActionSpec
     /// at merge time, so a queued candidate's gate cannot shift out from under it mid-queue.
     /// </summary>
     public string? IntegrationCommand { get; set; }
+}
+
+/// <summary>
+/// U6 follow-up (<c>doc/roadmap/U6-EVIDENCE.md</c> "What remains" #2): pushes the firing ticket's R5
+/// worktree branch and opens (or re-finds) its pull request via
+/// <see cref="Github.GitHubPullRequestService.OpenForTicketAsync"/>. The natural home is beside
+/// <see cref="EnqueueMergeActionSpec"/> in a <c>verdict-gate-*</c> chain: <c>verdict SHIP → open PR
+/// → wait for CI → enqueue merge</c>.
+/// <para>
+/// The action only <b>records intent</b>, exactly like <see cref="EnqueueMergeActionSpec"/>: it pushes
+/// the branch, opens or re-finds the pull request, and returns — CI, review and the merge queue are
+/// each driven by their own poll, never by this action re-firing.
+/// </para>
+/// <para>
+/// <b>Fails closed, never throws.</b> A project with no GitHub remote/token configured, a ticket
+/// never dispatched with <c>isolation: "worktree"</c>, or a policy refusal on the push/API host are
+/// all ordinary outcomes of <see cref="Github.GitHubPullRequestService"/> — it returns a result
+/// rather than throwing, and this action records why on the ticket rather than raising. Every
+/// policy-gate refusal already writes its own <c>outbound-denial/v1</c> receipt (the service does
+/// that); this action adds the one case the service leaves silent — "not configured at all" — so a
+/// project that never opted in costs nothing and still leaves a visible reason.
+/// </para>
+/// </summary>
+public sealed class OpenPullRequestActionSpec : ActionSpec
+{
+    public override string UiTypeKey => "openPullRequest";
 }

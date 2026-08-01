@@ -1434,6 +1434,100 @@
       ]
     },
     {
+      "id": "verdict-gate-qa-ship-open-pull-request",
+      "name": "GitHub (disabled by default — enable once this project has a GitHub remote and token configured in settings.json): a qa-tester SHIP verdict opens a pull request for the programmer's branch, beside verdict-gate-qa-ship-to-done's enqueueMerge",
+      "enabled": false,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "SHIP"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "external",
+            "publish",
+            "deploy",
+            "outbound"
+          ],
+          "negate": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "openPullRequest"
+        }
+      ]
+    },
+    {
+      "id": "github-ci-success-enqueues-merge",
+      "name": "GitHub CI (disabled by default — enable once this project has a GitHub remote and token configured, and the trigger's ref matches how this project's CI watches branches): a green check enqueues the ticket's branch for the owner's merge queue",
+      "enabled": false,
+      "trigger": {
+        "type": "githubCheckStatus",
+        "pollSeconds": 120,
+        "conclusions": [
+          "success"
+        ]
+      },
+      "conditions": [],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GitHub CI: check \"{checkName}\" concluded {checkConclusion} for ticket-{ticketId} — {ticketTitle}. Enqueuing the branch for the owner's merge queue."
+        },
+        {
+          "type": "enqueueMerge"
+        }
+      ]
+    },
+    {
+      "id": "github-ci-failure-records-check",
+      "name": "GitHub CI (disabled by default — enable once this project has a GitHub remote and token configured): a failing check records why and does not enqueue",
+      "enabled": false,
+      "trigger": {
+        "type": "githubCheckStatus",
+        "pollSeconds": 120,
+        "conclusions": [
+          "failure",
+          "timed_out",
+          "cancelled"
+        ]
+      },
+      "conditions": [],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GitHub CI: check \"{checkName}\" concluded {checkConclusion} for ticket-{ticketId} — {ticketTitle}. The branch was NOT enqueued for merge. Fix the failure and push again."
+        }
+      ]
+    },
+    {
       "id": "verdict-gate-ui-ship-to-done",
       "name": "Verdict gate: a ui-auditor SHIP verdict advances a ui-designer ticket out of Review",
       "enabled": true,

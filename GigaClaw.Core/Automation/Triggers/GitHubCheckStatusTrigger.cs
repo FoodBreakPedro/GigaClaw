@@ -100,13 +100,14 @@ public sealed class GitHubCheckStatusTrigger : ITrigger
                 var ticket = await ctx.Tickets.GetTicketAsync(ctx.ProjectSlug, id);
                 if (ticket is not null)
                 {
-                    firings.Add(new TriggerFiring(ticket.Id, ticket.Title, ticket.Status));
+                    firings.Add(new TriggerFiring(ticket.Id, ticket.Title, ticket.Status, run.Name, run.Conclusion));
                     continue;
                 }
             }
 
             // Ticketless, exactly like a gitCommit firing: the title carries the evidence.
-            firings.Add(new TriggerFiring(null, $"check {run.Name} {run.Conclusion} on {Short(reference)}", null));
+            firings.Add(new TriggerFiring(
+                null, $"check {run.Name} {run.Conclusion} on {Short(reference)}", null, run.Name, run.Conclusion));
         }
 
         if (added) SaveSeen(ctx, seen);

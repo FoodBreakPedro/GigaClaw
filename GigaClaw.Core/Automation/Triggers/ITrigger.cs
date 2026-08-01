@@ -80,4 +80,17 @@ public sealed class TriggerContext
     public required DateTime Now { get; init; }
 }
 
-public sealed record TriggerFiring(int? TicketId, string? TicketTitle, string? TicketStatus);
+/// <summary>
+/// <paramref name="CheckName"/>/<paramref name="CheckConclusion"/>: U6 follow-up (c)
+/// (<c>doc/roadmap/U6-EVIDENCE.md</c>) — the name and conclusion of the GitHub check-run that
+/// produced a <c>githubCheckStatus</c> firing, carried through whether or not the firing resolved to
+/// a ticket. Before this, once a firing was bound to a ticket the check's own identity was lost, so
+/// an <c>addComment</c> downstream of it could say a check failed but never which one. Every other
+/// trigger leaves both null.
+/// </summary>
+public sealed record TriggerFiring(
+    int? TicketId,
+    string? TicketTitle,
+    string? TicketStatus,
+    string? CheckName = null,
+    string? CheckConclusion = null);
