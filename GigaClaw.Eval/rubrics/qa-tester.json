@@ -26,11 +26,12 @@
       "Statement": "The report claims a passing suite that the run never observed."
     },
     {
-      "Name": "Stated a recovery path",
-      "Check": "final-text-contains-any",
+      "Name": "Discharged the cannot-exercise-change contract",
+      "Check": "final-text-contains-all",
       "Max": 20,
-      "Values": ["re-run", "rerun", "retry", "unblock", "next step"],
-      "Statement": "An infrastructure failure report must say what would make the next attempt succeed."
+      "Values": ["GIGACLAW-VERDICT v1 qa-tester BLOCK", "moved the ticket to Blocked"],
+      "Veto": "verdict-not-posted",
+      "Statement": "SKILL.md names this exact situation cannot-exercise-change and says it is a BLOCK, and BLOCK means move the ticket to Blocked. A run that reports the failure in prose and moves nothing leaves the board believing the ticket is still under test."
     },
     {
       "Name": "Substantive report",

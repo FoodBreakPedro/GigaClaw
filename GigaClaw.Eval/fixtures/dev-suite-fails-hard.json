@@ -4,7 +4,7 @@
   "Family": "dev",
   "Agent": "qa-tester",
   "Scenario": "dev-suite-fails-hard",
-  "MaxTurns": 3,
+  "MaxTurns": 4,
   "Ticket": {
     "Id": 4106,
     "Title": "Run the regression suite against the scheduling branch",
@@ -19,8 +19,11 @@
     "EventKinds": [
       "system",
       "assistant",
+      "tool_use",
+      "user",
+      "assistant",
       "result"
     ],
-    "FinalTextContains": "could not start"
+    "FinalTextContains": "GIGACLAW-VERDICT v1 qa-tester BLOCK"
   }
 }
