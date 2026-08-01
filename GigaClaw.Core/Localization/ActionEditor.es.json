@@ -70,5 +70,10 @@
   "ActionEnqueueMerge": "Encolar fusión",
   "EmIntegrationCommand": "Comando de integración (opcional, sobrescribe el ajuste del proyecto)",
   "EmIntegrationCommandPlaceholder": "dotnet test GigaClaw.Core.Tests -c Release",
-  "EmHint": "Encola la rama del worktree del ticket activador en la cola de fusión del proyecto. Requiere un proyecto aprobado por el propietario (settings.json); si no, la entrada queda retenida, no se fusiona. En blanco usa el comando de integración del proyecto, o se omite la comprobación si ninguno está definido."
+  "EmHint": "Encola la rama del worktree del ticket activador en la cola de fusión del proyecto. Requiere un proyecto aprobado por el propietario (settings.json); si no, la entrada queda retenida, no se fusiona. En blanco usa el comando de integración del proyecto, o se omite la comprobación si ninguno está definido.",
+
+  "ActionStartWorkflow": "Iniciar recorrido de flujo",
+  "SwAt": "Estado inicial",
+  "SwAtPlaceholder": "draft (vacío = el estado de entrada del grafo)",
+  "SwHint": "Abre un recorrido del .agents/workflow.json de este espacio de trabajo sobre el ticket activador. La acción solo registra la intención: el sondeo del motor entra en los estados, despliega cada estado de tarea como sub-ticket, enruta las puertas con las condiciones ordinarias y acota los ciclos. Idempotente por ticket: activarla de nuevo mientras hay un recorrido abierto se reengancha en lugar de reiniciarlo."
 }

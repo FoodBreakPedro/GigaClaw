@@ -90,5 +90,10 @@
   "ActionEnqueueMerge": "Mettre en file la fusion",
   "EmIntegrationCommand": "Commande d'integration (facultatif, remplace le reglage du projet)",
   "EmIntegrationCommandPlaceholder": "dotnet test GigaClaw.Core.Tests -c Release",
-  "EmHint": "Met en file la branche worktree du ticket declencheur sur la file de fusion du projet. Necessite un projet approuve par le proprietaire (settings.json) - sinon l'entree reste en attente, sans fusion. Vide utilise la commande d'integration du projet, ou saute la verification si aucune n'est definie."
+  "EmHint": "Met en file la branche worktree du ticket declencheur sur la file de fusion du projet. Necessite un projet approuve par le proprietaire (settings.json) - sinon l'entree reste en attente, sans fusion. Vide utilise la commande d'integration du projet, ou saute la verification si aucune n'est definie.",
+
+  "ActionStartWorkflow": "D\u00e9marrer un parcours de workflow",
+  "SwAt": "\u00c9tat de d\u00e9part",
+  "SwAtPlaceholder": "draft (vide = l\u2019\u00e9tat d\u2019entr\u00e9e du graphe)",
+  "SwHint": "Ouvre un parcours du .agents/workflow.json de cet espace de travail sur le ticket d\u00e9clencheur. L\u2019action n\u2019enregistre que l\u2019intention \u2014 le sondage du moteur entre dans les \u00e9tats, d\u00e9ploie chaque \u00e9tat de t\u00e2che en sous-ticket, route les portes via les conditions ordinaires et borne les cycles. Idempotent par ticket : un nouveau d\u00e9clenchement pendant un parcours en cours s\u2019y rattache au lieu de le red\u00e9marrer."
 }

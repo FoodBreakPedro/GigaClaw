@@ -20,6 +20,7 @@
             <option value="startTeamRun">@L["ActionStartTeamRun"]</option>
             <option value="parallelRunAgents">@L["ActionParallelRunAgents"]</option>
             <option value="enqueueMerge">@L["ActionEnqueueMerge"]</option>
+            <option value="startWorkflow">@L["ActionStartWorkflow"]</option>
         </select>
     </label>
 
@@ -302,6 +303,13 @@
             </label>
             <p class="field-hint">@L["EmHint"]</p>
             break;
+        case StartWorkflowActionSpec s:
+            <label>@L["SwAt"]
+                <input placeholder="@L["SwAtPlaceholder"]" value="@(s.At ?? "")"
+                       @onchange="e => s.At = string.IsNullOrWhiteSpace((string?)e.Value) ? null : ((string)e.Value!).Trim()" />
+            </label>
+            <p class="field-hint">@L["SwHint"]</p>
+            break;
     }
 
     <div class="node-editor-actions">
@@ -352,6 +360,7 @@
         StartTeamRunActionSpec => "startTeamRun",
         ParallelRunAgentsActionSpec => "parallelRunAgents",
         EnqueueMergeActionSpec => "enqueueMerge",
+        StartWorkflowActionSpec => "startWorkflow",
         _ => throw new NotSupportedException($"No UI mapping for action type {Action.GetType().Name}. Register it in ActionEditor.razor."),
     };
 
@@ -399,6 +408,7 @@
             "startTeamRun" => new StartTeamRunActionSpec { Team = "" },
             "parallelRunAgents" => new ParallelRunAgentsActionSpec { Branches = { NewBranch() } },
             "enqueueMerge" => new EnqueueMergeActionSpec(),
+            "startWorkflow" => new StartWorkflowActionSpec(),
             _ => throw new NotSupportedException($"Unknown action type key '{e.Value}'. Register it in ActionEditor.razor."),
         };
         await OnReplace.InvokeAsync(spec);
