@@ -39,6 +39,10 @@ internal sealed class ActionExecutor
     // behavior" shape as _leases. Production (AutomationEngine) wires a real store.
     private readonly MergeQueueStore? _mergeQueue;
     private readonly MergeApprovalGate _mergeApproval;
+    // U6 follow-up: null means openPullRequest is a no-op (logged, nothing opened) — same
+    // "unwired = pre-feature behavior" shape as _mergeQueue. Production (AutomationEngine) wires the
+    // same GitHubPullRequestService the rest of the C7 surface uses.
+    private readonly Github.GitHubPullRequestService? _pullRequests;
 
     // Serializes in-process git operations per repository. Keyed by the git cwd so one
     // repo's slow/hung git (bounded by ProcessRunner's timeout) can't stall other projects.
@@ -68,7 +72,8 @@ internal sealed class ActionExecutor
         OutboundApprovalGate? outboundGate = null,
         FileLeaseStore? leases = null,
         MergeQueueStore? mergeQueue = null,
-        MergeApprovalGate? mergeApproval = null)
+        MergeApprovalGate? mergeApproval = null,
+        Github.GitHubPullRequestService? pullRequests = null)
     {
         _tickets = tickets;
         _members = members;
@@ -92,6 +97,7 @@ internal sealed class ActionExecutor
         // held), not allow-all. Production (AutomationEngine) passes a gate anchored on the
         // owner's app settings.json, exactly like _outboundGate above.
         _mergeApproval = mergeApproval ?? new MergeApprovalGate(static () => []);
+        _pullRequests = pullRequests;
     }
 
     // ── Condition evaluation ────────────────────────────────────────────────
@@ -536,6 +542,9 @@ internal sealed class ActionExecutor
                     case StartWorkflowActionSpec sw:
                         await ExecuteStartWorkflowActionAsync(rt, firing, sw);
                         break;
+                    case OpenPullRequestActionSpec opr when firing.TicketId is not null:
+                        await ExecuteOpenPullRequestActionAsync(rt, firing, opr, ct);
+                        break;
                     default:
                         throw new NotSupportedException($"Unhandled action type {action.GetType().Name}. Register it in ActionExecutor.ExecuteAutomationAsync.");
                 }
@@ -854,6 +863,9 @@ internal sealed class ActionExecutor
                     // enqueueMerge after a runAgent is the normal shape too: the committer role
                     // enqueues the ticket's worktree branch once the preceding run finished.
                     case EnqueueMergeActionSpec em when firing.TicketId is not null: await ExecuteEnqueueMergeActionAsync(rt, firing, em, ct); break;
+                    // Same reasoning again: openPullRequest belongs beside enqueueMerge in a
+                    // verdict-gate chain, whether or not a runAgent precedes it in that chain.
+                    case OpenPullRequestActionSpec opr when firing.TicketId is not null: await ExecuteOpenPullRequestActionAsync(rt, firing, opr, ct); break;
                     case RunAgentActionSpec ra:
                     {
                         var (skip, runTask, agentName, runId) = await StartAgentRunAsync(rt, firing, ra, ct);
@@ -902,6 +914,7 @@ internal sealed class ActionExecutor
                     case SetLabelsActionSpec:
                     case AssignTicketActionSpec:
                     case EnqueueMergeActionSpec:
+                    case OpenPullRequestActionSpec:
                         break;
                     case MoveTicketStatusActionSpec:
                         // Deliberately unsupported after a runAgent: the pre-run move is what
@@ -1466,6 +1479,62 @@ internal sealed class ActionExecutor
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "enqueueMerge failed for ticket #{Id} in project {Project}", ticketId, rt.Slug);
+        }
+    }
+
+    /// <summary>
+    /// U6 follow-up: opens (or re-finds) a pull request for the firing ticket's R5 worktree branch
+    /// through <see cref="Github.GitHubPullRequestService.OpenForTicketAsync"/>. Records intent only,
+    /// exactly like <see cref="ExecuteEnqueueMergeActionAsync"/> — the push and the PR create/lookup
+    /// happen here, once; CI and review are driven by their own triggers, not by this action re-firing.
+    /// <para>
+    /// Fails closed rather than throwing for every outcome the service reports: an unwired executor
+    /// (<see cref="_pullRequests"/> null, the "unwired = pre-feature behavior" shape every optional
+    /// dependency here uses) logs and returns; a project with no GitHub config, no token, or a ticket
+    /// never dispatched under <c>isolation: "worktree"</c> gets a plain ticket note explaining why,
+    /// since the service itself writes nothing for that case. A policy-gate refusal (host not
+    /// approved) already wrote its own <c>outbound-denial/v1</c> receipt inside the service, so this
+    /// method does not duplicate it — it only fills the one silent gap.
+    /// </para>
+    /// </summary>
+    private async Task ExecuteOpenPullRequestActionAsync(
+        ProjectRuntime rt, TriggerFiring firing, OpenPullRequestActionSpec spec, CancellationToken ct)
+    {
+        if (_pullRequests is null)
+        {
+            _logger.LogDebug("openPullRequest: no GitHubPullRequestService wired — skipping for ticket #{Id}", firing.TicketId);
+            return;
+        }
+
+        var ticketId = firing.TicketId!.Value;
+        try
+        {
+            var result = await _pullRequests.OpenForTicketAsync(rt.Slug, ticketId, ct);
+
+            // Opened/AlreadyOpen: the service already wrote its own github-pull-request/v1 receipt.
+            // DryRun (a policy-gate refusal): the service already wrote its own outbound-denial/v1
+            // receipt (action "gitPush" or "githubRequest"). The only case left silent by the service
+            // is a plain Skip — no GitHub config, no token, or no worktree branch recorded — and that
+            // is the one this action records so it fails closed instead of vanishing.
+            if (!result.Published && !result.DryRun)
+            {
+                var reason = string.IsNullOrWhiteSpace(result.Error)
+                    ? "Pull request not opened."
+                    : $"Pull request not opened: {result.Error}";
+                await NoteAsync(rt, ticketId, reason);
+            }
+
+            _logger.LogInformation(
+                "openPullRequest: ticket #{Id} in project {Project} — opened={Opened} alreadyOpen={AlreadyOpen} pushed={Pushed}",
+                ticketId, rt.Slug, result.Opened, result.AlreadyOpen, result.Pushed);
+        }
+        catch (Exception ex)
+        {
+            // The service is documented to return rather than throw for every "not configured" case
+            // — a throw here would be a bug in that contract, not an expected outcome. Fail closed
+            // with a note anyway, so an unexpected exception cannot take the rest of the chain down.
+            _logger.LogWarning(ex, "openPullRequest failed for ticket #{Id} in project {Project}", ticketId, rt.Slug);
+            await NoteAsync(rt, ticketId, $"Pull request not opened: {ex.Message}");
         }
     }
 

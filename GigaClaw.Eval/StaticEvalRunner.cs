@@ -406,11 +406,16 @@ public sealed partial class StaticEvalRunner
 
     private static void ValidateConfig(EvalConfig config)
     {
-        if (config.Version != 1)
+        // Version 2 is the pack-aware config (doc/pack-infrastructure.md §9): the prompt-budget
+        // source names {packRoot} rather than the hardcoded ProjectTemplate root, matching what
+        // AgentsRootFor has resolved since packs landed. The string is declarative — the runner
+        // resolves the SKILL through AgentsRootFor, never through this literal — so the change is a
+        // documentation correction that these two checks were pinning in place.
+        if (config.Version != 2)
             throw new InvalidDataException($"Unsupported eval config version {config.Version}.");
         if (config.PromptBudget.Unit != "utf8Bytes")
             throw new InvalidDataException("Prompt budget Unit must be 'utf8Bytes'.");
-        if (config.PromptBudget.Source != "ProjectTemplate/Agents/{agent}/SKILL.md")
+        if (config.PromptBudget.Source != "{packRoot}/Agents/{agent}/SKILL.md")
             throw new InvalidDataException("Prompt budget Source must name the static SKILL.md input.");
         if (config.PromptBudget.WarningThreshold <= 0 ||
             config.PromptBudget.MaximumThreshold <= config.PromptBudget.WarningThreshold)

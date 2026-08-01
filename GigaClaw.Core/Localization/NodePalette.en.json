@@ -58,5 +58,7 @@
   "PalActParallelRunAgents": "Parallel branches",
   "PalActParallelRunAgentsHint": "Runs agents in parallel on the firing ticket with a join policy, a concurrency cap and an optional synthesizer",
   "PalActStartWorkflow": "Start workflow walk",
-  "PalActStartWorkflowHint": "Walks the firing ticket through the workspace's declared workflow graph: task states, gates, fan-out and join, bounded by maxCycles"
+  "PalActStartWorkflowHint": "Walks the firing ticket through the workspace's declared workflow graph: task states, gates, fan-out and join, bounded by maxCycles",
+  "PalActOpenPullRequest": "Open pull request",
+  "PalActOpenPullRequestHint": "Pushes the firing ticket's worktree branch and opens (or re-finds) its pull request against the project's configured GitHub remote"
 }

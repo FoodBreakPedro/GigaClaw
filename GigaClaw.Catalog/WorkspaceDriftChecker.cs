@@ -40,6 +40,17 @@ namespace GigaClaw.Catalog;
 /// (the golden manifest in <c>CoreInitManifestTests</c> proves this), so a raw byte comparison is
 /// exact for those.
 /// </para>
+///
+/// <para>
+/// <b>Packs.</b> A workspace with a pack installed is not a drifted workspace — its extra
+/// automations, contract and model keys, and team seats are <em>installed state</em>, declared in
+/// <c>.agents/packs.lock.json</c>. The lockfile is therefore read first and used to widen the
+/// expectation: pack-owned automation ids are not EXTRA, a core automation carrying a pack's
+/// recorded <c>automationPatches</c> additions is not MODIFIED, and a core team carrying seats held
+/// by a pack's agents is not MODIFIED. Nothing else is widened — an owner edit to any of those
+/// still reports, because the widening is per-entry and additive, exactly like the patches
+/// themselves (§4 D4).
+/// </para>
 /// </summary>
 public enum DriftKind { Missing, Modified, Extra }
 
@@ -76,6 +87,7 @@ public static class WorkspaceDriftChecker
         var allowlisted = new List<string>();
 
         var allowlist = ReadAllowlist(Path.Combine(agentsDir, OverridesFileName));
+        var installed = ReadInstalledPacks(workspacePath);
 
         foreach (var relative in template.RelativePaths().OrderBy(path => path, StringComparer.Ordinal))
         {
@@ -84,7 +96,7 @@ public static class WorkspaceDriftChecker
 
             if (relative == PackComposer.AutomationsFile)
             {
-                CompareAutomations(displayPath, workspaceFile, template.ReadAgentAsset(relative), allowlist, drift, allowlisted);
+                CompareAutomations(displayPath, workspaceFile, template.ReadAgentAsset(relative), allowlist, installed, drift, allowlisted);
             }
             else if (relative == PackComposer.ContractsFile || relative == PackComposer.ModelsFile)
             {
@@ -92,7 +104,7 @@ public static class WorkspaceDriftChecker
             }
             else if (relative == PackComposer.TeamsFile)
             {
-                CompareTeams(displayPath, workspaceFile, template.ReadAgentAsset(relative), drift);
+                CompareTeams(displayPath, workspaceFile, template.ReadAgentAsset(relative), installed, drift);
             }
             else
             {
@@ -129,11 +141,77 @@ public static class WorkspaceDriftChecker
 
     // --------------------------------------------------------------------- automations.json
 
+    /// <summary>
+    /// What <c>.agents/packs.lock.json</c> says is installed beyond core: the automation ids and
+    /// agent slugs each non-core pack contributed, and the patches it applied to core's automations.
+    /// </summary>
+    private sealed record InstalledPacks(
+        IReadOnlySet<string> AutomationIds,
+        IReadOnlySet<string> AgentSlugs,
+        IReadOnlyList<PackAutomationPatch> Patches)
+    {
+        public static readonly InstalledPacks None = new(
+            new HashSet<string>(StringComparer.Ordinal),
+            new HashSet<string>(StringComparer.Ordinal),
+            Array.Empty<PackAutomationPatch>());
+    }
+
+    /// <summary>
+    /// A workspace with no lockfile, or one this build cannot parse, is treated as core-only —
+    /// which is exactly today's behaviour and the conservative answer: the checker then reports
+    /// pack content as drift rather than silently accepting files nothing vouches for.
+    /// </summary>
+    private static InstalledPacks ReadInstalledPacks(string workspacePath)
+    {
+        PackLockFile? lockFile;
+        try { lockFile = PackInstaller.ReadWorkspaceLock(workspacePath); }
+        catch (PackValidationException) { return InstalledPacks.None; }
+        if (lockFile is null) return InstalledPacks.None;
+
+        var packs = lockFile.Packs.Where(pack => pack.Kind != PackKind.Core).ToList();
+        if (packs.Count == 0) return InstalledPacks.None;
+
+        return new InstalledPacks(
+            packs.SelectMany(pack => pack.Automations).ToHashSet(StringComparer.Ordinal),
+            packs.SelectMany(pack => pack.Agents).ToHashSet(StringComparer.Ordinal),
+            [.. packs.SelectMany(pack => pack.AutomationPatches)]);
+    }
+
+    /// <summary>
+    /// Re-applies the lockfile's recorded patches to the template's copy of an automation, so the
+    /// comparison is against "the template as this workspace's packs patched it". Both v1 ops are
+    /// set additions, which is what makes this a few lines rather than a merge model.
+    /// </summary>
+    private static void ApplyRecordedPatches(AutomationRule rule, InstalledPacks installed)
+    {
+        foreach (var patch in installed.Patches.Where(p => p.Automation == rule.Id))
+        {
+            if (patch.Op == PackAutomationPatch.OpAddAssignees)
+            {
+                var condition = rule.Conditions.OfType<AssignedToConditionSpec>().SingleOrDefault();
+                if (condition is null) continue;
+                foreach (var slug in patch.Slugs)
+                {
+                    if (!condition.Slugs.Contains(slug, StringComparer.Ordinal)) condition.Slugs.Add(slug);
+                }
+                continue;
+            }
+
+            var labels = rule.Conditions.OfType<LabelsConditionSpec>().SingleOrDefault();
+            if (labels is null) continue;
+            foreach (var label in patch.Labels)
+            {
+                if (!labels.Labels.Contains(label, StringComparer.Ordinal)) labels.Labels.Add(label);
+            }
+        }
+    }
+
     private static void CompareAutomations(
         string displayPath,
         string workspaceFile,
         byte[] templateBytes,
         IReadOnlySet<string> allowlist,
+        InstalledPacks installed,
         List<FileDrift> drift,
         List<string> allowlisted)
     {
@@ -157,6 +235,8 @@ public static class WorkspaceDriftChecker
         foreach (var id in workspaceAutomations.Keys.Except(templateAutomations.Keys, StringComparer.Ordinal)
                      .OrderBy(id => id, StringComparer.Ordinal))
         {
+            // An automation the lockfile says a pack installed is installed state, not drift.
+            if (installed.AutomationIds.Contains(id)) continue;
             if (allowlist.Contains(id)) { allowlisted.Add(id); continue; }
             drift.Add(new FileDrift(displayPath, DriftKind.Extra,
                 $"automation '{id}' present in workspace, not in template"));
@@ -165,6 +245,7 @@ public static class WorkspaceDriftChecker
         foreach (var id in templateAutomations.Keys.Intersect(workspaceAutomations.Keys, StringComparer.Ordinal)
                      .OrderBy(id => id, StringComparer.Ordinal))
         {
+            ApplyRecordedPatches(templateAutomations[id], installed);
             var templateJson = JsonSerializer.Serialize(templateAutomations[id], AutomationStore.JsonOptions);
             var workspaceJson = JsonSerializer.Serialize(workspaceAutomations[id], AutomationStore.JsonOptions);
             if (templateJson == workspaceJson) continue;
@@ -234,14 +315,43 @@ public static class WorkspaceDriftChecker
                 drift.Add(new FileDrift(displayPath, DriftKind.Missing, $"key '{key}' present in template, absent from workspace"));
                 continue;
             }
+
+            // contracts.json nests every agent under one `agents` object, so comparing that key
+            // whole would call any pack's contract entry a modification of core's. The comparison
+            // descends one level, which is the same per-entry granularity models.json gets for
+            // free from its flat shape.
+            if (templateObject[key] is JsonObject templateAgents && workspaceObject[key] is JsonObject workspaceAgents &&
+                key == ContractsAgentsKey)
+            {
+                foreach (var agent in templateAgents.Select(p => p.Key).OrderBy(k => k, StringComparer.Ordinal))
+                {
+                    if (!workspaceAgents.ContainsKey(agent))
+                    {
+                        drift.Add(new FileDrift(displayPath, DriftKind.Missing,
+                            $"agent '{agent}' present in template, absent from workspace"));
+                        continue;
+                    }
+                    if (!JsonNode.DeepEquals(templateAgents[agent], workspaceAgents[agent]))
+                        drift.Add(new FileDrift(displayPath, DriftKind.Modified, $"agent '{agent}' differs from template"));
+                }
+                continue;
+            }
+
             if (!JsonNode.DeepEquals(templateObject[key], workspaceObject[key]))
                 drift.Add(new FileDrift(displayPath, DriftKind.Modified, $"key '{key}' differs from template"));
         }
     }
 
+    private const string ContractsAgentsKey = "agents";
+
     // --------------------------------------------------------------------------- teams.json
 
-    private static void CompareTeams(string displayPath, string workspaceFile, byte[] templateBytes, List<FileDrift> drift)
+    private static void CompareTeams(
+        string displayPath,
+        string workspaceFile,
+        byte[] templateBytes,
+        InstalledPacks installed,
+        List<FileDrift> drift)
     {
         if (!File.Exists(workspaceFile))
         {
@@ -261,10 +371,22 @@ public static class WorkspaceDriftChecker
                 drift.Add(new FileDrift(displayPath, DriftKind.Missing, $"team '{slug}' present in template, absent from workspace"));
                 continue;
             }
-            if (DescribeTeam(templateTeams[slug]) != DescribeTeam(workspaceTeam))
+            // teamMembership is additive and never removes (§4), so a core team differs
+            // legitimately by exactly the seats installed packs' agents hold. Dropping those seats
+            // before comparing keeps every other difference — a renamed team, a reordered roster,
+            // a removed core seat — reporting as it did.
+            if (DescribeTeam(templateTeams[slug]) != DescribeTeam(WithoutPackSeats(workspaceTeam, installed)))
                 drift.Add(new FileDrift(displayPath, DriftKind.Modified, $"team '{slug}' differs from template"));
         }
     }
+
+    private static TeamDefinition WithoutPackSeats(TeamDefinition team, InstalledPacks installed) =>
+        installed.AgentSlugs.Count == 0
+            ? team
+            : team with
+            {
+                Roles = [.. team.Roles.Where(role => !installed.AgentSlugs.Contains(role.AgentSlug))]
+            };
 
     private static string DescribeTeam(TeamDefinition team) => string.Join('|',
         team.Slug, team.Name, team.Description, team.Icon,

@@ -19,51 +19,51 @@
             "notes": "All 5 fixture expectation(s) held."
           },
           {
-            "name": "Stated a decision",
-            "score": 20,
-            "max": 20,
-            "notes": "Marker 'rejected' present."
-          },
-          {
-            "name": "Cited the blocking conditions",
+            "name": "Posted the versioned approval receipt",
             "score": 25,
             "max": 25,
-            "notes": "All 2 required marker(s) present."
+            "notes": "All 1 required marker(s) present."
           },
           {
-            "name": "Told the requester how to return",
+            "name": "Guarded and hashed the artifacts",
             "score": 15,
             "max": 15,
-            "notes": "Marker 're-request' present."
+            "notes": "All 1 required event kind(s) appear."
+          },
+          {
+            "name": "Stated both owner moves and left the ticket in Review",
+            "score": 20,
+            "max": 20,
+            "notes": "All 3 required marker(s) present."
+          },
+          {
+            "name": "Did not settle the decision itself",
+            "score": 10,
+            "max": 10,
+            "notes": "None of 4 forbidden phrase(s) appear."
           },
           {
             "name": "Did not waive the gate",
             "score": 10,
             "max": 10,
             "notes": "None of 4 forbidden phrase(s) appear."
-          },
-          {
-            "name": "Substantive decision record",
-            "score": 10,
-            "max": 10,
-            "notes": "Final message is 278 character(s) against a floor of 150."
           }
         ],
         "vetoItems": [],
         "evidence": [
           {
             "kind": "hash",
-            "ref": "sha256:803e4ba6e644cd714e87add34d1f588bb54ac38ae57e72abbd9ca55800cb7709",
-            "note": "normalized replay stream for fixture 'governance-reject-unscoped-release' (5 event(s), exit 0)"
+            "ref": "sha256:4248a7e14295e54d2c9f21670236b38011e6e56764403e1f3ec3e20b93818340",
+            "note": "normalized replay stream for fixture 'governance-reject-unscoped-release' (10 event(s), exit 0)"
           },
           {
             "kind": "hash",
-            "ref": "sha256:e8787f2b0ea656138767d5759ad4a795664681511fbadd9d77e9c02e8f34fde6",
+            "ref": "sha256:efcd031e465b087f86439537fccbfb7bc9618a7b3fa2427e1dbe614ddbf655be",
             "note": "rubric 'approval-gatekeeper' v1"
           }
         ],
         "reviewedAtUtc": "1970-01-01T00:00:00Z",
-        "inputDigest": "sha256:803e4ba6e644cd714e87add34d1f588bb54ac38ae57e72abbd9ca55800cb7709"
+        "inputDigest": "sha256:4248a7e14295e54d2c9f21670236b38011e6e56764403e1f3ec3e20b93818340"
       }
     }
   ]

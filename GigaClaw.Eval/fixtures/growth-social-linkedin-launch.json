@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "Id": "growth-social-linkedin-launch",
+  "Family": "growth",
+  "Agent": "growth-writer",
+  "Scenario": "growth-social-linkedin-launch",
+  "MaxTurns": 6,
+  "Ticket": {
+    "Id": 4303,
+    "Title": "Ghostwrite the LinkedIn launch post for the scheduling rework",
+    "Status": "InProgress",
+    "Assignee": "growth-writer",
+    "Description": "Turn the founder's raw notes on the scheduling rework into one LinkedIn post in the practitioner voice: a primary post, alternative hooks, and a CTA variation, saved under content/social/. No corporate speak, and every number has to trace to the changelog linked in the ticket.",
+    "Comments": [
+      {
+        "Author": "trend-researcher",
+        "Body": "The drop-off is at project creation, not at signup. Anchor the hook on that step."
+      }
+    ]
+  },
+  "Expect": {
+    "ExitCode": 0,
+    "RunStatus": "Completed",
+    "EventKinds": [
+      "system",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "tool_use",
+      "user",
+      "assistant",
+      "result"
+    ],
+    "FinalTextContains": "GROWTH-COPY v1 artifact-sha256:"
+  }
+}

@@ -657,6 +657,7 @@ else
             Branches = { new ParallelBranchSpec { Agent = _skills.FirstOrDefault() ?? "programmer" } }
         },
         "startWorkflow" => new StartWorkflowActionSpec(),
+        "openPullRequest" => new OpenPullRequestActionSpec(),
         _ => throw new NotSupportedException($"Unknown action type key '{type}'. Register it in Automations.razor BuildAction."),
     };
 
@@ -759,6 +760,7 @@ else
             : string.Join(" ∥ ", s.Branches.Select(b => b.Key ?? b.Agent)),
         EnqueueMergeActionSpec => L["ActionEnqueueMerge"],
         StartWorkflowActionSpec s => string.IsNullOrWhiteSpace(s.At) ? L["ActionStartWorkflow"] : s.At,
+        OpenPullRequestActionSpec => L["ActionOpenPullRequest"],
         _ => throw new NotSupportedException($"No UI description for action type {a.GetType().Name}. Register it in Automations.razor DescribeAction."),
     };
 }

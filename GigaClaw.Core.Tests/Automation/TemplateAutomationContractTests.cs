@@ -600,6 +600,10 @@ public class TemplateAutomationContractTests
     /// enqueueMerge stays off every content/media/design pipeline's ship arm: those stay in-place
     /// under R4 leases, which already serialize genuinely conflicting content writes, and a merge
     /// hop would remove the write -&gt; review -&gt; revise visibility those pipelines need.
+    /// <c>github-ci-success-enqueues-merge</c> (U6 follow-up (a), disabled by default — see
+    /// <see cref="The_three_disabled_by_default_github_automations_ship_off_and_do_not_change_the_enabled_count"/>)
+    /// is the other legitimate member: the same code-touching pipeline's merge queue, reached from
+    /// GitHub CI directly instead of from the qa-tester verdict.
     /// </summary>
     [Fact]
     public void SP3_enqueueMerge_appears_nowhere_outside_the_code_touching_pipeline()
@@ -608,9 +612,108 @@ public class TemplateAutomationContractTests
         var withEnqueue = config.Automations
             .Where(a => a.Actions.OfType<EnqueueMergeActionSpec>().Any())
             .Select(a => a.Id)
+            .OrderBy(id => id, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(["verdict-gate-qa-ship-to-done"], withEnqueue);
+        Assert.Equal(
+            new[] { "github-ci-success-enqueues-merge", "verdict-gate-qa-ship-to-done" },
+            withEnqueue);
+    }
+
+    // ── U6 follow-up: GitHub automations ship wired but disabled ────────────
+    //
+    // Owner decision (2026-08-01): the three GitHub automations U6-EVIDENCE.md's follow-ups
+    // (a)/(b)/(c) called for ship in the template WIRED BUT DISABLED — off unless a project opts in
+    // by configuring a GitHub remote and token, consistent with local-first. Enabling them is a
+    // per-project decision the owner makes in settings.json, not a template default.
+
+    private static readonly string[] GitHubAutomationIds =
+    [
+        "github-ci-success-enqueues-merge",
+        "github-ci-failure-records-check",
+        "verdict-gate-qa-ship-open-pull-request",
+    ];
+
+    [Fact]
+    public void The_three_disabled_by_default_github_automations_ship_off_and_do_not_change_the_enabled_count()
+    {
+        var config = LoadConfig();
+
+        foreach (var id in GitHubAutomationIds)
+        {
+            var automation = Assert.Single(config.Automations, a => a.Id == id);
+            Assert.False(automation.Enabled, $"'{id}' must ship disabled by default.");
+        }
+
+        // Same criterion CatalogGeneratorTests pins from the other side: the enabled total is
+        // unchanged by these three, because every one of them starts off.
+        var enabledIds = config.Automations.Where(a => a.Enabled).Select(a => a.Id).ToHashSet(StringComparer.Ordinal);
+        Assert.DoesNotContain(enabledIds, id => GitHubAutomationIds.Contains(id, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void The_github_ci_success_arm_names_the_check_that_enqueues_the_merge()
+    {
+        var config = LoadConfig();
+        var success = Assert.Single(config.Automations, a => a.Id == "github-ci-success-enqueues-merge");
+
+        var trigger = Assert.IsType<GitHubCheckStatusTriggerSpec>(success.Trigger);
+        Assert.Equal(["success"], trigger.Conclusions);
+
+        var comment = Assert.Single(success.Actions.OfType<AddCommentActionSpec>());
+        Assert.Contains("{checkName}", comment.Content, StringComparison.Ordinal);
+        Assert.Contains("{checkConclusion}", comment.Content, StringComparison.Ordinal);
+
+        var enqueueIndex = success.Actions.FindIndex(a => a is EnqueueMergeActionSpec);
+        Assert.True(enqueueIndex > success.Actions.IndexOf(comment), "The check must be named before the merge is enqueued.");
+    }
+
+    /// <summary>
+    /// U6 follow-up (c)'s new placeholder is exactly why leg 5's assertion in U6EndToEndTests could
+    /// be strengthened: this pins the template's failure arm to the same vocabulary.
+    /// </summary>
+    [Fact]
+    public void The_github_ci_failure_arm_names_the_failing_check_and_never_enqueues()
+    {
+        var config = LoadConfig();
+        var failure = Assert.Single(config.Automations, a => a.Id == "github-ci-failure-records-check");
+
+        var trigger = Assert.IsType<GitHubCheckStatusTriggerSpec>(failure.Trigger);
+        Assert.Equal(["failure", "timed_out", "cancelled"], trigger.Conclusions);
+
+        var comment = Assert.Single(failure.Actions.OfType<AddCommentActionSpec>());
+        Assert.Contains("{checkName}", comment.Content, StringComparison.Ordinal);
+        Assert.Contains("{checkConclusion}", comment.Content, StringComparison.Ordinal);
+        Assert.Empty(failure.Actions.OfType<EnqueueMergeActionSpec>());
+    }
+
+    /// <summary>
+    /// The natural-home claim in the <c>openPullRequest</c> doc comment
+    /// (<see cref="OpenPullRequestActionSpec"/>): the template's PR-opening arm fires on the same
+    /// qa-tester SHIP verdict as <c>verdict-gate-qa-ship-to-done</c>, so a project with a remote
+    /// enables one sibling automation beside the always-on gate rather than editing it.
+    /// </summary>
+    [Fact]
+    public void The_open_pull_request_arm_gates_on_the_same_qa_ship_verdict_as_the_enqueueMerge_gate()
+    {
+        var config = LoadConfig();
+        var openPr = Assert.Single(config.Automations, a => a.Id == "verdict-gate-qa-ship-open-pull-request");
+        var ship = Assert.Single(config.Automations, a => a.Id == "verdict-gate-qa-ship-to-done");
+
+        var openPrTrigger = Assert.IsType<TicketCommentAddedTriggerSpec>(openPr.Trigger);
+        var shipTrigger = Assert.IsType<TicketCommentAddedTriggerSpec>(ship.Trigger);
+        Assert.Equal(shipTrigger.Authors, openPrTrigger.Authors);
+
+        var openPrAssignees = Assert.Single(openPr.Conditions.OfType<AssignedToConditionSpec>());
+        var shipAssignees = Assert.Single(ship.Conditions.OfType<AssignedToConditionSpec>());
+        Assert.Equal(shipAssignees.Slugs, openPrAssignees.Slugs);
+
+        var openPrVerdict = Assert.Single(openPr.Conditions.OfType<VerdictIsConditionSpec>());
+        Assert.Equal(["SHIP"], openPrVerdict.Verdicts);
+        Assert.Equal("qa-tester", openPrVerdict.Agent);
+
+        Assert.Single(openPr.Actions.OfType<OpenPullRequestActionSpec>());
+        Assert.Empty(openPr.Actions.OfType<EnqueueMergeActionSpec>());
     }
 
     private static string FindRepositoryRoot()

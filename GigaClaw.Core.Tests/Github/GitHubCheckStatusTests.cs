@@ -90,6 +90,10 @@ public class GitHubCheckStatusTests
         Assert.Null(firing.TicketId);            // gitCommit-family shape: ticketless by default
         Assert.Contains("build", firing.TicketTitle);
         Assert.Contains("failure", firing.TicketTitle);
+        // U6 follow-up (c): the check's own name/conclusion ride the firing even when it never
+        // resolves to a ticket — {checkName}/{checkConclusion} in addComment templates come from here.
+        Assert.Equal("build", firing.CheckName);
+        Assert.Equal("failure", firing.CheckConclusion);
     }
 
     [Fact]
@@ -208,6 +212,11 @@ public class GitHubCheckStatusTests
 
         Assert.Equal(ticket.Id, firing.TicketId);
         Assert.Equal("Doing", firing.TicketStatus);
+        // The check's identity survives ticket binding too — this is the exact gap U6-EVIDENCE.md
+        // recorded and follow-up (c) closes: {checkName}/{checkConclusion} still resolve once a
+        // firing is bound to a ticket, not only in the ticketless shape above.
+        Assert.Equal("build", firing.CheckName);
+        Assert.Equal("failure", firing.CheckConclusion);
     }
 
     // ── Policy + local-first ────────────────────────────────────────────────

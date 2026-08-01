@@ -30,6 +30,16 @@ Rules the schema cannot express, enforced by the validator:
 - `evidenceRefs` must resolve to an entry in `evidence`;
 - `path` evidence is workspace-relative (no absolute paths, no `..` traversal), `hash` evidence is `sha256:<64 hex>`, `link` evidence is an absolute non-placeholder `https` URL.
 
+### Two axes, one vocabulary
+
+`SHIP` / `FIX` / `BLOCK` is a single word set answering **two different questions**, and reading one as the other inverts its meaning. A reviewing agent's verdict judges *the artifact*: is this code, draft or render fit to advance? The eval judge's verdict judges *the agent*: did this run discharge the contract its SKILL states? The two are independent, and a well-performing agent routinely emits a refusal.
+
+The clearest case on disk is `GigaClaw.Eval/baselines/judge/security-auditor.json`, which records `"verdict": "SHIP"` for `security-injection-in-review` — a fixture whose entire purpose is that the *agent* emits `BLOCK`. Both words are correct: the auditor was right to block the injection, and blocking it correctly is what earns the judge's SHIP. `threat-modeler`, `ui-auditor` and `qa-tester`'s `dev-suite-fails-hard` have the same shape — the last one is a run that cannot exercise the change at all, answers `cannot-exercise-change` → `BLOCK` → `Blocked` exactly as its SKILL requires, and is scored SHIP for doing so.
+
+The practical consequence when authoring a rubric: **never veto an agent for the verdict it reached.** A judge-side veto records that the *run* broke its contract — it rendered before sign-off, waived a gate it exists to hold, claimed a test result it never observed. Wiring a veto to "the agent said BLOCK" would punish the fail-closed behaviour the SKILLs are written to produce, and would make the judge's BLOCK a duplicate of the agent's rather than an independent signal.
+
+The two axes are not renamed apart. Giving the judge a distinct token set would touch `RubricJudge`, `JudgeModels`, every baseline entry, and anything reading these files by token — a large re-record spent on a naming preference, when the axis is unambiguous from the file's directory (`baselines/judge/` is always the judge's answer). This section is the label instead.
+
 ## Transport
 
 A verdict travels as a ticket comment. The comment carries a marker line — same family as the existing `BLOG-REVIEW`/`UI-AUDIT` receipts — followed by a fenced `json` block:

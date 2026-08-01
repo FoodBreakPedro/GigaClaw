@@ -144,11 +144,11 @@ public sealed class StaticEvalRunnerTests
         fixture.AddAgent("worker", "# Worker\n");
         fixture.WriteInputs();
         var config = new EvalConfig(
-            1,
+            2,
             "../outside",
             "GigaClaw.Eval/baselines",
             new PromptBudgetConfig(
-                "ProjectTemplate/Agents/{agent}/SKILL.md",
+                "{packRoot}/Agents/{agent}/SKILL.md",
                 "utf8Bytes",
                 1024,
                 2048));
@@ -260,11 +260,11 @@ public sealed class StaticEvalRunnerTests
             var evalDirectory = Path.Combine(Root, "GigaClaw.Eval");
             Directory.CreateDirectory(evalDirectory);
             var config = new EvalConfig(
-                1,
+                2,
                 "artifacts/eval",
                 "GigaClaw.Eval/baselines",
                 new PromptBudgetConfig(
-                    "ProjectTemplate/Agents/{agent}/SKILL.md",
+                    "{packRoot}/Agents/{agent}/SKILL.md",
                     "utf8Bytes",
                     _warningThreshold,
                     _maximumThreshold));

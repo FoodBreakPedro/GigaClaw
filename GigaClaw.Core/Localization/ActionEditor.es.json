@@ -75,5 +75,8 @@
   "ActionStartWorkflow": "Iniciar recorrido de flujo",
   "SwAt": "Estado inicial",
   "SwAtPlaceholder": "draft (vacío = el estado de entrada del grafo)",
-  "SwHint": "Abre un recorrido del .agents/workflow.json de este espacio de trabajo sobre el ticket activador. La acción solo registra la intención: el sondeo del motor entra en los estados, despliega cada estado de tarea como sub-ticket, enruta las puertas con las condiciones ordinarias y acota los ciclos. Idempotente por ticket: activarla de nuevo mientras hay un recorrido abierto se reengancha en lugar de reiniciarlo."
+  "SwHint": "Abre un recorrido del .agents/workflow.json de este espacio de trabajo sobre el ticket activador. La acción solo registra la intención: el sondeo del motor entra en los estados, despliega cada estado de tarea como sub-ticket, enruta las puertas con las condiciones ordinarias y acota los ciclos. Idempotente por ticket: activarla de nuevo mientras hay un recorrido abierto se reengancha en lugar de reiniciarlo.",
+
+  "ActionOpenPullRequest": "Abrir pull request",
+  "OprHint": "Envía (push) la rama del worktree del ticket activador (desplegado con isolation: \"worktree\") y abre — o reencuentra — su pull request contra el remoto y la rama base configurados del proyecto. Nada que configurar aquí: el remoto, la base y el token viven en los ajustes de GitHub del proyecto. Un proyecto sin configuración de GitHub no es un error: el ticket recibe una nota explicando por qué, y no se envía nada."
 }

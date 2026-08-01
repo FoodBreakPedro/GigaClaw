@@ -14,9 +14,15 @@
         "categories": [
           {
             "name": "Dispatch behaved as declared",
-            "score": 40,
-            "max": 40,
-            "notes": "All 5 fixture expectation(s) held."
+            "score": 15,
+            "max": 15,
+            "notes": "All 4 named fixture expectation(s) held: replay.dispatch, replay.exit, replay.status, replay.events."
+          },
+          {
+            "name": "Delivered the declared receipt",
+            "score": 25,
+            "max": 25,
+            "notes": "All 1 named fixture expectation(s) held: replay.text."
           },
           {
             "name": "Stream carries no error",
@@ -28,7 +34,7 @@
             "name": "Final message is a handoff",
             "score": 20,
             "max": 20,
-            "notes": "Final message is 542 character(s) against a floor of 80."
+            "notes": "Final message is 787 character(s) against a floor of 80."
           },
           {
             "name": "No placeholder handoff",
@@ -41,17 +47,17 @@
         "evidence": [
           {
             "kind": "hash",
-            "ref": "sha256:8eef75f3ab6cb65dcc15112cddbbebc91c447667c350d5b51a38055434d99cc7",
+            "ref": "sha256:2feedd2db559d3e7a6e642ec88618ba419efe19d6895a3c161d600e75b7ce41c",
             "note": "normalized replay stream for fixture 'governance-watchdog-probe-red' (7 event(s), exit 0)"
           },
           {
             "kind": "hash",
-            "ref": "sha256:2ab95a8ba33161c4d60a3c2fcf6625352ba10206f4ed8343f4c0c937028bee83",
+            "ref": "sha256:9535c310ae527dd8893fc9b20c0e1c3bf8c7bc5dc660930e0e6e7ef21518c183",
             "note": "rubric 'default' v1"
           }
         ],
         "reviewedAtUtc": "1970-01-01T00:00:00Z",
-        "inputDigest": "sha256:8eef75f3ab6cb65dcc15112cddbbebc91c447667c350d5b51a38055434d99cc7"
+        "inputDigest": "sha256:2feedd2db559d3e7a6e642ec88618ba419efe19d6895a3c161d600e75b7ce41c"
       }
     }
   ]

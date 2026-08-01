@@ -21,6 +21,7 @@
             <option value="parallelRunAgents">@L["ActionParallelRunAgents"]</option>
             <option value="enqueueMerge">@L["ActionEnqueueMerge"]</option>
             <option value="startWorkflow">@L["ActionStartWorkflow"]</option>
+            <option value="openPullRequest">@L["ActionOpenPullRequest"]</option>
         </select>
     </label>
 
@@ -310,6 +311,9 @@
             </label>
             <p class="field-hint">@L["SwHint"]</p>
             break;
+        case OpenPullRequestActionSpec:
+            <p class="field-hint">@L["OprHint"]</p>
+            break;
     }
 
     <div class="node-editor-actions">
@@ -361,6 +365,7 @@
         ParallelRunAgentsActionSpec => "parallelRunAgents",
         EnqueueMergeActionSpec => "enqueueMerge",
         StartWorkflowActionSpec => "startWorkflow",
+        OpenPullRequestActionSpec => "openPullRequest",
         _ => throw new NotSupportedException($"No UI mapping for action type {Action.GetType().Name}. Register it in ActionEditor.razor."),
     };
 
@@ -409,6 +414,7 @@
             "parallelRunAgents" => new ParallelRunAgentsActionSpec { Branches = { NewBranch() } },
             "enqueueMerge" => new EnqueueMergeActionSpec(),
             "startWorkflow" => new StartWorkflowActionSpec(),
+            "openPullRequest" => new OpenPullRequestActionSpec(),
             _ => throw new NotSupportedException($"Unknown action type key '{e.Value}'. Register it in ActionEditor.razor."),
         };
         await OnReplace.InvokeAsync(spec);

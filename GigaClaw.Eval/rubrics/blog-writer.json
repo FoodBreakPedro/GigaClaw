@@ -11,11 +11,11 @@
       "Statement": "The run did not behave the way the fixture declares, so nothing downstream of it can be trusted."
     },
     {
-      "Name": "Named the artifact it produced",
-      "Check": "final-text-contains-any",
+      "Name": "Posted the versioned draft receipt",
+      "Check": "final-text-contains-all",
       "Max": 15,
-      "Values": ["content/drafts/", ".md"],
-      "Statement": "A draft nobody can find is not a deliverable."
+      "Values": ["BLOG-DRAFT v1 artifact-sha256:"],
+      "Statement": "SKILL.md steps 7 and the delivery block both mandate the receipt; it is what binds the review to the exact bytes drafted, and the four sibling blog rubrics already pin theirs."
     },
     {
       "Name": "Read the house structure first",

@@ -1,5 +1,0 @@
-{"type":"system","subtype":"init","session_id":"{{session_id}}","model":"mock"}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Anchoring email one on the first project, since that is where trials stall."}]}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Drafted three emails in campaigns/trial-nurture.md — day 1 walks through creating the first project, day 3 shows one automation worth keeping, day 7 asks what blocked them. One call to action each and no discounts."}]}}
-{"type":"result","subtype":"success","is_error":false,"duration_ms":150,"num_turns":1,"total_cost_usd":0.0471,"usage":{"input_tokens":300,"output_tokens":720,"cache_read_input_tokens":14100,"cache_creation_input_tokens":1100}}
-{"_meta":{"exit":0}}

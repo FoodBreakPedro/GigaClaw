@@ -115,6 +115,19 @@
       <LogicalName>GigaClaw.Core.Packs/core/pack.json</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
+    <!-- Every *other* pack, embedded as a verbatim image of its directory: pack.json, Agents/**
+         and the pack's workspace-root files all keep their pack-relative path under
+         GigaClaw.Core.Packs/<pack-id>/. Q1 makes packs repo-only, which means the shipped
+         GigaClaw.Core.dll is the only place a production install can read a pack from — without
+         this the Security pack is installable from a working tree and from nowhere else.
+         eval/** is excluded because §2 makes it build-time only: fixtures ship with the pack in
+         the repository and must never reach a workspace. The noise exclusions are the same
+         working-directory-not-git hazard as the two globs above (§6). -->
+    <EmbeddedResource Include="..\Packs\**\*.*"
+                      Exclude="..\Packs\*\eval\**\*.*;..\Packs\**\*.pyc;..\Packs\**\.DS_Store;..\Packs\**\Thumbs.db;..\Packs\**\desktop.ini">
+      <LogicalName>GigaClaw.Core.Packs/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>

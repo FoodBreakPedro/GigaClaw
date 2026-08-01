@@ -63,11 +63,19 @@ public static class ActionTemplate
     /// <summary>
     /// Renders the placeholder set common to ticket-scoped actions — <c>{ticketId}</c> and
     /// <c>{ticketTitle}</c> — plus every chain value captured so far.
+    /// <para>
+    /// <c>{checkName}</c>/<c>{checkConclusion}</c> (U6 follow-up (c)): the GitHub check-run name and
+    /// conclusion that produced a <c>githubCheckStatus</c> firing, carried on
+    /// <see cref="TriggerFiring"/> whether or not the firing resolved to a ticket. Empty for every
+    /// other trigger, so a template using them elsewhere just renders blank rather than failing.
+    /// </para>
     /// </summary>
     internal static string Render(string? template, ActionState? state, TriggerFiring? firing) =>
         Render(template, Values(state,
             ("ticketId", firing?.TicketId?.ToString() ?? ""),
-            ("ticketTitle", firing?.TicketTitle ?? "")));
+            ("ticketTitle", firing?.TicketTitle ?? ""),
+            ("checkName", firing?.CheckName ?? ""),
+            ("checkConclusion", firing?.CheckConclusion ?? "")));
 
     /// <summary>
     /// Builds a value bag from the chain values captured so far plus the caller's own

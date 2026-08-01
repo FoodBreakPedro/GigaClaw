@@ -46,7 +46,7 @@ The runtime lane R3–R7 landed in full that session (owner unparked R4–R7; ev
 - **SP-1 Approved**: SP-1 policy inventory reviewed & approved (unlocks R3 → R4 → R5/R6 → C5, C7).
 - **C9 Pack Infrastructure Approved**: All 4 escalated questions in [`doc/pack-infrastructure.md`](../pack-infrastructure.md) §10 decided by owner (unlocks T6 → G6).
 
-**Structural finding from the pack spec:** teams are compiled C# constants, so a pack cannot add a team or a membership without recompiling `GigaClaw.Core` — one of the five binding rules is unenforceable until teams move to data. Codex reached its weekly usage cap on 2026-07-30; lanes CX-R and CX-T are reassigned to Claude subagents working in the existing lane worktrees, under the same file boundaries and verification bar. Gemini keeps lane GM.
+**Structural finding from the pack spec — ~~teams are compiled C# constants, so a pack cannot add a team or a membership without recompiling `GigaClaw.Core`; one of the five binding rules is unenforceable until teams move to data~~ — RESOLVED 2026-08-01 (T6).** D8 landed: the roster is `ProjectTemplate/Agents/teams.json` composed through `TeamSeed`, and `AgentTeamService` reads the workspace's own composed copy. Proven end to end rather than by assertion — `SecurityPackRoundTripTests.Binding_3_the_packs_team_reaches_the_runtime_roster_without_recompiling` installs the shipped Security pack into a temp workspace and finds its `security-review` team through `AgentTeamService`, through the member filter, and (`…_is_seeded_into_a_project_database`) in a project DB via `TeamStore`, while the same service with no workspace still cannot see it. Binding 3 is enforceable for packs. Codex reached its weekly usage cap on 2026-07-30; lanes CX-R and CX-T are reassigned to Claude subagents working in the existing lane worktrees, under the same file boundaries and verification bar. Gemini keeps lane GM.
 
 | Task | Lane | State | Where |
 |---|---|---|---|
@@ -117,8 +117,8 @@ flowchart TD
     P13["◐ P13 Runner adapter ✓ (R7 IAgentRunner) + ✕ R8 Codex harness (blocked: usage cap)"]:::blocked
     U5["✓ U5 GitHub surface (CL C7, merged d1cce5d)"]:::done
     P9["◐ P9 Handoff artifacts — CL schema+plumbing ✓ (C6); GM G3 templates open"]:::partial
-    O7["◐ O7 Pack infrastructure — C9 spec approved ✓; T6 impl partial (strict-packs gate + Security manifest exist)"]:::partial
-    PACKS["Packs 1–6 (GM authoring + CL wiring) — Pack 1 partially proven (fixtures execute)"]:::open
+    O7["✓ O7 Pack infrastructure — C9 spec approved; T6 landed (manifest, composer, staged install/uninstall, lock, quarantine, strict-packs gate, packs embedded)"]:::done
+    PACKS["Packs 1–6 (GM authoring + CL wiring) — Pack 1 proven end to end (install → 5 bindings → uninstall)"]:::open
     P7["P7/P12 Truth registries (CL) — open"]:::open
     PILOTS["P16 / O3-O4 / O5 shadow pilots — gated on SP-4"]:::open
 

@@ -193,17 +193,17 @@ Upgrade of a pack = uninstall then install inside one staged transaction, with t
 
 **Rule.** A pack agent ships with (1) a contract entry, (2) a model mapping with a stated criterion, (3) a team membership, (4) at least one enabled dispatching automation, and (5) an eval fixture — or the catalog rejects the pack.
 
-What enforces each **today**, and what is missing:
+What enforced each **at drafting time**, and what was missing. Every gap in the table below is closed as of T6 — the six changes that follow it all landed, and [§11](#11-implementation-status-t6) says where. The table is kept because it is the argument for why the gate is shaped the way it is:
 
 | Binding | Enforced today by | Gap |
 |---|---|---|
 | Contract entry | `CatalogGenerator.FindBindingGaps` → `"contract"`; `TemplateAutomationContractTests.Shared_contract_manifest_covers_every_template_agent`; `StaticEvalRunner.CheckContract` (also cross-checks `riskClass` against the catalog) | Both read the single `ProjectTemplate/Agents/contracts.json`. Pack-blind, not absent. |
 | Model mapping | `FindBindingGaps` → `"model mapping"` (explicit **or** action-level); `StaticEvalRunner.CheckModel` | **The criterion is not checked at all, anywhere.** `models.json` is `slug → modelId` and nothing records *why* an agent is on Haiku rather than Opus. This half of the rule does not exist. |
-| Team membership | `FindBindingGaps` → `"team"` | Teams are compiled C# constants (D8). Structurally unavailable to a pack. |
+| Team membership | `FindBindingGaps` → `"team"` | Teams are compiled C# constants (D8). Structurally unavailable to a pack. **Closed by D8** — the roster is `teams.json`, and `SecurityPackRoundTripTests` proves a pack's team reaches `AgentTeamService`, the member filter and a project DB with no recompile. |
 | Dispatching automation | `FindBindingGaps` → `"enabled dispatching automation"`; enabled and disabled reported separately | Pack-blind. `{assignee}` expansion is also duplicated between `CatalogGenerator.ReadAutomations` and `TemplateAutomationContractTests`; the pack-aware composer should become the single implementation. |
 | **Eval fixture** | **Nothing.** | `AgentCatalogEntry.EvalBaselinePresent` is computed (does `GigaClaw.Eval/baselines/<slug>.json` exist) but is **not** one of `FindBindingGaps`' four reasons. And a *baseline* is not a *fixture*: baselines are the reviewed static-check snapshot (33 of them), fixtures are replay inputs (6 today, each naming one `Agent`). "Eval fixture" as written in the roadmap is enforced by no check that exists. |
 
-Six changes make the gate real:
+Six changes made the gate real, all landed:
 
 1. **`FindBindingGaps` gains a fifth reason, `"eval fixture"`**, computed as `fixtures.Any(f => f.Agent == slug)` — the shape `ReplayRunner.ReadFixture` already validates against the catalog.
 2. **`models.json` values become `string | {model: string, criterion: string}`.** Note this is *not* a free extension: `AgentsTemplateService.DefaultModels()` currently does `if (prop.Value.ValueKind == JsonValueKind.String)` and **silently skips** anything else, so an object-valued entry would quietly leave the agent with no default model. `DefaultModels()` must learn the object form in the same commit. Core's 12 existing mappings get criteria retro-fitted by GM.
@@ -420,7 +420,20 @@ Three details the §4 sketch leaves implicit, resolved as follows:
 - **Lock entries carry the data uninstall's own rules require**: `kind`, `removable` and `dependsOn` (steps 1's two refusals), `requiresRuntime` (quarantine after a runtime bump), and `mergeEntryHashes` — the per-entry hash that answers step 3's "still byte-identical to what was installed?" for merge artifacts, which the key lists alone cannot.
 - **`teamMembership` reversal** is a set subtraction of the pack's own agent slugs from every surviving team, matching the `automationPatches` reversal in step 3.
 
-Not yet landed, and sequenced after the teams change: the core-pack extraction (§6), `AgentTeamService` reading composed `teams.json` (D8), and the catalog/eval integration and CI gate (§7, §9). Until core is a pack, `PackComposeOptions.HostProvidedAgents` lets D4's reference resolution see the `ProjectTemplate` agents that belong to no manifest; the installer fills it from the workspace, the catalog passes nothing, and it is empty at every call site once §6 lands.
+The rest of the spec has since landed too:
+
+| Area | Where |
+|---|---|
+| Core-pack extraction (§6) | `ProjectTemplate/pack.json` + `CorePack`; the byte-identity invariant is `CoreInitManifestTests` against the pre-refactor golden manifest. |
+| Teams as data (D8) | `ProjectTemplate/Agents/teams.json`, `TeamSeed`, `AgentTeamService.GetDefinitions(workspace)`. The C# list survives only as the fallback for workspaces with no file, and `TeamSeedTests` asserts the two cannot drift. |
+| Catalog integration + the five-binding gate (§7, §9) | `CatalogGenerator` composes through `PackCatalogSource`, `FindBindingGaps` carries the fifth reason (`eval fixture`) and the model-criterion reason, and `.github/workflows/ci.yml` runs `check --strict-packs`. |
+| Eval integration (§9) | `ReplayConfig.FixtureRoots` (core's plus each pack's), `StaticEvalRunner` resolving SKILL paths per pack. |
+| Runtime quarantine (§5) | `PackQuarantine`; `AutomationStore.ApplyQuarantine` force-disables a quarantined pack's automations at config load and `ActionExecutor` refuses its agents at dispatch. |
+| Packs embedded (§2, Q1) | Every pack is embedded under `GigaClaw.Core.Packs/<id>/` as a verbatim image of its directory, minus `eval/**`; `PackSources.DiscoverEmbedded` enumerates them core-first. Without this a pack was installable from a working tree and from nowhere else, which is not the production shape Q1 describes. |
+| The Security pack, end to end | `SecurityPackRoundTripTests`: install the embedded core + Security packs into a temp workspace, assert the five bindings **where the runtime reads them**, then uninstall — an owner-edited root file survives and is reported orphaned, patches reverse as set subtractions, and the workspace returns byte-identical to a core-only install. |
+| Drift, with packs installed | `WorkspaceDriftChecker` reads `packs.lock.json` first and widens the expectation by exactly what it declares (pack-owned automation ids, recorded `automationPatches`, pack agents' team seats). Removing the lockfile makes the same workspace read as drifted again. |
+
+`PackComposeOptions.HostProvidedAgents` remains only as the transition seam D4 needed before core was a pack; it is empty at every production call site.
 
 ---
 

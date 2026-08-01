@@ -58,5 +58,7 @@
   "PalActParallelRunAgents": "Branches parallèles",
   "PalActParallelRunAgentsHint": "Exécute des agents en parallèle sur le ticket déclencheur, avec politique de jonction, plafond de concurrence et synthétiseur optionnel",
   "PalActStartWorkflow": "Démarrer un parcours de workflow",
-  "PalActStartWorkflowHint": "Fait parcourir au ticket déclencheur le graphe de workflow déclaré de l\u2019espace de travail : états de tâche, portes, éclatement et jonction, borné par maxCycles"
+  "PalActStartWorkflowHint": "Fait parcourir au ticket déclencheur le graphe de workflow déclaré de l\u2019espace de travail : états de tâche, portes, éclatement et jonction, borné par maxCycles",
+  "PalActOpenPullRequest": "Ouvrir une pull request",
+  "PalActOpenPullRequestHint": "Pousse la branche worktree du ticket déclencheur et ouvre (ou retrouve) sa pull request sur le remote GitHub configuré du projet"
 }

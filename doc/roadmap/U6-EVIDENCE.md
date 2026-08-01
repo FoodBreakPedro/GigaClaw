@@ -143,12 +143,13 @@ claim is that the *red result* is what stops the merge, not a missing approval.
 - `Queue.ListAsync` is **empty** — not held, not queued, not bounced, *nothing* — the processor
   returns `null`, and the workspace file is unchanged. No `merge-held/v1`, no `merge-completed/v1`.
 
-**Vocabulary limit found, not papered over.** Once a `githubCheckStatus` firing is bound to a
-ticket, the check-run's own name is no longer carried in the `TriggerFiring`, so `addComment`'s
-`{ticketTitle}` placeholder renders the *ticket*, not the failing check. The failure comment can
-therefore say *that* a check failed and which ticket it belongs to, but not *which* check. Naming
-the check would need a placeholder the action vocabulary does not have. The test asserts what the
-existing vocabulary actually supports and this note records the gap.
+**Vocabulary gap found, then closed.** Once a `githubCheckStatus` firing was bound to a ticket, the
+check-run's own name used to be lost from the `TriggerFiring`, so `addComment`'s `{ticketTitle}`
+placeholder could render the *ticket* but nothing named *which* check failed. U6 follow-up (c) closed
+it: `TriggerFiring.CheckName`/`CheckConclusion` are now populated on every `githubCheckStatus` firing,
+ticket-bound or not, and `{checkName}`/`{checkConclusion}` are new `ActionTemplate` placeholders. The
+assertion below, previously limited to what the vocabulary could prove, now asserts the failure
+comment names the check that failed and how — the previously impossible assertion is the proof.
 
 ### Leg 6 — a restart between the PR and CI
 
@@ -214,18 +215,26 @@ commit `4082184`, where Windows' default silently rewrote LF blobs on `git workt
 
 ### For U6 itself
 
-1. **No `githubCheckStatus` automation ships in the template.** `ProjectTemplate/Agents/automations.json`
-   contains no `githubCheckStatus` (or `githubPrComment`) automation at all — neither a success path
-   nor a failure path. Both automations U6 exercises are declared **in the test**, in the same
-   vocabulary a template automation would use. Shipping them means deciding what an initialized
-   project should poll by default, which is an owner decision and is why it was not taken here.
-2. **No action wires the pull request.** `GitHubPullRequestService` is registered in DI and fully
-   tested, but there is no `openPullRequest` automation action, so today it can only be called from
-   code. The natural home is beside `enqueueMerge` in the `verdict-gate-*` chains: *verdict SHIP →
-   open PR → wait for CI → enqueue merge*. That is a vocabulary addition (an `ActionSpec`, its
-   discriminator, and its executor branch), deliberately out of scope for a proof.
-3. **The failure comment cannot name the failing check** (see leg 5). A `{checkName}` /
-   `{checkConclusion}` placeholder on ticket-bound `githubCheckStatus` firings would close it.
+1. **Closed (owner decision 2026-08-01).** `ProjectTemplate/Agents/automations.json` now ships three
+   GitHub automations — `github-ci-success-enqueues-merge`, `github-ci-failure-records-check`, and
+   `verdict-gate-qa-ship-open-pull-request` — in the same vocabulary U6's test harness used, all
+   `enabled: false`: GitHub automations ship **wired but disabled**, off unless a project configures
+   a GitHub remote and token, consistent with local-first. `TemplateAutomationContractTests` pins
+   that all three ship off and that the enabled-automation count is unchanged by them;
+   `CatalogGeneratorTests` pins the regenerated `catalog.json`/`doc/catalog.md` counts
+   (Automations 55 → 58, EnabledAutomations unchanged at 54).
+2. **Closed.** `OpenPullRequestActionSpec` (`openPullRequest`) is now the vocabulary addition this
+   note called for: an `ActionSpec`, its discriminator, and `ActionExecutor.ExecuteOpenPullRequestActionAsync`,
+   mirrored across every surface `enqueueMerge`/`startWorkflow` have (editor, palette,
+   `DescribeAction`, en/fr/es localization, the generated API action table). It calls
+   `GitHubPullRequestService.OpenForTicketAsync` for the firing ticket and fails closed — a project
+   with no GitHub configuration gets a ticket note rather than a thrown exception — proved by
+   `ActionExecutorOpenPullRequestTests`.
+3. **Closed.** `TriggerFiring` now carries `CheckName`/`CheckConclusion`, populated by
+   `GitHubCheckStatusTrigger` on every firing — ticket-bound or not — and rendered by
+   `ActionTemplate.Render` as `{checkName}`/`{checkConclusion}`. Leg 5's assertion, previously
+   weakened to what the vocabulary could prove, now asserts the failure comment names the check by
+   its own name and conclusion (`GitHubCheckStatusTests`, `U6EndToEndTests`).
 4. **`main` is never pushed back.** The merge lands in the local workspace; the bare remote keeps the
    ticket branch only. A real deployment would want the landed `main` pushed, and the branch deleted
    on the remote — neither exists yet, in code or in test.
