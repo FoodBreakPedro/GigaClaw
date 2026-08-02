@@ -41,25 +41,7 @@
         <main class="mc-page">
 
             @* ---------------- row 1 — ticket status KPIs ---------------- *@
-            <section class="mc-grid mc-row-kpi" aria-label="@L["MissionTicketStatus"]">
-                @foreach (var kpi in snapshot.Kpis)
-                {
-                    <div class="mc-kpi" style="--stripe: @KpiColor(kpi.Column)">
-                        <div class="mc-kpi-label">@KpiLabel(kpi.Column)</div>
-                        <div class="mc-kpi-val num">@kpi.Count</div>
-                        @if (kpi.Delta is int delta)
-                        {
-                            <span class="mc-delta @DeltaClass(kpi.Column, delta) num">
-                                @DeltaArrow(delta) @Math.Abs(delta) <span class="vs">@L["MissionVsYesterday"]</span>
-                            </span>
-                        }
-                        else
-                        {
-                            <span class="mc-delta flat">@L["MissionNoBaseline"]</span>
-                        }
-                    </div>
-                }
-            </section>
+            <MissionKpiRow Kpis="snapshot.Kpis" />
 
             @* ---------------- row 2 — velocity / workload / attention ---------------- *@
             <section class="mc-grid mc-row-2">
