@@ -155,7 +155,8 @@ internal static class MissionFormat
     public static double PointX(int index, int count) =>
         count > 1 ? 34 + index * (540.0 / (count - 1)) : 34;
 
-    public static double PointY(int value, int max) =>
+    // Only Polyline plots a y — the cards place their own x-axis labels but never a y.
+    private static double PointY(int value, int max) =>
         330 - value / (double)Math.Max(1, max) * 310;
 
     /// <summary>Renders one series as SVG polyline points, skipping days with no value — that is how
