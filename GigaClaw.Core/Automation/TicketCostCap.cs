@@ -63,6 +63,10 @@ public static class TicketCostCap
             if (id != ticketId) continue;
             if (!decimal.TryParse(match.Groups["cap"].Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var receiptCap))
                 continue;
+            // Compared as rendered, not as decimals: a receipt only ever carries the rendered form,
+            // so a cap differing from it past AmountFormat's precision could never match one — every
+            // tick would read as a fresh episode and post another receipt, the exact spam this guard
+            // exists to stop. `==` would be shorter and would reintroduce that loop.
             if (string.Equals(Amount(receiptCap), Amount(cap), StringComparison.Ordinal))
                 return true;
         }
