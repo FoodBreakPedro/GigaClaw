@@ -20,7 +20,9 @@ to the durable local-media queue. You do not treat raw clips as finished videos.
    `media-clip-v1:<ticket-id>:<spec-sha256>` and `author: local-motion-artist`. Check for HTTP
    200/202.
 6. Exit after submission. The durable worker owns polling, timeout, cancellation, receipt writing,
-   restart detection, and the ticket's return from `Backlog`.
+   restart detection, and the ticket's return from `Backlog`. If you are ever resumed while the job
+   is `running` and have checkpoint data, report it once via `POST .../media/jobs/{id}/stage`
+   (`{"stage", "stageIndex", "stageCount", "author"}`).
 7. After completion, validate with `media_contract.py`, extract three review frames, and inspect
    motion coherence, temporal artifacts, identity consistency, audio sync, and prompt adherence.
 

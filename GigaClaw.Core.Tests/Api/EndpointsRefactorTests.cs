@@ -111,6 +111,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         "GET /api/projects/{slug}/media/jobs",
         "GET /api/projects/{slug}/media/jobs/{id}",
         "POST /api/projects/{slug}/media/jobs",
+        "POST /api/projects/{slug}/media/jobs/{id}/stage",
         "POST /api/projects/{slug}/media/jobs/{id}/cancel",
         "POST /api/projects/{slug}/media/jobs/{id}/review",
         // Dashboard
@@ -214,6 +215,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         ["GET /api/projects/{slug}/media/jobs"] = "Local Media",
         ["GET /api/projects/{slug}/media/jobs/{id}"] = "Local Media",
         ["POST /api/projects/{slug}/media/jobs"] = "Local Media",
+        ["POST /api/projects/{slug}/media/jobs/{id}/stage"] = "Local Media",
         ["POST /api/projects/{slug}/media/jobs/{id}/cancel"] = "Local Media",
         ["POST /api/projects/{slug}/media/jobs/{id}/review"] = "Local Media",
         ["GET /api/projects/{slug}/dashboard/tiles"] = "Dashboard",

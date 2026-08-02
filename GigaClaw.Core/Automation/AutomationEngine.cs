@@ -103,7 +103,12 @@ public sealed class AutomationEngine : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Plan 2.2: orphaned runs are released where they are loaded — AgentRunRegistry's
+        // store-backed constructor, which runs long before this service starts and is the only
+        // place a foreign snapshot ever enters memory. A second pass here would have nothing left
+        // to find: everything registered after that point belongs to this process.
         _logger.LogInformation("AutomationEngine started");
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try

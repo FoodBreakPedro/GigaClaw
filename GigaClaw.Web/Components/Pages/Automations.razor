@@ -13,7 +13,6 @@
 @inject IJSRuntime JS
 @inject LocalizationService L
 @inject MemberService MemberService
-@inject AgentRunsState RunsState
 @inject GigaClaw.Web.Services.EscapeKeyStack EscapeStack
 @implements IAsyncDisposable
 @rendermode InteractiveServer
@@ -225,53 +224,7 @@ else
         </div>
     }
 
-    @if (_showHistory)
-    {
-        <div class="run-history-overlay" @onclick="CloseHistory"></div>
-        <div class="run-history-drawer" @onclick:stopPropagation>
-            <div class="run-history-header">
-                <span class="run-history-title">@L["History"]</span>
-                <button class="agent-close-btn" @onclick="CloseHistory" title="@L["Close"]">×</button>
-            </div>
-            <div class="run-history-list">
-                @{
-                    var allRuns = RunsState.AllForProject(Slug)
-                        .Where(r => !(r.ConcurrencyGroup?.StartsWith("chat:") ?? false))
-                        .OrderByDescending(r => r.StartedAt)
-                        .ToList();
-                    var visibleRuns = allRuns.Take(_historyCount).ToList();
-                    var hasMore = allRuns.Count > _historyCount;
-                }
-                @if (allRuns.Count == 0)
-                {
-                    <div class="run-history-empty">@L["NoRunHistory"]</div>
-                }
-                @foreach (var run in visibleRuns)
-                {
-                    var statusCss = run.Status.ToString().ToLowerInvariant();
-                    var duration = (run.EndedAt ?? DateTime.UtcNow) - run.StartedAt;
-                    var durationStr = duration.TotalHours >= 1
-                        ? $"{(int)duration.TotalHours}h{duration.Minutes:D2}m"
-                        : duration.TotalMinutes >= 1
-                            ? $"{(int)duration.TotalMinutes}m{duration.Seconds:D2}s"
-                            : $"{duration.Seconds}s";
-                    <button class="run-history-item" @onclick="() => OpenRun(run.RunId)">
-                        <span class="run-history-agent">@run.AgentName</span>
-                        @if (run.TicketId is not null)
-                        {
-                            <span class="run-history-ticket">#@run.TicketId</span>
-                        }
-                        <span class="agent-status agent-status-@statusCss run-history-status">@run.Status</span>
-                        <span class="run-history-meta">@run.StartedAt.ToLocalTime().ToString("dd/MM HH:mm") · @durationStr</span>
-                    </button>
-                }
-                @if (hasMore)
-                {
-                    <button class="run-history-load-more" @onclick="() => _historyCount += 30">@L["LoadMore"]</button>
-                }
-            </div>
-        </div>
-    }
+    <RunHistoryDrawer Slug="@Slug" IsOpen="_showHistory" OnClose="CloseHistory" OnOpenRun="OpenRun" />
 
     <AgentRunDrawer RunId="@_activeRunDrawerId" OnClose="() => { _activeRunDrawerId = null; _showHistory = true; }" OnRetried="@(id => _activeRunDrawerId = id)" />
 }
@@ -296,7 +249,6 @@ else
     private bool _configLoadError;
 
     private bool _showHistory;
-    private int _historyCount = 30;
     private string? _activeRunDrawerId;
     private IDisposable? _escInitConflicts;
     private IDisposable? _escHistory;
@@ -314,7 +266,6 @@ else
     {
         if (_showHistory) return;
         _showHistory = true;
-        _historyCount = 30;
         _escHistory?.Dispose();
         _escHistory = EscapeStack.PushWithFocus(JS, () => InvokeAsync(() => { CloseHistory(); StateHasChanged(); }));
     }
@@ -635,6 +586,7 @@ else
             Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
         "verdictIs" => new VerdictIsConditionSpec { Verdicts = new List<string> { "SHIP" } },
         "repairBudget" => new RepairBudgetConditionSpec(),
+        "reviewerRetryBudget" => new ReviewerRetryBudgetConditionSpec(),
         "dependenciesResolved" => new DependenciesResolvedConditionSpec { ResolvedStatuses = new List<string> { "Done" } },
         _ => new TicketInColumnConditionSpec { Columns = new List<string> { "Todo" } },
     };

@@ -98,13 +98,28 @@
                 }
             </div>
             <label>@L["AssigneeMemberOptional"]
-                <select value="@(s.AssigneeSlug ?? "")" @onchange="e => s.AssigneeSlug = string.IsNullOrEmpty((string?)e.Value) ? null : (string)e.Value!">
+                <select value="@(s.AssigneeSlug ?? "")" @onchange="e => s.AssigneeSlug = string.IsNullOrEmpty((string?)e.Value) ? null : (string)e.Value!"
+                        disabled="@s.Unassigned">
                     <option value="">@L["AnyMemberOption"]</option>
                     @foreach (var sk in Skills) { <option value="@sk">@sk</option> }
                 </select>
             </label>
+            @* An empty assignee slug means "any assignee", so "nobody at all" — the intake case —
+               needs its own flag. Setting both matches nothing, so the picker is disabled here
+               rather than left to render a contradiction. *@
+            <label class="column-check" title="@L["UnassignedOnlyHint"]">
+                <input type="checkbox" checked="@s.Unassigned"
+                       @onchange="e => { s.Unassigned = (bool)e.Value!; if (s.Unassigned) s.AssigneeSlug = null; }" />
+                <span>@L["UnassignedOnly"]</span>
+            </label>
             <label>@L["DebounceSeconds"]
                 <input type="number" @bind="s.DebounceSeconds" />
+            </label>
+            <label title="@L["ExhaustedAssigneeHint"]">@L["ExhaustedAssignee"]
+                <select value="@(s.ExhaustedAssignee ?? "")" @onchange="e => s.ExhaustedAssignee = string.IsNullOrEmpty((string?)e.Value) ? null : (string)e.Value!">
+                    <option value="">@L["ExhaustedAssigneeNone"]</option>
+                    @foreach (var sk in Skills) { <option value="@sk">@sk</option> }
+                </select>
             </label>
             break;
 

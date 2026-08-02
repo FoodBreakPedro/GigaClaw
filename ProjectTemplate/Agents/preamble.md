@@ -67,6 +67,14 @@ applies persisted backoff and a finite attempt budget to re-dispatches.
 
 Invoke bundled Python helpers as `python3 .agents/scripts/<tool>.py <args>`. If `python3` is not on PATH (common on Windows), use `python` or `py -3` instead.
 
+## Codebase orientation
+
+If a `graphify` CLI is installed and `graphify-out/graph.json` exists in this workspace, prefer
+`graphify query "<question>"` to orient yourself before grepping unfamiliar code — it returns a
+scoped subgraph instead of raw file dumps. Run `graphify update .` after code changes to keep the
+graph current. If either the CLI or the graph is absent, proceed with your normal search tools;
+there is no install step to perform.
+
 ## Cross-platform paths
 
 Never use `/tmp` or other Linux-only filesystem paths — they do not exist on Windows. If you need a scratch file (patch, JSON body, …), write it in the current workspace (e.g. `body.json`, `full.patch`) and delete it once you are done.

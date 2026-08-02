@@ -128,6 +128,7 @@ internal sealed class ActionExecutor
             TicketAgeConditionSpec c               => EvaluateTicketAgeAsync(rt, c, firing),
             VerdictIsConditionSpec c               => EvaluateVerdictIsAsync(rt, c, firing),
             RepairBudgetConditionSpec c            => EvaluateRepairBudgetAsync(rt, c, firing),
+            ReviewerRetryBudgetConditionSpec c     => EvaluateReviewerRetryBudgetAsync(rt, c, firing),
             DependenciesResolvedConditionSpec c    => EvaluateDependenciesResolvedAsync(rt, c, firing),
             _                                      => Task.FromResult(true),
         };
@@ -333,6 +334,37 @@ internal sealed class ActionExecutor
         }
 
         return cycles ?? RepairLoop.DefaultMaxCycles;
+    }
+
+    // ── Reviewer retry (return-to-sender) ───────────────────────────────────
+
+    /// <summary>
+    /// Decides whether the reviewer may be asked once more for a contract-valid verdict. Counted
+    /// from the ticket's own retry receipts on every evaluation, for the same reason the repair
+    /// budget is: a resumed or re-triggered run must respect the cap instead of restarting it.
+    /// </summary>
+    private async Task<bool> EvaluateReviewerRetryBudgetAsync(
+        ProjectRuntime rt, ReviewerRetryBudgetConditionSpec c, TriggerFiring firing)
+    {
+        if (firing.TicketId is null) return false;
+        var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
+        if (ticket is null) return false;
+
+        var agent = string.IsNullOrWhiteSpace(c.Agent)
+            ? null
+            : ConditionEvaluators.ResolveAgentPlaceholder(c.Agent, ticket.AssignedTo);
+        if (c.Agent is not null && c.Agent.Contains("{assignee}") && agent is null)
+            return false; // Placeholder with nothing to resolve to: fail closed.
+
+        var state = ReviewerRetry.Resolve(VerdictCommentsOf(ticket), c.MaxRetries, agent);
+        if (state.Exhausted)
+        {
+            _logger.LogInformation(
+                "[{Slug}] ticket #{TicketId}: reviewer-retry budget spent ({Used}/{Max} re-reviews)",
+                rt.Slug, ticket.Id, state.RetriesUsed, state.MaxRetries);
+        }
+
+        return ConditionEvaluators.ReviewerRetryBudget(c, state);
     }
 
     private static List<VerdictComment> VerdictCommentsOf(Models.Ticket ticket)
@@ -580,6 +612,10 @@ internal sealed class ActionExecutor
         var (skip, runTask, agentName, runId) = await StartAgentRunAsync(rt, firing, a, ct);
         if (skip || runTask is null) return true;
 
+        // Past this line the run is dispatched, which is the only point at which a reviewer-retry
+        // receipt may be written. See MintReviewerRetryReceiptAsync.
+        await MintReviewerRetryReceiptAsync(rt, automation, firing, agentName);
+
         var statusBefore = state.StatusBeforeMove;
         var statusAfter = state.StatusAfterMove;
         var assigneeBefore = state.AssigneeBeforeMove;
@@ -588,6 +624,50 @@ internal sealed class ActionExecutor
         _ = HandleRunCompletionAsync(runTask, rt, firing, a, agentName, runId!, statusBefore, statusAfter, assigneeBefore, remainingActions, finalizeAsync, state, chainKey, ct);
         state.LastRun = null;
         return false;
+    }
+
+    /// <summary>
+    /// Writes the <c>GIGACLAW-REREVIEW v1</c> receipt for an automation that just re-dispatched a
+    /// reviewer, and only for one that did.
+    /// <para>
+    /// The receipt is the reviewer-retry budget: <see cref="ReviewerRetry.Resolve"/> counts one
+    /// retry per receipt on the ticket. That makes <em>when</em> it is written load-bearing. As an
+    /// ordinary <c>addComment</c> action ahead of the <c>runAgent</c> it was committed
+    /// unconditionally, but the <c>runAgent</c> next to it is not unconditional —
+    /// <see cref="RunStateManager.ShouldSkipAsync"/> skips a dispatch whose reviewer is already
+    /// busy in its own concurrency group, and a skipped <c>runAgent</c> stops the chain. The ticket
+    /// then held a spent budget with nothing re-reviewing it: the <c>withinCap</c> arm no longer
+    /// matched, the <c>exhausted</c> arm waits on a comment that will never arrive because nobody
+    /// was asked, and the retry arms deliberately move no ticket, so no column poll could rescue
+    /// it. Minting here — after the dispatch, mirroring how the repair loop's escalation receipt is
+    /// engine-rendered rather than hand-written into config — makes the receipt an artifact of a
+    /// dispatch that happened, which is the only thing it was ever meant to record.
+    /// </para>
+    /// The trigger is the automation's own <c>reviewerRetryBudget: withinCap</c> condition: an arm
+    /// that claims a retry is available is exactly an arm that spends one when it fires.
+    /// </summary>
+    private async Task MintReviewerRetryReceiptAsync(
+        ProjectRuntime rt, Automation automation, TriggerFiring firing, string reviewer)
+    {
+        if (firing.TicketId is not int ticketId) return;
+        if (!automation.Conditions.OfType<ReviewerRetryBudgetConditionSpec>()
+                .Any(c => string.Equals(c.Mode, "withinCap", StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        try
+        {
+            await _tickets.AddCommentAsync(
+                rt.Slug, ticketId, ReviewerRetry.RenderReceipt(ticketId, reviewer), "automation");
+        }
+        catch (Exception ex)
+        {
+            // A lost receipt means the retry was free rather than that the ticket is stuck: the
+            // next unusable verdict re-enters the same withinCap arm. Erring toward one extra
+            // re-review is the cheaper failure, and the Review watchdog in the shipped template
+            // terminates the ticket regardless.
+            _logger.LogWarning(
+                ex, "Reviewer-retry receipt failed for ticket #{Id} in project {Project}", ticketId, rt.Slug);
+        }
     }
 
     // Resolves the agent name, applies the skip gate, and starts the run (without awaiting it).

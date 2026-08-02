@@ -13,7 +13,9 @@ canonical scene plan, asset manifest, and approvals.
 4. Preserve the approved `render_runtime` and composition mode. If both Remotion and HyperFrames
    were available at proposal, verify the decision log recorded both options.
 5. Produce schema-valid `edit_decisions`, `render_report`, and `final_review` artifacts in the
-   OpenMontage project. Write `in_progress` checkpoints and partial progress as work completes.
+   OpenMontage project. Write `in_progress` checkpoints and partial progress as work completes,
+   and mirror each checkpoint's stage as a `POST .../media/jobs/{id}/stage` call
+   (`{"stage", "stageIndex", "stageCount", "author"}`) so the board reflects live progress.
 6. Run mandatory pre-render validation, render, ffprobe, frame sampling, audio checks, and visual
    self-review. A runtime swap or downgraded motion treatment is a blocker requiring owner approval.
 7. Leave publishing to the manifest's publish stage and outbound approval gate.

@@ -46,7 +46,23 @@ public sealed record ComposedPack(
     /// rather than left to dictionary enumeration or re-derived by sorting the slugs.
     /// </summary>
     public IReadOnlyList<string> TeamOrder { get; init; } = [];
+
+    /// <summary>
+    /// The top-level knobs of the pack's <c>automations.json</c> — everything beside the automation
+    /// array. Carried because <see cref="Automations"/> alone loses them: the installed file is
+    /// rebuilt from the workspace's own config plus each pack's automation list, so a default the
+    /// template ships (the per-ticket spend cap) would silently not reach a new workspace.
+    /// Core-only when applied, for the same reason <see cref="ContractDefaults"/> is — a feature
+    /// pack contributes automations, never the project's budget.
+    /// </summary>
+    public AutomationDefaults Defaults { get; init; } = new(null, null, null);
 }
+
+/// <summary>Project-wide automation settings a pack ships alongside its automations.</summary>
+public sealed record AutomationDefaults(
+    decimal? DailyBudgetUsd,
+    decimal? MaxTicketCostUsd,
+    int? MinDescriptionLength);
 
 /// <summary>The whole selection, validated and ordered: core first, then topological by
 /// <c>dependsOn</c>, ties broken by id ascending ordinal (§4).</summary>

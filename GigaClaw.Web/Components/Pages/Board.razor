@@ -90,6 +90,16 @@ else
                 &#8630;
             </button>
             <button class="header-action-btn new-instruction-btn" @onclick="OpenChatDrawer" title="@L["NewInstruction"]">&#128172; @L["NewInstruction"]</button>
+            @* Phase 3.3: approvals inbox entry point — count badge only shows when there's work waiting. *@
+            <button class="header-action-btn approvals-btn" @onclick="OpenApprovals" title="@L["ApprovalsInboxTitle"]">
+                &#9989; @L["Approvals"]
+                @if (PendingApprovalTickets.Count > 0)
+                {
+                    <span class="approvals-count-badge">@PendingApprovalTickets.Count</span>
+                }
+            </button>
+            @* Phase 3.4: run history from the board, reusing the same drawer as the Automations page. *@
+            <button class="header-action-btn" @onclick="OpenRunHistoryDrawer" title="@L["History"]">&#128337; @L["RunsButtonLabel"]</button>
             <a class="header-action-btn" href="@ReturnFrom($"/board/{Slug}/automations")" title="@L["Automations"]">&#9881; @L["Automations"]</a>
             <a class="header-action-btn" href="@ReturnFrom($"/board/{Slug}/settings")" title="@L["ProjectSettingsTooltip"]">&#9881;&#65039; @L["ProjectSettings"]</a>
         </div>
@@ -210,6 +220,27 @@ else
                                                 <span class="sub-status-chip" style="--sc: @subCol.Color" title="@subCol.Name">@cnt</span>
                                             }
                                         }
+                                    </div>
+                                }
+                                @* Phase 3.1: Blocked-reason chip, derived server-side from the newest GIGACLAW-GATE/REPAIR comment. *@
+                                @if (ticket.Status == "Blocked" && !string.IsNullOrEmpty(ticket.BlockedReason))
+                                {
+                                    <div class="blocked-reason-row">
+                                        <span class="blocked-reason-chip" title="@ticket.BlockedReason">&#9940; @ticket.BlockedReason</span>
+                                    </div>
+                                }
+                                @* Phase 3.2: blockedBy badge — dependency edges already loaded on the summary. *@
+                                @if (ticket.BlockedBy.Count > 0)
+                                {
+                                    var firstBlocker = ticket.BlockedBy[0];
+                                    var extra = ticket.BlockedBy.Count - 1;
+                                    <div class="blocked-by-row">
+                                        <span class="blocked-by-badge"
+                                              title="@BlockedByTooltip(ticket)"
+                                              @onclick="() => SelectTicketById(firstBlocker.Id)"
+                                              @onclick:stopPropagation>
+                                            &#9939; @L["BlockedByPrefix"] #@firstBlocker.Id@(extra > 0 ? $" +{extra}" : "")
+                                        </span>
                                     </div>
                                 }
                                 <div class="ticket-card-bottom">
@@ -622,6 +653,27 @@ else
                 </div>
             }
 
+            @* ── Phase 3.2: blockedBy section ── *@
+            @if (selectedSummary?.BlockedBy is { Count: > 0 })
+            {
+                <div class="blocked-by-section">
+                    <div class="section-header">
+                        <span class="section-label">&#9939; @L["BlockedBySection"] (@selectedSummary.BlockedBy.Count)</span>
+                    </div>
+                    <div class="blocked-by-list">
+                        @foreach (var blocker in selectedSummary.BlockedBy)
+                        {
+                            <div class="blocked-by-list-row" @onclick="() => SelectTicketById(blocker.Id)">
+                                <span class="sub-ticket-status-dot" style="background: @GetColumnColor(blocker.Status)"></span>
+                                <span class="sub-ticket-id">#@blocker.Id</span>
+                                <span class="sub-ticket-title">@blocker.Title</span>
+                                <span class="sub-ticket-status">@blocker.Status</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
             @* ── Ticket body (thread layout) ── *@
                 <div class="ticket-panel-thread">
                     <div class="section-header">
@@ -732,6 +784,9 @@ else
     </div>
 }
 
+@* Phase 3.4: run history from the board header, shares RunHistoryDrawer with Automations.razor. *@
+<RunHistoryDrawer Slug="@Slug" IsOpen="_showRunHistory" OnClose="CloseRunHistoryDrawer" OnOpenRun="OpenRunFromHistory" />
+
 @if (_activeRunDrawerId is not null)
 {
     <ErrorBoundary>
@@ -746,6 +801,46 @@ else
             </div>
         </ErrorContent>
     </ErrorBoundary>
+}
+
+@* Phase 3.3: approvals inbox drawer. *@
+@if (_showApprovals)
+{
+    <div class="run-history-overlay" @onclick="CloseApprovals"></div>
+    <div class="approvals-drawer" @onclick:stopPropagation>
+        <div class="run-history-header">
+            <span class="run-history-title">@L["ApprovalsInboxTitle"]</span>
+            <button class="agent-close-btn" @onclick="CloseApprovals" title="@L["Close"]">×</button>
+        </div>
+        <div class="approvals-list">
+            @if (_approvalNotice is not null)
+            {
+                <div class="approval-notice">@_approvalNotice</div>
+            }
+            @if (PendingApprovalTickets.Count == 0)
+            {
+                <div class="run-history-empty">@L["NoApprovals"]</div>
+            }
+            @foreach (var t in PendingApprovalTickets)
+            {
+                <div class="approval-row">
+                    <div class="approval-row-main" @onclick="async () => { CloseApprovals(); await SelectTicketById(t.Id); }">
+                        <span class="run-history-ticket">#@t.Id</span>
+                        <span class="approval-row-title">@t.Title</span>
+                        @if (!string.IsNullOrEmpty(t.AssignedTo))
+                        {
+                            <span class="assignee-badge" title="@t.AssignedTo">@MemberDisplayName(t.AssignedTo)</span>
+                        }
+                        <span class="run-history-meta">@string.Format(L["LabeledAgo"], FormatTimeSince(t.LastActivityAt ?? t.UpdatedAt))</span>
+                    </div>
+                    <div class="approval-row-actions">
+                        <button class="approval-approve-btn" @onclick="() => ApproveTicket(t)" @onclick:stopPropagation>@L["Approve"]</button>
+                        <button class="approval-reject-btn" @onclick="() => RejectTicket(t)" @onclick:stopPropagation>@L["Reject"]</button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
 }
 
 @if (_showChatDrawer)
@@ -1180,6 +1275,114 @@ else
         _escRunDrawer?.Dispose();
         _escRunDrawer = null;
     }
+
+    // Phase 3.4: run history drawer, shared with Automations.razor via RunHistoryDrawer.
+    private bool _showRunHistory;
+    private IDisposable? _escRunHistory;
+
+    private void OpenRunHistoryDrawer()
+    {
+        if (_showRunHistory) return;
+        _showRunHistory = true;
+        _escRunHistory?.Dispose();
+        _escRunHistory = EscapeStack.PushWithFocus(JS, () => InvokeAsync(() => { CloseRunHistoryDrawer(); StateHasChanged(); }));
+    }
+
+    private void CloseRunHistoryDrawer()
+    {
+        _showRunHistory = false;
+        _escRunHistory?.Dispose();
+        _escRunHistory = null;
+    }
+
+    private void OpenRunFromHistory(string runId)
+    {
+        CloseRunHistoryDrawer();
+        OpenRunDrawer(runId);
+    }
+
+    // Phase 3.3: approvals inbox — tickets carrying the pending-approval label. _tickets already
+    // includes Labels for every board ticket, so this is a filter over data already in memory,
+    // not an extra query.
+    private const string PendingApprovalLabel = "pending-approval";
+    private List<TicketSummary> PendingApprovalTickets =>
+        _tickets.Where(t => t.Labels.Any(l => l.Name == PendingApprovalLabel)).ToList();
+
+    private bool _showApprovals;
+    private IDisposable? _escApprovals;
+
+    private void OpenApprovals()
+    {
+        if (_showApprovals) return;
+        _showApprovals = true;
+        _escApprovals?.Dispose();
+        _escApprovals = EscapeStack.PushWithFocus(JS, () => InvokeAsync(() => { CloseApprovals(); StateHasChanged(); }));
+    }
+
+    private void CloseApprovals()
+    {
+        _showApprovals = false;
+        _escApprovals?.Dispose();
+        _escApprovals = null;
+    }
+
+    // approval-mark-on-done / approval-clear-on-revision (automations.json) do the label swap
+    // once they observe the status change — the board only needs to move the ticket.
+    private string? _approvalNotice;
+
+    private Task ApproveTicket(TicketSummary ticket) => DecideApprovalAsync(ticket, "Done");
+    private Task RejectTicket(TicketSummary ticket) => DecideApprovalAsync(ticket, "Todo");
+
+    /// <summary>
+    /// Approve → Done, Reject → Todo, and only from Review. The inbox is a list rendered some time
+    /// ago: an agent may already have moved the ticket on, in which case an unconditional move would
+    /// silently drag it back out of wherever it now belongs. TransitionTicketAsync's expectedStatus
+    /// makes the check atomic with the write, and the conflict is reported instead of swallowed.
+    /// </summary>
+    private async Task DecideApprovalAsync(TicketSummary ticket, string target)
+    {
+        if (!_columns.Any(c => c.Name == target)) return;
+        _approvalNotice = null;
+        try
+        {
+            await TicketService.TransitionTicketAsync(
+                Slug, ticket.Id, target, assignedTo: null, author: "owner", expectedStatus: "Review");
+        }
+        catch (TicketTransitionConflictException)
+        {
+            _approvalNotice = L.Get("ApprovalConflict", ticket.Id);
+        }
+        await RefreshTicketsAndTouch();
+    }
+
+    private static string FormatTimeSince(DateTime utc)
+    {
+        var span = DateTime.UtcNow - utc;
+        if (span.TotalDays >= 1) return $"{(int)span.TotalDays}d";
+        if (span.TotalHours >= 1) return $"{(int)span.TotalHours}h";
+        if (span.TotalMinutes >= 1) return $"{(int)span.TotalMinutes}m";
+        return "<1m";
+    }
+
+    // Phase 3.2: opens a ticket by id even when it isn't in the currently-loaded/filtered
+    // list (e.g. a blockedBy edge pointing outside the active sub-kanban).
+    private async Task SelectTicketById(int ticketId)
+    {
+        var summary = _tickets.FirstOrDefault(t => t.Id == ticketId);
+        if (summary is not null)
+        {
+            await SelectTicket(summary);
+            return;
+        }
+        Navigation.NavigateTo(NavigationReturn.WithReturnTo($"/board/{Slug}/ticket/{ticketId}", CurrentBoardPath));
+    }
+
+    private static string BlockedByTooltip(TicketSummary ticket)
+    {
+        var lines = ticket.BlockedBy.Select(b => $"#{b.Id} — {b.Title} ({b.Status})");
+        return string.Join('\n', lines);
+    }
+
     private void OpenChatDrawer()
     {
         _chatInitialAgent = null;
@@ -1296,6 +1499,8 @@ else
         _escPriorityPicker?.Dispose();
         _escLabelDropdown?.Dispose();
         _escAssigneeDropdown?.Dispose();
+        _escRunHistory?.Dispose();
+        _escApprovals?.Dispose();
     }
 
     protected override async Task OnParametersSetAsync()

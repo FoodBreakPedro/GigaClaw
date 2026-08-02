@@ -1,6 +1,7 @@
 using System.Text.Json;
 using GigaClaw.Catalog;
 using GigaClaw.Core.Automation;
+using GigaClaw.Core.Automation.Verdicts;
 
 namespace GigaClaw.Core.Tests.Automation;
 
@@ -151,8 +152,71 @@ public class TemplateAutomationContractTests
         Assert.Equal(
             defaults.GetProperty("retryBackoffSeconds").GetInt32(),
             trigger.RetryBackoffSeconds);
-        Assert.Equal("Blocked", trigger.ExhaustedStatus);
+        // Phase 1.5 (return-to-sender): spent dispatch retries no longer park the ticket on the
+        // owner. It goes back to Backlog owned by the groomer, which is the column+assignee pair
+        // the `groomer` automation watches — so triage picks it up without anyone being paged.
+        Assert.Equal("Backlog", trigger.ExhaustedStatus);
+        Assert.Equal("groomer", trigger.ExhaustedAssignee);
         Assert.False(string.IsNullOrWhiteSpace(trigger.ExhaustedComment));
+    }
+
+    /// <summary>
+    /// The loop `exhaustedAssignee` could create, pinned closed: an automation that dispatches the
+    /// groomer must not also hand the groomer its own exhausted tickets, or a ticket the groomer
+    /// cannot groom would be re-served to it forever. The groomer's own arm parks in Blocked
+    /// instead, which is the one place the series genuinely has to stop.
+    /// </summary>
+    [Fact]
+    public void No_automation_routes_its_own_exhaustion_back_to_the_agent_it_dispatches()
+    {
+        var config = LoadConfig();
+        foreach (var automation in config.Automations)
+        {
+            if (automation.Trigger is not TicketInColumnTriggerSpec trigger) continue;
+            if (string.IsNullOrWhiteSpace(trigger.ExhaustedAssignee)) continue;
+
+            var dispatched = automation.Actions.OfType<RunAgentActionSpec>()
+                .Select(run => run.Agent)
+                .ToHashSet(StringComparer.Ordinal);
+            Assert.DoesNotContain(
+                trigger.ExhaustedAssignee!,
+                dispatched);
+        }
+
+        var groomer = Assert.Single(config.Automations, a => a.Id == "groomer");
+        var groomerTrigger = Assert.IsType<TicketInColumnTriggerSpec>(groomer.Trigger);
+        Assert.Equal("Blocked", groomerTrigger.ExhaustedStatus);
+        Assert.True(string.IsNullOrWhiteSpace(groomerTrigger.ExhaustedAssignee));
+    }
+
+    /// <summary>
+    /// Phase 1.1: the intake arm is what makes "post a ticket to Backlog with no assignee" a
+    /// complete request. It must filter on the trigger's own <c>unassigned</c> flag rather than on
+    /// an assignee slug — an empty <c>assigneeSlug</c> means "any assignee", which would make
+    /// intake and the `groomer` arm fight over the same tickets.
+    /// </summary>
+    [Fact]
+    public void Backlog_intake_and_the_groomer_arm_filter_on_disjoint_assignee_states()
+    {
+        var config = LoadConfig();
+        var intake = Assert.Single(config.Automations, a => a.Id == "backlog-intake");
+        var groomer = Assert.Single(config.Automations, a => a.Id == "groomer");
+
+        var intakeTrigger = Assert.IsType<TicketInColumnTriggerSpec>(intake.Trigger);
+        Assert.Equal(["Backlog"], intakeTrigger.Columns);
+        Assert.True(intakeTrigger.Unassigned);
+        Assert.True(string.IsNullOrEmpty(intakeTrigger.AssigneeSlug));
+
+        var groomerTrigger = Assert.IsType<TicketInColumnTriggerSpec>(groomer.Trigger);
+        Assert.Equal(["Backlog"], groomerTrigger.Columns);
+        Assert.Equal("groomer", groomerTrigger.AssigneeSlug);
+        Assert.False(groomerTrigger.Unassigned);
+
+        // Intake hands the ticket over; it never dispatches an agent itself, so the existing
+        // `groomer` arm stays the single place a grooming run is started.
+        Assert.Empty(intake.Actions.OfType<RunAgentActionSpec>());
+        var assign = Assert.Single(intake.Actions.OfType<AssignTicketActionSpec>());
+        Assert.Equal("groomer", assign.Slug);
     }
 
     // ── C2: verdict-gated ticket exit ───────────────────────────────────────
@@ -210,8 +274,10 @@ public class TemplateAutomationContractTests
 
     /// <summary>
     /// The explicit C2 criterion: a reviewer that produces prose and no parseable verdict must fail
-    /// loudly. Every reviewer author covered by a SHIP arm must also be covered by a gate that
-    /// treats MISSING (plus INVALID and STALE) as a block.
+    /// loudly. Phase 1.2 changed *when* it fails, not whether: an unusable verdict (INVALID, STALE,
+    /// MISSING) is the reviewer's own output failing, so the reviewer is asked once more before the
+    /// ticket blocks. What this test pins is that the retry is bounded and terminates in a block —
+    /// the one arm that ends the story still names MISSING and still moves the ticket to Blocked.
     /// </summary>
     [Theory]
     [MemberData(nameof(GatedPipelines))]
@@ -222,8 +288,7 @@ public class TemplateAutomationContractTests
 
         var escalation = Assert.Single(
             VerdictGates(config),
-            a => a.Trigger is TicketCommentAddedTriggerSpec t && t.Authors.Contains(reviewer)
-                && a.Conditions.OfType<AssignedToConditionSpec>().Any(c => c.Slugs.Contains(producer))
+            a => Blocks(a) && Governs(a, reviewer, producer)
                 && a.Conditions.OfType<VerdictIsConditionSpec>()
                     .Any(c => c.Verdicts.Contains("MISSING", StringComparer.Ordinal)));
 
@@ -232,12 +297,80 @@ public class TemplateAutomationContractTests
         Assert.NotEqual(shipAutomationId, escalation.Id);
 
         var verdict = Assert.Single(escalation.Conditions.OfType<VerdictIsConditionSpec>());
-        foreach (var outcome in new[] { "BLOCK", "INVALID", "STALE", "MISSING" })
+        foreach (var outcome in new[] { "INVALID", "STALE", "MISSING" })
             Assert.Contains(outcome, verdict.Verdicts);
         Assert.DoesNotContain("SHIP", verdict.Verdicts);
         Assert.Equal(fresh, verdict.RequireFreshArtifact);
-        Assert.True(Blocks(escalation), $"'{escalation.Id}' must move the ticket to Blocked.");
+
+        // It blocks only once the retry is spent, and there is a matching arm that spends it.
+        Assert.Single(
+            escalation.Conditions.OfType<ReviewerRetryBudgetConditionSpec>(),
+            c => c.Mode == "exhausted");
+        var retry = Assert.Single(
+            VerdictGates(config),
+            a => Governs(a, reviewer, producer)
+                && a.Conditions.OfType<ReviewerRetryBudgetConditionSpec>().Any(c => c.Mode == "withinCap"));
+        Assert.False(Blocks(retry), $"'{retry.Id}' must re-review, not block.");
+
+        // Return-to-sender: the retry re-runs the REVIEWER, never the author — the author was not
+        // the one who failed to produce a verdict.
+        var rerun = Assert.Single(retry.Actions.OfType<RunAgentActionSpec>());
+        Assert.Equal(reviewer, rerun.Agent);
+        Assert.DoesNotContain(retry.Actions, a => a is MoveTicketStatusActionSpec);
     }
+
+    /// <summary>
+    /// A deliberate BLOCK is the one verdict outcome that never earns a second chance: the reviewer
+    /// judged the work rather than failing to report on it. It escalates on the first firing, on
+    /// its own arm, with no retry-budget condition that could hold it back.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GatedPipelines))]
+    public void A_deliberate_block_verdict_escalates_immediately(
+        string shipAutomationId, string reviewer, string producer, bool fresh)
+    {
+        var config = LoadConfig();
+
+        var block = Assert.Single(
+            VerdictGates(config),
+            a => Blocks(a) && Governs(a, reviewer, producer)
+                && a.Conditions.OfType<VerdictIsConditionSpec>()
+                    .Any(c => c.Verdicts.Contains("BLOCK", StringComparer.Ordinal)));
+
+        Assert.NotEqual(shipAutomationId, block.Id);
+        var verdict = Assert.Single(block.Conditions.OfType<VerdictIsConditionSpec>());
+        Assert.Equal(["BLOCK"], verdict.Verdicts);
+        Assert.Equal(fresh, verdict.RequireFreshArtifact);
+        Assert.Empty(block.Conditions.OfType<ReviewerRetryBudgetConditionSpec>());
+        Assert.Empty(block.Conditions.OfType<RepairBudgetConditionSpec>());
+    }
+
+    /// <summary>
+    /// Phase 1.4: a Blocked ticket has an owner. Every arm that parks a ticket in Blocked assigns
+    /// it to the human first, so "Blocked" means "a person has to decide" rather than leaving the
+    /// ticket nominally owned by the agent that could not finish it.
+    /// </summary>
+    [Fact]
+    public void Every_verdict_gated_block_hands_the_ticket_to_the_owner()
+    {
+        var config = LoadConfig();
+        var blocking = VerdictGates(config).Where(Blocks).ToList();
+        Assert.NotEmpty(blocking);
+
+        foreach (var automation in blocking)
+        {
+            var move = automation.Actions.FindIndex(a => a is MoveTicketStatusActionSpec { To: "Blocked" });
+            var assign = automation.Actions.Take(move).OfType<AssignTicketActionSpec>().LastOrDefault();
+            Assert.True(
+                assign is not null,
+                $"'{automation.Id}' blocks the ticket without assigning an owner first.");
+            Assert.Equal("owner", assign!.Slug);
+        }
+    }
+
+    private static bool Governs(GigaClaw.Core.Automation.Automation automation, string reviewer, string producer)
+        => automation.Trigger is TicketCommentAddedTriggerSpec t && t.Authors.Contains(reviewer)
+            && automation.Conditions.OfType<AssignedToConditionSpec>().Any(c => c.Slugs.Contains(producer));
 
     /// <summary>
     /// Fail closed with a paper trail: no verdict-gated automation may park a ticket in Blocked
@@ -268,7 +401,15 @@ public class TemplateAutomationContractTests
 
     /// <summary>
     /// A FIX is a work order, not a rejection: every repair arm must have an escalating twin, or a
-    /// ticket could round forever. The twin is identified by carrying the same reviewer authors.
+    /// ticket could round forever. The twin is identified by carrying the same reviewer authors
+    /// <em>and</em> the same <c>extended-repair</c> gating — Phase 1.6 duplicated every repair pair
+    /// into a base arm that stands down for the label and a twin that requires it, so pairing on
+    /// authors alone would now match two exhaustion arms per family.
+    /// <para>
+    /// Phase 1.3 also changed what exhaustion does: instead of parking the ticket on the owner it
+    /// routes the ticket back to Backlog owned by the groomer, carrying the whole verdict history
+    /// so the triage pass can re-scope from evidence rather than from a run log.
+    /// </para>
     /// </summary>
     [Fact]
     public void Every_repair_arm_has_an_escalating_twin_that_carries_the_verdict_history()
@@ -293,14 +434,209 @@ public class TemplateAutomationContractTests
                 config.Automations,
                 a => a.Id != repair.Id
                     && a.Trigger is TicketCommentAddedTriggerSpec t && t.Authors.SequenceEqual(authors)
-                    && a.Conditions.OfType<RepairBudgetConditionSpec>().Any(c => c.Mode == "exhausted"));
+                    && a.Conditions.OfType<RepairBudgetConditionSpec>().Any(c => c.Mode == "exhausted")
+                    && ExtendedRepair(a) == ExtendedRepair(repair)
+                    && !Triaged(a));
 
             Assert.Equal(repair.Enabled, twin.Enabled);
-            Assert.True(Blocks(twin), $"'{twin.Id}' must escalate to Blocked.");
+
+            // Return-to-sender, not a page: exhaustion re-scopes through the groomer.
+            Assert.False(Blocks(twin), $"'{twin.Id}' must re-scope, not block.");
+            Assert.Contains(twin.Actions.OfType<MoveTicketStatusActionSpec>(), m => m.To == "Backlog");
+            Assert.Equal("groomer", Assert.Single(twin.Actions.OfType<AssignTicketActionSpec>()).Slug);
             Assert.Contains(
                 twin.Actions.OfType<AddCommentActionSpec>(),
                 c => c.Content.Contains("{verdictHistory}", StringComparison.Ordinal));
             Assert.DoesNotContain(twin.Actions, a => a is RunAgentActionSpec);
+
+            // The pair's caps agree, so a labeled ticket cannot be "within cap" on one arm and
+            // "exhausted" on the other at the same round.
+            Assert.Equal(
+                Assert.Single(repair.Conditions.OfType<RepairBudgetConditionSpec>()).MaxCycles,
+                Assert.Single(twin.Conditions.OfType<RepairBudgetConditionSpec>()).MaxCycles);
+        }
+    }
+
+    /// <summary>
+    /// Phase 1.6: <c>extended-repair</c> raises the repair cap without an engine change, by
+    /// duplicating each repair arm. Exactly one of the two may match any ticket, so the base arm
+    /// must negate the label the extended arm requires — otherwise a labeled ticket fires both and
+    /// gets two dispatches per FIX verdict.
+    /// </summary>
+    [Fact]
+    public void The_extended_repair_label_selects_exactly_one_arm_of_each_pair()
+    {
+        var config = LoadConfig();
+        var extended = config.Automations.Where(ExtendedRepair).ToList();
+        Assert.NotEmpty(extended);
+
+        foreach (var arm in extended)
+        {
+            Assert.EndsWith("-extended", arm.Id, StringComparison.Ordinal);
+            var budget = Assert.Single(arm.Conditions.OfType<RepairBudgetConditionSpec>());
+            Assert.Equal(4, budget.MaxCycles);
+
+            var baseArm = Assert.Single(
+                config.Automations,
+                a => a.Id == arm.Id[..^"-extended".Length]);
+
+            // The base arm reads the contract's own cap, and stands down for the label.
+            Assert.Null(Assert.Single(baseArm.Conditions.OfType<RepairBudgetConditionSpec>()).MaxCycles);
+            Assert.Single(
+                baseArm.Conditions.OfType<LabelsConditionSpec>(),
+                c => c.Negate && c.Labels.Contains("extended-repair"));
+        }
+    }
+
+    private static bool ExtendedRepair(GigaClaw.Core.Automation.Automation automation)
+        => automation.Conditions.OfType<LabelsConditionSpec>()
+            .Any(c => !c.Negate && c.Labels.Contains("extended-repair"));
+
+    private static bool Triaged(GigaClaw.Core.Automation.Automation automation)
+        => automation.Conditions.OfType<LabelsConditionSpec>()
+            .Any(c => !c.Negate && c.Labels.Contains("triaged"));
+
+    /// <summary>
+    /// The funded-loop guard. Exhaustion routes a ticket back to Backlog owned by the groomer, and
+    /// both the trigger's attempt counter (reset by the groomer's own edits) and the repair budget
+    /// (reset by the escalation receipt) hand the next lap fresh budgets — so without a stop
+    /// condition a ticket nobody can specify would be re-scoped and re-run forever, each lap
+    /// costing real money. The <c>triaged</c> label is that stop: the first exhaustion applies it
+    /// and re-scopes, and a ticket already wearing it goes to the owner in Blocked instead.
+    /// </summary>
+    [Fact]
+    public void Exhaustion_re_scopes_once_and_then_hands_the_ticket_to_a_human()
+    {
+        var config = LoadConfig();
+        var reScoping = config.Automations
+            .Where(a => a.Conditions.OfType<RepairBudgetConditionSpec>().Any(c => c.Mode == "exhausted")
+                && !Triaged(a))
+            .ToList();
+        Assert.NotEmpty(reScoping);
+
+        foreach (var lap in reScoping)
+        {
+            // It only runs on a ticket that has not had its lap yet …
+            Assert.Single(
+                lap.Conditions.OfType<LabelsConditionSpec>(),
+                c => c.Negate && c.Labels.Contains("triaged"));
+
+            // … and it is what marks the lap as used, before the ticket leaves the column.
+            var labelAt = lap.Actions.FindIndex(a => a is SetLabelsActionSpec s && s.Add.Contains("triaged"));
+            var moveAt = lap.Actions.FindIndex(a => a is MoveTicketStatusActionSpec);
+            Assert.True(labelAt >= 0, $"'{lap.Id}' re-scopes without recording the triage lap.");
+            Assert.True(labelAt < moveAt, $"'{lap.Id}' labels the ticket after moving it.");
+            Assert.Equal("groomer", Assert.Single(lap.Actions.OfType<AssignTicketActionSpec>()).Slug);
+
+            // The second lap exists, and it terminates on a person.
+            var terminal = Assert.Single(
+                config.Automations,
+                a => a.Id != lap.Id
+                    && Triaged(a)
+                    && ExtendedRepair(a) == ExtendedRepair(lap)
+                    && a.Trigger is TicketCommentAddedTriggerSpec t
+                    && lap.Trigger is TicketCommentAddedTriggerSpec lt
+                    && t.Authors.SequenceEqual(lt.Authors)
+                    && a.Conditions.OfType<AssignedToConditionSpec>()
+                        .SelectMany(c => c.Slugs)
+                        .SequenceEqual(lap.Conditions.OfType<AssignedToConditionSpec>().SelectMany(c => c.Slugs)));
+
+            Assert.True(Blocks(terminal), $"'{terminal.Id}' must block rather than re-scope again.");
+            Assert.Equal("owner", Assert.Single(terminal.Actions.OfType<AssignTicketActionSpec>()).Slug);
+            Assert.DoesNotContain(terminal.Actions, a => a is RunAgentActionSpec);
+            Assert.DoesNotContain(
+                terminal.Actions.OfType<SetLabelsActionSpec>(),
+                s => s.Add.Contains("triaged"));
+        }
+    }
+
+    /// <summary>
+    /// A funded loop needs a floor as well as a lap count. <c>maxTicketCostUsd</c> is the per-ticket
+    /// spend ceiling <c>RunStateManager</c> enforces before any dispatch; shipping it unset would
+    /// mean every new project runs its triage loops on an unlimited budget until somebody notices.
+    /// The default is deliberately conservative — a ceiling, not a target.
+    /// </summary>
+    [Fact]
+    public void The_template_ships_a_per_ticket_spend_ceiling()
+    {
+        var config = LoadConfig();
+        Assert.NotNull(config.MaxTicketCostUsd);
+        Assert.InRange(config.MaxTicketCostUsd!.Value, 1m, 50m);
+    }
+
+    /// <summary>
+    /// The reviewer-retry receipt is the budget, so it may only be written by the dispatch it
+    /// records — <c>ActionExecutor.MintReviewerRetryReceiptAsync</c>, on the non-skip path. An
+    /// <c>addComment</c> in front of the <c>runAgent</c> is committed even when the dispatch is
+    /// skipped (a busy reviewer), which spends the budget for a re-review nobody was asked for and
+    /// strands the ticket in Review with no arm left that matches it.
+    /// </summary>
+    [Fact]
+    public void No_retry_arm_writes_its_own_receipt_in_config()
+    {
+        var config = LoadConfig();
+        var retries = config.Automations
+            .Where(a => a.Conditions.OfType<ReviewerRetryBudgetConditionSpec>().Any(c => c.Mode == "withinCap"))
+            .ToList();
+        Assert.NotEmpty(retries);
+
+        foreach (var retry in retries)
+        {
+            Assert.DoesNotContain(
+                retry.Actions.OfType<AddCommentActionSpec>(),
+                c => c.Content.Contains(ReviewerRetry.RetryMarkerPrefix, StringComparison.Ordinal));
+            Assert.IsType<RunAgentActionSpec>(retry.Actions[0]);
+        }
+    }
+
+    /// <summary>
+    /// The retry arms move no ticket, on purpose — the work stays in Review with its assignee. That
+    /// leaves no column poll to rescue a ticket whose reviewer never answers, so the gate ships a
+    /// watchdog that polls Review itself and terminates on the owner once the retry is spent.
+    /// </summary>
+    [Fact]
+    public void A_review_watchdog_terminates_a_ticket_no_comment_will_ever_reach()
+    {
+        var config = LoadConfig();
+        var watchdog = Assert.Single(config.Automations, a => a.Id == "verdict-gate-review-watchdog");
+
+        var trigger = Assert.IsType<TicketInColumnTriggerSpec>(watchdog.Trigger);
+        Assert.Equal(["Review"], trigger.Columns);
+        Assert.True(trigger.Seconds >= 60, "The watchdog is a backstop, not a second gate — poll slowly.");
+        Assert.True(trigger.MaxConsecutiveFirings > 0, "An unbounded watchdog is a loop.");
+
+        var verdicts = Assert.Single(watchdog.Conditions.OfType<VerdictIsConditionSpec>());
+        Assert.Equal(["INVALID", "STALE", "MISSING"], verdicts.Verdicts);
+        Assert.Equal(
+            "exhausted",
+            Assert.Single(watchdog.Conditions.OfType<ReviewerRetryBudgetConditionSpec>()).Mode);
+
+        Assert.True(Blocks(watchdog));
+        Assert.Equal("owner", Assert.Single(watchdog.Actions.OfType<AssignTicketActionSpec>()).Slug);
+        Assert.DoesNotContain(watchdog.Actions, a => a is RunAgentActionSpec);
+    }
+
+    /// <summary>
+    /// A retry arm advertises exactly the outcomes it can actually see. <c>STALE</c> is produced by
+    /// re-hashing the reviewed artifact, so an arm with <c>requireFreshArtifact: false</c> can never
+    /// resolve one — naming it there documents a re-review path that cannot happen, and the whole
+    /// point of the verdict list is that a reader can tell what will fire from it.
+    /// </summary>
+    [Fact]
+    public void A_retry_arm_never_advertises_an_outcome_it_cannot_reach()
+    {
+        var config = LoadConfig();
+        var retries = config.Automations
+            .Where(a => a.Conditions.OfType<ReviewerRetryBudgetConditionSpec>().Any(c => c.Mode == "withinCap"))
+            .ToList();
+        Assert.NotEmpty(retries);
+
+        foreach (var retry in retries)
+        {
+            var verdict = Assert.Single(retry.Conditions.OfType<VerdictIsConditionSpec>());
+            Assert.Contains("INVALID", verdict.Verdicts);
+            Assert.Contains("MISSING", verdict.Verdicts);
+            Assert.Equal(verdict.RequireFreshArtifact, verdict.Verdicts.Contains("STALE"));
         }
     }
 
@@ -361,9 +697,10 @@ public class TemplateAutomationContractTests
             Assert.DoesNotContain(
                 gate.Conditions.OfType<VerdictIsConditionSpec>(),
                 c => c.Agent == "evaluator");
-            Assert.DoesNotContain(
-                ((TicketCommentAddedTriggerSpec)gate.Trigger).Authors,
-                author => author == "evaluator");
+            // Most gate arms are comment-driven; the Review watchdog polls the column instead and
+            // names no authors at all, which is trivially free of the evaluator.
+            if (gate.Trigger is TicketCommentAddedTriggerSpec comments)
+                Assert.DoesNotContain(comments.Authors, author => author == "evaluator");
         }
     }
 
@@ -381,7 +718,9 @@ public class TemplateAutomationContractTests
     {
         var config = LoadConfig();
         var ad7 = config.Automations.Where(a => a.Id.StartsWith("content-verdict-gate-", StringComparison.Ordinal)).ToList();
-        Assert.Equal(4, ad7.Count);
+        // ship + repair(×2 caps) + exhaustion(×2 caps, ×2 triage laps) + block
+        // + reviewer-retry(×2 budget states).
+        Assert.Equal(10, ad7.Count);
 
         foreach (var automation in ad7)
         {
@@ -410,8 +749,14 @@ public class TemplateAutomationContractTests
                  {
                      "content-verdict-gate-ship-to-done",
                      "content-verdict-gate-repair-round",
+                     "content-verdict-gate-repair-round-extended",
                      "content-verdict-gate-repair-exhausted",
+                     "content-verdict-gate-repair-exhausted-extended",
+                     "content-verdict-gate-repair-exhausted-triaged",
+                     "content-verdict-gate-repair-exhausted-triaged-extended",
                      "content-verdict-gate-block-escalate",
+                     "content-verdict-gate-reviewer-retry",
+                     "content-verdict-gate-reviewer-retry-exhausted",
                  })
         {
             Assert.True(ad7.ContainsKey(id), $"AD-7 pipeline is missing '{id}'.");

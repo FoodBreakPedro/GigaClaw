@@ -10,6 +10,18 @@ using Microsoft.Extensions.Logging;
 
 namespace GigaClaw.Core.Services;
 
+/// <summary>The addressed project or job does not exist. The API edge answers 404.</summary>
+public sealed class LocalMediaNotFoundException(string message) : InvalidOperationException(message);
+
+/// <summary>The request itself is malformed — a missing author, an out-of-range stage index. The
+/// API edge answers 400. This is the single source of request validation: the endpoint re-checks
+/// nothing, so the two can never drift apart.</summary>
+public sealed class LocalMediaValidationException(string message) : InvalidOperationException(message);
+
+/// <summary>The job's persisted state refuses the operation — it is not running, or the report
+/// would rewind progress. The API edge answers 409.</summary>
+public sealed class LocalMediaConflictException(string message) : InvalidOperationException(message);
+
 /// <summary>
 /// Durable control plane for governed local media generation.
 ///
@@ -19,6 +31,9 @@ namespace GigaClaw.Core.Services;
 public sealed class LocalMediaJobService : BackgroundService
 {
     private const int DefaultMaxConcurrent = 2;
+    /// <summary>Upper bound on a reported stage name. Long enough for any human-readable checkpoint
+    /// label, short enough that a runaway worker cannot write a novel into the board.</summary>
+    private const int MaxStageLength = 120;
     private static readonly HashSet<string> FinalStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
         LocalMediaJobStatuses.AwaitingReview,
@@ -105,6 +120,9 @@ public sealed class LocalMediaJobService : BackgroundService
             null,
             null,
             null,
+            null,
+            null,
+            null,
             null);
 
         try
@@ -188,12 +206,12 @@ public sealed class LocalMediaJobService : BackgroundService
     {
         RequireAuthor(author);
         var job = await GetAsync(projectSlug, id, cancellationToken)
-            ?? throw new InvalidOperationException("Local media job not found.");
+            ?? throw new LocalMediaNotFoundException("Local media job not found.");
         if (job.Status is not (LocalMediaJobStatuses.Queued or LocalMediaJobStatuses.Running))
-            throw new InvalidOperationException("Only queued or running local media jobs can be cancelled.");
+            throw new LocalMediaConflictException("Only queued or running local media jobs can be cancelled.");
 
         if (!await TryCancelStateAsync(projectSlug, id, cancellationToken))
-            throw new InvalidOperationException("The local media job finished before cancellation could be applied.");
+            throw new LocalMediaConflictException("The local media job finished before cancellation could be applied.");
 
         if (_processes.TryGetValue(JobKey(projectSlug, id), out var process))
         {
@@ -203,6 +221,62 @@ public sealed class LocalMediaJobService : BackgroundService
 
         await NotifyTicketAsync(projectSlug, id, cancellationToken);
         return (await GetAsync(projectSlug, id, cancellationToken))!;
+    }
+
+    public async Task<LocalMediaJob> UpdateStageAsync(
+        string projectSlug,
+        string id,
+        UpdateLocalMediaJobStageRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        RequireAuthor(request.Author);
+        var stage = ValidateStage(request);
+        await RequireProjectAsync(projectSlug);
+        await EnsureTableAsync(projectSlug, cancellationToken);
+        var job = await GetAsync(projectSlug, id, cancellationToken)
+            ?? throw new LocalMediaNotFoundException("Local media job not found.");
+
+        // Fast path only. The authoritative running/monotonicity check lives in TrySetStageAsync's
+        // UPDATE predicate: everything read here is already stale by the time the UPDATE executes,
+        // so this exists to return the precise message cheaply, not to guarantee anything.
+        if (!string.Equals(job.Status, LocalMediaJobStatuses.Running, StringComparison.OrdinalIgnoreCase))
+            throw new LocalMediaConflictException("Stage progress can only be reported while the job is running.");
+        if (request.StageIndex is int newIndex && job.StageIndex is int currentIndex && newIndex < currentIndex)
+            throw new LocalMediaConflictException(
+                $"StageIndex {newIndex} would regress the current StageIndex {currentIndex}.");
+
+        if (await TrySetStageAsync(projectSlug, id, stage, request.StageIndex, request.StageCount, cancellationToken))
+            return (await GetAsync(projectSlug, id, cancellationToken))!;
+
+        // Zero rows updated: the row stopped satisfying the predicate between the read and the write.
+        // One follow-up read tells the two causes apart so the caller gets the true reason rather
+        // than whichever guess the stale snapshot suggested.
+        var current = await GetAsync(projectSlug, id, cancellationToken)
+            ?? throw new LocalMediaNotFoundException("Local media job not found.");
+        throw string.Equals(current.Status, LocalMediaJobStatuses.Running, StringComparison.OrdinalIgnoreCase)
+            ? new LocalMediaConflictException(
+                $"StageIndex {request.StageIndex} would regress the current StageIndex {current.StageIndex}.")
+            : new LocalMediaConflictException("The local media job is no longer running.");
+    }
+
+    /// <summary>Rejects a malformed stage report before it reaches SQLite. Endpoint-side validation
+    /// was removed in favour of this one copy — two copies drift, and the drift is silent.</summary>
+    private static string ValidateStage(UpdateLocalMediaJobStageRequest request)
+    {
+        var stage = request.Stage?.Trim();
+        if (string.IsNullOrWhiteSpace(stage))
+            throw new LocalMediaValidationException("The 'stage' field is required.");
+        if (stage.Length > MaxStageLength)
+            throw new LocalMediaValidationException(
+                $"The 'stage' field must be at most {MaxStageLength} characters.");
+        if (request.StageIndex is int index && index < 0)
+            throw new LocalMediaValidationException("StageIndex must be zero or greater.");
+        if (request.StageCount is int count && count <= 0)
+            throw new LocalMediaValidationException("StageCount must be greater than zero.");
+        if (request.StageIndex is int reported && request.StageCount is int total && reported > total)
+            throw new LocalMediaValidationException(
+                $"StageIndex {reported} must not exceed StageCount {total}.");
+        return stage;
     }
 
     public async Task<LocalMediaJob> ReviewAsync(
@@ -215,11 +289,11 @@ public sealed class LocalMediaJobService : BackgroundService
         RequireAuthor(author);
         var normalized = decision.Trim().ToLowerInvariant();
         if (normalized is not ("approved" or "rejected"))
-            throw new InvalidOperationException("Decision must be approved or rejected.");
+            throw new LocalMediaValidationException("Decision must be approved or rejected.");
         var job = await GetAsync(projectSlug, id, cancellationToken)
-            ?? throw new InvalidOperationException("Local media job not found.");
+            ?? throw new LocalMediaNotFoundException("Local media job not found.");
         if (!string.Equals(job.Status, LocalMediaJobStatuses.AwaitingReview, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Only a job awaiting review can be approved or rejected.");
+            throw new LocalMediaConflictException("Only a job awaiting review can be approved or rejected.");
 
         var status = normalized == "approved"
             ? LocalMediaJobStatuses.Approved
@@ -550,7 +624,7 @@ public sealed class LocalMediaJobService : BackgroundService
 
     private async Task<Project> RequireProjectAsync(string projectSlug) =>
         await _projects.GetProjectAsync(projectSlug)
-        ?? throw new InvalidOperationException($"Project '{projectSlug}' does not exist.");
+        ?? throw new LocalMediaNotFoundException($"Project '{projectSlug}' does not exist.");
 
     private static string ResolveWorkspaceFile(string workspace, string relativePath, string description)
     {
@@ -723,7 +797,10 @@ public sealed class LocalMediaJobService : BackgroundService
                 ReviewedAt TEXT NULL,
                 ReviewDecision TEXT NULL,
                 ProcessId INTEGER NULL,
-                BoardNotifiedAt TEXT NULL
+                BoardNotifiedAt TEXT NULL,
+                Stage TEXT NULL,
+                StageIndex INTEGER NULL,
+                StageCount INTEGER NULL
             );
             CREATE INDEX IF NOT EXISTS IX_MediaJobs_StatusCreatedAt
                 ON MediaJobs(Status, CreatedAt);
@@ -731,6 +808,32 @@ public sealed class LocalMediaJobService : BackgroundService
                 ON MediaJobs(TicketId);
             """;
         await command.ExecuteNonQueryAsync(cancellationToken);
+
+        // CREATE TABLE IF NOT EXISTS above only shapes a brand-new database; a table created before
+        // this field set was added still lacks these columns, so add them here in the repo's inline
+        // ALTER TABLE ADD COLUMN convention (tolerating "already exists" on a table that already
+        // migrated).
+        await AddColumnIfMissingAsync(connection, "ALTER TABLE MediaJobs ADD COLUMN Stage TEXT NULL", cancellationToken);
+        await AddColumnIfMissingAsync(connection, "ALTER TABLE MediaJobs ADD COLUMN StageIndex INTEGER NULL", cancellationToken);
+        await AddColumnIfMissingAsync(connection, "ALTER TABLE MediaJobs ADD COLUMN StageCount INTEGER NULL", cancellationToken);
+    }
+
+    private static async Task AddColumnIfMissingAsync(
+        SqliteConnection connection,
+        string alterSql,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = alterSql;
+        try
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (SqliteException exception) when (
+            exception.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase))
+        {
+            // Column already exists — expected on an already-migrated database.
+        }
     }
 
     private SqliteConnection OpenConnection(string projectSlug) =>
@@ -848,6 +951,41 @@ public sealed class LocalMediaJobService : BackgroundService
         command.Parameters.AddWithValue("$outputPath", (object?)outputPath ?? DBNull.Value);
         command.Parameters.AddWithValue("$provenanceJson", (object?)provenanceJson ?? DBNull.Value);
         command.Parameters.AddWithValue("$processId", (object?)processId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$now", Iso(DateTime.UtcNow));
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$running", LocalMediaJobStatuses.Running);
+        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+    }
+
+    private async Task<bool> TrySetStageAsync(
+        string projectSlug,
+        string id,
+        string stage,
+        int? stageIndex,
+        int? stageCount,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = OpenConnection(projectSlug);
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        // The monotonic guard is the UPDATE's own predicate, not a C# read-then-write: two workers
+        // reporting checkpoints concurrently both read the same StageIndex, so a guard outside the
+        // statement lets the slower report win and rewind the progress the UI already showed.
+        // COALESCE keeps a report that omits an index from erasing one, which is the same rewind by
+        // another name.
+        command.CommandText = """
+            UPDATE MediaJobs
+               SET Stage = $stage,
+                   StageIndex = COALESCE($stageIndex, StageIndex),
+                   StageCount = COALESCE($stageCount, StageCount),
+                   UpdatedAt = $now
+             WHERE Id = $id
+               AND Status = $running
+               AND (StageIndex IS NULL OR $stageIndex IS NULL OR StageIndex <= $stageIndex)
+            """;
+        command.Parameters.AddWithValue("$stage", stage);
+        command.Parameters.AddWithValue("$stageIndex", (object?)stageIndex ?? DBNull.Value);
+        command.Parameters.AddWithValue("$stageCount", (object?)stageCount ?? DBNull.Value);
         command.Parameters.AddWithValue("$now", Iso(DateTime.UtcNow));
         command.Parameters.AddWithValue("$id", id);
         command.Parameters.AddWithValue("$running", LocalMediaJobStatuses.Running);
@@ -989,7 +1127,10 @@ public sealed class LocalMediaJobService : BackgroundService
             NullableDate("ReviewedAt"),
             NullableString("ReviewDecision"),
             reader.IsDBNull(reader.GetOrdinal("ProcessId")) ? null : reader.GetInt32(reader.GetOrdinal("ProcessId")),
-            NullableDate("BoardNotifiedAt"));
+            NullableDate("BoardNotifiedAt"),
+            NullableString("Stage"),
+            reader.IsDBNull(reader.GetOrdinal("StageIndex")) ? null : reader.GetInt32(reader.GetOrdinal("StageIndex")),
+            reader.IsDBNull(reader.GetOrdinal("StageCount")) ? null : reader.GetInt32(reader.GetOrdinal("StageCount")));
     }
 
     private static string RequiredString(JsonElement element, string name)
@@ -1004,7 +1145,7 @@ public sealed class LocalMediaJobService : BackgroundService
     private static void RequireAuthor(string? author)
     {
         if (string.IsNullOrWhiteSpace(author))
-            throw new InvalidOperationException("The 'author' field is required.");
+            throw new LocalMediaValidationException("The 'author' field is required.");
     }
 
     private static bool IsUnder(string path, string root)

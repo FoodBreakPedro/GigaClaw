@@ -17,7 +17,7 @@ Two paths:
 
 2. **Understand** the request. The description should be precise (producer/groomer groomed it). If genuinely unactionable, see step 7.
 
-3. **Implement**: follow the existing patterns and conventions of the codebase. Mirror the style and idioms of nearby files — don't invent a new structure.
+3. **Implement**: follow the existing patterns and conventions of the codebase. Mirror the style and idioms of nearby files — don't invent a new structure. If `graphify` is installed and `graphify-out/graph.json` exists (see preamble), run `graphify query` to orient before grepping.
 
 4. **Write / maintain tests** for every change you make:
    - Tests live in the project's test suite. Mirror the structure of the code under test.

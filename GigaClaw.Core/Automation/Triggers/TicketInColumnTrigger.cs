@@ -42,6 +42,11 @@ public sealed class TicketInColumnTrigger : ITrigger
             var tickets = await ctx.Tickets.ListTicketsAsync(ctx.ProjectSlug, statusFilter: col);
             foreach (var t in tickets)
             {
+                // An empty AssigneeSlug means "any assignee", so "no assignee at all" — the intake
+                // case — needs its own flag. Setting both is contradictory and matches nothing,
+                // which is the safe reading of a spec that cannot be satisfied.
+                if (_spec.Unassigned && !string.IsNullOrEmpty(t.AssignedTo)) continue;
+
                 if (!string.IsNullOrEmpty(_spec.AssigneeSlug))
                 {
                     if (t.AssignedTo is null || t.AssignedTo != _spec.AssigneeSlug) continue;
@@ -127,6 +132,7 @@ public sealed class TicketInColumnTrigger : ITrigger
                     && count >= _spec.MaxConsecutiveFirings
                     && !previouslyHandled
                     && (!string.IsNullOrWhiteSpace(_spec.ExhaustedStatus)
+                        || !string.IsNullOrWhiteSpace(_spec.ExhaustedAssignee)
                         || !string.IsNullOrWhiteSpace(_spec.ExhaustedComment));
                 attempts[key] = new JsonObject
                 {
@@ -143,6 +149,22 @@ public sealed class TicketInColumnTrigger : ITrigger
 
             if (shouldHandleExhaustion)
             {
+                // Reassign before the move so the ticket never appears in its new column still
+                // owned by the agent that just failed to make progress on it — the triage agent
+                // owns it from the moment it lands. An unknown slug is skipped, not fatal:
+                // exhaustion handling exists to unstick a ticket, not to add a new failure mode.
+                if (!string.IsNullOrWhiteSpace(_spec.ExhaustedAssignee)
+                    && ticket is not null
+                    && !string.Equals(ticket.AssignedTo, _spec.ExhaustedAssignee, StringComparison.OrdinalIgnoreCase))
+                {
+                    var members = await ctx.Members.ListMembersAsync(ctx.ProjectSlug);
+                    if (members.Any(m => string.Equals(m.Slug, _spec.ExhaustedAssignee, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        await ctx.Tickets.UpdateTicketAsync(
+                            ctx.ProjectSlug, tid, assignedTo: _spec.ExhaustedAssignee, author: "automation");
+                    }
+                }
+
                 if (!string.IsNullOrWhiteSpace(_spec.ExhaustedStatus)
                     && ticket is not null
                     && !string.Equals(ticket.Status, _spec.ExhaustedStatus, StringComparison.OrdinalIgnoreCase))

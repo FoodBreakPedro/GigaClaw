@@ -37,7 +37,7 @@ Deferred, product-dependent: **Paid Ads (ROAS)** and **Influencer (STAR)** — c
 | P16 semantic memory shadow index | A real retrieval problem measured at current scale | Read-only index over MEMORY.md topics + ticket evidence; markdown stays authoritative; benchmark exact vs semantic recall with human judgment before any authority. Discount "sub-ms HNSW" claims (ruflo's own audit: 1.48×, not 150×) |
 | O3/O4 outcome-grounded model routing | O6 baselines exist **and** something consumes `scores.json` | Shadow recommendations logged beside deterministic choices; learn only from QA/owner/evaluator outcomes, never process exit codes; calibrated confidence + one-click rollback before any live routing |
 | O5 context compression | Measured prompt-size pain (catalog can report prompt budgets) | Compress large tool outputs pre-prompt; headroom/claude-context-mode patterns |
-| O2 cost dashboards + forecasting | Nice-to-have; CostTracker data already durable | Visual/predictive layer over existing per-ticket cost records |
+| O2 cost dashboards + forecasting | Nice-to-have; CostTracker data already durable | Visual/predictive layer over existing per-ticket cost records. **2026-08-02**: being delivered by the system-level Mission Control page (Option A — Operations, Phase 4 of the automation & UX improvement plan); its ops/cost strip is the O2 slot. |
 | U15 background-worker catalog | After U6; workers = plain interval automations | testgaps-style workers as named cron automations, not a new subsystem |
 | U16 TDD-guard hook | After P3 hooks exist | PreToolUse block on implementation-before-failing-test for `code` tickets |
 | Full-funnel marketing completion (paid ads, influencer) | Product demand + Pack 6 in real use | Extends Pack 6 under the same binding rule |
@@ -48,7 +48,7 @@ Deferred, product-dependent: **Paid Ads (ROAS)** and **Influencer (STAR)** — c
 |---|---|
 | T16 zero-trust federation | Federating one laptop with itself; both source-verified analyses scored 2 |
 | T15 Raft/Byzantine/Gossip consensus | ruflo ships topology metadata; consensus lives in alpha libraries; own audit grades claims fabricated |
-| A14 queen/swarm-leader agent | AutomationEngine in a costume; ruflo's `agent_spawn` writes a record, doesn't spawn |
+| A14 queen/swarm-leader agent | AutomationEngine in a costume; ruflo's `agent_spawn` writes a record, doesn't spawn. **Revisit triggers (2026-08-02, D1)**: reconsider a standing coordinator only when (a) Pack 4 specialist packs land and label-routing proves insufficient, (b) cross-pipeline prioritization under budget is needed, or (c) `scores.json` gains a consumer enabling outcome-informed routing. |
 | P14 GOAP A* planning | README-only, zero code corroboration; five columns and a groomer don't need A* |
 | P17 Ed25519 hash-chained receipts | Single owner — you are the threat model. (Plain policy receipts ship with P3) |
 | O15 quantization / cross-cloud | Wrong scale; benchmarks self-graded fabricated |

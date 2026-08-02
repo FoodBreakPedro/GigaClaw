@@ -27,6 +27,33 @@ public sealed class AgentRun
     public DateTime? EndedAt { get; set; }
     public int? ExitCode { get; set; }
 
+    /// <summary>
+    /// Plan 2.2 — id of the GigaClaw host process that owns this run, stamped at construction and
+    /// persisted with the snapshot. Together with <see cref="HostProcessStartTime"/> this is the
+    /// liveness signal, and the only one: a loaded run is alive if and only if the process that
+    /// registered it is still running. The claude subprocess's own pid (<see cref="ProcessId"/>)
+    /// cannot answer that question — it is null until the spawn succeeds, it is recycled by the OS,
+    /// and a surviving orphan subprocess is still a dead run because the host lost its stdout pipe
+    /// and can never complete it. See <see cref="AgentRunRegistry.IsHostAlive"/> for the rule.
+    /// </summary>
+    public int HostProcessId { get; init; } = Environment.ProcessId;
+
+    /// <summary>
+    /// Start time (UTC) of the host process named by <see cref="HostProcessId"/>. A pid alone is
+    /// not an identity — the OS recycles it, so an unrelated process wearing a dead host's number
+    /// would make an orphaned run look alive forever. The pair is unique for as long as it matters.
+    /// Null on a snapshot written before this field existed: unknowable, therefore dead.
+    /// </summary>
+    public DateTime? HostProcessStartTime { get; init; } = AgentRunRegistry.CurrentHostStartTime;
+
+    /// <summary>
+    /// Pid of the claude subprocess once spawned, recorded for diagnosis only — a reconciled run
+    /// names the process an operator may still have to kill by hand on platforms without
+    /// <see cref="ProcessJobObject"/>'s kill-on-close containment (i.e. everything but Windows).
+    /// Never used as a liveness signal: see <see cref="HostProcessId"/>.
+    /// </summary>
+    public int? ProcessId { get; set; }
+
     // Token usage accumulated from the claude CLI's terminal `result` events. A single AgentRun
     // can spawn several subprocesses (resume retry, quota fallback, chat steer replay), each
     // emitting its own result event, so these are sums — not the last event's values.
@@ -125,6 +152,15 @@ public sealed class AgentRunSnapshot
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public AgentRunStatus Status { get; set; }
     public int? ExitCode { get; set; }
+    /// <summary>See <see cref="AgentRun.HostProcessId"/>. A snapshot written before Plan 2.2 has no
+    /// such field and deserializes to 0, which matches no live process — an unknowable owner is
+    /// treated as dead, never as alive.</summary>
+    public int HostProcessId { get; set; }
+    /// <summary>See <see cref="AgentRun.HostProcessStartTime"/>. Absent on pre-Plan-2.2 snapshots,
+    /// which therefore read as dead rather than as owned by whatever wears the pid today.</summary>
+    public DateTime? HostProcessStartTime { get; set; }
+    /// <summary>See <see cref="AgentRun.ProcessId"/>. Diagnostic only.</summary>
+    public int? ProcessId { get; set; }
     public int InputTokens { get; set; }
     public int OutputTokens { get; set; }
     public int CacheReadTokens { get; set; }
@@ -169,6 +205,9 @@ public sealed class RunLogStore
             ExternalRunId = run.ExternalRunId,
             Status = run.Status,
             ExitCode = run.ExitCode,
+            HostProcessId = run.HostProcessId,
+            HostProcessStartTime = run.HostProcessStartTime,
+            ProcessId = run.ProcessId,
             InputTokens = run.InputTokens,
             OutputTokens = run.OutputTokens,
             CacheReadTokens = run.CacheReadTokens,
@@ -210,7 +249,10 @@ public sealed class RunLogStore
                 SkillFile = snapshot.SkillFile,
                 ConcurrencyGroup = snapshot.ConcurrencyGroup,
                 StartedAt = snapshot.StartedAt,
+                HostProcessId = snapshot.HostProcessId,
+                HostProcessStartTime = snapshot.HostProcessStartTime,
             };
+            run.ProcessId = snapshot.ProcessId;
             run.SessionId = snapshot.SessionId;
             run.Model = snapshot.Model;
             run.ChatTarget = snapshot.ChatTarget;
@@ -240,17 +282,74 @@ public sealed class AgentRunRegistry
     public event Action<AgentRun>? OnRunStarted;
     public event Action<AgentRun>? OnRunEnded;
 
+    /// <summary>
+    /// Start time (UTC) of this process, read once. Stamped onto every run alongside
+    /// <see cref="Environment.ProcessId"/> so a later host can tell "the owner is still running"
+    /// from "something else now wears that pid". Unreadable on a locked-down host — then no run
+    /// this process writes can ever be proven alive, which is the safe direction.
+    /// </summary>
+    internal static readonly DateTime? CurrentHostStartTime = ReadCurrentHostStartTime();
+
+    private static DateTime? ReadCurrentHostStartTime()
+    {
+        try { using var self = System.Diagnostics.Process.GetCurrentProcess(); return self.StartTime.ToUniversalTime(); }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// The one liveness rule in the system. A run loaded from disk is alive only while the host
+    /// process that registered it is still running — identified by pid <em>and</em> start time,
+    /// because a pid on its own is recycled and an unrelated process wearing a dead host's number
+    /// would keep an orphaned run "Running" (and its concurrency group shut) forever. Anything
+    /// unknowable — pid 0 from a pre-Plan-2.2 snapshot, a missing start time, a process the OS will
+    /// not describe — reads as dead: terminalizing a live run costs one re-dispatch, while
+    /// resurrecting a dead one deadlocks a dispatch lane until someone restarts the app.
+    /// </summary>
+    public static bool IsHostAlive(AgentRun run)
+    {
+        if (run.HostProcessId <= 0 || run.HostProcessStartTime is not DateTime startedAt) return false;
+        try
+        {
+            using var host = System.Diagnostics.Process.GetProcessById(run.HostProcessId);
+            if (host.HasExited) return false;
+            // Same pid AND same birth instant: the clocks agree to the second at best, so compare
+            // with a tolerance rather than for equality.
+            return Math.Abs((host.StartTime.ToUniversalTime() - startedAt).TotalSeconds) <= 2;
+        }
+        catch
+        {
+            // No such process, or the OS refuses to describe it. Either way this host cannot prove
+            // the run is alive, and an unprovable run is treated as orphaned.
+            return false;
+        }
+    }
+
     public AgentRunRegistry() { }
 
-    public AgentRunRegistry(RunLogStore store)
+    public AgentRunRegistry(RunLogStore store) : this(store, null) { }
+
+    /// <summary>
+    /// Loads persisted runs and terminalizes the orphans among them. Runs are persisted at
+    /// <see cref="Register"/>, not only at completion (Plan 2.2), so a host that dies mid-dispatch
+    /// leaves a <see cref="AgentRunStatus.Running"/> snapshot behind. That snapshot is not
+    /// cosmetic: <see cref="HasActiveInGroup"/> and <see cref="ActiveForTicket"/> key off it, so one
+    /// stale record holds a concurrency group — and its agent's whole dispatch lane — shut for as
+    /// long as this process lives. Marking it Stopped here releases both.
+    /// <para>
+    /// It is a <em>conditional</em> reconciliation, not a blanket one: several GigaClaw instances
+    /// can share a data dir (the devcheck launch config shares the main one), and a blanket rule
+    /// would let a starting instance stamp Stopped over another instance's genuinely in-flight
+    /// runs. <paramref name="isHostAlive"/> overrides the probe for tests; production always uses
+    /// <see cref="IsHostAlive"/>.
+    /// </para>
+    /// </summary>
+    public AgentRunRegistry(RunLogStore store, Func<AgentRun, bool>? isHostAlive)
     {
         _store = store;
+        var alive = isHostAlive ?? IsHostAlive;
         foreach (var run in store.LoadAll())
         {
-            // A live run is never persisted — any snapshot with Status=Running is stale
-            // (process exited before Complete was called). Reconcile to Stopped so the UI
-            // never shows permanently-Running runs after a restart.
-            if (run.Status == AgentRunStatus.Running)
+            if (run.Status == AgentRunStatus.Running && !alive(run))
             {
                 run.Status = AgentRunStatus.Stopped;
                 run.EndedAt = DateTime.UtcNow;
@@ -263,8 +362,33 @@ public sealed class AgentRunRegistry
     public AgentRun Register(AgentRun run)
     {
         _runs[run.RunId] = run;
+        // Plan 2.2: persist the run the moment it starts, not only when it ends. Until now a host
+        // that died mid-dispatch left no trace of the run at all — it simply vanished from history,
+        // and nothing downstream could tell "never happened" from "crashed halfway". The in-flight
+        // snapshot is what makes an orphan detectable (and reconcilable) after a restart.
+        Persist(run);
         OnRunStarted?.Invoke(run);
         return run;
+    }
+
+    /// <summary>
+    /// Writes the run's current state to the log store, if one is configured. Called at
+    /// registration, whenever a durable field changes mid-run (the subprocess pid), and at
+    /// completion. A no-op for registries built without a store, as the tests' are.
+    /// </summary>
+    public void Persist(AgentRun run)
+    {
+        try { _store?.Save(run); }
+        catch { /* run-log persistence is best-effort; never fail a dispatch over it */ }
+    }
+
+    /// <summary>Records the claude subprocess pid on a live run and persists it. Diagnostic only —
+    /// see <see cref="AgentRun.ProcessId"/>.</summary>
+    public void NoteProcessId(string runId, int processId)
+    {
+        if (!_runs.TryGetValue(runId, out var run)) return;
+        run.ProcessId = processId;
+        Persist(run);
     }
 
     public void Complete(string runId, AgentRunStatus status, int? exitCode)

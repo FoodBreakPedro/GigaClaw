@@ -78,49 +78,108 @@ public class TemplateVerdictGateTests
             "blog-reviewer");
 
         var ship = harness.Automation("verdict-gate-blog-ship-to-seo");
-        var escalate = harness.Automation("verdict-gate-block-escalate");
+        var retry = harness.Automation("verdict-gate-blog-reviewer-retry");
+        // Per-reviewer arm, not a shared one: another reviewer's receipts must never exhaust
+        // blog-reviewer's own first attempt on the same ticket.
+        var exhausted = harness.Automation("verdict-gate-blog-reviewer-retry-exhausted");
         var firing = Harness.Firing(ticket.Id);
         Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, ship, firing));
-        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, escalate, firing));
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, retry, firing));
 
         // Someone edits the approved draft after the review.
         harness.WriteArtifact(runtime, "content/posts/agents.md", "edited after the review\n");
 
+        // Phase 1.2 (return-to-sender): a stale judgement is the reviewer's problem, so the first
+        // firing asks blog-reviewer for a fresh review rather than parking the ticket on the owner.
         Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, ship, firing));
-        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, escalate, firing));
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, retry, firing));
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, exhausted, firing));
 
-        await harness.Executor.ExecuteAutomationAsync(runtime, escalate, firing, CancellationToken.None);
+        // Spending the retry (the receipt the retry arm posts) swaps the arms over.
+        await harness.CommentAsync(
+            ticket.Id, ReviewerRetry.RenderReceipt(ticket.Id, "blog-reviewer"), "automation");
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, retry, firing));
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, exhausted, firing));
+
+        await harness.Executor.ExecuteAutomationAsync(runtime, exhausted, firing, CancellationToken.None);
         var after = (await harness.Tickets.GetTicketAsync(runtime.Slug, ticket.Id))!;
         Assert.Equal("Blocked", after.Status);
+        Assert.Equal("owner", after.AssignedTo);
     }
 
     // ── The loud-fail modes ─────────────────────────────────────────────────
 
-    /// <summary>The explicit C2 criterion: prose is not a pass.</summary>
+    /// <summary>
+    /// The explicit C2 criterion: prose is not a pass. Phase 1.2 puts one bounded reviewer retry in
+    /// front of the block — the reviewer, not the author, is the one that failed to report — and
+    /// this walks the whole path: re-review once, then block with a receipt and an owner.
+    /// </summary>
     [Fact]
-    public async Task A_prose_only_review_blocks_the_ticket_with_a_receipt()
+    public async Task A_prose_only_review_is_re_reviewed_once_then_blocks_with_a_receipt()
     {
         using var tmp = new TempDir();
         var harness = new Harness(tmp.Path);
-        var (runtime, ticket) = await harness.SeedAsync("gate-qa-prose", "programmer");
+        var (runtime, ticket) = await harness.SeedAsync("gate-qa-prose", "programmer", "qa-tester");
 
         await harness.CommentAsync(ticket.Id, "PASS — looks good to me, 93/100. Shipping it.", "qa-tester");
 
         var ship = harness.Automation("verdict-gate-qa-ship-to-done");
-        var escalate = harness.Automation("verdict-gate-qa-block-escalate");
+        var retry = harness.Automation("verdict-gate-qa-reviewer-retry");
+        var exhausted = harness.Automation("verdict-gate-qa-reviewer-retry-exhausted");
+        var block = harness.Automation("verdict-gate-qa-block-escalate");
         var firing = Harness.Firing(ticket.Id);
 
         Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, ship, firing));
-        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, escalate, firing));
+        // A MISSING verdict is not a deliberate BLOCK: the immediate-escalation arm stands down.
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, block, firing));
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, retry, firing));
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, exhausted, firing));
 
-        await harness.Executor.ExecuteAutomationAsync(runtime, escalate, firing, CancellationToken.None);
+        // The retry receipt is what spends the budget, and it is recounted from the ticket.
+        await harness.CommentAsync(
+            ticket.Id, ReviewerRetry.RenderReceipt(ticket.Id, "qa-tester"), "automation");
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, retry, firing));
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, exhausted, firing));
+
+        await harness.Executor.ExecuteAutomationAsync(runtime, exhausted, firing, CancellationToken.None);
 
         var after = (await harness.Tickets.GetTicketAsync(runtime.Slug, ticket.Id))!;
         Assert.Equal("Blocked", after.Status);
+        Assert.Equal("owner", after.AssignedTo);
         var receipt = after.Comments.Last();
         Assert.Equal("automation", receipt.Author);
         Assert.StartsWith($"GIGACLAW-GATE v1 ticket-{ticket.Id} blocked", receipt.Content, StringComparison.Ordinal);
         Assert.Contains("MISSING", receipt.Content, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The blocking receipt closes the episode, so an owner who unblocks the ticket hands the
+    /// reviewer a fresh retry rather than a permanently spent one — the same contract the repair
+    /// loop keeps for its own escalation receipt.
+    /// </summary>
+    [Fact]
+    public async Task A_block_receipt_hands_the_reviewer_a_fresh_retry_budget()
+    {
+        using var tmp = new TempDir();
+        var harness = new Harness(tmp.Path);
+        var (runtime, ticket) = await harness.SeedAsync("gate-qa-retry-reset", "programmer", "qa-tester");
+
+        await harness.CommentAsync(ticket.Id, "no verdict here, just prose", "qa-tester");
+        var retry = harness.Automation("verdict-gate-qa-reviewer-retry");
+        var exhausted = harness.Automation("verdict-gate-qa-reviewer-retry-exhausted");
+        var firing = Harness.Firing(ticket.Id);
+
+        await harness.CommentAsync(
+            ticket.Id, ReviewerRetry.RenderReceipt(ticket.Id, "qa-tester"), "automation");
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, exhausted, firing));
+
+        // The owner hands the ticket back: same column, same producer, still no usable verdict.
+        await harness.Executor.ExecuteAutomationAsync(runtime, exhausted, firing, CancellationToken.None);
+        await harness.Tickets.MoveTicketAsync(runtime.Slug, ticket.Id, "Review", "owner");
+        await harness.Tickets.UpdateTicketAsync(runtime.Slug, ticket.Id, assignedTo: "programmer", author: "owner");
+
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, retry, firing));
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, exhausted, firing));
     }
 
     [Fact]
@@ -140,7 +199,7 @@ public class TemplateVerdictGateTests
         Assert.False(await harness.Executor.ConditionsMatchAsync(
             runtime, harness.Automation("verdict-gate-qa-ship-to-done"), firing));
         Assert.True(await harness.Executor.ConditionsMatchAsync(
-            runtime, harness.Automation("verdict-gate-qa-block-escalate"), firing));
+            runtime, harness.Automation("verdict-gate-qa-reviewer-retry"), firing));
     }
 
     /// <summary>A verdict the marker line disagrees with is not a verdict.</summary>
@@ -159,7 +218,7 @@ public class TemplateVerdictGateTests
         Assert.False(await harness.Executor.ConditionsMatchAsync(
             runtime, harness.Automation("verdict-gate-qa-ship-to-done"), firing));
         Assert.True(await harness.Executor.ConditionsMatchAsync(
-            runtime, harness.Automation("verdict-gate-qa-block-escalate"), firing));
+            runtime, harness.Automation("verdict-gate-qa-reviewer-retry"), firing));
     }
 
     // ── FIX and the bounded repair loop ─────────────────────────────────────
@@ -169,7 +228,7 @@ public class TemplateVerdictGateTests
     {
         using var tmp = new TempDir();
         var harness = new Harness(tmp.Path);
-        var (runtime, ticket) = await harness.SeedAsync("gate-qa-repair", "programmer");
+        var (runtime, ticket) = await harness.SeedAsync("gate-qa-repair", "programmer", "groomer");
 
         var repair = harness.Automation("verdict-gate-qa-repair-round");
         var escalate = harness.Automation("verdict-gate-qa-repair-exhausted");
@@ -194,13 +253,122 @@ public class TemplateVerdictGateTests
 
         await harness.Executor.ExecuteAutomationAsync(runtime, escalate, firing, CancellationToken.None);
 
+        // Phase 1.3: a spent repair budget re-scopes through the groomer instead of paging the
+        // owner — Blocked is reserved for "a human must decide".
         var after = (await harness.Tickets.GetTicketAsync(runtime.Slug, ticket.Id))!;
-        Assert.Equal("Blocked", after.Status);
-        var escalation = after.Comments.Last().Content;
+        Assert.Equal("Backlog", after.Status);
+        Assert.Equal("groomer", after.AssignedTo);
+        var escalation = after.Comments.Last(c => c.Author == "automation").Content;
         Assert.StartsWith($"GIGACLAW-REPAIR v1 ticket-{ticket.Id} escalated 2/2", escalation, StringComparison.Ordinal);
         Assert.Contains("failing-acceptance-criterion", escalation, StringComparison.Ordinal);
         Assert.Contains("failing-adversarial-test", escalation, StringComparison.Ordinal);
         Assert.DoesNotContain("{verdictHistory}", escalation, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Phase 1.6: the `extended-repair` label buys a ticket more repair rounds without an engine
+    /// change — the arms are duplicated and the base pair stands down for the label. At round three
+    /// (past the contract default of 2) only the extended repair arm may fire: if the base
+    /// exhaustion arm also matched, one FIX verdict would both re-dispatch the author and re-scope
+    /// the ticket through the groomer.
+    /// </summary>
+    [Fact]
+    public async Task The_extended_repair_label_buys_rounds_the_default_cap_would_have_spent()
+    {
+        using var tmp = new TempDir();
+        var harness = new Harness(tmp.Path);
+        var (runtime, ticket) = await harness.SeedAsync("gate-qa-extended", "programmer", "groomer");
+
+        var baseRound = harness.Automation("verdict-gate-qa-repair-round");
+        var baseExhausted = harness.Automation("verdict-gate-qa-repair-exhausted");
+        var extRound = harness.Automation("verdict-gate-qa-repair-round-extended");
+        var extExhausted = harness.Automation("verdict-gate-qa-repair-exhausted-extended");
+        var firing = Harness.Firing(ticket.Id);
+
+        foreach (var round in new[] { "round-one", "round-two", "round-three" })
+        {
+            await harness.CommentAsync(
+                ticket.Id, Verdict("qa-tester", "FIX", seed: round, veto: "failing-acceptance-criterion"), "qa-tester");
+        }
+
+        // Unlabeled: three FIX rounds against a cap of two is spent, and the extended arms are inert.
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, baseRound, firing));
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, baseExhausted, firing));
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, extRound, firing));
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, extExhausted, firing));
+
+        var label = await harness.Labels.CreateLabelAsync(runtime.Slug, "extended-repair", "#888888");
+        await harness.Tickets.PatchTicketLabelsAsync(runtime.Slug, ticket.Id, [label.Id], [], "groomer");
+
+        // Labeled: the base pair stands down entirely and the raised cap still has a round left.
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, baseRound, firing));
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, baseExhausted, firing));
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, extRound, firing));
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, extExhausted, firing));
+
+        await harness.CommentAsync(
+            ticket.Id, Verdict("qa-tester", "FIX", seed: "round-four", veto: "failing-adversarial-test"), "qa-tester");
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, extRound, firing));
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, extExhausted, firing));
+    }
+
+    /// <summary>
+    /// The funded-loop stop, end to end. Exhaustion sends the ticket back to Backlog owned by the
+    /// groomer, and that hand-off resets everything that bounds the loop — the trigger's attempt
+    /// counter (the groomer edits the ticket) and the repair budget (the escalation receipt closes
+    /// the episode). So the first lap has to leave a mark the second lap can see, or a ticket
+    /// nobody can specify is re-scoped and re-run forever at real cost. The mark is the `triaged`
+    /// label: one automated lap, then a person.
+    /// </summary>
+    [Fact]
+    public async Task A_second_exhaustion_after_triage_goes_to_the_owner_instead_of_the_groomer()
+    {
+        using var tmp = new TempDir();
+        var harness = new Harness(tmp.Path);
+        var (runtime, ticket) = await harness.SeedAsync("gate-qa-triage-lap", "programmer", "groomer");
+
+        var firstLap = harness.Automation("verdict-gate-qa-repair-exhausted");
+        var secondLap = harness.Automation("verdict-gate-qa-repair-exhausted-triaged");
+        var firing = Harness.Firing(ticket.Id);
+
+        foreach (var round in new[] { "round-one", "round-two" })
+        {
+            await harness.CommentAsync(
+                ticket.Id, Verdict("qa-tester", "FIX", seed: round, veto: "failing-acceptance-criterion"), "qa-tester");
+        }
+
+        // Lap one: no `triaged` label yet, so the groomer gets its shot and the terminal arm is inert.
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, firstLap, firing));
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, secondLap, firing));
+
+        await harness.Executor.ExecuteAutomationAsync(runtime, firstLap, firing, CancellationToken.None);
+
+        var afterLapOne = (await harness.Tickets.GetTicketAsync(runtime.Slug, ticket.Id))!;
+        Assert.Equal("Backlog", afterLapOne.Status);
+        Assert.Equal("groomer", afterLapOne.AssignedTo);
+        Assert.Contains(afterLapOne.Labels, l => l.Name == "triaged");
+
+        // The groomer re-scopes and sends it round again; it exhausts a second time.
+        await harness.Tickets.MoveTicketAsync(runtime.Slug, ticket.Id, "Review", "groomer");
+        await harness.Tickets.UpdateTicketAsync(runtime.Slug, ticket.Id, assignedTo: "programmer", author: "groomer");
+        foreach (var round in new[] { "round-three", "round-four" })
+        {
+            await harness.CommentAsync(
+                ticket.Id, Verdict("qa-tester", "FIX", seed: round, veto: "failing-adversarial-test"), "qa-tester");
+        }
+
+        // Lap two: the label is on, so the arms have swapped — no second funded re-scoping.
+        Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, firstLap, firing));
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, secondLap, firing));
+
+        await harness.Executor.ExecuteAutomationAsync(runtime, secondLap, firing, CancellationToken.None);
+
+        var afterLapTwo = (await harness.Tickets.GetTicketAsync(runtime.Slug, ticket.Id))!;
+        Assert.Equal("Blocked", afterLapTwo.Status);
+        Assert.Equal("owner", afterLapTwo.AssignedTo);
+        var receipt = afterLapTwo.Comments.Last(c => c.Author == "automation").Content;
+        Assert.Contains("triaged", receipt, StringComparison.Ordinal);
+        Assert.DoesNotContain("{verdictHistory}", receipt, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -215,12 +383,12 @@ public class TemplateVerdictGateTests
         var (runtime, ticket) = await harness.SeedAsync("gate-qa-routed", "programmer");
 
         await harness.CommentAsync(ticket.Id, "no verdict here, just prose", "qa-tester");
-        var escalate = harness.Automation("verdict-gate-qa-block-escalate");
-        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, escalate, Harness.Firing(ticket.Id)));
+        var retry = harness.Automation("verdict-gate-qa-reviewer-retry");
+        Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, retry, Harness.Firing(ticket.Id)));
 
         await harness.Tickets.MoveTicketAsync(runtime.Slug, ticket.Id, "Todo", "qa-tester");
         Assert.False(await harness.Executor.ConditionsMatchAsync(
-            runtime, escalate, new TriggerFiring(ticket.Id, "Ship the change", "Todo")));
+            runtime, retry, new TriggerFiring(ticket.Id, "Ship the change", "Todo")));
     }
 
     /// <summary>
@@ -239,9 +407,10 @@ public class TemplateVerdictGateTests
         var firing = Harness.Firing(ticket.Id);
         Assert.False(await harness.Executor.ConditionsMatchAsync(
             runtime, harness.Automation("verdict-gate-qa-ship-to-done"), firing));
-        // The qa pipeline reads it as MISSING — no qa-tester verdict exists — and blocks.
+        // The qa pipeline reads it as MISSING — no qa-tester verdict exists — and sends the review
+        // back to qa-tester rather than letting another agent's judgement stand in for its own.
         Assert.True(await harness.Executor.ConditionsMatchAsync(
-            runtime, harness.Automation("verdict-gate-qa-block-escalate"), firing));
+            runtime, harness.Automation("verdict-gate-qa-reviewer-retry"), firing));
     }
 
     // ── Fixtures ────────────────────────────────────────────────────────────
@@ -309,6 +478,7 @@ public class TemplateVerdictGateTests
         public ProjectService Projects { get; }
         public TicketService Tickets { get; }
         public MemberService Members { get; }
+        public LabelService Labels { get; }
         public ActionExecutor Executor { get; }
         public AutomationConfig Config { get; }
         private string _slug = "";
@@ -325,8 +495,9 @@ public class TemplateVerdictGateTests
             var runs = new AgentRunRegistry();
             var sessions = new SessionRegistry();
             var cost = new CostTracker();
+            Labels = new LabelService(Projects);
             Executor = new ActionExecutor(
-                Tickets, members, new LabelService(Projects), sessions, runs,
+                Tickets, members, Labels, sessions, runs,
                 new ClaudeRunner(sessions, runs, new RunConcurrencyGate(1), NullLogger<ClaudeRunner>.Instance),
                 cost, new LocalizationService(new AppSettingsService(root)), Projects,
                 new RunStateManager(runs, cost, Tickets, NullLogger.Instance),

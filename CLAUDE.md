@@ -14,7 +14,11 @@ Keep the `dotnet watch` process running — it serves the UI and the automation 
 
 ### Debug instance (isolated)
 
-To verify changes end-to-end without touching the main instance or spending tokens, use the `gigaclaw-web-debug` launch config (`.claude/launch.json`): port **5232**, data dir `%APPDATA%/GigaClaw-debug` (own registry/projects/runs), and the **mock claude CLI** (`GigaClaw.ClaudeMock`, built on start and injected via `GIGACLAW_CLAUDE_BIN`) so agent dispatches replay canned NDJSON scenarios instead of calling the real CLI. Never verify against the main instance on :5230 — it runs the user's real projects and live agent runs. Note: `gigaclaw-web-devcheck` (:5231) shares the main data dir — its AutomationEngine dispatches REAL agents on real projects; prefer `gigaclaw-web-debug`.
+To verify changes end-to-end without touching the main instance or spending tokens, use the `gigaclaw-web-debug` launch config (`.claude/launch.json`): port **5232**, isolated data dir `GigaClaw-debug` under the platform app-data root (`%APPDATA%` on Windows, `~/Library/Application Support` on macOS, `~/.config` on Linux — own registry/projects/runs), and the **mock claude CLI** (`GigaClaw.ClaudeMock`, built on start and injected via `GIGACLAW_CLAUDE_BIN`) so agent dispatches replay canned NDJSON scenarios instead of calling the real CLI. The entry runs `tools/run-debug-instance.cs` via `dotnet run` (a .NET 10 file-based app), so it works identically on Windows, macOS, and Linux; it can also be started manually from the repo root:
+
+```
+dotnet run tools/run-debug-instance.cs
+``` Never verify against the main instance on :5230 — it runs the user's real projects and live agent runs. Note: `gigaclaw-web-devcheck` (:5231) shares the main data dir — its AutomationEngine dispatches REAL agents on real projects; prefer `gigaclaw-web-debug`.
 
 ## Repository layout
 

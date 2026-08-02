@@ -34,6 +34,13 @@ public record TicketSummary(
 
     /// <summary>Tickets that cannot proceed until this ticket completes.</summary>
     public List<TicketDependencyInfo> Blocks { get; init; } = [];
+
+    /// <summary>
+    /// Short (~60 char) reason extracted from the newest <c>GIGACLAW-GATE v1</c>/<c>GIGACLAW-REPAIR v1</c>
+    /// comment on this ticket. Populated only for tickets in the Blocked status; null otherwise.
+    /// See <see cref="Services.TicketService"/>'s blocked-reason extraction.
+    /// </summary>
+    public string? BlockedReason { get; init; }
 }
 
 public record SubTicketInfo(int Id, string Title, string Status, string? AssignedTo);

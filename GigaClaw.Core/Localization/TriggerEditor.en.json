@@ -42,5 +42,10 @@
   "ParentColumnOptional": "Parent tickets column (optional)",
   "AllColumns": "— all —",
   "IdleColumnsHint": "Columns considered \"idle\" (the board is idle when all tickets are in these)",
-  "InactivityMinutes": "Minutes of inactivity before triggering"
+  "InactivityMinutes": "Minutes of inactivity before triggering",
+  "UnassignedOnly": "Only unassigned tickets",
+  "UnassignedOnlyHint": "Fires only for tickets with no assignee at all — the intake case. An empty assignee picker means “any assignee”, which is not the same thing, so the picker is disabled while this is on.",
+  "ExhaustedAssignee": "Hand over to, when attempts run out",
+  "ExhaustedAssigneeHint": "Reassigned once when the consecutive-firing cap is reached, before the column move. Point it at a triage member, never at the agent this automation dispatches, or exhaustion feeds straight back into the dispatch that failed.",
+  "ExhaustedAssigneeNone": "— leave the assignee alone —"
 }

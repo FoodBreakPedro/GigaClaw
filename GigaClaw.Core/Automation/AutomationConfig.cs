@@ -6,6 +6,28 @@ public sealed class AutomationConfig
 {
     public List<Automation> Automations { get; set; } = new();
     public decimal? DailyBudgetUsd { get; set; }
+
+    /// <summary>
+    /// Plan 2.1 — per-ticket spend ceiling, in USD. <see cref="DailyBudgetUsd"/>'s per-ticket
+    /// sibling: the daily budget stops the whole project once the day's spend is gone, which is no
+    /// help against a single ticket that loops an agent all afternoon while the rest of the board
+    /// stays cheap. Measured against the ticket's own accumulated <c>Ticket.AgentCostUsd</c>
+    /// (written by <c>RunCostRecorder</c> → <c>TicketService.AddAgentUsageAsync</c>), so it is
+    /// durable and survives a restart — nothing is counted in engine memory.
+    /// <para>
+    /// Null is the one way to disable the cap; every value from <c>0</c> up is enforced, because
+    /// "this ticket gets no further spend" is a thing an owner may want to say and must not be read
+    /// as "unlimited". The shipped template sets a conservative default rather than leaving it
+    /// unset, so a new project's triage loops are bounded from the first dispatch.
+    /// Enforced in <see cref="RunStateManager.ShouldSkipAsync"/>,
+    /// which on breach skips the dispatch, posts one <see cref="TicketCostCap.MarkerPrefix"/> receipt
+    /// and hands the ticket to <see cref="TicketCostCap.TriageAgent"/>. The cap has <b>no</b> agent
+    /// exemption — unlike the daily budget's <c>ceo</c> escape hatch — see
+    /// <see cref="TicketCostCap"/> for why.
+    /// </para>
+    /// </summary>
+    public decimal? MaxTicketCostUsd { get; set; }
+
     public int? MinDescriptionLength { get; set; }
 }
 
@@ -52,6 +74,12 @@ public sealed class TicketInColumnTriggerSpec : TriggerSpec
     public int Seconds { get; set; } = 30;
     public List<string> Columns { get; set; } = new();
     public string? AssigneeSlug { get; set; }
+    /// <summary>
+    /// Narrows the trigger to tickets that carry no assignee at all — the intake case, which
+    /// <see cref="AssigneeSlug"/> cannot express (an empty slug there means "any assignee").
+    /// Setting both is a contradiction and deliberately matches nothing rather than picking one.
+    /// </summary>
+    public bool Unassigned { get; set; }
     public int DebounceSeconds { get; set; } = 0;
     /// <summary>
     /// Maximum number of consecutive action-chain completions while a ticket remains
@@ -69,6 +97,15 @@ public sealed class TicketInColumnTriggerSpec : TriggerSpec
     /// is reached. The ticket service validates that the configured column exists.
     /// </summary>
     public string? ExhaustedStatus { get; set; }
+    /// <summary>
+    /// Optional member slug the ticket is reassigned to exactly once when the consecutive firing
+    /// cap is reached, applied before <see cref="ExhaustedStatus"/> so the ticket lands in its new
+    /// column already owned by whoever has to triage it. An unknown slug is logged and skipped —
+    /// exhaustion handling never fails the trigger. Point this at a triage agent rather than at the
+    /// agent the exhausted automation itself dispatches, or exhaustion feeds straight back into the
+    /// same dispatch.
+    /// </summary>
+    public string? ExhaustedAssignee { get; set; }
     /// <summary>Optional automation-authored comment added once when the cap is reached.</summary>
     public string? ExhaustedComment { get; set; }
 }
@@ -164,6 +201,7 @@ public sealed class GitHubCheckStatusTriggerSpec : TriggerSpec
 [JsonDerivedType(typeof(TicketCountInColumnConditionSpec), "ticketCountInColumn")]
 [JsonDerivedType(typeof(VerdictIsConditionSpec), "verdictIs")]
 [JsonDerivedType(typeof(RepairBudgetConditionSpec), "repairBudget")]
+[JsonDerivedType(typeof(ReviewerRetryBudgetConditionSpec), "reviewerRetryBudget")]
 [JsonDerivedType(typeof(DependenciesResolvedConditionSpec), "dependenciesResolved")]
 public abstract class ConditionSpec
 {
@@ -308,6 +346,49 @@ public sealed class RepairBudgetConditionSpec : ConditionSpec
     /// rather than loops.
     /// </summary>
     public int? MaxCycles { get; set; }
+}
+
+/// <summary>
+/// The cap half of the bounded <b>reviewer</b> retry (see <c>doc/verdict-contract.md</c>). Pairs
+/// with <c>verdictIs: ["INVALID", "STALE", "MISSING"]</c>: one automation carries
+/// <c>mode: "withinCap"</c> and re-dispatches the <em>reviewer</em>, its twin carries
+/// <c>mode: "exhausted"</c> and blocks the ticket for the owner.
+/// <para>
+/// <c>repairBudget</c>'s sibling, and deliberately a separate budget: a <c>FIX</c> is the author's
+/// problem, whereas an unreadable, absent or stale verdict is the <em>reviewer's</em> output
+/// failing — sending the work back to the author would punish the wrong agent. INVALID verdicts
+/// never spend a repair round (<see cref="Verdicts.RepairLoop"/> skips them), so without this
+/// second budget a flaky reviewer would block the ticket on its first bad answer.
+/// </para>
+/// <para>
+/// Like the repair budget, nothing is stored: the retries already spent are recounted from the
+/// ticket's comment trail on every evaluation — one per <c>GIGACLAW-REREVIEW v1</c> receipt since
+/// the last gate or repair-escalation receipt closed the episode — so it survives an engine restart
+/// and a resumed run cannot restart it.
+/// </para>
+/// </summary>
+public sealed class ReviewerRetryBudgetConditionSpec : ConditionSpec
+{
+    public override string UiTypeKey => "reviewerRetryBudget";
+
+    /// <summary><c>withinCap</c> (another reviewer pass is allowed) or <c>exhausted</c> (block).
+    /// Anything else matches nothing, so a typo stalls the ticket instead of looping it.</summary>
+    public string Mode { get; set; } = "withinCap";
+
+    /// <summary>
+    /// Only count retries of this reviewer, matching the reviewer slug the receipt names. Empty =
+    /// any reviewer. Name the reviewer literally: <c>{assignee}</c> resolves to the ticket's
+    /// assignee, which on a gated ticket is the <em>author</em> — a filter that would match no
+    /// receipt and hand the reviewer an endless supply of retries.
+    /// </summary>
+    public string? Agent { get; set; }
+
+    /// <summary>
+    /// Reviewer re-dispatches allowed per episode. The default of
+    /// <see cref="Verdicts.ReviewerRetry.DefaultMaxRetries"/> is deliberately one: a reviewer that
+    /// cannot produce a contract-valid verdict twice in a row is a defect, not a flake.
+    /// </summary>
+    public int MaxRetries { get; set; } = Verdicts.ReviewerRetry.DefaultMaxRetries;
 }
 
 /// <summary>

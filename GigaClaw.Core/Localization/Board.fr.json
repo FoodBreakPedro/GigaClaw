@@ -127,5 +127,15 @@
   "ScheduledForLabel": "Planifié :",
   "ScheduleEdit": "Modifier la planification",
   "ScheduleButton": "Planifier…",
-  "ScheduleNoDate": "Aucune date définie"
+  "ScheduleNoDate": "Aucune date définie",
+  "BlockedByPrefix": "bloqué par",
+  "BlockedBySection": "Bloqué par",
+  "Approvals": "Approbations",
+  "ApprovalsInboxTitle": "Boîte d'approbations",
+  "NoApprovals": "Aucun ticket en attente d'approbation.",
+  "Approve": "Approuver",
+  "Reject": "Rejeter",
+  "LabeledAgo": "Étiqueté il y a {0}",
+  "ApprovalConflict": "Le ticket #{0} a déjà quitté Revue — la liste a été actualisée.",
+  "RunsButtonLabel": "Exécutions"
 }

@@ -580,6 +580,11 @@ public sealed class ClaudeRunner : IAgentRunner
         run.Push(new StreamEvent(DateTime.UtcNow, "launch",
             $"{ctx.AgentName} {(isResume ? "(resume)" : "(new)")} session={sessionId[..8]} cwd={ctx.ExecutionPath ?? ctx.WorkspacePath} skill={ctx.SkillFile}"));
 
+        // Plan 2.2: record which OS process this run is currently driving, so a run orphaned by a
+        // host crash names the subprocess an operator may still have to kill by hand (the job-object
+        // containment above is Windows-only). Diagnostic — never a liveness signal, see AgentRun.ProcessId.
+        try { _runs.NoteProcessId(run.RunId, proc.Id); } catch { /* pid unavailable if it exited instantly */ }
+
         // Confine claude and every process it spawns to a job that is killed when we close it.
         // This is the root-cause guard against stuck runs: a process the agent backgrounds would
         // otherwise inherit claude's stdout/stderr pipe and outlive it, so the pipe never reaches

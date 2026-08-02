@@ -1,0 +1,73 @@
+@* Phase 3.4: shared run-history drawer, extracted from Automations.razor so the board's
+   "Runs" header button and the automations page's History button reuse the same markup
+   and behavior instead of maintaining two copies. *@
+@using GigaClaw.Web.Services
+@inject AgentRunsState RunsState
+@inject LocalizationService L
+
+@if (IsOpen)
+{
+    <div class="run-history-overlay" @onclick="() => OnClose.InvokeAsync()"></div>
+    <div class="run-history-drawer" @onclick:stopPropagation>
+        <div class="run-history-header">
+            <span class="run-history-title">@L["History"]</span>
+            <button class="agent-close-btn" @onclick="() => OnClose.InvokeAsync()" title="@L["Close"]">×</button>
+        </div>
+        <div class="run-history-list">
+            @{
+                var allRuns = RunsState.AllForProject(Slug)
+                    .Where(r => !(r.ConcurrencyGroup?.StartsWith("chat:") ?? false))
+                    .OrderByDescending(r => r.StartedAt)
+                    .ToList();
+                var visibleRuns = allRuns.Take(_historyCount).ToList();
+                var hasMore = allRuns.Count > _historyCount;
+            }
+            @if (allRuns.Count == 0)
+            {
+                <div class="run-history-empty">@L["NoRunHistory"]</div>
+            }
+            @foreach (var run in visibleRuns)
+            {
+                var statusCss = run.Status.ToString().ToLowerInvariant();
+                var duration = (run.EndedAt ?? DateTime.UtcNow) - run.StartedAt;
+                var durationStr = duration.TotalHours >= 1
+                    ? $"{(int)duration.TotalHours}h{duration.Minutes:D2}m"
+                    : duration.TotalMinutes >= 1
+                        ? $"{(int)duration.TotalMinutes}m{duration.Seconds:D2}s"
+                        : $"{duration.Seconds}s";
+                <button class="run-history-item" @onclick="() => OnOpenRun.InvokeAsync(run.RunId)">
+                    <span class="run-history-agent">@run.AgentName</span>
+                    @if (run.TicketId is not null)
+                    {
+                        <span class="run-history-ticket">#@run.TicketId</span>
+                    }
+                    <span class="agent-status agent-status-@statusCss run-history-status">@run.Status</span>
+                    <span class="run-history-meta">@run.StartedAt.ToLocalTime().ToString("dd/MM HH:mm") · @durationStr</span>
+                </button>
+            }
+            @if (hasMore)
+            {
+                <button class="run-history-load-more" @onclick="() => _historyCount += 30">@L["LoadMore"]</button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnOpenRun { get; set; }
+
+    private int _historyCount = 30;
+    private bool _wasOpen;
+
+    protected override void OnParametersSet()
+    {
+        // Reset pagination each time the drawer transitions from closed to open, matching
+        // the original Automations.razor OpenHistory() behavior.
+        if (IsOpen && !_wasOpen)
+            _historyCount = 30;
+        _wasOpen = IsOpen;
+    }
+}

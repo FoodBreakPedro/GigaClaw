@@ -72,6 +72,34 @@ public static partial class Endpoints
         }).Produces<CreateLocalMediaJobResult>(202).Produces<CreateLocalMediaJobResult>()
           .ProducesProblem(400);
 
+        media.MapPost("/jobs/{id}/stage", async (
+            string slug,
+            string id,
+            UpdateLocalMediaJobStageRequest request,
+            LocalMediaJobService service,
+            CancellationToken cancellationToken) =>
+        {
+            // Validation lives in the service (LocalMediaValidationException) and nowhere else, so a
+            // rule added there cannot go missing here. The three typed exceptions are the whole
+            // status-code map: missing thing → 404, bad request → 400, wrong state → 409.
+            try
+            {
+                return Results.Ok(await service.UpdateStageAsync(slug, id, request, cancellationToken));
+            }
+            catch (LocalMediaNotFoundException exception)
+            {
+                return Results.NotFound(new { error = exception.Message });
+            }
+            catch (LocalMediaValidationException exception)
+            {
+                return Results.BadRequest(new { error = exception.Message });
+            }
+            catch (InvalidOperationException exception)
+            {
+                return Results.Conflict(new { error = exception.Message });
+            }
+        }).Produces<LocalMediaJob>().ProducesProblem(400).ProducesProblem(404).ProducesProblem(409);
+
         media.MapPost("/jobs/{id}/cancel", async (
             string slug,
             string id,
@@ -79,17 +107,23 @@ public static partial class Endpoints
             LocalMediaJobService service,
             CancellationToken cancellationToken) =>
         {
-            if (string.IsNullOrWhiteSpace(request.Author))
-                return Results.BadRequest(new { error = "The 'author' field is required." });
             try
             {
                 return Results.Ok(await service.CancelAsync(slug, id, request.Author, cancellationToken));
+            }
+            catch (LocalMediaNotFoundException exception)
+            {
+                return Results.NotFound(new { error = exception.Message });
+            }
+            catch (LocalMediaValidationException exception)
+            {
+                return Results.BadRequest(new { error = exception.Message });
             }
             catch (InvalidOperationException exception)
             {
                 return Results.Conflict(new { error = exception.Message });
             }
-        }).Produces<LocalMediaJob>().ProducesProblem(400).ProducesProblem(409);
+        }).Produces<LocalMediaJob>().ProducesProblem(400).ProducesProblem(404).ProducesProblem(409);
 
         media.MapPost("/jobs/{id}/review", async (
             string slug,
@@ -98,8 +132,6 @@ public static partial class Endpoints
             LocalMediaJobService service,
             CancellationToken cancellationToken) =>
         {
-            if (string.IsNullOrWhiteSpace(request.Author))
-                return Results.BadRequest(new { error = "The 'author' field is required." });
             try
             {
                 return Results.Ok(await service.ReviewAsync(
@@ -109,10 +141,18 @@ public static partial class Endpoints
                     request.Author,
                     cancellationToken));
             }
+            catch (LocalMediaNotFoundException exception)
+            {
+                return Results.NotFound(new { error = exception.Message });
+            }
+            catch (LocalMediaValidationException exception)
+            {
+                return Results.BadRequest(new { error = exception.Message });
+            }
             catch (InvalidOperationException exception)
             {
                 return Results.Conflict(new { error = exception.Message });
             }
-        }).Produces<LocalMediaJob>().ProducesProblem(400).ProducesProblem(409);
+        }).Produces<LocalMediaJob>().ProducesProblem(400).ProducesProblem(404).ProducesProblem(409);
     }
 }

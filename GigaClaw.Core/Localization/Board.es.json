@@ -127,5 +127,15 @@
   "ScheduledForLabel": "Programado:",
   "ScheduleEdit": "Editar programación",
   "ScheduleButton": "Programar…",
-  "ScheduleNoDate": "Sin fecha establecida"
+  "ScheduleNoDate": "Sin fecha establecida",
+  "BlockedByPrefix": "bloqueado por",
+  "BlockedBySection": "Bloqueado por",
+  "Approvals": "Aprobaciones",
+  "ApprovalsInboxTitle": "Bandeja de aprobaciones",
+  "NoApprovals": "No hay tickets pendientes de aprobación.",
+  "Approve": "Aprobar",
+  "Reject": "Rechazar",
+  "LabeledAgo": "Etiquetado hace {0}",
+  "ApprovalConflict": "El ticket #{0} ya salió de Revisión — la lista se ha actualizado.",
+  "RunsButtonLabel": "Ejecuciones"
 }
