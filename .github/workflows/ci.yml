@@ -70,7 +70,10 @@ jobs:
 
       # T1/T2: committed catalog artifacts must remain deterministic. Enforces strict
       # five-part binding checks for every agent discovered in ProjectTemplate/Agents.
+      # Deterministic file/JSON check with no platform-dependent behavior (the CRLF bug class is
+      # caught by "Checkout is normalized" above), so one OS is enough.
       - name: Catalog drift check
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           dotnet run --project GigaClaw.Catalog -c Release --no-build -- generate
@@ -82,7 +85,9 @@ jobs:
       # core still carries known gaps — and, more importantly, stops a pack landing with any of
       # them. A pack that cannot meet the bar on its first commit is the anti-pattern the rule
       # exists to prevent, so this is unconditional for packs whatever mode core is in (owner Q2).
+      # Deterministic file/JSON check (see "Catalog drift check"), so one OS is enough.
       - name: Pack composition and strict binding gate
+        if: runner.os == 'Linux'
         shell: bash
         run: dotnet run --project GigaClaw.Catalog -c Release --no-build -- check --strict-packs
 
@@ -94,7 +99,9 @@ jobs:
 
       # T4: committed static baselines are the reviewed policy snapshot. Strict mode fails on
       # findings outside the baseline as well as on malformed inputs and baseline drift.
+      # Deterministic file/JSON check (see "Catalog drift check"), so one OS is enough.
       - name: Static agent eval
+        if: runner.os == 'Linux'
         shell: bash
         run: dotnet run --project GigaClaw.Eval -c Release --no-build -- all --strict
 
