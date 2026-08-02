@@ -35,6 +35,17 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # NuGet package cache. setup-dotnet's built-in `cache: true` requires committed
+      # packages.lock.json files, which this repo does not have, so cache the package folder
+      # directly, keyed per OS on the files that pin package versions.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
       # ProjectTemplate/** is embedded verbatim into GigaClaw.Core.dll and written byte-for-byte
       # into every workspace, so the bytes Git hands the build ARE the product. .gitattributes pins
       # eol=lf; this asserts the checkout honored it before anything downstream compares hashes and
