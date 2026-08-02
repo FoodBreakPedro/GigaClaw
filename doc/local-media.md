@@ -90,12 +90,40 @@ version control.
 - `GET /api/projects/{slug}/media/jobs`
 - `GET /api/projects/{slug}/media/jobs/{id}`
 - `POST /api/projects/{slug}/media/jobs`
+- `POST /api/projects/{slug}/media/jobs/{id}/stage`
 - `POST /api/projects/{slug}/media/jobs/{id}/cancel`
 - `POST /api/projects/{slug}/media/jobs/{id}/review`
 
 Creation returns `202 Accepted`; replaying the same idempotency key returns the existing job with
 `200 OK`. Every mutation requires `author`. Cancel accepts `{ "author": "..." }`; review accepts
 `{ "decision": "approved|rejected", "author": "..." }`.
+
+## Stage progress
+
+`LocalMediaJob` carries optional `Stage` (string), `StageIndex` (int), and `StageCount` (int) fields
+alongside the flat status enum, so a long-running job can report where it is inside a multi-step
+workflow (e.g. an OpenMontage compositor stage) without a sub-ticket. `POST
+/api/projects/{slug}/media/jobs/{id}/stage` accepts `{ "stage": "...", "stageIndex": N,
+"stageCount": M, "author": "..." }`; `stageIndex`/`stageCount` are optional, `stage` and `author`
+are required. `stage` is capped at 120 characters, `stageIndex` must be ≥ 0, `stageCount` > 0, and
+`stageIndex` must not exceed `stageCount`.
+
+Updates are only accepted while the job is `running`, and `stageIndex` is monotonic — a value lower
+than what is already persisted is rejected so an out-of-order or replayed report can never rewind
+progress already shown on the board. The guard is the `UPDATE` statement's own `WHERE` predicate
+(`StageIndex IS NULL OR $stageIndex IS NULL OR StageIndex <= $stageIndex`), not a read-then-write
+check in C#: two workers reporting concurrently both read the same index, so a guard outside the
+statement lets the slower report land last and win. An omitted index or count leaves the stored one
+in place (`COALESCE`) rather than clearing it, which is the same rewind by another name.
+
+Validation lives in `LocalMediaJobService` only — the endpoint re-checks nothing, so the two cannot
+drift. The route maps the service's three typed exceptions: `LocalMediaNotFoundException` → **404**
+(unknown project or job), `LocalMediaValidationException` → **400**, `LocalMediaConflictException` →
+**409** (not running, or a regression). The cancel and review routes map the same three.
+
+The local-media artist and compositor skills call
+this endpoint from their own checkpoint data; the compositor's `in_progress` OpenMontage
+checkpoints are the primary source today.
 
 ## Runtime configuration
 

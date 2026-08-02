@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -217,6 +218,27 @@ public class TicketService : ITicketDependencyQuery
             .GroupBy(x => x.ParentId!.Value)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Info).ToList());
 
+        // Phase 3.1: blocked-reason chip. One cheap comments query scoped to the (typically
+        // few) Blocked tickets — never per-ticket — so the board list stays a couple of
+        // round trips regardless of board size.
+        // Only the marker's first line is ever parsed and the rendered chip is ~60 chars, so the
+        // query pulls a truncated prefix instead of whole comment bodies — a receipt can carry a
+        // full diff, and the board has no use for any of it. The row cap bounds a ticket that
+        // collected hundreds of gate receipts; the newest one wins regardless.
+        var blockedIds = allTickets.Where(t => t.Status == "Blocked").Select(t => t.Id).ToList();
+        var blockedReasons = blockedIds.Count > 0
+            ? await db.Comments.AsNoTracking()
+                .Where(c => blockedIds.Contains(c.TicketId)
+                    && (c.Content.Contains("GIGACLAW-GATE v1") || c.Content.Contains("GIGACLAW-REPAIR v1")))
+                .OrderByDescending(c => c.CreatedAt)
+                .Take(MaxBlockedReasonComments)
+                .Select(c => new { c.TicketId, Content = c.Content.Substring(0, BlockedReasonPrefixLength) })
+                .ToListAsync()
+            : [];
+        var blockedReasonByTicket = blockedReasons
+            .GroupBy(c => c.TicketId)
+            .ToDictionary(g => g.Key, g => ExtractBlockedReason(g.First().Content)); // First = newest (query is ordered desc)
+
         var ticketIds = allTickets.Select(t => t.Id).ToList();
         var dependencyRows = ticketIds.Count > 0
             ? await (
@@ -246,8 +268,78 @@ public class TicketService : ITicketDependencyQuery
                 .Where(edge => edge.BlockingTicketId == t.Id)
                 .Select(edge => edge.Blocked)
                 .OrderBy(edge => edge.Id)
-                .ToList()
+                .ToList(),
+            BlockedReason = blockedReasonByTicket.GetValueOrDefault(t.Id)
         }).ToList();
+    }
+
+    // Phase 3.1: matches the marker's first line, e.g.
+    //   "GIGACLAW-GATE v1 ticket-42 blocked — the reviewer returned BLOCK."
+    //   "GIGACLAW-REPAIR v1 ticket-42 escalated 2/2"
+    // See doc/verdict-contract.md (Transport, The bounded repair loop) for the marker family;
+    // GigaClaw.Core/Automation/Verdicts/RepairLoop.cs and ReviewerRetry.cs own the emitters.
+    /// <summary>How much of a receipt comment the blocked-reason chip reads. Only the first line is
+    /// parsed and the chip truncates to ~60 chars, so the rest is dead weight in the query.</summary>
+    private const int BlockedReasonPrefixLength = 240;
+
+    /// <summary>Row cap on the blocked-reason lookup — the newest receipt per ticket is all that is
+    /// used, and Blocked tickets are few.</summary>
+    private const int MaxBlockedReasonComments = 200;
+
+    // The nested quantifier `(?:\s+\S+)*?` before a literal can backtrack badly on a hostile line,
+    // and the marker text is written by agents. The timeout turns the pathological case into a
+    // caught RegexMatchTimeoutException-free fallback rather than a hung board render.
+    private static readonly Regex GateMarkerLineRegex = new(
+        @"^GIGACLAW-GATE\s+v1\s+ticket-\d+\s+\S+(?:\s+\S+)*?\s+—\s+(?<reason>.+)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(100));
+
+    private static readonly Regex RepairMarkerLineRegex = new(
+        @"^GIGACLAW-REPAIR\s+v1\s+ticket-\d+\s+escalated\s+(?<used>\d+)/(?<max>\d+)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Derives a short (~60 char) human-readable reason from the newest gate/repair receipt on
+    /// a Blocked ticket. Best-effort: the marker text is owned by <c>automations.json</c>, so this
+    /// degrades to a truncated first line rather than throwing when the shape drifts.
+    /// </summary>
+    internal static string? ExtractBlockedReason(string commentContent)
+    {
+        if (string.IsNullOrWhiteSpace(commentContent)) return null;
+        var firstLine = commentContent.Split('\n', 2)[0].Trim();
+
+        try
+        {
+            var gateMatch = GateMarkerLineRegex.Match(firstLine);
+            if (gateMatch.Success)
+            {
+                var reason = gateMatch.Groups["reason"].Value.Trim();
+                var firstSentence = reason.Split('.', 2)[0].Trim();
+                return TruncateReason(firstSentence);
+            }
+
+            var repairMatch = RepairMarkerLineRegex.Match(firstLine);
+            if (repairMatch.Success)
+                return $"Repair budget exhausted ({repairMatch.Groups["used"].Value}/{repairMatch.Groups["max"].Value})";
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // A marker line crafted (or corrupted) into catastrophic backtracking degrades to the
+            // same truncated-first-line fallback the shape-drift path already uses.
+            return TruncateReason(firstLine);
+        }
+
+        if (firstLine.Contains("GIGACLAW-GATE", StringComparison.Ordinal)
+            || firstLine.Contains("GIGACLAW-REPAIR", StringComparison.Ordinal))
+            return TruncateReason(firstLine);
+
+        return null;
+    }
+
+    private static string TruncateReason(string reason)
+    {
+        const int maxLen = 60;
+        return reason.Length <= maxLen ? reason : reason[..(maxLen - 1)].TrimEnd() + "…";
     }
 
     public async Task<Ticket?> GetTicketAsync(string projectSlug, int ticketId)

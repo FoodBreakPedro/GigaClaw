@@ -29,9 +29,17 @@ public sealed class CatalogGeneratorTests
         // Enabled trails total by four: `weekly-ticket-example` is a shipped-off sample, not a gate,
         // and the three GitHub automations ship wired but disabled (owner decision 2026-08-01 — off
         // unless a project configures a GitHub remote/token) — every pack automation is still enabled
-        // by the binding rule.
-        Assert.Equal(58, catalog.Summary.Automations);
-        Assert.Equal(54, catalog.Summary.EnabledAutomations);
+        // by the binding rule. Phase 1 (return-to-sender) then added 15 core arms, all enabled:
+        // `backlog-intake` (unassigned Backlog tickets reach the groomer), five reviewer-retry arms
+        // + three retry-exhaustion arms (an INVALID/STALE/MISSING verdict re-runs the reviewer once
+        // before it blocks), and six `extended-repair` duplicates of the repair pairs = 66 core.
+        // The engine-domain review then added 9 more core arms, all enabled: the shared
+        // retry-exhaustion arm split per reviewer family so one reviewer's receipts cannot exhaust
+        // another's first attempt (+2), a `verdict-gate-review-watchdog` that terminates a ticket
+        // stranded in Review on a spent retry budget, and six `*-triaged` twins that cap the
+        // groomer re-scoping loop at one funded lap = 75 core.
+        Assert.Equal(82, catalog.Summary.Automations);
+        Assert.Equal(78, catalog.Summary.EnabledAutomations);
         Assert.Equal(37, catalog.Summary.ExplicitModelMappings);
         // 9 filter-only core teams + the two C8 presets (parallel-review, hypothesis-debug) + the
         // pack's security-review.
@@ -51,9 +59,9 @@ public sealed class CatalogGeneratorTests
         Assert.NotEmpty(contentWriter.EnabledDispatchingAutomations);
         Assert.Contains("scripts/content_contract.py", catalog.Scripts);
         Assert.Equal(12, catalog.Teams.Count);
-        // 51 core (45 + the three SP-3 worktree-isolated twins + the three U6 GitHub automations)
-        // + the pack's 7.
-        Assert.Equal(58, catalog.Automations.Count);
+        // 75 core (51 + Phase 1's intake/reviewer-retry/extended-repair arms + the review's
+        // per-family retry-exhaustion split, Review watchdog and `*-triaged` twins) + the pack's 7.
+        Assert.Equal(82, catalog.Automations.Count);
         // Core only. A baseline is the *reviewed* static-check snapshot and §9 keeps it a
         // core-owned artifact about pack content, so a pack's baselines appear when someone
         // reviews them — not when the pack lands. The binding rule requires a fixture, which the

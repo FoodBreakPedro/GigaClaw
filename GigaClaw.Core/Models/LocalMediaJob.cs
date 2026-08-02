@@ -31,7 +31,10 @@ public sealed record LocalMediaJob(
     DateTime? ReviewedAt,
     string? ReviewDecision,
     int? ProcessId,
-    DateTime? BoardNotifiedAt
+    DateTime? BoardNotifiedAt,
+    string? Stage,
+    int? StageIndex,
+    int? StageCount
 );
 
 public sealed record CreateLocalMediaJobRequest(
@@ -48,3 +51,13 @@ public sealed record CreateLocalMediaJobResult(LocalMediaJob Job, bool Created);
 public sealed record ReviewLocalMediaJobRequest(string Decision, string Author);
 
 public sealed record LocalMediaJobActionRequest(string Author);
+
+/// <summary>
+/// Reports checkpoint-derived progress for a running job. StageIndex/StageCount are optional
+/// (e.g. a compositor may only know the current stage name, not the total count yet).
+/// </summary>
+public sealed record UpdateLocalMediaJobStageRequest(
+    string Stage,
+    int? StageIndex,
+    int? StageCount,
+    string Author);
