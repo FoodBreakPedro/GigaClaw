@@ -78,50 +78,8 @@
             @* ---------------- row 4 — recent tickets / activity feed ---------------- *@
             <section class="mc-grid mc-row-4">
 
-                <article class="mc-card">
-                    <div class="mc-card-head">
-                        <div>
-                            <div class="mc-card-label">@L["MissionRecentTickets"]</div>
-                            <div class="mc-card-sub">@L["MissionRecentTicketsSub"]</div>
-                        </div>
-                    </div>
-                    @if (snapshot.RecentTickets.Count == 0)
-                    {
-                        <div class="mc-empty">@L["MissionRecentEmpty"]</div>
-                    }
-                    else
-                    {
-                        <div class="mc-table-wrap">
-                            <table class="mc-tickets">
-                                <thead>
-                                    <tr>
-                                        <th>@L["MissionColId"]</th>
-                                        <th>@L["MissionColTitle"]</th>
-                                        <th>@L["MissionColProject"]</th>
-                                        <th>@L["MissionColStatus"]</th>
-                                        <th>@L["MissionColPriority"]</th>
-                                        <th class="upd">@L["MissionColUpdated"]</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var ticket in snapshot.RecentTickets)
-                                    {
-                                        <tr @onclick="() => OpenTicket(ticket.ProjectSlug, ticket.TicketId)">
-                                            <td class="id num">#@ticket.TicketId</td>
-                                            <td>@ticket.Title</td>
-                                            <td class="proj-cell">@ticket.ProjectName</td>
-                                            <td>
-                                                <span class="mc-status-pill" style="--sc: @KpiColor(ticket.Status)">@KpiLabel(ticket.Status)</span>
-                                            </td>
-                                            <td class="prio">@PriorityLabel(ticket.Priority)</td>
-                                            <td class="upd num">@Since(ticket.UpdatedAtUtc)</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </article>
+                <MissionRecentTicketsCard Tickets="snapshot.RecentTickets"
+                                          OnOpenTicket="t => OpenTicket(t.ProjectSlug, t.TicketId)" />
 
                 <article class="mc-card">
                     <div class="mc-card-head">
@@ -307,7 +265,6 @@
     // can share them; only the localization-bound wrappers stay here, for markup brevity.
 
     private string KpiLabel(string column) => MissionFormat.KpiLabel(L, column);
-    private string PriorityLabel(TicketPriority priority) => MissionFormat.PriorityLabel(L, priority);
     private string Score(double? value) => MissionFormat.Score(L, value);
     private string Percent(double? value) => MissionFormat.Percent(L, value);
 }
