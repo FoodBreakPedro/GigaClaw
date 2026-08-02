@@ -48,12 +48,6 @@ Thumbs.db
 !ProjectTemplate/.dashboard/**
 /doc/.obsidian
 
-# TDD gate scratch (dotnet test/build stdout/stderr written into each worktree)
-.gate-*.out
-.gate-*.err
-.judge-*.out
-.judge-*.err
-
 # Python bytecode from running the agent contract validators locally. These would
 # otherwise be embedded into GigaClaw.Core and copied into every workspace.
 __pycache__/
