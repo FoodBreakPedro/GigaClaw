@@ -340,8 +340,12 @@ public sealed class MissionControlService
             {
                 items.Add(new MissionAttentionItem(
                     MissionSeverity.Critical, "blocked", lane.Project.Slug, lane.Project.Name,
-                    ticket.Id, ticket.Title,
-                    ticket.BlockedReason ?? "Blocked with no recorded gate receipt",
+                    ticket.Id, MissionText.Literal(ticket.Title),
+                    // The reason is agent-authored prose already in the operator's ticket; only the
+                    // "there wasn't one" fallback is ours to translate.
+                    ticket.BlockedReason is string reason
+                        ? MissionText.Literal(reason)
+                        : MissionText.Of("MissionAttentionBlockedNoReceipt"),
                     ticket.UpdatedAt, null));
             }
 
@@ -350,8 +354,10 @@ public sealed class MissionControlService
             {
                 items.Add(new MissionAttentionItem(
                     MissionSeverity.Warning, "approval", lane.Project.Slug, lane.Project.Name,
-                    ticket.Id, ticket.Title,
-                    $"{PendingApprovalLabel} · {ticket.AssignedTo ?? "unassigned"}",
+                    ticket.Id, MissionText.Literal(ticket.Title),
+                    ticket.AssignedTo is string assignee
+                        ? MissionText.Of("MissionAttentionApproval", PendingApprovalLabel, assignee)
+                        : MissionText.Of("MissionAttentionApprovalUnassigned", PendingApprovalLabel),
                     ticket.UpdatedAt, null));
             }
 
@@ -367,8 +373,8 @@ public sealed class MissionControlService
                 if (ticket is null || Same(ticket.Status, DoneStatus)) continue;
                 items.Add(new MissionAttentionItem(
                     MissionSeverity.Warning, "costcap", lane.Project.Slug, lane.Project.Name,
-                    ticket.Id, ticket.Title,
-                    $"Per-ticket cost cap reached · ${ticket.AgentCostUsd:0.##} spent",
+                    ticket.Id, MissionText.Literal(ticket.Title),
+                    MissionText.Of("MissionAttentionCostCap", ticket.AgentCostUsd.ToString("0.##")),
                     receipt.CreatedAt, null));
             }
 
@@ -383,8 +389,9 @@ public sealed class MissionControlService
                     items.Add(new MissionAttentionItem(
                         fraction >= 1.0 ? MissionSeverity.Critical : MissionSeverity.Warning,
                         "budget", lane.Project.Slug, lane.Project.Name, null,
-                        $"Daily budget ${spentToday:0.00} of ${budget:0.00}",
-                        $"{fraction * 100:0}% of today's budget consumed",
+                        MissionText.Of("MissionAttentionBudgetTitle",
+                            spentToday.ToString("0.00"), budget.ToString("0.00")),
+                        MissionText.Of("MissionAttentionBudget", (fraction * 100).ToString("0")),
                         nowUtc, Math.Min(fraction, 1.0)));
                 }
             }
@@ -514,12 +521,19 @@ public sealed class MissionControlService
             if (run.Status == AgentRunStatus.Running)
                 events.Add(new MissionActivityEvent(
                     run.StartedAt, run.ProjectSlug, run.AgentName, run.TicketId, "run-started",
-                    $"{run.AgentName} started", run.Model));
+                    MissionText.Of("MissionFeedRunStarted", run.AgentName), run.Model));
             else if (run.EndedAt is DateTime ended)
                 events.Add(new MissionActivityEvent(
                     ended, run.ProjectSlug, run.AgentName, run.TicketId,
                     run.Status == AgentRunStatus.Completed ? "run-completed" : "run-failed",
-                    $"{run.AgentName} {run.Status.ToString().ToLowerInvariant()}", run.Model));
+                    // Stopped and Failed share the "run-failed" dot but not the verb.
+                    MissionText.Of(run.Status switch
+                    {
+                        AgentRunStatus.Completed => "MissionFeedRunCompleted",
+                        AgentRunStatus.Stopped => "MissionFeedRunStopped",
+                        _ => "MissionFeedRunFailed"
+                    }, run.AgentName),
+                    run.Model));
         }
 
         return events
@@ -529,31 +543,34 @@ public sealed class MissionControlService
     }
 
     /// <summary>Classifies a receipt comment into a feed event. Unknown markers are dropped rather
-    /// than shown raw — the feed is a summary, and the ticket already holds the full receipt.</summary>
-    internal static (string? Kind, string? Text) DescribeMarker(string content, int ticketId, string author)
+    /// than shown raw — the feed is a summary, and the ticket already holds the full receipt. The
+    /// sentence itself is left to the page: see <see cref="MissionText"/>.</summary>
+    internal static (string? Kind, MissionText? Text) DescribeMarker(string content, int ticketId, string author)
     {
         var firstLine = content.Split('\n', 2)[0].Trim();
+        var id = ticketId.ToString();
         if (firstLine.Contains("GIGACLAW-GATE", StringComparison.Ordinal))
         {
+            // The verdict token is the receipt's own vocabulary, not prose — it stays as written.
             var verdict = firstLine.Contains("SHIP", StringComparison.Ordinal) ? "SHIP"
                 : firstLine.Contains("BLOCK", StringComparison.Ordinal) ? "BLOCK"
                 : firstLine.Contains("FIX", StringComparison.Ordinal) ? "FIX"
                 : "gate";
-            return ("gate", $"{author} {verdict} on #{ticketId}");
+            return ("gate", MissionText.Of("MissionFeedGate", author, verdict, id));
         }
         if (firstLine.Contains("GIGACLAW-REPAIR", StringComparison.Ordinal))
-            return ("repair", $"{author} repair round on #{ticketId}");
+            return ("repair", MissionText.Of("MissionFeedRepair", author, id));
         if (firstLine.Contains("GIGACLAW-REREVIEW", StringComparison.Ordinal))
-            return ("rereview", $"{author} re-review requested on #{ticketId}");
+            return ("rereview", MissionText.Of("MissionFeedRereview", author, id));
         if (firstLine.Contains(TicketCostCap.MarkerPrefix, StringComparison.Ordinal))
-            return ("costcap", $"#{ticketId} parked — per-ticket cost cap");
+            return ("costcap", MissionText.Of("MissionFeedCostCap", id));
         if (firstLine.Contains("GIGACLAW-HANDOFF", StringComparison.Ordinal))
-            return ("handoff", $"{author} handed off #{ticketId}");
+            return ("handoff", MissionText.Of("MissionFeedHandoff", author, id));
         if (firstLine.Contains("GIGACLAW-VERDICT", StringComparison.Ordinal))
-            return ("verdict", $"{author} posted a verdict on #{ticketId}");
+            return ("verdict", MissionText.Of("MissionFeedVerdict", author, id));
         if (firstLine.Contains("GIGACLAW-MERGE", StringComparison.Ordinal)
             || firstLine.Contains("merge-held", StringComparison.Ordinal))
-            return ("merge", $"merge queue · #{ticketId}");
+            return ("merge", MissionText.Of("MissionFeedMerge", id));
         return (null, null);
     }
 

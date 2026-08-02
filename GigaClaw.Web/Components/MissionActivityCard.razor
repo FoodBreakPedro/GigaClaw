@@ -1,0 +1,36 @@
+@using static GigaClaw.Web.Components.MissionFormat
+@inject LocalizationService L
+
+@* Mission Control row 4 — receipts and run start/stop, newest first. *@
+<article class="mc-card">
+    <div class="mc-card-head">
+        <div>
+            <div class="mc-card-label">@L["MissionActivity"]</div>
+            <div class="mc-card-sub">@L["MissionActivitySub"]</div>
+        </div>
+    </div>
+    @if (Activity.Count == 0)
+    {
+        <div class="mc-empty">@L["MissionActivityEmpty"]</div>
+    }
+    else
+    {
+        <div class="mc-feed">
+            @foreach (var item in Activity)
+            {
+                <div class="mc-feed-item">
+                    <i class="mc-feed-dot" style="background: @EventColor(item.Kind)"></i>
+                    <span class="mc-feed-time num">@Since(item.AtUtc)</span>
+                    <span class="mc-feed-body">
+                        @MissionFormat.Text(L, item.Text)
+                        <span class="mc-feed-sub">@item.ProjectSlug@(item.Detail is null ? "" : $" · {item.Detail}")</span>
+                    </span>
+                </div>
+            }
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MissionActivityEvent> Activity { get; set; } = [];
+}

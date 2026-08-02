@@ -1,0 +1,53 @@
+@using static GigaClaw.Web.Components.MissionFormat
+@inject LocalizationService L
+
+@* Mission Control row 4 — the most recently touched tickets across every active project. *@
+<article class="mc-card">
+    <div class="mc-card-head">
+        <div>
+            <div class="mc-card-label">@L["MissionRecentTickets"]</div>
+            <div class="mc-card-sub">@L["MissionRecentTicketsSub"]</div>
+        </div>
+    </div>
+    @if (Tickets.Count == 0)
+    {
+        <div class="mc-empty">@L["MissionRecentEmpty"]</div>
+    }
+    else
+    {
+        <div class="mc-table-wrap">
+            <table class="mc-tickets">
+                <thead>
+                    <tr>
+                        <th>@L["MissionColId"]</th>
+                        <th>@L["MissionColTitle"]</th>
+                        <th>@L["MissionColProject"]</th>
+                        <th>@L["MissionColStatus"]</th>
+                        <th>@L["MissionColPriority"]</th>
+                        <th class="upd">@L["MissionColUpdated"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ticket in Tickets)
+                    {
+                        <tr @onclick="() => OnOpenTicket.InvokeAsync(ticket)">
+                            <td class="id num">#@ticket.TicketId</td>
+                            <td>@ticket.Title</td>
+                            <td class="proj-cell">@ticket.ProjectName</td>
+                            <td>
+                                <span class="mc-status-pill" style="--sc: @KpiColor(ticket.Status)">@MissionFormat.KpiLabel(L, ticket.Status)</span>
+                            </td>
+                            <td class="prio">@MissionFormat.PriorityLabel(L, ticket.Priority)</td>
+                            <td class="upd num">@Since(ticket.UpdatedAtUtc)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MissionRecentTicket> Tickets { get; set; } = [];
+    [Parameter] public EventCallback<MissionRecentTicket> OnOpenTicket { get; set; }
+}

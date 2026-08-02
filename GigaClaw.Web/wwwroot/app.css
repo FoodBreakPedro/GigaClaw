@@ -4796,8 +4796,8 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     border-radius: 6px;
     font-size: 0.7rem;
     font-weight: 600;
-    background: color-mix(in srgb, var(--s-blocked, #f06b6b) 16%, transparent);
-    color: var(--s-blocked, #f06b6b);
+    background: color-mix(in srgb, var(--s-blocked) 16%, transparent);
+    color: var(--s-blocked);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4848,7 +4848,7 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     padding: 0 0.3rem;
     margin-left: 0.3rem;
     border-radius: 999px;
-    background: var(--s-blocked, #f06b6b);
+    background: var(--s-blocked);
     color: #fff;
     font-size: 0.68rem;
     font-weight: 700;
@@ -4857,8 +4857,8 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     position: fixed;
     top: 0; right: 0; bottom: 0;
     width: min(420px, 92vw);
-    background: var(--surface2, #1a1f2e);
-    border-left: 1px solid var(--border, #333);
+    background: var(--surface2);
+    border-left: 1px solid var(--border);
     z-index: 901;
     display: flex;
     flex-direction: column;
@@ -4880,7 +4880,7 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.6rem 1rem;
-    border-bottom: 1px solid var(--border, #333);
+    border-bottom: 1px solid var(--border);
 }
 .approval-row-main {
     display: flex;
@@ -4891,7 +4891,7 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     cursor: pointer;
 }
 .approval-row-title {
-    color: var(--text, #e4e4f0);
+    color: var(--text);
     font-size: 0.85rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4918,11 +4918,11 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
 }
 .approval-approve-btn:hover { background: color-mix(in srgb, var(--accent) 32%, transparent); }
 .approval-reject-btn {
-    background: color-mix(in srgb, var(--s-blocked, #f06b6b) 15%, transparent);
-    color: var(--s-blocked, #f06b6b);
-    border-color: color-mix(in srgb, var(--s-blocked, #f06b6b) 40%, transparent);
+    background: color-mix(in srgb, var(--s-blocked) 15%, transparent);
+    color: var(--s-blocked);
+    border-color: color-mix(in srgb, var(--s-blocked) 40%, transparent);
 }
-.approval-reject-btn:hover { background: color-mix(in srgb, var(--s-blocked, #f06b6b) 30%, transparent); }
+.approval-reject-btn:hover { background: color-mix(in srgb, var(--s-blocked) 30%, transparent); }
 
 /* Phase 4: mission control */
 
@@ -4932,16 +4932,19 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
    introduced is declared here — scoped to .mc-root so it cannot leak into the board. Every
    selector is mc-prefixed for the same reason. */
 .mc-root {
-    --mc-blue: #3b82f6;
+    /* Three of these were re-stated :root tokens under a mockup name, with the same hex on both
+       sides; they are aliases now, so retuning the app palette reaches Mission Control too. The
+       rest is the status palette the mockup introduced and :root has no equivalent for. */
+    --mc-blue: var(--accent-info);
     --mc-green: #16a34a;
     --mc-purple: #8b5cf6;
     --mc-amber: #d97706;
     --mc-teal: #0e9db5;
     --mc-red: #e05252;
     --mc-indigo: #6366f1;
-    --mc-good: #22c55e;
+    --mc-good: var(--accent-success);
     --mc-warn: #f59e0b;
-    --mc-crit: #f06b6b;
+    --mc-crit: var(--s-blocked);
 
     color: var(--text);
     display: block;
@@ -4996,13 +4999,16 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     font-size: 0.78rem;
     font-weight: 550;
 }
-.mc-dot-live {
+/* One 7px round dot, three jobs: the live-run pulse, the staleness legend key (.mc-sdot) and
+   the activity-feed bullet (.mc-feed-dot). Only .mc-dot-live carries a colour of its own — the
+   other two are tinted inline by the row they label. */
+.mc-dot-live, .mc-sdot, .mc-feed-dot {
     width: 7px; height: 7px;
     border-radius: 50%;
-    background: var(--accent);
     flex: none;
     display: inline-block;
 }
+.mc-dot-live { background: var(--accent); }
 .mc-dot-live.sm { width: 6px; height: 6px; }
 @media (prefers-reduced-motion: no-preference) {
     .mc-dot-live { animation: mcPulse 2s ease-in-out infinite; }
@@ -5233,7 +5239,6 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     align-items: center;
     gap: 0.3rem;
 }
-.mc-sdot { width: 7px; height: 7px; border-radius: 50%; flex: none; display: inline-block; }
 
 /* ---------- attention queue ---------- */
 .mc-att-list { display: flex; flex-direction: column; gap: 0.55rem; }
@@ -5446,7 +5451,9 @@ table.mc-tickets td.prio { white-space: nowrap; color: var(--text-muted); }
 }
 
 /* ---------- activity feed ---------- */
-.mc-feed { display: flex; flex-direction: column; }
+/* The feed is the tallest thing in row 4; let it scroll inside its own card so a busy hour
+   cannot stretch the neighbouring recent-tickets card into a wall of empty space. */
+.mc-feed { display: flex; flex-direction: column; max-height: 420px; overflow-y: auto; }
 .mc-feed-item {
     display: grid;
     grid-template-columns: 12px 34px minmax(0, 1fr);
@@ -5456,10 +5463,7 @@ table.mc-tickets td.prio { white-space: nowrap; color: var(--text-muted); }
     border-bottom: 1px solid var(--border);
 }
 .mc-feed-item:last-child { border-bottom: 0; }
-.mc-feed-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 6px; flex: none; display: inline-block; }
+.mc-feed-dot { margin-top: 6px; }
 .mc-feed-time { font-size: 0.68rem; color: var(--text-dim); padding-top: 2px; white-space: nowrap; }
 .mc-feed-body { font-size: 0.76rem; color: var(--text); min-width: 0; }
 .mc-feed-sub { display: block; font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
-/* The feed is the tallest thing in row 4; let it scroll inside its own card so a busy hour
-   cannot stretch the neighbouring recent-tickets card into a wall of empty space. */
-.mc-feed { max-height: 420px; overflow-y: auto; }

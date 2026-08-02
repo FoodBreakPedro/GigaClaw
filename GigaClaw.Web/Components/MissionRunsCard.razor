@@ -1,0 +1,67 @@
+@using System.Globalization
+@using GigaClaw.Core.Automation
+@using static GigaClaw.Web.Components.MissionFormat
+@inject LocalizationService L
+
+@* Mission Control row 3 — dispatches in flight, plus the spend strip. The run list is passed in
+   already materialised: the page computes it once per render and the header shares the same list. *@
+<article class="mc-card">
+    <div class="mc-card-head">
+        <div>
+            <div class="mc-card-label">@L["MissionActiveRuns"]</div>
+            <div class="mc-card-sub">@L.Get("MissionActiveRunsSub", ActiveRuns.Count)</div>
+        </div>
+    </div>
+
+    @if (ActiveRuns.Count == 0)
+    {
+        <div class="mc-empty">@L["MissionActiveRunsEmpty"]</div>
+    }
+    else
+    {
+        <div class="mc-runs">
+            @foreach (var run in ActiveRuns.Take(5))
+            {
+                <div class="mc-run">
+                    <div class="mc-run-top">
+                        <span class="mc-dot-live"></span>
+                        <span class="mc-run-agent">@run.AgentName</span>
+                        <span class="mc-run-arrow">→</span>
+                        <span class="mc-proj">@run.ProjectSlug</span>
+                        @if (run.TicketId is int runTicket)
+                        {
+                            <span class="mc-att-id num">#@runTicket</span>
+                        }
+                    </div>
+                    <div class="mc-run-bot">
+                        <span class="mc-run-meta num">@Elapsed(run.StartedAt)</span>
+                        <button class="mc-ghost" @onclick="() => OnViewLog.InvokeAsync(run.RunId)">@L["MissionViewLog"]</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="mc-cost-strip">
+        <span>@L["MissionCostToday"] <b class="num">@Usd(Cost.TodayUsd)</b></span>
+        <span>@L["MissionCostWeek"] <b class="num">@Usd(Cost.WeekUsd)</b></span>
+        <span>
+            @L["MissionCacheSavings"]
+            <b class="num">@(Cost.CacheSavingsPercent is double savings ? $"{savings:0}%" : L["MissionNoData"])</b>
+        </span>
+        <span>
+            @L["MissionCostliest"]
+            <b class="num">
+                @(Cost.CostliestTicketId is int costliest
+                    ? $"#{costliest} ${Cost.CostliestUsd.ToString("0.00", CultureInfo.InvariantCulture)}"
+                    : L["MissionNoData"])
+            </b>
+        </span>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<AgentRun> ActiveRuns { get; set; } = [];
+    [Parameter, EditorRequired] public MissionCostStrip Cost { get; set; } = default!;
+    [Parameter] public EventCallback<string> OnViewLog { get; set; }
+}

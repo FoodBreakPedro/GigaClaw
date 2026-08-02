@@ -7,6 +7,22 @@ namespace GigaClaw.Core.Services;
 /// inventing one.</summary>
 public sealed record MissionKpi(string Column, int Count, int? Delta);
 
+/// <summary>
+/// A user-facing string the Mission Control page has still to render: a localization key plus its
+/// ordered format arguments, resolved against the Mission.{en,es,fr} dictionaries by the component.
+///
+/// <para>Composing the sentence here instead would hard-code English into every locale — the whole
+/// activity feed and attention queue used to read English on a French UI for exactly that reason.
+/// A <see cref="Literal"/> carries text that is already final and must not be formatted: an
+/// agent-authored blocked reason or a ticket title, which may itself contain braces.</para>
+/// </summary>
+public sealed record MissionText(string? Key, IReadOnlyList<string> Args)
+{
+    public static MissionText Of(string key, params string[] args) => new(key, args);
+
+    public static MissionText Literal(string text) => new(null, [text]);
+}
+
 public sealed record MissionAgentWorkload(
     string Agent,
     int Dispatches,
@@ -42,8 +58,8 @@ public sealed record MissionAttentionItem(
     string ProjectSlug,
     string ProjectName,
     int? TicketId,
-    string Title,
-    string Detail,
+    MissionText Title,
+    MissionText Detail,
     DateTime? SinceUtc,
     double? Progress);
 
@@ -64,7 +80,7 @@ public sealed record MissionActivityEvent(
     string Agent,
     int? TicketId,
     string Kind,
-    string Text,
+    MissionText Text,
     string? Detail);
 
 public sealed record MissionCostStrip(

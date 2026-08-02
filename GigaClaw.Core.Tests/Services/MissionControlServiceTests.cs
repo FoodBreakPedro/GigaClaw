@@ -135,7 +135,10 @@ public sealed class MissionControlServiceTests
 
         var blockedItem = Assert.Single(snapshot.Attention, i => i.Kind == "blocked");
         Assert.Equal(MissionSeverity.Critical, blockedItem.Severity);
-        Assert.Equal("qa-tester returned BLOCK", blockedItem.Detail);
+        // The blocked reason is agent-authored prose, so it travels as a literal MissionText rather
+        // than a localization key — the page renders it verbatim.
+        Assert.Null(blockedItem.Detail.Key);
+        Assert.Equal("qa-tester returned BLOCK", Assert.Single(blockedItem.Detail.Args));
 
         var approvalItem = Assert.Single(snapshot.Attention, i => i.Kind == "approval");
         Assert.Equal(approval.Id, approvalItem.TicketId);

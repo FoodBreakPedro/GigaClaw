@@ -1,0 +1,59 @@
+@inject LocalizationService L
+
+@* Mission Control row 5 — evaluator scores, the first consumer of scores.json. *@
+<article class="mc-card">
+    <div class="mc-card-head">
+        <div>
+            <div class="mc-card-label">@L["MissionScores"]</div>
+            <div class="mc-card-sub">@L["MissionScoresSub"]</div>
+        </div>
+    </div>
+    @if (Scores.Count == 0)
+    {
+        <div class="mc-empty">@L["MissionScoresEmpty"]</div>
+    }
+    else
+    {
+        <div class="mc-table-wrap">
+            <table class="mc-tickets mc-scores">
+                <thead>
+                    <tr>
+                        <th>@L["MissionColProject"]</th>
+                        <th>@L["MissionScoreAgent"]</th>
+                        <th>@L["MissionScoreOutcome"]</th>
+                        <th>@L["MissionScoreProcess"]</th>
+                        <th>@L["MissionScoreEfficiency"]</th>
+                        <th>@L["MissionScoreCommunication"]</th>
+                        <th>@L["MissionScoreFirstPass"]</th>
+                        <th class="upd">@L["MissionScoreSamples"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var project in Scores)
+                    {
+                        @foreach (var score in project.Scores.Take(6))
+                        {
+                            <tr>
+                                <td class="proj-cell">@project.ProjectName</td>
+                                <td>@score.Agent</td>
+                                <td class="num">@Score(score.Outcome)</td>
+                                <td class="num">@Score(score.Process)</td>
+                                <td class="num">@Score(score.Efficiency)</td>
+                                <td class="num">@Score(score.Communication)</td>
+                                <td class="num">@Percent(score.FirstPassRate)</td>
+                                <td class="upd num">@score.Samples</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MissionProjectScores> Scores { get; set; } = [];
+
+    private string Score(double? value) => MissionFormat.Score(L, value);
+    private string Percent(double? value) => MissionFormat.Percent(L, value);
+}
