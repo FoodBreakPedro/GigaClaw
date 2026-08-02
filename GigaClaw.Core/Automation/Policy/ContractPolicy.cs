@@ -838,7 +838,12 @@ internal sealed class GitIgnoreGlobSet
             var options = RegexOptions.CultureInvariant | RegexOptions.Compiled;
             if (caseSensitivity == PathCaseSensitivity.Insensitive)
                 options |= RegexOptions.IgnoreCase;
-            return new GlobRule(negated, new Regex(regex, options, TimeSpan.FromMilliseconds(25)));
+            // Backtracking fence only. The generated patterns are structurally linear, so a real
+            // match is microseconds — but the budget is wall-clock, and under full-suite parallel
+            // load the first (JIT-compiling) match through a Compiled regex blew a 25 ms budget
+            // and failed policy checks spuriously. 1 s still trips instantly on a genuinely
+            // catastrophic pattern while being immune to scheduler noise.
+            return new GlobRule(negated, new Regex(regex, options, TimeSpan.FromSeconds(1)));
         }
 
         private static string ToRegexBody(string pattern)
