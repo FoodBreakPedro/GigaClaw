@@ -1,7 +1,6 @@
 @page "/mission"
 @using System.Globalization
 @using GigaClaw.Core.Automation
-@using static GigaClaw.Web.Components.MissionFormat
 @inject MissionControlService MissionControl
 @inject TicketService TicketService
 @inject AgentRunsState AgentRuns
@@ -57,10 +56,10 @@
                 <MissionWorkloadCard Workload="snapshot.Workload" />
 
                 <MissionAttentionCard Items="snapshot.Attention"
-                                     Notice="_actionNotice"
-                                     OnOpen="item => OpenTicket(item.ProjectSlug, item.TicketId!.Value)"
-                                     OnApprove="item => ApproveAsync(item.ProjectSlug, item.TicketId!.Value)"
-                                     OnReject="item => RejectAsync(item.ProjectSlug, item.TicketId!.Value)" />
+                                      Notice="_actionNotice"
+                                      OnOpen="item => OpenTicket(item.ProjectSlug, item.TicketId!.Value)"
+                                      OnApprove="item => ApproveAsync(item.ProjectSlug, item.TicketId!.Value)"
+                                      OnReject="item => RejectAsync(item.ProjectSlug, item.TicketId!.Value)" />
 
             </section>
 
@@ -87,55 +86,7 @@
 
             @* ---------------- row 5 — evaluator scores (first consumer of scores.json) ---------------- *@
             <section class="mc-grid mc-row-5">
-                <article class="mc-card">
-                    <div class="mc-card-head">
-                        <div>
-                            <div class="mc-card-label">@L["MissionScores"]</div>
-                            <div class="mc-card-sub">@L["MissionScoresSub"]</div>
-                        </div>
-                    </div>
-                    @if (snapshot.EvaluatorScores.Count == 0)
-                    {
-                        <div class="mc-empty">@L["MissionScoresEmpty"]</div>
-                    }
-                    else
-                    {
-                        <div class="mc-table-wrap">
-                            <table class="mc-tickets mc-scores">
-                                <thead>
-                                    <tr>
-                                        <th>@L["MissionColProject"]</th>
-                                        <th>@L["MissionScoreAgent"]</th>
-                                        <th>@L["MissionScoreOutcome"]</th>
-                                        <th>@L["MissionScoreProcess"]</th>
-                                        <th>@L["MissionScoreEfficiency"]</th>
-                                        <th>@L["MissionScoreCommunication"]</th>
-                                        <th>@L["MissionScoreFirstPass"]</th>
-                                        <th class="upd">@L["MissionScoreSamples"]</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var project in snapshot.EvaluatorScores)
-                                    {
-                                        @foreach (var score in project.Scores.Take(6))
-                                        {
-                                            <tr>
-                                                <td class="proj-cell">@project.ProjectName</td>
-                                                <td>@score.Agent</td>
-                                                <td class="num">@Score(score.Outcome)</td>
-                                                <td class="num">@Score(score.Process)</td>
-                                                <td class="num">@Score(score.Efficiency)</td>
-                                                <td class="num">@Score(score.Communication)</td>
-                                                <td class="num">@Percent(score.FirstPassRate)</td>
-                                                <td class="upd num">@score.Samples</td>
-                                            </tr>
-                                        }
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </article>
+                <MissionScoresCard Scores="snapshot.EvaluatorScores" />
             </section>
 
         </main>
@@ -232,12 +183,4 @@
         _refreshCts?.Dispose();
         _refreshCts = null;
     }
-
-    // ------------------------------------------------------------------ formatting
-    // The culture-, palette- and geometry-level helpers live in MissionFormat so the section cards
-    // can share them; only the localization-bound wrappers stay here, for markup brevity.
-
-    private string KpiLabel(string column) => MissionFormat.KpiLabel(L, column);
-    private string Score(double? value) => MissionFormat.Score(L, value);
-    private string Percent(double? value) => MissionFormat.Percent(L, value);
 }
