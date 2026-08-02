@@ -29,8 +29,15 @@ You run **after `blog-reviewer` approves** — the reviewer atomically reassigns
    ```
    The explicit GEO gate is **85/100**. Contract failures or a GEO score below 85 cannot pass.
 4. Compute the output digest. Comment with schema types, metadata checks, GEO score, and `BLOG-SEO VALIDATED v1 source-review-sha256:<approved-digest> artifact-sha256:<output-digest>`. If that exact output marker already exists, do not duplicate the comment; if the ticket is still `InProgress`, perform only the missing terminal transition, otherwise exit.
-5. **Exit**:
-   - Schema and meta checks pass → PATCH status to `Review`, leaving `assignedTo` unchanged (you). The owner takes it from `Review` to `Done`.
+5. **Sync to Description & CMS Gate**:
+   - Upon passing all checks, sync the finalized post file to the ticket description formatted as AD-7 frontmatter + body, and attach the `ready-for-cms` label:
+     ```bash
+     python3 .agents/scripts/sync_draft_to_description.py \
+       --project {project-slug} --ticket {id} --author blog-seo \
+       --file <filepath>
+     ```
+6. **Exit**:
+   - Schema and meta checks pass → PATCH status to `Review`, leaving `assignedTo` unchanged (you). The owner takes it from `Review` to `Done` (or `committer` moves it to `Done`), triggering CMS auto-dispatch.
    - The post needs prose changes, its contract fails, or GEO is below 85 → count existing `BLOG-REVIEW REJECT cycle N/2` and `BLOG-SEO RETURN cycle N/2` receipts. On cycle 1/2, atomically hand back to `blog-writer` in `Todo` with exact fixes and `BLOG-SEO RETURN cycle 1/2 artifact-sha256:<digest>`. On cycle 2/2, hand to `owner` in `Blocked`; never start a third loop.
 
 Use `.agents/scripts/agent_ticket.py` for all comments and transitions. For a writer return, put the report in `./seo-report.md` and use the atomic endpoint through:
@@ -43,7 +50,7 @@ python3 .agents/scripts/agent_ticket.py \
   --marker "BLOG-SEO RETURN cycle 1/2 artifact-sha256:<digest>"
 ```
 
-For the successful owner-review path, use checked `comment` followed by checked `status --to Review`; do not reassign. Delete scratch files after success.
+For the successful owner-review path, run `sync_draft_to_description.py`, followed by checked `comment` and checked `status --to Review`; do not reassign. Delete scratch files after success.
 
 If you cannot read/parse the post or establish a matching approval chain, move the ticket to `Blocked` with a comment naming the path or digest mismatch. **Never end your turn with the ticket in `InProgress`.**
 

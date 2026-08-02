@@ -5185,7 +5185,17 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
 .mc-st-sub { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.2rem; }
 
 /* ---------- workload bars ---------- */
-.mc-bars { display: flex; flex-direction: column; justify-content: space-between; gap: 2px; flex: 1 1 auto; }
+.mc-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1 1 auto;
+    max-height: 380px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+    padding-right: 4px;
+}
 .mc-bar-row {
     display: grid;
     grid-template-columns: 104px minmax(0, 1fr) 96px;

@@ -18,7 +18,7 @@
     {
         var maxDispatches = Math.Max(1, Workload.Max(w => w.Dispatches));
         <div class="mc-bars">
-            @foreach (var agent in Workload.Take(12))
+            @foreach (var agent in Workload)
             {
                 <div class="mc-bar-row">
                     <span class="mc-bar-name" title="@agent.Agent">
