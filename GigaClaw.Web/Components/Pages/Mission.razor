@@ -12,6 +12,12 @@
 
 <PageTitle>@L["MissionTitle"]</PageTitle>
 
+@* Materialised once per render: the header and the runs card both need it, and the
+   projection walks every project's live run list. *@
+@{
+    var activeRuns = ActiveRuns;
+}
+
 <div class="mc-root">
 
     <header class="mc-header">
@@ -23,7 +29,7 @@
             <span class="mc-generated">@_snapshot.GeneratedAtUtc.ToString("HH:mm 'UTC'", CultureInfo.InvariantCulture)</span>
         }
         <button class="mc-pill" @onclick="RefreshAsync" disabled="@_loading">@L["MissionRefresh"]</button>
-        <span class="mc-live-pill"><span class="mc-dot-live"></span><span class="num">@ActiveRuns.Count</span>&nbsp;@L["MissionAgentsRunning"]</span>
+        <span class="mc-live-pill"><span class="mc-dot-live"></span><span class="num">@activeRuns.Count</span>&nbsp;@L["MissionAgentsRunning"]</span>
     </header>
 
     @if (_snapshot is null)
@@ -65,60 +71,7 @@
 
                 <MissionStatusMixCard StatusMix="snapshot.StatusMix" />
 
-                <article class="mc-card">
-                    <div class="mc-card-head">
-                        <div>
-                            <div class="mc-card-label">@L["MissionActiveRuns"]</div>
-                            <div class="mc-card-sub">@L.Get("MissionActiveRunsSub", ActiveRuns.Count)</div>
-                        </div>
-                    </div>
-
-                    @if (ActiveRuns.Count == 0)
-                    {
-                        <div class="mc-empty">@L["MissionActiveRunsEmpty"]</div>
-                    }
-                    else
-                    {
-                        <div class="mc-runs">
-                            @foreach (var run in ActiveRuns.Take(5))
-                            {
-                                <div class="mc-run">
-                                    <div class="mc-run-top">
-                                        <span class="mc-dot-live"></span>
-                                        <span class="mc-run-agent">@run.AgentName</span>
-                                        <span class="mc-run-arrow">→</span>
-                                        <span class="mc-proj">@run.ProjectSlug</span>
-                                        @if (run.TicketId is int runTicket)
-                                        {
-                                            <span class="mc-att-id num">#@runTicket</span>
-                                        }
-                                    </div>
-                                    <div class="mc-run-bot">
-                                        <span class="mc-run-meta num">@Elapsed(run.StartedAt)</span>
-                                        <button class="mc-ghost" @onclick="() => OpenRunDrawer(run.RunId)">@L["MissionViewLog"]</button>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-
-                    <div class="mc-cost-strip">
-                        <span>@L["MissionCostToday"] <b class="num">@Usd(snapshot.Cost.TodayUsd)</b></span>
-                        <span>@L["MissionCostWeek"] <b class="num">@Usd(snapshot.Cost.WeekUsd)</b></span>
-                        <span>
-                            @L["MissionCacheSavings"]
-                            <b class="num">@(snapshot.Cost.CacheSavingsPercent is double savings ? $"{savings:0}%" : L["MissionNoData"])</b>
-                        </span>
-                        <span>
-                            @L["MissionCostliest"]
-                            <b class="num">
-                                @(snapshot.Cost.CostliestTicketId is int costliest
-                                    ? $"#{costliest} ${snapshot.Cost.CostliestUsd.ToString("0.00", CultureInfo.InvariantCulture)}"
-                                    : L["MissionNoData"])
-                            </b>
-                        </span>
-                    </div>
-                </article>
+                <MissionRunsCard ActiveRuns="activeRuns" Cost="snapshot.Cost" OnViewLog="OpenRunDrawer" />
 
             </section>
 
