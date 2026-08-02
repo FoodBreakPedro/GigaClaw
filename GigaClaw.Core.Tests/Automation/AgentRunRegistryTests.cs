@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GigaClaw.Core.Services;
 using GigaClaw.Core.Tests.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -93,6 +94,54 @@ public class AgentRunRegistryTests
         Assert.NotNull(loaded);
         Assert.Equal(AgentRunStatus.Stopped, loaded!.Status);
         Assert.NotNull(loaded.EndedAt);
+    }
+
+    /// <summary>
+    /// A5: the 24h purge is the only place a run's usage leaves memory, and it also deletes the
+    /// snapshot JSON — so PurgeOld must append the run's cost line to the durable
+    /// <c>runs/costs.ndjson</c> ledger before the snapshot disappears.
+    /// </summary>
+    [Fact]
+    public void PurgeOld_AppendsCostLedgerLine_BeforeDeletingRunJson()
+    {
+        using var tmp = new TempDir();
+        var store = new RunLogStore(tmp.Path);
+        var registry = new AgentRunRegistry(store);
+
+        var run = new AgentRun
+        {
+            RunId = "purged", ProjectSlug = "p", TicketId = 7,
+            AgentName = "qa-tester", SkillFile = "qa-tester/SKILL.md",
+            ConcurrencyGroup = "qa-tester", StartedAt = DateTime.UtcNow.AddDays(-2),
+        };
+        run.Model = "claude-haiku-4-5";
+        run.AddUsage(100, 50, 10, 5, 0.25m);
+        registry.Register(run);
+        registry.Complete("purged", AgentRunStatus.Completed, 0);
+        run.EndedAt = DateTime.UtcNow.AddHours(-48);
+
+        registry.PurgeOld(TimeSpan.FromHours(24));
+
+        Assert.Null(registry.Get("purged"));
+        Assert.False(File.Exists(Path.Combine(tmp.Path, "runs", "purged.json")));
+
+        var ledgerPath = Path.Combine(tmp.Path, "runs", "costs.ndjson");
+        Assert.True(File.Exists(ledgerPath), "PurgeOld must write the cost ledger before deleting the run JSON.");
+        var line = Assert.Single(File.ReadAllLines(ledgerPath));
+
+        using var doc = JsonDocument.Parse(line);
+        var root = doc.RootElement;
+        Assert.Equal("purged", root.GetProperty("runId").GetString());
+        Assert.Equal("p", root.GetProperty("projectSlug").GetString());
+        Assert.Equal(7, root.GetProperty("ticketId").GetInt32());
+        Assert.Equal("qa-tester", root.GetProperty("agentName").GetString());
+        Assert.Equal("claude-haiku-4-5", root.GetProperty("model").GetString());
+        Assert.Equal("Completed", root.GetProperty("status").GetString());
+        Assert.Equal(100, root.GetProperty("inputTokens").GetInt32());
+        Assert.Equal(50, root.GetProperty("outputTokens").GetInt32());
+        Assert.Equal(10, root.GetProperty("cacheReadTokens").GetInt32());
+        Assert.Equal(5, root.GetProperty("cacheWriteTokens").GetInt32());
+        Assert.Equal(0.25m, root.GetProperty("totalCostUsd").GetDecimal());
     }
 }
 

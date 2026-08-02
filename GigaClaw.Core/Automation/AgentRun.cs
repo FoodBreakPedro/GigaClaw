@@ -226,6 +226,47 @@ public sealed class RunLogStore
         if (File.Exists(path)) File.Delete(path);
     }
 
+    private readonly object _ledgerLock = new();
+
+    /// <summary>
+    /// A5: appends one NDJSON line of usage data per purged run to <c>runs/costs.ndjson</c>,
+    /// called by <see cref="AgentRunRegistry.PurgeOld"/> immediately before <see cref="Delete"/>
+    /// removes the full snapshot. The registry purges every run older than 24h, so without this
+    /// ledger no question beyond a day of spend ("what did qa-tester cost last week?") is
+    /// answerable from data. Append-only, never rewritten, never read by the engine.
+    /// Failures are swallowed: the ledger is telemetry and must never block the purge.
+    /// </summary>
+    public void AppendCostLedger(AgentRun run)
+    {
+        try
+        {
+            var line = JsonSerializer.Serialize(new
+            {
+                runId = run.RunId,
+                projectSlug = run.ProjectSlug,
+                ticketId = run.TicketId,
+                agentName = run.AgentName,
+                model = run.Model,
+                backend = run.Backend,
+                startedAt = run.StartedAt,
+                endedAt = run.EndedAt,
+                status = run.Status.ToString(),
+                exitCode = run.ExitCode,
+                inputTokens = run.InputTokens,
+                outputTokens = run.OutputTokens,
+                cacheReadTokens = run.CacheReadTokens,
+                cacheWriteTokens = run.CacheWriteTokens,
+                totalCostUsd = run.TotalCostUsd,
+            }, s_json);
+            lock (_ledgerLock)
+                File.AppendAllText(Path.Combine(_dir, "costs.ndjson"), line + "\n");
+        }
+        catch
+        {
+            // Telemetry only — losing one ledger line is better than a purge that never completes.
+        }
+    }
+
     public IEnumerable<AgentRun> LoadAll()
     {
         if (!Directory.Exists(_dir)) yield break;
@@ -493,13 +534,18 @@ public sealed class AgentRunRegistry
             .Where(r => r.ProjectSlug == projectSlug && r.ChatTarget == chatTarget && r.Status != AgentRunStatus.Running && r.EndedAt is not null)
             .MaxBy(r => r.EndedAt);
 
-    /// <summary>Purge runs that ended more than N minutes ago.</summary>
+    /// <summary>Purge runs that ended more than N minutes ago. The purge is the only place a
+    /// run's usage leaves memory, so each purged run is appended to the durable cost ledger
+    /// (<see cref="RunLogStore.AppendCostLedger"/>) before its snapshot JSON is deleted.</summary>
     public void PurgeOld(TimeSpan age)
     {
         var cutoff = DateTime.UtcNow - age;
         foreach (var r in _runs.Values.Where(r => r.Status != AgentRunStatus.Running && r.EndedAt is not null && r.EndedAt < cutoff).ToList())
         {
-            _runs.TryRemove(r.RunId, out _);
+            // The TryRemove result gates the ledger append: two overlapping purges must not
+            // record the same run's cost twice.
+            if (!_runs.TryRemove(r.RunId, out _)) continue;
+            _store?.AppendCostLedger(r);
             _store?.Delete(r.RunId);
         }
     }
