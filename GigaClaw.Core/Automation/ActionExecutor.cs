@@ -1178,6 +1178,17 @@ internal sealed class ActionExecutor
                 return;
             }
 
+            // A3: chained consolidation is gated on signal. An empty parent transcript means there
+            // is nothing to distill, and dispatching a full LLM pass to conclude "no lessons" burns
+            // a run for nothing. Standalone consolidations (parentRun == null — manual or
+            // API-triggered) still run: they curate existing memory rather than distill run events.
+            var eventsSummary = BuildEventsSummary(parentRun);
+            if (parentRun is not null && string.IsNullOrWhiteSpace(eventsSummary))
+            {
+                _logger.LogInformation("consolidateAgentMemory: parent run {Id} recorded no consolidatable events — skipping", parentRun.RunId);
+                return;
+            }
+
             var instructionPath = Path.Combine(
                 rt.Workspace!,
                 spec.InstructionFile.Replace('/', Path.DirectorySeparatorChar));
@@ -1190,7 +1201,6 @@ internal sealed class ActionExecutor
 
             var instructionContent = (await File.ReadAllTextAsync(instructionPath, ct))
                 .Replace("{agentSlug}", agent);
-            var eventsSummary = BuildEventsSummary(parentRun);
 
             const string scope = "consolidate";
             _sessions.Clear(rt.Workspace!, $"{scope}:{agent}", ticketId: null);
