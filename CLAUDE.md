@@ -39,7 +39,7 @@ tools/                     Repo helpers (publish-stable.ps1, …).
 
 - Project registry: `%APPDATA%/GigaClaw/registry.db` (SQLite).
 - Per-project DB: `%APPDATA%/GigaClaw/projects/<slug>.db`.
-- Run logs: `%APPDATA%/GigaClaw/runs/<run-id>/`.
+- Run logs: `%APPDATA%/GigaClaw/runs/<run-id>.json` (flat, one snapshot per run); `runs/costs.ndjson` is an append-only cost ledger (one usage line per purged run).
 - App settings (language, onboardingSeen): `%APPDATA%/GigaClaw/settings.json`.
 - Agent memory and session state: `<workspace>/.agents/**`.
 
