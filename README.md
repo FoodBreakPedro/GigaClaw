@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.webp" alt="GigaClaw demo" width="800" />
+  <img src="doc/assets/demo.webp" alt="GigaClaw demo" width="800" />
 </p>
 
 <p align="center">
@@ -137,7 +137,7 @@ This app is designed to be operated by AI agents through its REST API. Here's ho
 Each project has a customizable **Dashboard** view alongside the kanban board. Tiles are free-dragged, auto-refresh on a schedule, and can be created or edited from the in-app AI chat panel — the agent writes the tile's folder for you.
 
 <p align="center">
-  <img src="docs/assets/dashboard.png" alt="GigaClaw dashboard" width="800" />
+  <img src="doc/assets/dashboard.png" alt="GigaClaw dashboard" width="800" />
 </p>
 
 ### Tile types

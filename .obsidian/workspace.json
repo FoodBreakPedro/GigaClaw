@@ -183,7 +183,7 @@
     "wiki/Welcome to Karpathy LLM Wiki.md",
     "wiki",
     "graphify-out/cache/ast/v0.9.31/ad7a8a4766cd90182aab21036fac858a3b9844dad9c3572e5c118a3d7aef3a95.json",
-    "Codex Ecosystem Comparison.md",
-    "Claude Ecosystem Comparison.md"
+    "doc/dev-notes/Codex Ecosystem Comparison.md",
+    "doc/dev-notes/Claude Ecosystem Comparison.md"
   ]
 }
