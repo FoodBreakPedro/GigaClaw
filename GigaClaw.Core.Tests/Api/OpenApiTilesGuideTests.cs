@@ -10,6 +10,7 @@ namespace GigaClaw.Core.Tests.Api;
 /// RED until OpenApiMarkdownGenerator emits the guide and TileSidecar fields carry
 /// XML doc comments describing the schema.
 /// </summary>
+[Collection("ApiHost")] // see ApiHostCollection: GIGACLAW_DATA_DIR is process-global
 public sealed class OpenApiTilesGuideTests : IClassFixture<OpenApiDocumentationTests.ApiFactory>, IDisposable
 {
     private static readonly string[] AllTemplates =

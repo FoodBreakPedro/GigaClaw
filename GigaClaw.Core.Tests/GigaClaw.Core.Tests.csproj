@@ -25,8 +25,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Several fixtures mutate process-wide env vars (GIGACLAW_DATA_DIR, GIGACLAW_CLAUDE_BIN);
-         parallel collections race on them and can deadlock the whole run. -->
+    <!-- Collections run in parallel. Fixtures that mutate process-wide env vars are serialized
+         through shared collections instead: "MockClaude" (GIGACLAW_CLAUDE_BIN) and "ApiHost"
+         (GIGACLAW_DATA_DIR). -->
     <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

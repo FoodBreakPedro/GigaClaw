@@ -5,6 +5,7 @@ using GigaClaw.Web.Api;
 
 namespace GigaClaw.Core.Tests.Api;
 
+[Collection("ApiHost")] // see ApiHostCollection: GIGACLAW_DATA_DIR is process-global
 public sealed class TicketDependencyApiTests :
     IClassFixture<EndpointsRefactorTests.ApiFactory>,
     IDisposable

@@ -10,6 +10,7 @@ namespace GigaClaw.Core.Tests.Api;
 /// Tests are RED until Endpoints.cs has .Produces&lt;T&gt;() annotations and
 /// OpenApiMarkdownGenerator.GetExampleValue special-cases the "author" field.
 /// </summary>
+[Collection("ApiHost")] // see ApiHostCollection: GIGACLAW_DATA_DIR is process-global
 public sealed class OpenApiDocumentationTests : IClassFixture<OpenApiDocumentationTests.ApiFactory>, IDisposable
 {
     private readonly HttpClient _client;

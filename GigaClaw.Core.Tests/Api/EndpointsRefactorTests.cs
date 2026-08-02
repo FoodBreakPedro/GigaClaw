@@ -14,6 +14,7 @@ namespace GigaClaw.Core.Tests.Api;
 ///   - Endpoints.cs becomes a thin orchestrator and per-domain partial files exist.
 /// Source-text assertions are RED on dev (monolith) and GREEN after the refactor.
 /// </summary>
+[Collection("ApiHost")] // see ApiHostCollection: GIGACLAW_DATA_DIR is process-global
 public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTests.ApiFactory>, IDisposable
 {
     private readonly HttpClient _client;

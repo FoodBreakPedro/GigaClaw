@@ -12,6 +12,7 @@ namespace GigaClaw.Core.Tests.Api;
 /// directly). <c>POST /api/projects/{slug}/initialize</c> and Home.razor's project-creation flow
 /// both call that same helper, so this test's assertions hold for both call sites by construction.
 /// </summary>
+[Collection("ApiHost")] // see ApiHostCollection: GIGACLAW_DATA_DIR is process-global
 public sealed class ProjectInitializeModelSeedTests : IClassFixture<ProjectInitializeModelSeedTests.ApiFactory>, IDisposable
 {
     private readonly HttpClient _client;
