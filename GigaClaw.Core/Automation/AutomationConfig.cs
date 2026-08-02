@@ -522,6 +522,10 @@ public sealed class ConsolidateAgentMemoryActionSpec : ActionSpec
     public int MaxTurns { get; set; } = 5;
     /// <summary>Path to the instruction markdown file, relative to workspace root.</summary>
     public string InstructionFile { get; set; } = ".agents/memory-consolidation.md";
+    /// <summary>Claude model for the consolidation pass, mirroring <see cref="RunAgentActionSpec.Model"/>.
+    /// Null falls back to the CLI default. Distillation is mechanical summarization, so the shipped
+    /// template pins a cheap model here rather than paying the parent run's tier twice.</summary>
+    public string? Model { get; set; }
 }
 
 /// <summary>

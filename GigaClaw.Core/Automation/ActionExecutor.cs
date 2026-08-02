@@ -1208,7 +1208,7 @@ internal sealed class ActionExecutor
                     ? "No events were recorded for this run."
                     : eventsSummary,
                 SessionScope = scope,
-                Model = null,
+                Model = spec.Model,
                 RetryOnResumeFailure = true,
                 MaxRunDuration = TimeSpan.FromMinutes(30),
             };
