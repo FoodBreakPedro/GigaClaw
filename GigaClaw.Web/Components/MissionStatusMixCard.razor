@@ -1,0 +1,65 @@
+@using static GigaClaw.Web.Components.MissionFormat
+@inject LocalizationService L
+
+@* Mission Control row 3 — open tickets by column, as a donut plus its table. *@
+<article class="mc-card">
+    <div class="mc-card-head">
+        <div>
+            <div class="mc-card-label">@L["MissionStatusMix"]</div>
+            <div class="mc-card-sub">@L["MissionStatusMixSub"]</div>
+        </div>
+    </div>
+    @{
+        var mix = StatusMix
+            .Where(kv => kv.Value > 0)
+            .OrderByDescending(kv => kv.Value)
+            .ToList();
+        var mixTotal = mix.Sum(kv => kv.Value);
+    }
+    @if (mixTotal == 0)
+    {
+        <div class="mc-empty">@L["MissionStatusMixEmpty"]</div>
+    }
+    else
+    {
+        const double circumference = 263.89; // 2πr, r = 42
+        var offset = 0.0;
+        <div class="mc-donut-wrap">
+            <div class="mc-donut">
+                <svg viewBox="0 0 120 120" role="img" aria-label="@L["MissionStatusMix"]">
+                    <g transform="rotate(-90 60 60)" fill="none" stroke-width="14">
+                        @foreach (var slice in mix)
+                        {
+                            var length = slice.Value / (double)mixTotal * circumference;
+                            var dash = $"{Num(length)} {Num(circumference - length)}";
+                            var dashOffset = Num(-offset);
+                            offset += length;
+                            <circle cx="60" cy="60" r="42" stroke="@KpiColor(slice.Key)"
+                                    stroke-dasharray="@dash" stroke-dashoffset="@dashOffset"></circle>
+                        }
+                    </g>
+                </svg>
+                <div class="mc-donut-center">
+                    <b class="num">@mixTotal</b>
+                    <span>@L["MissionOpenTickets"]</span>
+                </div>
+            </div>
+            <div class="mc-mix-table">
+                @foreach (var slice in mix)
+                {
+                    <div class="mc-mix-row">
+                        <i class="mc-sdot" style="background: @KpiColor(slice.Key)"></i>
+                        <span class="nm">@MissionFormat.KpiLabel(L, slice.Key)</span>
+                        <span class="vl num">@slice.Value</span>
+                        <span class="pc num">@Num(slice.Value * 100.0 / mixTotal)%</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyDictionary<string, int> StatusMix { get; set; } =
+        new Dictionary<string, int>();
+}
