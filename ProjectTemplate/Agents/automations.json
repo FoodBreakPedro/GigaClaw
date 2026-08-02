@@ -1,4 +1,5 @@
 {
+  "maxTicketCostUsd": 25.00,
   "automations": [
     {
       "id": "assignee-dispatch",
@@ -13,8 +14,9 @@
         "debounceSeconds": 0,
         "maxConsecutiveFirings": 3,
         "retryBackoffSeconds": 300,
-        "exhaustedStatus": "Blocked",
-        "exhaustedComment": "Automation stopped after 3 unchanged dispatch attempts. Add owner feedback or revise the ticket before retrying."
+        "exhaustedStatus": "Backlog",
+        "exhaustedAssignee": "groomer",
+        "exhaustedComment": "Automation stopped after 3 unchanged dispatch attempts. The ticket goes back to Backlog assigned to the groomer for re-scoping; the groomer routes it on, or hands it to the owner when it cannot."
       },
       "conditions": [
         {
@@ -96,8 +98,9 @@
         "debounceSeconds": 0,
         "maxConsecutiveFirings": 3,
         "retryBackoffSeconds": 300,
-        "exhaustedStatus": "Blocked",
-        "exhaustedComment": "Automation stopped after 3 unchanged dispatch attempts. Add owner feedback or revise the ticket before retrying."
+        "exhaustedStatus": "Backlog",
+        "exhaustedAssignee": "groomer",
+        "exhaustedComment": "Automation stopped after 3 unchanged dispatch attempts. The ticket goes back to Backlog assigned to the groomer for re-scoping; the groomer routes it on, or hands it to the owner when it cannot."
       },
       "conditions": [
         {
@@ -140,6 +143,36 @@
         {
           "type": "commitAgentMemory",
           "agent": "{assignee}"
+        }
+      ]
+    },
+    {
+      "id": "backlog-intake",
+      "name": "Intake: hand an unassigned Backlog ticket to the groomer",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketInColumn",
+        "seconds": 30,
+        "columns": [
+          "Backlog"
+        ],
+        "unassigned": true,
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 3,
+        "retryBackoffSeconds": 600,
+        "exhaustedStatus": "Blocked",
+        "exhaustedComment": "Intake could not hand this ticket to the groomer after 3 attempts — it is still unassigned. @owner - assign it by hand, or check that a `groomer` member exists in this project."
+      },
+      "conditions": [],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "system",
+          "content": "Intake: ticket-{ticketId} arrived in Backlog with no assignee, so the automation engine handed it to the groomer. The groomer rewrites the title and description, sets priority and labels, and reassigns the ticket to the agent that should do the work — it never leaves itself as the assignee. This is the only entry point that needs no caller-side routing: anything that can create a Backlog ticket gets grooming for free."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "groomer"
         }
       ]
     },
@@ -364,8 +397,9 @@
         "debounceSeconds": 0,
         "maxConsecutiveFirings": 3,
         "retryBackoffSeconds": 300,
-        "exhaustedStatus": "Blocked",
-        "exhaustedComment": "Agent resume stopped after 3 unchanged attempts. Add owner feedback or revise the ticket before retrying."
+        "exhaustedStatus": "Backlog",
+        "exhaustedAssignee": "groomer",
+        "exhaustedComment": "Agent resume stopped after 3 unchanged attempts. The ticket goes back to Backlog assigned to the groomer for re-scoping; the groomer routes it on, or hands it to the owner when it cannot."
       },
       "conditions": [
         {
@@ -433,8 +467,9 @@
         "debounceSeconds": 0,
         "maxConsecutiveFirings": 3,
         "retryBackoffSeconds": 300,
-        "exhaustedStatus": "Blocked",
-        "exhaustedComment": "Agent resume stopped after 3 unchanged attempts. Add owner feedback or revise the ticket before retrying."
+        "exhaustedStatus": "Backlog",
+        "exhaustedAssignee": "groomer",
+        "exhaustedComment": "Agent resume stopped after 3 unchanged attempts. The ticket goes back to Backlog assigned to the groomer for re-scoping; the groomer routes it on, or hands it to the owner when it cannot."
       },
       "conditions": [
         {
@@ -1206,8 +1241,9 @@
         "debounceSeconds": 0,
         "maxConsecutiveFirings": 3,
         "retryBackoffSeconds": 300,
-        "exhaustedStatus": "Blocked",
-        "exhaustedComment": "content-writer dispatch stopped after 3 unchanged attempts from Todo. Add owner feedback or revise the ticket before retrying."
+        "exhaustedStatus": "Backlog",
+        "exhaustedAssignee": "groomer",
+        "exhaustedComment": "content-writer dispatch stopped after 3 unchanged attempts from Todo. The ticket goes back to Backlog assigned to the groomer for re-scoping; the groomer routes it on, or hands it to the owner when it cannot."
       },
       "conditions": [],
       "actions": [
@@ -1249,8 +1285,9 @@
         "debounceSeconds": 0,
         "maxConsecutiveFirings": 5,
         "retryBackoffSeconds": 120,
-        "exhaustedStatus": "Blocked",
-        "exhaustedComment": "content-writer made no progress across 5 consecutive dispatch attempts while InProgress. Parking for owner review. This guards a stuck run only — the writer/reviewer revision budget itself is enforced by blog-reviewer's CONTENT-REVIEW cycle markers, capped at 2/2."
+        "exhaustedStatus": "Backlog",
+        "exhaustedAssignee": "groomer",
+        "exhaustedComment": "content-writer made no progress across 5 consecutive dispatch attempts while InProgress. The ticket goes back to Backlog assigned to the groomer for re-scoping. This guards a stuck run only — the writer/reviewer revision budget itself is enforced by blog-reviewer's CONTENT-REVIEW cycle markers, capped at 2/2."
       },
       "conditions": [],
       "actions": [
@@ -1726,6 +1763,13 @@
         {
           "type": "repairBudget",
           "mode": "withinCap"
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ],
+          "negate": true
         }
       ],
       "actions": [
@@ -1733,6 +1777,85 @@
           "type": "addComment",
           "author": "automation",
           "content": "GIGACLAW-GATE v1 ticket-{ticketId} repair round — returning the work to {assignee}.\n\nThe reviewer returned FIX and `maxReviewCycles` still has a round left, so the automation engine re-dispatches the producing agent with the refused categories and veto items injected into its run context. When the budget runs out the ticket escalates to the owner instead of looping."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "InProgress"
+        },
+        {
+          "type": "runAgent",
+          "agent": "{assignee}",
+          "concurrencyGroup": "{assignee}",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "{assignee}"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "{assignee}"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-repair-round-extended",
+      "name": "Verdict gate: a FIX verdict returns the work to the producing agent while the repair budget holds (extended cap: tickets labeled `extended-repair`)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor",
+          "blog-reviewer",
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer",
+            "blog-writer",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "repairBudget",
+          "mode": "withinCap",
+          "maxCycles": 4
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} repair round — returning the work to {assignee}.\n\nThe reviewer returned FIX and `maxReviewCycles` still has a round left — this ticket carries `extended-repair`, so the cap is 4 rounds instead of the contract default, so the automation engine re-dispatches the producing agent with the refused categories and veto items injected into its run context. When the budget runs out the ticket escalates to the owner instead of looping."
         },
         {
           "type": "moveTicketStatus",
@@ -1798,23 +1921,48 @@
         {
           "type": "repairBudget",
           "mode": "exhausted"
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ],
+          "negate": true
         }
       ],
       "actions": [
         {
           "type": "addComment",
           "author": "automation",
-          "content": "{verdictHistory}\n\n@owner — the repair budget for this ticket is spent, so the automation engine stopped the produce/review loop and parked the ticket here rather than starting another round. Every round's reasons are above; no run log is needed. Unblocking the ticket (or moving it back to Todo with feedback) hands the agents a fresh budget."
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent, so the automation engine stopped the produce/review loop rather than starting another round. It is not parked on the owner: the ticket goes back to Backlog assigned to the groomer for failure triage. Every round's reasons are above — the groomer re-scopes the requirements from them, splits the work through the producer, reassigns it, or (last resort) hands it to the owner in Blocked. Landing in Backlog also hands the agents a fresh repair budget.\n\nThis is the single automated re-scoping lap. The ticket now carries the `triaged` label, so if the produce/review loop exhausts its budget again the gate hands the ticket to the owner in Blocked instead of serving it to the groomer a second time — one machine attempt at re-scoping, then a person."
+        },
+        {
+          "type": "setLabels",
+          "add": [
+            "triaged"
+          ],
+          "remove": []
+        },
+        {
+          "type": "assignTicket",
+          "slug": "groomer"
         },
         {
           "type": "moveTicketStatus",
-          "to": "Blocked"
+          "to": "Backlog"
         }
       ]
     },
     {
-      "id": "verdict-gate-block-escalate",
-      "name": "Verdict gate: BLOCK, INVALID, STALE or MISSING blocks the ticket with a receipt",
+      "id": "verdict-gate-repair-exhausted-triaged",
+      "name": "Verdict gate: a FIX verdict with the repair budget spent escalates to the owner (already triaged once: escalates to the owner)",
       "enabled": true,
       "trigger": {
         "type": "ticketCommentAdded",
@@ -1845,10 +1993,228 @@
         {
           "type": "verdictIs",
           "verdicts": [
-            "BLOCK",
-            "INVALID",
-            "STALE",
-            "MISSING"
+            "FIX"
+          ],
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted"
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent again, and this ticket already carries the `triaged` label: the groomer has had its one automated re-scoping lap and the produce/review loop still cannot converge. Rather than fund another lap, the gate stops here.\n\n@owner — this ticket is now assigned to you. Every review round's reasons are above. Re-scope it by hand, split it, or close it; removing the `triaged` label is what hands the loop another automated attempt."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-repair-exhausted-extended",
+      "name": "Verdict gate: a FIX verdict with the repair budget spent escalates to the owner (extended cap: tickets labeled `extended-repair`)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor",
+          "blog-reviewer",
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer",
+            "blog-writer",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "maxCycles": 4
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ]
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ],
+          "negate": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent — this ticket carried `extended-repair`, so it already had the raised 4-round cap — so the automation engine stopped the produce/review loop rather than starting another round. It is not parked on the owner: the ticket goes back to Backlog assigned to the groomer for failure triage. Every round's reasons are above — the groomer re-scopes the requirements from them, splits the work through the producer, reassigns it, or (last resort) hands it to the owner in Blocked. Landing in Backlog also hands the agents a fresh repair budget.\n\nThis is the single automated re-scoping lap. The ticket now carries the `triaged` label, so if the produce/review loop exhausts its budget again the gate hands the ticket to the owner in Blocked instead of serving it to the groomer a second time — one machine attempt at re-scoping, then a person."
+        },
+        {
+          "type": "setLabels",
+          "add": [
+            "triaged"
+          ],
+          "remove": []
+        },
+        {
+          "type": "assignTicket",
+          "slug": "groomer"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Backlog"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-repair-exhausted-triaged-extended",
+      "name": "Verdict gate: a FIX verdict with the repair budget spent escalates to the owner (extended cap: tickets labeled `extended-repair`) (already triaged once: escalates to the owner)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor",
+          "blog-reviewer",
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer",
+            "blog-writer",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "maxCycles": 4
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ]
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent again, and this ticket already carries the `triaged` label: the groomer has had its one automated re-scoping lap and the produce/review loop still cannot converge. Rather than fund another lap, the gate stops here.\n\n@owner — this ticket is now assigned to you. Every review round's reasons are above. Re-scope it by hand, split it, or close it; removing the `triaged` label is what hands the loop another automated attempt."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-block-escalate",
+      "name": "Verdict gate: a deliberate BLOCK verdict blocks the ticket and assigns the owner",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor",
+          "blog-reviewer",
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer",
+            "blog-writer",
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "BLOCK"
           ],
           "requireFreshArtifact": true
         }
@@ -1857,7 +2223,424 @@
         {
           "type": "addComment",
           "author": "automation",
-          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — the reviewer's verdict does not permit an exit.\n\nThe newest verdict on this ticket resolved to one of:\n- `BLOCK` — the reviewer escalated deliberately;\n- `INVALID` — the comment breaks the v1 verdict contract (`.agents/scripts/verdict.schema.json`);\n- `STALE` — the reviewed artifact changed after the review, so the judgement no longer applies;\n- `MISSING` — the reviewer answered in prose and posted no parseable verdict.\n\nThe gate fails closed: an unreadable, absent or stale verdict blocks the ticket, it never passes it. A reviewer that writes prose instead of a verdict stalls the pipeline visibly instead of letting work through.\n\n@owner — read the newest reviewer comment, then either fix the artifact and move the ticket back to Todo, or re-run the reviewer so it posts a contract-valid verdict. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — the reviewer returned BLOCK.\n\n`BLOCK` is a deliberate escalation: the reviewer judged the work and refused to send it back for another pass. It is the one verdict outcome that never gets an automatic second chance — an `INVALID`, `STALE` or `MISSING` verdict is the reviewer's own output failing and earns one re-review first (`verdict-gate-*-reviewer-retry`), while a spent repair budget re-scopes through the groomer. A BLOCK needs a human decision, so the ticket stops here.\n\n@owner — this ticket is now assigned to you. Read the newest reviewer comment, then either fix the artifact and move the ticket back to Todo, or re-scope it."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-ui-reviewer-retry",
+      "name": "Verdict gate: an unusable ui-auditor verdict returns the review to ui-auditor once",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "agent": "ui-auditor",
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "withinCap",
+          "agent": "ui-auditor",
+          "maxRetries": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "ui-auditor",
+          "concurrencyGroup": "ui-auditor",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "ui-auditor"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "ui-auditor"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-blog-reviewer-retry",
+      "name": "Verdict gate: an unusable blog-reviewer verdict returns the review to blog-reviewer once",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "blog-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "withinCap",
+          "agent": "blog-reviewer",
+          "maxRetries": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "blog-reviewer",
+          "concurrencyGroup": "blog-reviewer",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "blog-reviewer"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "blog-reviewer"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-media-reviewer-retry",
+      "name": "Verdict gate: an unusable local-media-reviewer verdict returns the review to local-media-reviewer once",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "agent": "local-media-reviewer",
+          "requireFreshArtifact": true
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "withinCap",
+          "agent": "local-media-reviewer",
+          "maxRetries": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "local-media-reviewer",
+          "concurrencyGroup": "local-media-reviewer",
+          "maxTurns": 60,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "local-media-reviewer"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "local-media-reviewer"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-ui-reviewer-retry-exhausted",
+      "name": "Verdict gate: a second unusable ui-auditor verdict blocks the ticket with a receipt",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "ui-auditor"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "ui-designer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "requireFreshArtifact": true,
+          "agent": "ui-auditor"
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "exhausted",
+          "maxRetries": 1,
+          "agent": "ui-auditor"
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — ui-auditor was asked again and still produced no usable verdict.\n\nThe newest verdict on this ticket resolved to one of:\n- `INVALID` — the comment breaks the v1 verdict contract (`.agents/scripts/verdict.schema.json`);\n- `STALE` — the reviewed artifact changed after the review, so the judgement no longer applies;\n- `MISSING` — the reviewer answered in prose and posted no parseable verdict.\n\nThe reviewer-retry budget for this episode is spent: return-to-sender already gave the reviewer a second pass and it failed the same way. The gate fails closed — an unreadable, absent or stale verdict blocks the ticket, it never passes it.\n\n@owner — this ticket is now assigned to you. Read the newest reviewer comment, then either repair the reviewer's protocol and re-run it, or judge the work by hand. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-blog-reviewer-retry-exhausted",
+      "name": "Verdict gate: a second unusable blog-reviewer verdict blocks the ticket with a receipt",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "blog-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "requireFreshArtifact": true,
+          "agent": "blog-reviewer"
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "exhausted",
+          "maxRetries": 1,
+          "agent": "blog-reviewer"
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — blog-reviewer was asked again and still produced no usable verdict.\n\nThe newest verdict on this ticket resolved to one of:\n- `INVALID` — the comment breaks the v1 verdict contract (`.agents/scripts/verdict.schema.json`);\n- `STALE` — the reviewed artifact changed after the review, so the judgement no longer applies;\n- `MISSING` — the reviewer answered in prose and posted no parseable verdict.\n\nThe reviewer-retry budget for this episode is spent: return-to-sender already gave the reviewer a second pass and it failed the same way. The gate fails closed — an unreadable, absent or stale verdict blocks the ticket, it never passes it.\n\n@owner — this ticket is now assigned to you. Read the newest reviewer comment, then either repair the reviewer's protocol and re-run it, or judge the work by hand. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-media-reviewer-retry-exhausted",
+      "name": "Verdict gate: a second unusable local-media-reviewer verdict blocks the ticket with a receipt",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "local-media-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "local-image-artist",
+            "local-motion-artist",
+            "local-media-compositor"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "requireFreshArtifact": true,
+          "agent": "local-media-reviewer"
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "exhausted",
+          "maxRetries": 1,
+          "agent": "local-media-reviewer"
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — local-media-reviewer was asked again and still produced no usable verdict.\n\nThe newest verdict on this ticket resolved to one of:\n- `INVALID` — the comment breaks the v1 verdict contract (`.agents/scripts/verdict.schema.json`);\n- `STALE` — the reviewed artifact changed after the review, so the judgement no longer applies;\n- `MISSING` — the reviewer answered in prose and posted no parseable verdict.\n\nThe reviewer-retry budget for this episode is spent: return-to-sender already gave the reviewer a second pass and it failed the same way. The gate fails closed — an unreadable, absent or stale verdict blocks the ticket, it never passes it.\n\n@owner — this ticket is now assigned to you. Read the newest reviewer comment, then either repair the reviewer's protocol and re-run it, or judge the work by hand. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-review-watchdog",
+      "name": "Verdict gate: a ticket stranded in Review on a spent reviewer-retry budget is blocked",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketInColumn",
+        "seconds": 300,
+        "columns": [
+          "Review"
+        ],
+        "debounceSeconds": 0,
+        "maxConsecutiveFirings": 3,
+        "retryBackoffSeconds": 600
+      },
+      "conditions": [
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "exhausted",
+          "maxRetries": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — stranded in Review with no usable verdict and no retry left.\n\nThe reviewer-retry budget for this episode is spent (a `GIGACLAW-REREVIEW v1` receipt on this ticket says the reviewer was already asked again), the newest verdict still resolves to `INVALID`, `STALE` or `MISSING`, and the ticket has been sitting in Review anyway.\n\nEvery other arm of the gate keys off a *new* reviewer comment. This one polls the column instead, so a ticket whose next comment never arrives — the reviewer crashed, or its re-dispatch never ran — terminates here rather than sitting in Review forever.\n\n@owner — this ticket is now assigned to you. Read the newest reviewer comment, then either repair the reviewer's protocol and re-run it, or judge the work by hand. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
         },
         {
           "type": "moveTicketStatus",
@@ -1901,6 +2684,13 @@
           "type": "repairBudget",
           "mode": "withinCap",
           "agent": "qa-tester"
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ],
+          "negate": true
         }
       ],
       "actions": [
@@ -1908,6 +2698,82 @@
           "type": "addComment",
           "author": "automation",
           "content": "GIGACLAW-GATE v1 ticket-{ticketId} repair round — returning the work to {assignee}.\n\nqa-tester returned FIX and `maxReviewCycles` still has a round left, so the automation engine re-dispatches the producing agent with the failed acceptance criteria and veto items injected into its run context. When the budget runs out the ticket escalates to the owner instead of looping."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "InProgress"
+        },
+        {
+          "type": "runAgent",
+          "agent": "{assignee}",
+          "concurrencyGroup": "{assignee}",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false,
+          "isolation": "worktree"
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "{assignee}"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "{assignee}"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-qa-repair-round-extended",
+      "name": "Verdict gate: a qa-tester FIX verdict returns the work to the programmer while the repair budget holds (extended cap: tickets labeled `extended-repair`)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "withinCap",
+          "agent": "qa-tester",
+          "maxCycles": 4
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} repair round — returning the work to {assignee}.\n\nqa-tester returned FIX and `maxReviewCycles` still has a round left — this ticket carries `extended-repair`, so the cap is 4 rounds instead of the contract default, so the automation engine re-dispatches the producing agent with the failed acceptance criteria and veto items injected into its run context. When the budget runs out the ticket escalates to the owner instead of looping."
         },
         {
           "type": "moveTicketStatus",
@@ -1970,23 +2836,48 @@
           "type": "repairBudget",
           "mode": "exhausted",
           "agent": "qa-tester"
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ],
+          "negate": true
         }
       ],
       "actions": [
         {
           "type": "addComment",
           "author": "automation",
-          "content": "{verdictHistory}\n\n@owner — the repair budget for this ticket is spent, so the automation engine stopped the programmer/qa loop and parked the ticket here rather than starting another round. Every round's reasons are above; no run log is needed. Unblocking the ticket (or moving it back to Todo with feedback) hands the agents a fresh budget."
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent, so the automation engine stopped the programmer/qa loop rather than starting another round. It is not parked on the owner: the ticket goes back to Backlog assigned to the groomer for failure triage. Every round's reasons are above — the groomer re-scopes the requirements from them, splits the work through the producer, reassigns it, or (last resort) hands it to the owner in Blocked. Landing in Backlog also hands the agents a fresh repair budget.\n\nThis is the single automated re-scoping lap. The ticket now carries the `triaged` label, so if the produce/review loop exhausts its budget again the gate hands the ticket to the owner in Blocked instead of serving it to the groomer a second time — one machine attempt at re-scoping, then a person."
+        },
+        {
+          "type": "setLabels",
+          "add": [
+            "triaged"
+          ],
+          "remove": []
+        },
+        {
+          "type": "assignTicket",
+          "slug": "groomer"
         },
         {
           "type": "moveTicketStatus",
-          "to": "Blocked"
+          "to": "Backlog"
         }
       ]
     },
     {
-      "id": "verdict-gate-qa-block-escalate",
-      "name": "Verdict gate: a qa-tester BLOCK, INVALID, STALE or MISSING verdict blocks the ticket with a receipt",
+      "id": "verdict-gate-qa-repair-exhausted-triaged",
+      "name": "Verdict gate: a qa-tester FIX verdict with the repair budget spent escalates to the owner (already triaged once: escalates to the owner)",
       "enabled": true,
       "trigger": {
         "type": "ticketCommentAdded",
@@ -2011,10 +2902,216 @@
         {
           "type": "verdictIs",
           "verdicts": [
-            "BLOCK",
-            "INVALID",
-            "STALE",
-            "MISSING"
+            "FIX"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "agent": "qa-tester"
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent again, and this ticket already carries the `triaged` label: the groomer has had its one automated re-scoping lap and the produce/review loop still cannot converge. Rather than fund another lap, the gate stops here.\n\n@owner — this ticket is now assigned to you. Every review round's reasons are above. Re-scope it by hand, split it, or close it; removing the `triaged` label is what hands the loop another automated attempt."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-qa-repair-exhausted-extended",
+      "name": "Verdict gate: a qa-tester FIX verdict with the repair budget spent escalates to the owner (extended cap: tickets labeled `extended-repair`)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "agent": "qa-tester",
+          "maxCycles": 4
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ]
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ],
+          "negate": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent — this ticket carried `extended-repair`, so it already had the raised 4-round cap — so the automation engine stopped the programmer/qa loop rather than starting another round. It is not parked on the owner: the ticket goes back to Backlog assigned to the groomer for failure triage. Every round's reasons are above — the groomer re-scopes the requirements from them, splits the work through the producer, reassigns it, or (last resort) hands it to the owner in Blocked. Landing in Backlog also hands the agents a fresh repair budget.\n\nThis is the single automated re-scoping lap. The ticket now carries the `triaged` label, so if the produce/review loop exhausts its budget again the gate hands the ticket to the owner in Blocked instead of serving it to the groomer a second time — one machine attempt at re-scoping, then a person."
+        },
+        {
+          "type": "setLabels",
+          "add": [
+            "triaged"
+          ],
+          "remove": []
+        },
+        {
+          "type": "assignTicket",
+          "slug": "groomer"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Backlog"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-qa-repair-exhausted-triaged-extended",
+      "name": "Verdict gate: a qa-tester FIX verdict with the repair budget spent escalates to the owner (extended cap: tickets labeled `extended-repair`) (already triaged once: escalates to the owner)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "agent": "qa-tester",
+          "maxCycles": 4
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ]
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent again, and this ticket already carries the `triaged` label: the groomer has had its one automated re-scoping lap and the produce/review loop still cannot converge. Rather than fund another lap, the gate stops here.\n\n@owner — this ticket is now assigned to you. Every review round's reasons are above. Re-scope it by hand, split it, or close it; removing the `triaged` label is what hands the loop another automated attempt."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-qa-block-escalate",
+      "name": "Verdict gate: a deliberate qa-tester BLOCK verdict blocks the ticket and assigns the owner",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "BLOCK"
           ],
           "agent": "qa-tester",
           "requireFreshArtifact": false
@@ -2024,7 +3121,130 @@
         {
           "type": "addComment",
           "author": "automation",
-          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — qa-tester's verdict does not permit an exit.\n\nThe newest qa-tester verdict on this ticket resolved to one of:\n- `BLOCK` — the change could not be exercised, or the failure keeps repeating;\n- `INVALID` — the comment breaks the v1 verdict contract (`.agents/scripts/verdict.schema.json`);\n- `MISSING` — qa-tester answered in prose and posted no parseable verdict.\n\nThe gate fails closed: an unreadable or absent verdict blocks the ticket, it never passes it. A reviewer that writes prose instead of a verdict stalls the pipeline visibly instead of letting untested work through.\n\n@owner — read the newest qa-tester comment, then either fix the change and move the ticket back to Todo, or re-run qa-tester so it posts a contract-valid verdict. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — qa-tester returned BLOCK.\n\n`BLOCK` is a deliberate escalation: the change could not be exercised, or the same failure keeps repeating. It is the one verdict outcome that never gets an automatic second chance — an `INVALID`, `STALE` or `MISSING` verdict is qa-tester's own output failing and earns one re-review first (`verdict-gate-qa-reviewer-retry`), while a spent repair budget re-scopes through the groomer. A BLOCK needs a human decision, so the ticket stops here.\n\n@owner — this ticket is now assigned to you. Read the newest qa-tester comment, then either fix the change and move the ticket back to Todo, or re-scope it."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-qa-reviewer-retry",
+      "name": "Verdict gate: an unusable qa-tester verdict returns the review to qa-tester once",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "MISSING"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "withinCap",
+          "agent": "qa-tester",
+          "maxRetries": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "qa-tester",
+          "concurrencyGroup": "qa-tester",
+          "maxTurns": 150,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false,
+          "isolation": "worktree"
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "qa-tester"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "qa-tester"
+        }
+      ]
+    },
+    {
+      "id": "verdict-gate-qa-reviewer-retry-exhausted",
+      "name": "Verdict gate: a second unusable qa-tester verdict blocks the ticket with a receipt",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "qa-tester"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "programmer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "agent": "qa-tester",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "exhausted",
+          "agent": "qa-tester",
+          "maxRetries": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — qa-tester was asked again and still produced no usable verdict.\n\nThe newest verdict on this ticket resolved to one of:\n- `INVALID` — the comment breaks the v1 verdict contract (`.agents/scripts/verdict.schema.json`);\n- `STALE` — the reviewed artifact changed after the review, so the judgement no longer applies;\n- `MISSING` — the reviewer answered in prose and posted no parseable verdict.\n\nThe reviewer-retry budget for this episode is spent: return-to-sender already gave the reviewer a second pass and it failed the same way. The gate fails closed — an unreadable, absent or stale verdict blocks the ticket, it never passes it.\n\n@owner — this ticket is now assigned to you. Read the newest reviewer comment, then either repair the reviewer's protocol and re-run it, or judge the work by hand. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
         },
         {
           "type": "moveTicketStatus",
@@ -2129,6 +3349,13 @@
           "type": "repairBudget",
           "mode": "withinCap",
           "agent": "blog-reviewer"
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ],
+          "negate": true
         }
       ],
       "actions": [
@@ -2136,6 +3363,81 @@
           "type": "addComment",
           "author": "automation",
           "content": "GIGACLAW-GATE v1 ticket-{ticketId} repair round — returning the draft to {assignee}.\n\nblog-reviewer returned FIX and `maxReviewCycles` still has a round left. The ticket goes back to InProgress (not Todo) so the AD-7 revision loop rewrites the description in place, with the refused categories and veto items injected into the run context."
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "InProgress"
+        },
+        {
+          "type": "runAgent",
+          "agent": "{assignee}",
+          "concurrencyGroup": "{assignee}",
+          "maxTurns": 150,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "{assignee}"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "{assignee}"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-repair-round-extended",
+      "name": "Verdict gate (AD-7): FIX returns the draft to content-writer (extended cap: tickets labeled `extended-repair`)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "withinCap",
+          "agent": "blog-reviewer",
+          "maxCycles": 4
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} repair round — returning the draft to {assignee}.\n\nblog-reviewer returned FIX and `maxReviewCycles` still has a round left — this ticket carries `extended-repair`, so the cap is 4 rounds instead of the contract default. The ticket goes back to InProgress (not Todo) so the AD-7 revision loop rewrites the description in place, with the refused categories and veto items injected into the run context."
         },
         {
           "type": "moveTicketStatus",
@@ -2197,23 +3499,48 @@
           "type": "repairBudget",
           "mode": "exhausted",
           "agent": "blog-reviewer"
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ],
+          "negate": true
         }
       ],
       "actions": [
         {
           "type": "addComment",
           "author": "automation",
-          "content": "{verdictHistory}\n\n@owner — the AD-7 revision budget for this draft is spent, so the automation engine stopped the writer/reviewer loop and parked the ticket here rather than starting a third round. Every round's reasons are above. Unblocking the ticket hands the agents a fresh budget."
+          "content": "{verdictHistory}\n\nThe AD-7 revision budget for this draft is spent, so the automation engine stopped the writer/reviewer loop rather than starting another round. It is not parked on the owner: the ticket goes back to Backlog assigned to the groomer for failure triage. Every round's reasons are above — the groomer re-scopes the brief from them, splits the work, reassigns it, or (last resort) hands it to the owner in Blocked. Landing in Backlog also hands the agents a fresh revision budget.\n\nThis is the single automated re-scoping lap. The ticket now carries the `triaged` label, so if the produce/review loop exhausts its budget again the gate hands the ticket to the owner in Blocked instead of serving it to the groomer a second time — one machine attempt at re-scoping, then a person."
+        },
+        {
+          "type": "setLabels",
+          "add": [
+            "triaged"
+          ],
+          "remove": []
+        },
+        {
+          "type": "assignTicket",
+          "slug": "groomer"
         },
         {
           "type": "moveTicketStatus",
-          "to": "Blocked"
+          "to": "Backlog"
         }
       ]
     },
     {
-      "id": "content-verdict-gate-block-escalate",
-      "name": "Verdict gate (AD-7): BLOCK, INVALID or MISSING blocks the draft with a receipt",
+      "id": "content-verdict-gate-repair-exhausted-triaged",
+      "name": "Verdict gate (AD-7): a spent repair budget escalates to the owner (already triaged once: escalates to the owner)",
       "enabled": true,
       "trigger": {
         "type": "ticketCommentAdded",
@@ -2238,10 +3565,216 @@
         {
           "type": "verdictIs",
           "verdicts": [
-            "BLOCK",
-            "INVALID",
-            "STALE",
-            "MISSING"
+            "FIX"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "agent": "blog-reviewer"
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ],
+          "negate": true
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent again, and this ticket already carries the `triaged` label: the groomer has had its one automated re-scoping lap and the produce/review loop still cannot converge. Rather than fund another lap, the gate stops here.\n\n@owner — this ticket is now assigned to you. Every review round's reasons are above. Re-scope it by hand, split it, or close it; removing the `triaged` label is what hands the loop another automated attempt."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-repair-exhausted-extended",
+      "name": "Verdict gate (AD-7): a spent repair budget escalates to the owner (extended cap: tickets labeled `extended-repair`)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "agent": "blog-reviewer",
+          "maxCycles": 4
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ]
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ],
+          "negate": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\nThe AD-7 revision budget for this draft is spent — this ticket carried `extended-repair`, so it already had the raised 4-round cap — so the automation engine stopped the writer/reviewer loop rather than starting another round. It is not parked on the owner: the ticket goes back to Backlog assigned to the groomer for failure triage. Every round's reasons are above — the groomer re-scopes the brief from them, splits the work, reassigns it, or (last resort) hands it to the owner in Blocked. Landing in Backlog also hands the agents a fresh revision budget.\n\nThis is the single automated re-scoping lap. The ticket now carries the `triaged` label, so if the produce/review loop exhausts its budget again the gate hands the ticket to the owner in Blocked instead of serving it to the groomer a second time — one machine attempt at re-scoping, then a person."
+        },
+        {
+          "type": "setLabels",
+          "add": [
+            "triaged"
+          ],
+          "remove": []
+        },
+        {
+          "type": "assignTicket",
+          "slug": "groomer"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Backlog"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-repair-exhausted-triaged-extended",
+      "name": "Verdict gate (AD-7): a spent repair budget escalates to the owner (extended cap: tickets labeled `extended-repair`) (already triaged once: escalates to the owner)",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "FIX"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "repairBudget",
+          "mode": "exhausted",
+          "agent": "blog-reviewer",
+          "maxCycles": 4
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "extended-repair"
+          ]
+        },
+        {
+          "type": "labels",
+          "labels": [
+            "triaged"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "{verdictHistory}\n\nThe repair budget for this ticket is spent again, and this ticket already carries the `triaged` label: the groomer has had its one automated re-scoping lap and the produce/review loop still cannot converge. Rather than fund another lap, the gate stops here.\n\n@owner — this ticket is now assigned to you. Every review round's reasons are above. Re-scope it by hand, split it, or close it; removing the `triaged` label is what hands the loop another automated attempt."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-block-escalate",
+      "name": "Verdict gate (AD-7): a deliberate BLOCK verdict blocks the draft and assigns the owner",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "BLOCK"
           ],
           "agent": "blog-reviewer",
           "requireFreshArtifact": false
@@ -2251,7 +3784,129 @@
         {
           "type": "addComment",
           "author": "automation",
-          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — the AD-7 review verdict does not permit an exit.\n\nThe newest blog-reviewer verdict on this draft resolved to `BLOCK` (unreadable draft or spent budget), `INVALID` (the comment breaks the v1 verdict contract in `.agents/scripts/verdict.schema.json`) or `MISSING` (the reviewer answered in prose and posted no parseable verdict).\n\nThe gate fails closed: an unreadable or absent verdict blocks the draft, it never passes it.\n\n@owner — read the newest blog-reviewer comment, then either repair the ticket description and move the ticket back to Todo, or re-run the reviewer so it posts a contract-valid verdict."
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — blog-reviewer returned BLOCK on the AD-7 draft.\n\n`BLOCK` is a deliberate escalation: the reviewer judged the draft and refused to send it back for another revision. It is the one verdict outcome that never gets an automatic second chance — an `INVALID`, `STALE` or `MISSING` verdict is the reviewer's own output failing and earns one re-review first (`content-verdict-gate-reviewer-retry`), while a spent revision budget re-scopes through the groomer. A BLOCK needs a human decision, so the draft stops here.\n\n@owner — this ticket is now assigned to you. Read the newest blog-reviewer comment, then either repair the ticket description and move it back to Todo, or re-scope it."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
+        },
+        {
+          "type": "moveTicketStatus",
+          "to": "Blocked"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-reviewer-retry",
+      "name": "Verdict gate (AD-7): an unusable blog-reviewer verdict returns the review to blog-reviewer once",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "MISSING"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "withinCap",
+          "agent": "blog-reviewer",
+          "maxRetries": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "runAgent",
+          "agent": "blog-reviewer",
+          "concurrencyGroup": "blog-reviewer",
+          "maxTurns": 100,
+          "mutuallyExclusiveWith": [],
+          "env": {},
+          "model": "claude-sonnet-4-6",
+          "restoreStatusOnFail": false
+        },
+        {
+          "type": "consolidateAgentMemory",
+          "agent": "blog-reviewer"
+        },
+        {
+          "type": "commitAgentMemory",
+          "agent": "blog-reviewer"
+        }
+      ]
+    },
+    {
+      "id": "content-verdict-gate-reviewer-retry-exhausted",
+      "name": "Verdict gate (AD-7): a second unusable blog-reviewer verdict blocks the draft with a receipt",
+      "enabled": true,
+      "trigger": {
+        "type": "ticketCommentAdded",
+        "pollSeconds": 120,
+        "authors": [
+          "blog-reviewer"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "assignedTo",
+          "slugs": [
+            "content-writer"
+          ]
+        },
+        {
+          "type": "ticketInColumn",
+          "columns": [
+            "Review"
+          ]
+        },
+        {
+          "type": "verdictIs",
+          "verdicts": [
+            "INVALID",
+            "STALE",
+            "MISSING"
+          ],
+          "agent": "blog-reviewer",
+          "requireFreshArtifact": false
+        },
+        {
+          "type": "reviewerRetryBudget",
+          "mode": "exhausted",
+          "agent": "blog-reviewer",
+          "maxRetries": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "addComment",
+          "author": "automation",
+          "content": "GIGACLAW-GATE v1 ticket-{ticketId} blocked — blog-reviewer was asked again and still produced no usable verdict.\n\nThe newest verdict on this ticket resolved to one of:\n- `INVALID` — the comment breaks the v1 verdict contract (`.agents/scripts/verdict.schema.json`);\n- `STALE` — the reviewed artifact changed after the review, so the judgement no longer applies;\n- `MISSING` — the reviewer answered in prose and posted no parseable verdict.\n\nThe reviewer-retry budget for this episode is spent: return-to-sender already gave the reviewer a second pass and it failed the same way. The gate fails closed — an unreadable, absent or stale verdict blocks the ticket, it never passes it.\n\n@owner — this ticket is now assigned to you. Read the newest reviewer comment, then either repair the reviewer's protocol and re-run it, or judge the work by hand. Check a candidate comment with `python3 .agents/scripts/verdict_contract.py --extract <comment-file> --out verdict.json`."
+        },
+        {
+          "type": "assignTicket",
+          "slug": "owner"
         },
         {
           "type": "moveTicketStatus",

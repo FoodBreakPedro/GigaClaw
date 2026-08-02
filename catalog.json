@@ -3,8 +3,8 @@
   "Summary": {
     "Agents": 37,
     "Contracts": 37,
-    "Automations": 58,
-    "EnabledAutomations": 54,
+    "Automations": 82,
+    "EnabledAutomations": 78,
     "ExplicitModelMappings": 37,
     "Teams": 12,
     "Scripts": 22
@@ -96,7 +96,9 @@
         "assignee-resume",
         "blog-reviewer-on-review",
         "content-reviewer-on-review",
-        "owner-feedback"
+        "content-verdict-gate-reviewer-retry",
+        "owner-feedback",
+        "verdict-gate-blog-reviewer-retry"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -167,7 +169,8 @@
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback",
-        "verdict-gate-repair-round"
+        "verdict-gate-repair-round",
+        "verdict-gate-repair-round-extended"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -282,6 +285,7 @@
       ],
       "EnabledDispatchingAutomations": [
         "content-verdict-gate-repair-round",
+        "content-verdict-gate-repair-round-extended",
         "content-writer-on-inprogress",
         "content-writer-resume"
       ],
@@ -529,7 +533,8 @@
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback",
-        "verdict-gate-repair-round"
+        "verdict-gate-repair-round",
+        "verdict-gate-repair-round-extended"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -553,7 +558,8 @@
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback",
-        "verdict-gate-repair-round"
+        "verdict-gate-repair-round",
+        "verdict-gate-repair-round-extended"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -600,7 +606,8 @@
         "assignee-dispatch",
         "assignee-resume",
         "local-media-reviewer-on-review",
-        "owner-feedback"
+        "owner-feedback",
+        "verdict-gate-media-reviewer-retry"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -624,7 +631,8 @@
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback",
-        "verdict-gate-repair-round"
+        "verdict-gate-repair-round",
+        "verdict-gate-repair-round-extended"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -682,7 +690,8 @@
         "assignee-dispatch-code",
         "assignee-resume-code",
         "owner-feedback-code",
-        "verdict-gate-qa-repair-round"
+        "verdict-gate-qa-repair-round",
+        "verdict-gate-qa-repair-round-extended"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -708,7 +717,8 @@
         "assignee-dispatch-code",
         "assignee-resume-code",
         "owner-feedback-code",
-        "qa-on-review"
+        "qa-on-review",
+        "verdict-gate-qa-reviewer-retry"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -870,7 +880,8 @@
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback",
-        "ui-audit-on-review"
+        "ui-audit-on-review",
+        "verdict-gate-ui-reviewer-retry"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -894,7 +905,8 @@
         "assignee-dispatch",
         "assignee-resume",
         "owner-feedback",
-        "verdict-gate-repair-round"
+        "verdict-gate-repair-round",
+        "verdict-gate-repair-round-extended"
       ],
       "DisabledDispatchingAutomations": [],
       "EvalBaselinePresent": true,
@@ -1110,6 +1122,12 @@
       "Models": [
         "claude-sonnet-4-6"
       ]
+    },
+    {
+      "Id": "backlog-intake",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
     },
     {
       "Id": "groomer",
@@ -1483,13 +1501,99 @@
       ]
     },
     {
+      "Id": "verdict-gate-repair-round-extended",
+      "Enabled": true,
+      "Agents": [
+        "blog-writer",
+        "local-image-artist",
+        "local-media-compositor",
+        "local-motion-artist",
+        "ui-designer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
       "Id": "verdict-gate-repair-exhausted",
       "Enabled": true,
       "Agents": [],
       "Models": []
     },
     {
+      "Id": "verdict-gate-repair-exhausted-triaged",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-repair-exhausted-extended",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-repair-exhausted-triaged-extended",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
       "Id": "verdict-gate-block-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-ui-reviewer-retry",
+      "Enabled": true,
+      "Agents": [
+        "ui-auditor"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "verdict-gate-blog-reviewer-retry",
+      "Enabled": true,
+      "Agents": [
+        "blog-reviewer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "verdict-gate-media-reviewer-retry",
+      "Enabled": true,
+      "Agents": [
+        "local-media-reviewer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "verdict-gate-ui-reviewer-retry-exhausted",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-blog-reviewer-retry-exhausted",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-media-reviewer-retry-exhausted",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-review-watchdog",
       "Enabled": true,
       "Agents": [],
       "Models": []
@@ -1505,13 +1609,57 @@
       ]
     },
     {
+      "Id": "verdict-gate-qa-repair-round-extended",
+      "Enabled": true,
+      "Agents": [
+        "programmer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
       "Id": "verdict-gate-qa-repair-exhausted",
       "Enabled": true,
       "Agents": [],
       "Models": []
     },
     {
+      "Id": "verdict-gate-qa-repair-exhausted-triaged",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-qa-repair-exhausted-extended",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-qa-repair-exhausted-triaged-extended",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
       "Id": "verdict-gate-qa-block-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "verdict-gate-qa-reviewer-retry",
+      "Enabled": true,
+      "Agents": [
+        "qa-tester"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "verdict-gate-qa-reviewer-retry-exhausted",
       "Enabled": true,
       "Agents": [],
       "Models": []
@@ -1533,13 +1681,57 @@
       ]
     },
     {
+      "Id": "content-verdict-gate-repair-round-extended",
+      "Enabled": true,
+      "Agents": [
+        "content-writer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
       "Id": "content-verdict-gate-repair-exhausted",
       "Enabled": true,
       "Agents": [],
       "Models": []
     },
     {
+      "Id": "content-verdict-gate-repair-exhausted-triaged",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "content-verdict-gate-repair-exhausted-extended",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "content-verdict-gate-repair-exhausted-triaged-extended",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
       "Id": "content-verdict-gate-block-escalate",
+      "Enabled": true,
+      "Agents": [],
+      "Models": []
+    },
+    {
+      "Id": "content-verdict-gate-reviewer-retry",
+      "Enabled": true,
+      "Agents": [
+        "blog-reviewer"
+      ],
+      "Models": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    {
+      "Id": "content-verdict-gate-reviewer-retry-exhausted",
       "Enabled": true,
       "Agents": [],
       "Models": []

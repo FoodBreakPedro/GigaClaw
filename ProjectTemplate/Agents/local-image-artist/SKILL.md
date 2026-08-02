@@ -25,7 +25,9 @@ POST ${GIGACLAW_API_URL}/api/projects/{project-slug}/media/jobs
 ```
 
 Check for HTTP 200/202. The service moves the ticket to `Backlog` while the durable job runs,
-then to `Review` or `Blocked` on completion. Do not poll or keep the agent run alive.
+then to `Review` or `Blocked` on completion. Do not poll or keep the agent run alive. If you are
+ever resumed while the job is `running` and have checkpoint data, report it once via
+`POST .../media/jobs/{id}/stage` (`{"stage", "stageIndex", "stageCount", "author"}`).
 
 If dispatched again after completion, run:
 
