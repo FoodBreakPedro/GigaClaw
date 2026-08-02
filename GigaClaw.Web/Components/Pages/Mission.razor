@@ -61,32 +61,7 @@
             @* ---------------- row 3 — throughput / mix / runs ---------------- *@
             <section class="mc-grid mc-row-3">
 
-                <article class="mc-card">
-                    <div class="mc-card-head">
-                        <div>
-                            <div class="mc-card-label">@L["MissionThroughput"]</div>
-                            <div class="mc-card-sub">@L["MissionThroughputSub"]</div>
-                        </div>
-                    </div>
-                    <div class="mc-mini-grid">
-                        @foreach (var metric in snapshot.Throughput)
-                        {
-                            var delta = metric.ThisWeek - metric.LastWeek;
-                            <div class="mc-mini">
-                                <div class="mc-mini-label">@ThroughputLabel(metric.Metric)</div>
-                                <div class="mc-mini-row">
-                                    <div class="mc-mini-val num">@metric.ThisWeek</div>
-                                </div>
-                                <div class="mc-mini-delta @(delta > 0 ? "up" : delta < 0 ? "down" : "") num">
-                                    @(delta == 0 ? "—" : $"{DeltaArrow(delta)} {Math.Abs(delta)}")
-                                </div>
-                            </div>
-                        }
-                    </div>
-                    <div class="mc-card-foot">
-                        <span class="mc-card-sub">@L["MissionThroughputFoot"]</span>
-                    </div>
-                </article>
+                <MissionThroughputCard Throughput="snapshot.Throughput" />
 
                 <article class="mc-card">
                     <div class="mc-card-head">
@@ -435,7 +410,6 @@
 
     private string KpiLabel(string column) => MissionFormat.KpiLabel(L, column);
     private string PriorityLabel(TicketPriority priority) => MissionFormat.PriorityLabel(L, priority);
-    private string ThroughputLabel(string metric) => MissionFormat.ThroughputLabel(L, metric);
     private string Score(double? value) => MissionFormat.Score(L, value);
     private string Percent(double? value) => MissionFormat.Percent(L, value);
 }

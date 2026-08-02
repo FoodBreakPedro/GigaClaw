@@ -1,0 +1,34 @@
+@using static GigaClaw.Web.Components.MissionFormat
+@inject LocalizationService L
+
+@* Mission Control row 3 — this week against last week, per pipeline. *@
+<article class="mc-card">
+    <div class="mc-card-head">
+        <div>
+            <div class="mc-card-label">@L["MissionThroughput"]</div>
+            <div class="mc-card-sub">@L["MissionThroughputSub"]</div>
+        </div>
+    </div>
+    <div class="mc-mini-grid">
+        @foreach (var metric in Throughput)
+        {
+            var delta = metric.ThisWeek - metric.LastWeek;
+            <div class="mc-mini">
+                <div class="mc-mini-label">@MissionFormat.ThroughputLabel(L, metric.Metric)</div>
+                <div class="mc-mini-row">
+                    <div class="mc-mini-val num">@metric.ThisWeek</div>
+                </div>
+                <div class="mc-mini-delta @(delta > 0 ? "up" : delta < 0 ? "down" : "") num">
+                    @(delta == 0 ? "—" : $"{DeltaArrow(delta)} {Math.Abs(delta)}")
+                </div>
+            </div>
+        }
+    </div>
+    <div class="mc-card-foot">
+        <span class="mc-card-sub">@L["MissionThroughputFoot"]</span>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MissionThroughput> Throughput { get; set; } = [];
+}
