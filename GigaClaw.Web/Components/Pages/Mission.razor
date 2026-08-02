@@ -50,68 +50,11 @@
 
                 <MissionWorkloadCard Workload="snapshot.Workload" />
 
-                <article class="mc-card mc-card-hero">
-                    <div class="mc-card-head">
-                        <div>
-                            <div class="mc-card-label">@L["MissionAttention"]</div>
-                            <div class="mc-card-sub">@L.Get("MissionAttentionSub", snapshot.Attention.Count)</div>
-                        </div>
-                    </div>
-
-                    @if (_actionNotice is not null)
-                    {
-                        <div class="approval-notice">@_actionNotice</div>
-                    }
-                    @if (snapshot.Attention.Count == 0)
-                    {
-                        <div class="mc-empty">@L["MissionAttentionEmpty"]</div>
-                    }
-                    else
-                    {
-                        <div class="mc-att-list">
-                            @foreach (var item in snapshot.Attention.Take(8))
-                            {
-                                <div class="mc-att" style="--sev: @SeverityColor(item.Severity)">
-                                    <div class="mc-att-top">
-                                        <span class="mc-sev @item.Severity.ToString().ToLowerInvariant()">@SeverityLabel(item.Severity)</span>
-                                        <span class="mc-proj">@item.ProjectName</span>
-                                        @if (item.TicketId is int ticketId)
-                                        {
-                                            <span class="mc-att-id num">#@ticketId</span>
-                                        }
-                                    </div>
-                                    <div class="mc-att-title">@item.Title</div>
-                                    <div class="mc-att-meta">
-                                        @item.Detail
-                                        @if (item.SinceUtc is DateTime itemSince)
-                                        {
-                                            <span> · @Since(itemSince)</span>
-                                        }
-                                    </div>
-                                    @if (item.Progress is double progress)
-                                    {
-                                        <div class="mc-progress"><i style="width: @Num(progress * 100)%"></i></div>
-                                    }
-                                    <div class="mc-att-actions">
-                                        @if (item.TicketId is int id)
-                                        {
-                                            <button class="mc-ghost" @onclick="() => OpenTicket(item.ProjectSlug, id)">@L["MissionActionOpen"]</button>
-                                        }
-                                        @if (item.Kind == "approval" && item.TicketId is int approvalId)
-                                        {
-                                            <button class="mc-ghost" @onclick="() => ApproveAsync(item.ProjectSlug, approvalId)">@L["MissionActionApprove"]</button>
-                                            <button class="mc-ghost" @onclick="() => RejectAsync(item.ProjectSlug, approvalId)">@L["MissionActionReject"]</button>
-                                        }
-                                        @if (item.Kind == "budget")
-                                        {
-                                            <a class="mc-ghost" href="@AutomationsHref(item.ProjectSlug)">@L["MissionActionSettings"]</a>
-                                        }
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </article>
+                <MissionAttentionCard Items="snapshot.Attention"
+                                     Notice="_actionNotice"
+                                     OnOpen="item => OpenTicket(item.ProjectSlug, item.TicketId!.Value)"
+                                     OnApprove="item => ApproveAsync(item.ProjectSlug, item.TicketId!.Value)"
+                                     OnReject="item => RejectAsync(item.ProjectSlug, item.TicketId!.Value)" />
 
             </section>
 
@@ -471,9 +414,6 @@
     private void OpenTicket(string slug, int ticketId) =>
         Navigation.NavigateTo(NavigationReturn.WithReturnTo($"/board/{slug}/ticket/{ticketId}", "/mission"));
 
-    private static string AutomationsHref(string slug) =>
-        NavigationReturn.WithReturnTo($"/board/{slug}/automations", "/mission");
-
     private void OpenRunDrawer(string runId) => _activeRunDrawerId = runId;
     private void CloseRunDrawer() => _activeRunDrawerId = null;
 
@@ -495,7 +435,6 @@
 
     private string KpiLabel(string column) => MissionFormat.KpiLabel(L, column);
     private string PriorityLabel(TicketPriority priority) => MissionFormat.PriorityLabel(L, priority);
-    private string SeverityLabel(MissionSeverity severity) => MissionFormat.SeverityLabel(L, severity);
     private string ThroughputLabel(string metric) => MissionFormat.ThroughputLabel(L, metric);
     private string Score(double? value) => MissionFormat.Score(L, value);
     private string Percent(double? value) => MissionFormat.Percent(L, value);

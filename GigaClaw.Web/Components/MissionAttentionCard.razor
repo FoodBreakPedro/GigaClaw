@@ -1,0 +1,81 @@
+@using static GigaClaw.Web.Components.MissionFormat
+@inject LocalizationService L
+
+@* Mission Control row 2 — the cross-project queue of things waiting on a human. The row's actions
+   are raised to the page, which owns the ticket writes and the refresh that follows them. *@
+<article class="mc-card mc-card-hero">
+    <div class="mc-card-head">
+        <div>
+            <div class="mc-card-label">@L["MissionAttention"]</div>
+            <div class="mc-card-sub">@L.Get("MissionAttentionSub", Items.Count)</div>
+        </div>
+    </div>
+
+    @if (Notice is not null)
+    {
+        <div class="approval-notice">@Notice</div>
+    }
+    @if (Items.Count == 0)
+    {
+        <div class="mc-empty">@L["MissionAttentionEmpty"]</div>
+    }
+    else
+    {
+        <div class="mc-att-list">
+            @foreach (var item in Items.Take(8))
+            {
+                <div class="mc-att" style="--sev: @SeverityColor(item.Severity)">
+                    <div class="mc-att-top">
+                        <span class="mc-sev @item.Severity.ToString().ToLowerInvariant()">@MissionFormat.SeverityLabel(L, item.Severity)</span>
+                        <span class="mc-proj">@item.ProjectName</span>
+                        @if (item.TicketId is int ticketId)
+                        {
+                            <span class="mc-att-id num">#@ticketId</span>
+                        }
+                    </div>
+                    <div class="mc-att-title">@item.Title</div>
+                    <div class="mc-att-meta">
+                        @item.Detail
+                        @if (item.SinceUtc is DateTime itemSince)
+                        {
+                            <span> · @Since(itemSince)</span>
+                        }
+                    </div>
+                    @if (item.Progress is double progress)
+                    {
+                        <div class="mc-progress"><i style="width: @Num(progress * 100)%"></i></div>
+                    }
+                    <div class="mc-att-actions">
+                        @if (item.TicketId is not null)
+                        {
+                            <button class="mc-ghost" @onclick="() => OnOpen.InvokeAsync(item)">@L["MissionActionOpen"]</button>
+                        }
+                        @if (item.Kind == "approval" && item.TicketId is not null)
+                        {
+                            <button class="mc-ghost" @onclick="() => OnApprove.InvokeAsync(item)">@L["MissionActionApprove"]</button>
+                            <button class="mc-ghost" @onclick="() => OnReject.InvokeAsync(item)">@L["MissionActionReject"]</button>
+                        }
+                        @if (item.Kind == "budget")
+                        {
+                            <a class="mc-ghost" href="@AutomationsHref(item.ProjectSlug)">@L["MissionActionSettings"]</a>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MissionAttentionItem> Items { get; set; } = [];
+
+    /// <summary>Shown when an approve/reject lost a race — the ticket already left Review.</summary>
+    [Parameter] public string? Notice { get; set; }
+
+    [Parameter] public EventCallback<MissionAttentionItem> OnOpen { get; set; }
+    [Parameter] public EventCallback<MissionAttentionItem> OnApprove { get; set; }
+    [Parameter] public EventCallback<MissionAttentionItem> OnReject { get; set; }
+
+    private static string AutomationsHref(string slug) =>
+        NavigationReturn.WithReturnTo($"/board/{slug}/automations", "/mission");
+}
