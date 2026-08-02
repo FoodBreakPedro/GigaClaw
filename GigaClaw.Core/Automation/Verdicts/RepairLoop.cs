@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace GigaClaw.Core.Automation.Verdicts;
 
@@ -58,9 +60,9 @@ public static class RepairLoop
     /// <summary>Marker line of the escalation receipt. Also the episode reset marker.</summary>
     public const string EscalationMarkerPrefix = "GIGACLAW-REPAIR v1";
 
-    private static readonly System.Text.RegularExpressions.Regex EscalationRegex = new(
+    private static readonly Regex EscalationRegex = new(
         @"^GIGACLAW-REPAIR\s+v1\s+ticket-(?<ticket>[0-9]+)\s+escalated\s+(?<used>[0-9]+)/(?<max>[0-9]+)\s*$",
-        System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.Compiled);
+        RegexOptions.Multiline | RegexOptions.Compiled);
 
     public static bool IsEscalationReceipt(string? commentBody)
         => commentBody is not null && EscalationRegex.IsMatch(commentBody);
@@ -331,6 +333,6 @@ public static class RepairLoop
 
     private static string Format(double value)
         => value == Math.Floor(value)
-            ? ((long)value).ToString(System.Globalization.CultureInfo.InvariantCulture)
-            : value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            ? ((long)value).ToString(CultureInfo.InvariantCulture)
+            : value.ToString("0.##", CultureInfo.InvariantCulture);
 }
