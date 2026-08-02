@@ -56,7 +56,7 @@
                 <MissionWorkloadCard Workload="snapshot.Workload" />
 
                 <MissionAttentionCard Items="snapshot.Attention"
-                                      Notice="_actionNotice"
+                                      Notice="@_actionNotice"
                                       OnOpen="item => OpenTicket(item.ProjectSlug, item.TicketId!.Value)"
                                       OnApprove="item => ApproveAsync(item.ProjectSlug, item.TicketId!.Value)"
                                       OnReject="item => RejectAsync(item.ProjectSlug, item.TicketId!.Value)" />
