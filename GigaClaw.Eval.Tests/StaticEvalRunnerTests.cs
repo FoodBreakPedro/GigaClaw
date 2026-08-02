@@ -36,6 +36,23 @@ public sealed class StaticEvalRunnerTests
     }
 
     [Fact]
+    public void Run_PrunesReportsOfAgentsThatLeftTheCatalog()
+    {
+        using var fixture = new EvalFixture();
+        fixture.AddAgent("worker", "# Worker\n");
+        fixture.WriteInputs();
+        // A report left behind by an agent that has since been removed from the catalog.
+        var orphan = fixture.ReportPath("retired-agent");
+        Directory.CreateDirectory(Path.GetDirectoryName(orphan)!);
+        File.WriteAllText(orphan, "{}");
+
+        new StaticEvalRunner(fixture.Root).Run("all", updateBaselines: true);
+
+        Assert.False(File.Exists(orphan));
+        Assert.True(File.Exists(fixture.ReportPath("all")));
+    }
+
+    [Fact]
     public void Run_ParsesOptionalFrontmatterAndReportsMalformedStaticInputs()
     {
         using var fixture = new EvalFixture();

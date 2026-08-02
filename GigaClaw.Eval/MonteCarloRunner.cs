@@ -93,8 +93,13 @@ public sealed class MonteCarloRunner
             .ToArray();
 
         if (writeReport)
+        {
+            EvalArtifacts.PruneOrphans(
+                Path.Combine(ResolveConfiguredPath(_config.ArtifactRoot), _monteCarlo.ArtifactSubdirectory),
+                _replay.CatalogSlugs);
             foreach (var report in reports)
                 WriteReport(report);
+        }
         stopwatch.Stop();
 
         var failed = reports.SelectMany(report => report.Fixtures).Any(result => result.Status != Pass);

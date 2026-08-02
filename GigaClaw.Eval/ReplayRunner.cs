@@ -79,8 +79,13 @@ public sealed partial class ReplayRunner
             .ToArray();
 
         if (writeReport)
+        {
+            EvalArtifacts.PruneOrphans(
+                Path.Combine(ResolveConfiguredPath(_config.ArtifactRoot), _replay.ArtifactSubdirectory),
+                CatalogSlugs);
             foreach (var report in reports)
                 WriteReport(report);
+        }
         stopwatch.Stop();
 
         var failed = reports
@@ -475,6 +480,10 @@ public sealed partial class ReplayRunner
         ResolveConfiguredPath(_config.ArtifactRoot),
         _replay.ArtifactSubdirectory,
         $"{agent}.json");
+
+    /// <summary>Every catalog slug — the "still exists" set <see cref="EvalArtifacts.PruneOrphans"/>
+    /// checks against, shared with the judge and Monte Carlo layers that stack on replay.</summary>
+    internal IEnumerable<string> CatalogSlugs => _catalog.Agents.Select(agent => agent.Slug);
 
     /// <summary>A scenario lives in <c>scenarios/</c> beside the fixture root that ships it, so
     /// the roots are probed in configured order. When no root carries it, the first root's path is

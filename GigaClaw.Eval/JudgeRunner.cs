@@ -89,8 +89,13 @@ public sealed class JudgeRunner
             .ToArray();
 
         if (writeReport)
+        {
+            EvalArtifacts.PruneOrphans(
+                Path.Combine(ResolveConfiguredPath(_config.ArtifactRoot), _judge.ArtifactSubdirectory),
+                _replay.CatalogSlugs);
             foreach (var report in reports)
                 WriteReport(report);
+        }
         stopwatch.Stop();
 
         var failed = reports.SelectMany(report => report.Fixtures).Any(result => result.Status != Pass);

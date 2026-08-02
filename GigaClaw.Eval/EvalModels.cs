@@ -47,6 +47,21 @@ public sealed record EvalBaseline(
 
 public sealed record EvalRunResult(EvalReport Report, int ExitCode, long ElapsedMilliseconds);
 
+/// <summary>Removes per-agent artifact files whose name no longer matches a live agent. Reports
+/// are keyed by slug and only ever overwritten, so an agent that leaves the catalog would keep
+/// its last report on disk forever — the gitignored artifact root grew without bound.</summary>
+internal static class EvalArtifacts
+{
+    public static void PruneOrphans(string directory, IEnumerable<string> currentNames)
+    {
+        if (!Directory.Exists(directory)) return;
+        var current = currentNames.ToHashSet(StringComparer.Ordinal);
+        foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
+            if (!current.Contains(Path.GetFileNameWithoutExtension(path)))
+                File.Delete(path);
+    }
+}
+
 internal static class EvalJson
 {
     public static readonly JsonSerializerOptions Options = new()

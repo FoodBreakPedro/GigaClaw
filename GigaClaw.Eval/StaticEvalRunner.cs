@@ -55,7 +55,12 @@ public sealed partial class StaticEvalRunner
             PromptBudget: _config.PromptBudget,
             Agents: evaluated);
         if (writeReport)
+        {
+            EvalArtifacts.PruneOrphans(
+                ResolveConfiguredPath(_config.ArtifactRoot),
+                _catalog.Agents.Select(agent => agent.Slug).Append("all"));
             WriteReport(report);
+        }
         stopwatch.Stop();
 
         var hasIntegrityErrors = evaluated.Any(agent =>
