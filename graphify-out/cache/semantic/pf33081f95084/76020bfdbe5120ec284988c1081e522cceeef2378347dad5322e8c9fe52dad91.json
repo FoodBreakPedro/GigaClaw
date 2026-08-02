@@ -1,1 +1,0 @@
-{"nodes": [{"id": "doc_handoff-contract", "label": "Handoff Contract (v1)", "file_type": "document", "source_file": "doc/handoff-contract.md"}], "edges": [{"source": "doc_handoff-contract", "target": "doc_agent-dispatch", "relation": "shares_data_with", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "doc/handoff-contract.md"}], "hyperedges": []}

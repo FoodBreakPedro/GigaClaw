@@ -1,1 +1,0 @@
-{"nodes": [{"id": "doc_automation-engine", "label": "Automation Engine", "file_type": "document", "source_file": "doc/automation-engine.md"}], "edges": [{"source": "doc_automation-engine", "target": "doc_agent-dispatch", "relation": "calls", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "doc/automation-engine.md"}], "hyperedges": []}

@@ -1,1 +1,0 @@
-{"nodes": [{"id": "qa_tester", "label": "QA Tester Agent", "file_type": "concept", "source_file": "ProjectTemplate/Agents/qa-tester/SKILL.md"}], "edges": [{"source": "qa_tester", "target": "giga_claw_api_url", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ProjectTemplate/Agents/qa-tester/SKILL.md"}], "hyperedges": []}
