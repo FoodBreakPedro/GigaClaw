@@ -66,13 +66,7 @@ public static class ConditionEvaluators
     /// failure and re-dispatching it forever is not.
     /// </summary>
     public static bool RepairBudget(RepairBudgetConditionSpec c, RepairLoopState? state)
-    {
-        var exhausted = string.Equals(c.Mode, "exhausted", StringComparison.OrdinalIgnoreCase);
-        var withinCap = string.Equals(c.Mode, "withinCap", StringComparison.OrdinalIgnoreCase);
-        if (!exhausted && !withinCap) return false;
-        if (state is null) return exhausted;
-        return exhausted ? state.Exhausted : !state.Exhausted;
-    }
+        => MatchesBudgetMode(c.Mode, state?.Exhausted);
 
     /// <summary>
     /// Matches when the ticket's reviewer-retry budget is in the configured state. A null
@@ -81,12 +75,23 @@ public static class ConditionEvaluators
     /// the safe failure, re-dispatching a reviewer forever is not.
     /// </summary>
     public static bool ReviewerRetryBudget(ReviewerRetryBudgetConditionSpec c, ReviewerRetryState? state)
+        => MatchesBudgetMode(c.Mode, state?.Exhausted);
+
+    /// <summary>
+    /// The two-mode budget test shared by <see cref="RepairBudget"/> and
+    /// <see cref="ReviewerRetryBudget"/>. Their budgets are counted from different evidence and
+    /// close on different episode boundaries, but once recounted they are read the same way, so the
+    /// reading lives in one place: a null <paramref name="exhausted"/> (the budget could not be
+    /// established) matches the <c>exhausted</c> arm, and an unrecognised <paramref name="mode"/>
+    /// matches neither arm so a typo stalls the ticket instead of opening a gate.
+    /// </summary>
+    private static bool MatchesBudgetMode(string? mode, bool? exhausted)
     {
-        var exhausted = string.Equals(c.Mode, "exhausted", StringComparison.OrdinalIgnoreCase);
-        var withinCap = string.Equals(c.Mode, "withinCap", StringComparison.OrdinalIgnoreCase);
-        if (!exhausted && !withinCap) return false;
-        if (state is null) return exhausted;
-        return exhausted ? state.Exhausted : !state.Exhausted;
+        if (string.Equals(mode, "exhausted", StringComparison.OrdinalIgnoreCase))
+            return exhausted ?? true;
+        if (string.Equals(mode, "withinCap", StringComparison.OrdinalIgnoreCase))
+            return exhausted is false;
+        return false;
     }
 
     /// <summary>

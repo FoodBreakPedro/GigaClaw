@@ -276,8 +276,19 @@ public class TicketService : ITicketDependencyQuery
     // Phase 3.1: matches the marker's first line, e.g.
     //   "GIGACLAW-GATE v1 ticket-42 blocked — the reviewer returned BLOCK."
     //   "GIGACLAW-REPAIR v1 ticket-42 escalated 2/2"
-    // See doc/verdict-contract.md (Transport, The bounded repair loop) for the marker family;
-    // GigaClaw.Core/Automation/Verdicts/RepairLoop.cs and ReviewerRetry.cs own the emitters.
+    // See doc/verdict-contract.md (Transport, The bounded repair loop) for the marker family.
+    //
+    // Neither regex below is built from a shared marker constant, because the two markers do not
+    // share an origin. GIGACLAW-GATE has no C# emitter at all — every instance is addComment
+    // content authored in ProjectTemplate/Agents/automations.json, so there is no constant to
+    // reference and the shape can drift per workspace. GIGACLAW-REPAIR is emitted by
+    // Automation/Verdicts/RepairLoop.RenderEscalation (RepairLoop.EscalationMarkerPrefix).
+    //
+    // Both markers are also read by the automation side — RepairLoop.EscalationRegex and
+    // ReviewerRetry.GateReceiptRegex — to decide episode boundaries: those are anchored, Multiline,
+    // and run over a whole comment body. The two here read one already-split line to render a chip
+    // and are deliberately looser, so a drifted marker degrades the display instead of mis-scoring
+    // a budget. Keep the strictness difference when either side changes.
     /// <summary>How much of a receipt comment the blocked-reason chip reads. Only the first line is
     /// parsed and the chip truncates to ~60 chars, so the rest is dead weight in the query.</summary>
     private const int BlockedReasonPrefixLength = 240;
