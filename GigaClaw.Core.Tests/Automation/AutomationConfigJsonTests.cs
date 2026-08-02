@@ -161,6 +161,30 @@ public class AutomationConfigJsonTests
         Assert.DoesNotContain("Bearer", json);
     }
 
+    /// <summary>
+    /// Plan 2.1's cap is JSON-only for now (no settings UI), so automations.json is its entire
+    /// surface — it has to read through <see cref="AutomationStore.JsonOptions"/> under the exact
+    /// camelCase spelling the documentation gives owners.
+    /// </summary>
+    [Fact]
+    public void AutomationConfig_reads_maxTicketCostUsd_from_automations_json()
+    {
+        const string json = """{"dailyBudgetUsd":40,"maxTicketCostUsd":5.5,"automations":[]}""";
+        var config = JsonSerializer.Deserialize<AutomationConfig>(json, AutomationStore.JsonOptions)!;
+
+        Assert.Equal(40m, config.DailyBudgetUsd);
+        Assert.Equal(5.5m, config.MaxTicketCostUsd);
+    }
+
+    [Fact]
+    public void AutomationConfig_without_maxTicketCostUsd_leaves_the_cap_disabled()
+    {
+        var config = JsonSerializer.Deserialize<AutomationConfig>(
+            """{"automations":[]}""", AutomationStore.JsonOptions)!;
+
+        Assert.Null(config.MaxTicketCostUsd);
+    }
+
     [Fact]
     public void Condition_Negate_round_trip()
     {

@@ -42,5 +42,10 @@
   "ParentColumnOptional": "Colonne des tickets parents (optionnel)",
   "AllColumns": "— toutes —",
   "IdleColumnsHint": "Colonnes considérées comme \"idle\" (le board est idle quand tous les tickets y sont)",
-  "InactivityMinutes": "Minutes d'inactivité avant déclenchement"
+  "InactivityMinutes": "Minutes d'inactivité avant déclenchement",
+  "UnassignedOnly": "Uniquement les tickets non assignés",
+  "UnassignedOnlyHint": "Ne se déclenche que pour les tickets sans aucun assigné — le cas de l'admission. Un sélecteur d'assigné vide signifie « n'importe quel assigné », ce qui est différent : le sélecteur est donc désactivé tant que ceci est actif.",
+  "ExhaustedAssignee": "Transmettre à, une fois les tentatives épuisées",
+  "ExhaustedAssigneeHint": "Réassigné une seule fois lorsque le plafond de déclenchements consécutifs est atteint, avant le changement de colonne. Visez un membre de triage, jamais l'agent que cette automatisation déclenche, sinon l'épuisement relance le déclenchement qui a échoué.",
+  "ExhaustedAssigneeNone": "— ne pas changer l'assigné —"
 }

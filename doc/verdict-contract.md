@@ -98,7 +98,7 @@ A `FIX` is not a rejection, it is a work order: the reviewer is asking the produ
 { "type": "repairBudget", "mode": "withinCap" }     // → moveTicketStatus InProgress + runAgent {assignee}
 
 { "type": "verdictIs", "verdicts": ["FIX"] }
-{ "type": "repairBudget", "mode": "exhausted" }     // → addComment "{verdictHistory}" + moveTicketStatus Blocked
+{ "type": "repairBudget", "mode": "exhausted" }     // → addComment "{verdictHistory}" + assignTicket groomer + moveTicketStatus Backlog
 ```
 
 `repairBudget` says nothing about whether a repair is outstanding — a fresh ticket is trivially "within cap" — so it is only meaningful next to `verdictIs`. An unknown `mode` matches neither arm, and a contract manifest that exists but cannot be parsed resolves to `exhausted`: an unknowable budget escalates to a human rather than looping.
@@ -123,10 +123,43 @@ Artifact reviewed: `sha256:…`
 
 Cost is not plumbed separately: the loop dispatches through the ordinary `runAgent` path, so every round accumulates on the ticket's existing token/cost badge via `CostTracker`.
 
+**A raised cap for hard tickets.** A ticket labeled `extended-repair` is judged against 4 rounds instead of the contract default. This is config, not engine: each repair pair ships twice — the base arms carry `{ "type": "labels", "labels": ["extended-repair"], "negate": true }` and read the contract's own cap, the `*-extended` twins require the label and set `"maxCycles": 4`. Exactly one of the two ever matches. The groomer applies the label during intake when the work is genuinely hard to specify; it is deliberately not applied as a reaction to failure, because more rounds do not fix wrong requirements.
+
+**Where exhaustion goes.** Not to the owner, the first time. A spent budget means the produce/review loop could not converge on *these* requirements, which is a re-scoping problem, so the ticket returns to `Backlog` assigned to the `groomer` carrying `{verdictHistory}` — see the failure-triage section of [`groomer/SKILL.md`](../ProjectTemplate/Agents/groomer/SKILL.md). Landing in Backlog also closes the episode, so the next attempt starts with a fresh budget.
+
+**And how often it may go there.** Exactly once per ticket. That hand-off resets everything that bounds the loop — the `ticketInColumn` attempt series clears when the groomer edits the ticket, and the repair budget is recounted from the escalation receipt — so an unmarked re-scoping route is a *funded* loop: a ticket nobody can specify would be groomed, re-run and re-exhausted forever, paying for each lap. The stop is a label. The exhaustion arms add `triaged` (via `setLabels`, before the move) and stand down for it (`{ "type": "labels", "labels": ["triaged"], "negate": true }`); a `*-triaged` twin requires it and routes to `owner` + `Blocked` instead. One machine attempt at re-scoping, then a person. Removing the label is what deliberately buys another lap. The spend side of the same loop is capped by [`maxTicketCostUsd`](./automation-engine.md).
+
+## Return to sender: the bounded reviewer retry
+
+`INVALID`, `STALE` and `MISSING` are not judgements of the work — they are the *reviewer's* output failing. Blocking the ticket punishes the author for a verdict that was never written, and `RepairLoop` deliberately does not spend a repair round on an unreadable verdict, so without a second budget a single flaky review would park the ticket on a human.
+
+`reviewerRetryBudget` is that second budget, shaped exactly like `repairBudget`:
+
+```json
+{ "type": "verdictIs", "verdicts": ["INVALID", "MISSING"] }
+{ "type": "reviewerRetryBudget", "mode": "withinCap", "agent": "<reviewer>", "maxRetries": 1 }   // → runAgent <reviewer>
+
+{ "type": "verdictIs", "verdicts": ["INVALID", "MISSING"] }
+{ "type": "reviewerRetryBudget", "mode": "exhausted", "agent": "<reviewer>", "maxRetries": 1 }   // → addComment + assignTicket owner + moveTicketStatus Blocked
+```
+
+`STALE` joins the list only on an arm whose `verdictIs` sets `requireFreshArtifact: true`; with freshness off nothing can ever resolve stale, so naming it there would advertise a path that does not exist. Scope `agent` to the reviewer literally — leaving it blank lets one reviewer's receipts exhaust another reviewer's first attempt on the same ticket, and `{assignee}` resolves to the *author*, which matches no receipt at all.
+
+The retry re-runs the **reviewer**, not the author, and leaves the ticket in `Review` with its assignee untouched. `maxRetries` is 1 by default: a reviewer that cannot produce a contract-valid verdict twice in a row is a defect, not a flake.
+
+**Where the retry count comes from.** The ticket's comments again — one per `GIGACLAW-REREVIEW v1 ticket-<id> reviewer=<slug>` receipt. Any `GIGACLAW-GATE v1` or `GIGACLAW-REPAIR v1` receipt closes the episode and returns the budget, so an owner who unblocks a ticket hands the reviewer a fresh retry rather than a permanently spent one. The receipt carries neither marker, so it can never close its own episode.
+
+**Who writes it.** The engine, on the dispatch path, and nothing else — `ActionExecutor.MintReviewerRetryReceiptAsync`, triggered by the arm's own `withinCap` condition once the `runAgent` has actually started. It is deliberately *not* an `addComment` action in front of the `runAgent`: an action chain commits that comment unconditionally, but the dispatch beside it is conditional — `RunStateManager` skips a reviewer already busy in its own concurrency group, and a skipped `runAgent` ends the chain. The ticket would then carry a spent budget for a re-review nobody was asked for: the `withinCap` arm no longer matches, the `exhausted` arm waits on a reviewer comment that will never come, and the retry arms move no ticket, so no column poll finds it either. The receipt is evidence of a dispatch, so only a dispatch writes it.
+
+**The backstop.** Because the retry arms move no ticket, there is no column transition to fall back on if a re-review is dispatched and the reviewer never answers. `verdict-gate-review-watchdog` polls `Review` every 5 minutes for exactly that shape — an unusable verdict with the retry budget already spent — and terminates it the same way the comment-driven arm would: receipt, `owner`, `Blocked`. It should never fire; it exists so that "never" is a property of the system rather than a hope.
+
+A deliberate `BLOCK` is the one outcome that skips all of this: the reviewer judged the work rather than failing to report on it, so its arm carries no budget condition and escalates on the first firing. Every arm that parks a ticket in `Blocked` — BLOCK and spent-retry alike — assigns it to `owner` first, so `Blocked` means "a person has to decide" rather than leaving the ticket nominally owned by an agent that is not working on it.
+
 ## Consumers
 
-- **Gate** — `verdictIs` gates ticket exit on a valid verdict instead of prose. Invalid or stale ⇒ Blocked with a receipt.
-- **Repair loop** — a `FIX` verdict re-dispatches the producing agent with the failed categories and veto items injected, capped by `maxReviewCycles` from [`contracts.json`](../ProjectTemplate/Agents/contracts.json).
+- **Gate** — `verdictIs` gates ticket exit on a valid verdict instead of prose. Invalid or stale ⇒ one re-review, then Blocked with a receipt.
+- **Repair loop** — a `FIX` verdict re-dispatches the producing agent with the failed categories and veto items injected, capped by `maxReviewCycles` from [`contracts.json`](../ProjectTemplate/Agents/contracts.json) (or 4 for an `extended-repair` ticket).
+- **Reviewer retry** — an `INVALID`/`STALE`/`MISSING` verdict re-dispatches the reviewer once, capped by `reviewerRetryBudget`.
 - **Eval judge** — the eval harness scores agents with the same shape, so an eval verdict and a review verdict are comparable objects. Its deterministic rubric judge is a pure function of the replayed stream, so it stamps `reviewedAtUtc` with the Unix epoch and cites `hash` evidence only (see the non-file case above); its opt-in real-LLM judge records the model, CLI version and settings beside the verdict and is explicitly informational. See [`GigaClaw.Eval/README.md`](../GigaClaw.Eval/README.md).
 
 Worked examples (one per gating reviewer) and the rejection corpus live in `GigaClaw.Core.Tests/Fixtures/verdicts/`; `TemplateVerdictContractTests` runs the validator against all of them, so a schema edit that breaks a reviewer fails the build. `RepairLoopTests` covers the loop end to end over a real project, including a rebuilt executor that must resume the count rather than restart it.

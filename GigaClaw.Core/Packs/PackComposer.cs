@@ -225,8 +225,9 @@ public static class PackComposer
             ReadModels(manifest, source, models, modelsPreamble, errors);
         if (agentPathSet.Contains(TeamsFile))
             ReadTeams(manifest, source, teams, teamOrder, errors);
+        var automationDefaults = new AutomationDefaults(null, null, null);
         if (agentPathSet.Contains(AutomationsFile))
-            ReadAutomations(manifest, source, automations, errors);
+            automationDefaults = ReadAutomations(manifest, source, automations, errors);
 
         // `provides` is declared AND verified — a mismatch in either direction is an error (§3).
         VerifySet(label, "provides.agents", manifest.Provides.Agents, actualAgents, "Agents/<slug>/SKILL.md", errors);
@@ -250,7 +251,7 @@ public static class PackComposer
             contractAgents,
             models,
             teams)
-        { ModelsPreamble = modelsPreamble, TeamOrder = teamOrder };
+        { ModelsPreamble = modelsPreamble, TeamOrder = teamOrder, Defaults = automationDefaults };
     }
 
     private static void VerifySet(
@@ -367,7 +368,7 @@ public static class PackComposer
         }
     }
 
-    private static void ReadAutomations(
+    private static AutomationDefaults ReadAutomations(
         PackManifest manifest, IPackSource source, List<AutomationRule> automations, List<string> errors)
     {
         var label = $"pack '{manifest.Id}'";
@@ -378,9 +379,11 @@ public static class PackComposer
             if (config is null)
             {
                 errors.Add($"{label}: {AutomationsFile} deserialized to null.");
-                return;
+                return new AutomationDefaults(null, null, null);
             }
             automations.AddRange(config.Automations);
+            return new AutomationDefaults(
+                config.DailyBudgetUsd, config.MaxTicketCostUsd, config.MinDescriptionLength);
         }
         catch (JsonException ex)
         {
@@ -392,6 +395,8 @@ public static class PackComposer
             // vocabulary this runtime does not have. Fail closed rather than drop the member.
             errors.Add($"{label}: {AutomationsFile} uses an automation type this runtime does not know — {ex.Message}");
         }
+
+        return new AutomationDefaults(null, null, null);
     }
 
     /// <summary>

@@ -74,12 +74,15 @@ public class AgentRunRegistryTests
         using var tmp = new TempDir();
         var store = new RunLogStore(tmp.Path);
 
-        // Persist a run that looks like it was still Running when the process died
+        // Persist a run that looks like it was still Running when the process died. The owner is
+        // what makes it stale: pid 0 is what a pre-Plan-2.2 snapshot deserializes to, and no live
+        // process ever answers to it. See AgentRunRegistryLoadTests for the full liveness rule.
         var staleRun = new AgentRun
         {
             RunId = "stale", ProjectSlug = "p", TicketId = null,
             AgentName = "a", SkillFile = "a/SKILL.md",
             ConcurrencyGroup = "a", StartedAt = DateTime.UtcNow,
+            HostProcessId = 0, HostProcessStartTime = null,
         };
         // Status is Running (default) — simulate orphaned run
         store.Save(staleRun);

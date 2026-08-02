@@ -346,6 +346,7 @@ public static class OpenApiMarkdownGenerator
         sb.AppendLine("| `ticketCountInColumn` | `columns[]`, `assigneeSlug?`, `sameAssignee?`, `operator`, `value` | Counts tickets in columns and compares to a threshold (e.g. `== 0` = no pending) |");
         sb.AppendLine("| `verdictIs` | `verdicts[]` (`SHIP`/`FIX`/`BLOCK`/`MISSING`/`INVALID`/`STALE`), `agent?`, `requireFreshArtifact?` | Gates on the newest reviewer verdict posted to the ticket (see doc/verdict-contract.md) |");
         sb.AppendLine("| `repairBudget` | `mode` (`withinCap`/`exhausted`), `agent?`, `maxCycles?` | Bounds the FIX repair loop: rounds are recounted from the ticket's FIX verdicts, capped by `maxReviewCycles` (see doc/verdict-contract.md) |");
+        sb.AppendLine("| `reviewerRetryBudget` | `mode` (`withinCap`/`exhausted`), `agent?`, `maxRetries` | Bounds the reviewer retry (return-to-sender): re-dispatches raised on an INVALID/STALE/MISSING verdict are recounted from the ticket's `GIGACLAW-REREVIEW v1` receipts (see doc/verdict-contract.md) |");
         sb.AppendLine("| `dependenciesResolved` | `resolvedStatuses[]` | Matches when every ticket the firing ticket is blocked by has reached a resolved status (no edges = matches) |");
         sb.AppendLine("| `minDescriptionLength` | `length` | Checks the ticket description is long enough |");
         sb.AppendLine("| `fieldLength` | `field`, `mode` (min/max), `length`, `negate?` | Checks the length of a field |");

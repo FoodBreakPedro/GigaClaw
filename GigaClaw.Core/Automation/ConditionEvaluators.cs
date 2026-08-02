@@ -75,6 +75,21 @@ public static class ConditionEvaluators
     }
 
     /// <summary>
+    /// Matches when the ticket's reviewer-retry budget is in the configured state. A null
+    /// <paramref name="state"/> means the budget could not be established: that resolves to
+    /// "exhausted", for the same reason <see cref="RepairBudget"/> does — blocking for a human is
+    /// the safe failure, re-dispatching a reviewer forever is not.
+    /// </summary>
+    public static bool ReviewerRetryBudget(ReviewerRetryBudgetConditionSpec c, ReviewerRetryState? state)
+    {
+        var exhausted = string.Equals(c.Mode, "exhausted", StringComparison.OrdinalIgnoreCase);
+        var withinCap = string.Equals(c.Mode, "withinCap", StringComparison.OrdinalIgnoreCase);
+        if (!exhausted && !withinCap) return false;
+        if (state is null) return exhausted;
+        return exhausted ? state.Exhausted : !state.Exhausted;
+    }
+
+    /// <summary>
     /// True when nothing is blocking the ticket: every <c>blockedBy</c> edge points at a ticket
     /// in one of the resolved statuses. No edges = nothing blocking = true.
     /// </summary>

@@ -42,5 +42,10 @@
   "ParentColumnOptional": "Columna de tickets padre (opcional)",
   "AllColumns": "— todas —",
   "IdleColumnsHint": "Columnas consideradas \"inactivas\" (el tablero está inactivo cuando todos los tickets están en estas)",
-  "InactivityMinutes": "Minutos de inactividad antes de activar"
+  "InactivityMinutes": "Minutos de inactividad antes de activar",
+  "UnassignedOnly": "Solo tickets sin asignar",
+  "UnassignedOnlyHint": "Se dispara solo para tickets sin ningún responsable — el caso de admisión. Un selector de responsable vacío significa «cualquier responsable», que no es lo mismo, por eso el selector se desactiva mientras esto esté activo.",
+  "ExhaustedAssignee": "Traspasar a, al agotar los intentos",
+  "ExhaustedAssigneeHint": "Se reasigna una vez al alcanzar el límite de disparos consecutivos, antes del cambio de columna. Apúntalo a un miembro de triaje, nunca al agente que esta automatización despacha, o el agotamiento realimenta el mismo despacho que falló.",
+  "ExhaustedAssigneeNone": "— no cambiar el responsable —"
 }

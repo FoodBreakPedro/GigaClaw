@@ -496,6 +496,17 @@ public sealed partial class PackInstaller
         var byId = new Dictionary<string, AutomationRule>(StringComparer.Ordinal);
         foreach (var automation in config.Automations) byId[automation.Id] = automation;
 
+        // The project-wide knobs (spend caps, minimum description length) live beside the
+        // automation array, and the file being rebuilt from that array alone is what would drop
+        // them. Core seeds only what the workspace has not decided for itself: these are owner
+        // settings, so unlike a core automation they are never reset by a re-Initialize.
+        foreach (var core in composition.Packs.Where(p => p.Manifest.Kind == PackKind.Core))
+        {
+            config.DailyBudgetUsd ??= core.Defaults.DailyBudgetUsd;
+            config.MaxTicketCostUsd ??= core.Defaults.MaxTicketCostUsd;
+            config.MinDescriptionLength ??= core.Defaults.MinDescriptionLength;
+        }
+
         var errors = new List<string>();
         foreach (var pack in composition.Packs)
         {

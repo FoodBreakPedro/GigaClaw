@@ -16,6 +16,7 @@
             <option value="ticketCountInColumn">@L["CondTypeTicketCountInColumn"]</option>
             <option value="verdictIs">@L["CondTypeVerdictIs"]</option>
             <option value="repairBudget">@L["CondTypeRepairBudget"]</option>
+            <option value="reviewerRetryBudget">@L["CondTypeReviewerRetryBudget"]</option>
             <option value="dependenciesResolved">@L["CondTypeDependenciesResolved"]</option>
         </select>
     </label>
@@ -178,6 +179,23 @@
                        @onchange="e => s.MaxCycles = int.TryParse((string?)e.Value, out var v) ? v : null" />
             </label>
             break;
+        case ReviewerRetryBudgetConditionSpec s:
+            <label>@L["RepairMode"]
+                <select value="@s.Mode" @onchange="e => s.Mode = (string)e.Value!">
+                    <option value="withinCap">@L["RepairModeWithinCap"]</option>
+                    <option value="exhausted">@L["RepairModeExhausted"]</option>
+                </select>
+            </label>
+            <label>@L["RepairReviewer"]
+                <select value="@(s.Agent ?? "")" @onchange="e => s.Agent = string.IsNullOrEmpty((string?)e.Value) ? null : (string)e.Value!">
+                    <option value="">@L["AnyMember"]</option>
+                    @foreach (var sk in Skills) { <option value="@sk">@sk</option> }
+                </select>
+            </label>
+            <label>@L["ReviewerMaxRetries"]
+                <input type="number" min="0" @bind="s.MaxRetries" />
+            </label>
+            break;
         case DependenciesResolvedConditionSpec s:
             <div class="column-picker">
                 <div class="column-picker-label">@L["DependencyResolvedStatuses"]</div>
@@ -246,6 +264,7 @@
         TicketCountInColumnConditionSpec => "ticketCountInColumn",
         VerdictIsConditionSpec => "verdictIs",
         RepairBudgetConditionSpec => "repairBudget",
+        ReviewerRetryBudgetConditionSpec => "reviewerRetryBudget",
         DependenciesResolvedConditionSpec => "dependenciesResolved",
         _ => throw new NotSupportedException($"No UI mapping for condition type {Condition.GetType().Name}. Register it in ConditionEditor.razor."),
     };
@@ -265,6 +284,7 @@
             "ticketCountInColumn" => new TicketCountInColumnConditionSpec { Columns = new List<string> { "InProgress" }, SameAssignee = true, Operator = "==", Value = 0 },
             "verdictIs" => new VerdictIsConditionSpec { Verdicts = new List<string> { "SHIP" } },
             "repairBudget" => new RepairBudgetConditionSpec(),
+            "reviewerRetryBudget" => new ReviewerRetryBudgetConditionSpec(),
             "dependenciesResolved" => new DependenciesResolvedConditionSpec { ResolvedStatuses = new List<string> { "Done" } },
             _ => throw new NotSupportedException($"Unknown condition type key '{e.Value}'. Register it in ConditionEditor.razor."),
         };
