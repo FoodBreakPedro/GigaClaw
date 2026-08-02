@@ -46,6 +46,15 @@ internal static class MissionFormat
     public static string Percent(LocalizationService l, double? value) =>
         value is double v ? (v * 100).ToString("0", CultureInfo.InvariantCulture) + "%" : l["MissionNoData"];
 
+    /// <summary>Resolves a <see cref="MissionText"/> the aggregation left structured. A literal is
+    /// returned untouched — it is agent- or user-authored text that must not go through
+    /// <c>string.Format</c>, where a stray brace in a ticket title would be read as a placeholder.
+    /// </summary>
+    public static string Text(LocalizationService l, MissionText text) =>
+        text.Key is not string key ? text.Args.Count > 0 ? text.Args[0] : ""
+            : text.Args.Count == 0 ? l[key]
+            : l.Get(key, [.. text.Args]);
+
     // ------------------------------------------------------------------ labels
 
     public static string KpiLabel(LocalizationService l, string column) => column switch

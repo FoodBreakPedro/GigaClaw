@@ -33,9 +33,9 @@
                             <span class="mc-att-id num">#@ticketId</span>
                         }
                     </div>
-                    <div class="mc-att-title">@item.Title</div>
+                    <div class="mc-att-title">@MissionFormat.Text(L, item.Title)</div>
                     <div class="mc-att-meta">
-                        @item.Detail
+                        @MissionFormat.Text(L, item.Detail)
                         @if (item.SinceUtc is DateTime itemSince)
                         {
                             <span> · @Since(itemSince)</span>
