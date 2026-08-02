@@ -53,7 +53,7 @@ public static class TicketCostCap
     /// <paramref name="cap"/>. A receipt naming a different cap belongs to a closed episode — the
     /// ceiling has moved since — and does not suppress a fresh report.
     /// </summary>
-    public static bool IsReceiptForCap(string? commentBody, int ticketId, decimal cap)
+    private static bool IsReceiptForCap(string? commentBody, int ticketId, decimal cap)
     {
         if (commentBody is null) return false;
         foreach (Match match in ReceiptRegex.Matches(commentBody))
