@@ -1,6 +1,6 @@
-# Build + test on every push/PR. GigaClaw.ClaudeMock is built explicitly so the hermetic
-# ClaudeRunner integration tests find the mock claude binary instead of falling back to a real
-# CLI (MockClaudeBinFixture walks the repo tree for a previously built binary).
+# Build + test on every push/PR. The single solution build covers GigaClaw.ClaudeMock so the
+# hermetic ClaudeRunner integration tests find the mock claude binary instead of falling back to a
+# real CLI (MockClaudeBinFixture walks the repo tree for a previously built binary).
 #
 # The matrix is load-bearing. This job ran only on windows-latest for its whole life, on a project
 # developed on macOS, so every platform-shaped defect was either invisible or the *only* thing
@@ -50,14 +50,21 @@ jobs:
           fi
           echo "All shipped template files are LF."
 
+      # One Release build of the whole solution. Every later step (catalog, tests, eval) runs
+      # with `-c Release --no-build` against these binaries, so this must stay ahead of all of
+      # them.
+      - name: Build
+        shell: bash
+        run: dotnet build GigaClaw.slnx -c Release --nologo
+
       # T1/T2: committed catalog artifacts must remain deterministic. Enforces strict
       # five-part binding checks for every agent discovered in ProjectTemplate/Agents.
       - name: Catalog drift check
         shell: bash
         run: |
-          dotnet run --project GigaClaw.Catalog -- generate
+          dotnet run --project GigaClaw.Catalog -c Release --no-build -- generate
           git diff --exit-code -- catalog.json doc/catalog.md
-          dotnet run --project GigaClaw.Catalog -- check --strict
+          dotnet run --project GigaClaw.Catalog -c Release --no-build -- check --strict
 
       # T6: the five-binding rule as a gate (doc/pack-infrastructure.md §7). --strict-packs is
       # strict for pack agents and baseline for core agents, which is what lets a pack land while
@@ -66,16 +73,7 @@ jobs:
       # exists to prevent, so this is unconditional for packs whatever mode core is in (owner Q2).
       - name: Pack composition and strict binding gate
         shell: bash
-        run: dotnet run --project GigaClaw.Catalog -- check --strict-packs
-
-      - name: Build
-        shell: bash
-        run: |
-          dotnet build GigaClaw.Web -c Release --nologo
-          dotnet build GigaClaw.ClaudeMock -c Release --nologo
-          dotnet build GigaClaw.Core.Tests -c Release --nologo
-          dotnet build GigaClaw.Eval -c Release --nologo
-          dotnet build GigaClaw.Eval.Tests -c Release --nologo
+        run: dotnet run --project GigaClaw.Catalog -c Release --no-build -- check --strict-packs
 
       - name: Test
         shell: bash
