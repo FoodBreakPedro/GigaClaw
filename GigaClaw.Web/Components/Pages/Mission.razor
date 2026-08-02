@@ -48,74 +48,7 @@
 
                 <MissionVelocityCard Velocity="snapshot.Velocity" SnapshotsSince="snapshot.SnapshotsSince" />
 
-                <article class="mc-card">
-                    <div class="mc-card-head">
-                        <div>
-                            <div class="mc-card-label">@L["MissionWorkload"]</div>
-                            <div class="mc-card-sub">@L["MissionWorkloadSub"]</div>
-                        </div>
-                    </div>
-
-                    @if (snapshot.Workload.Count == 0)
-                    {
-                        <div class="mc-empty">@L["MissionWorkloadEmpty"]</div>
-                    }
-                    else
-                    {
-                        var maxDispatches = Math.Max(1, snapshot.Workload.Max(w => w.Dispatches));
-                        <div class="mc-bars">
-                            @foreach (var agent in snapshot.Workload.Take(12))
-                            {
-                                <div class="mc-bar-row">
-                                    <span class="mc-bar-name" title="@agent.Agent">
-                                        @if (agent.Running)
-                                        {
-                                            <span class="mc-dot-live sm"></span>
-                                        }
-                                        @agent.Agent
-                                    </span>
-                                    <span class="mc-bar-track">
-                                        <span class="mc-bar-fill @StalenessClass(agent.Staleness)"
-                                              style="width: @Num(agent.Dispatches * 100.0 / maxDispatches)%"></span>
-                                    </span>
-                                    <span class="mc-bar-meta">
-                                        <b class="num">@agent.Dispatches</b>
-                                        @if (agent.Running)
-                                        {
-                                            <span>· @L["MissionRunningNow"]</span>
-                                        }
-                                        else if (agent.LastRunAtUtc is DateTime last)
-                                        {
-                                            @if (agent.Staleness == "fresh")
-                                            {
-                                                <span>· @Since(last)</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="mc-chip @StalenessClass(agent.Staleness)">@Since(last)</span>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            @* On the roster, never dispatched — the reddest state, not a blank. *@
-                                            <span class="mc-chip @StalenessClass(agent.Staleness)">@L["MissionStaleNever"]</span>
-                                        }
-                                    </span>
-                                </div>
-                            }
-                        </div>
-                    }
-
-                    <div class="mc-card-foot">
-                        <div class="mc-stale-legend">
-                            <span><i class="mc-sdot" style="background: var(--mc-blue)"></i>@L["MissionStaleFresh"]</span>
-                            <span><i class="mc-sdot" style="background: var(--mc-amber)"></i>@L["MissionStaleStale"]</span>
-                            @* One red bucket, two ways in: idle for over a week, or never dispatched. *@
-                            <span><i class="mc-sdot" style="background: var(--mc-red)"></i>@L["MissionStaleVeryStale"]</span>
-                        </div>
-                        <span class="mc-card-sub">@L.Get("MissionAgentsCount", snapshot.Workload.Count)</span>
-                    </div>
-                </article>
+                <MissionWorkloadCard Workload="snapshot.Workload" />
 
                 <article class="mc-card mc-card-hero">
                     <div class="mc-card-head">
