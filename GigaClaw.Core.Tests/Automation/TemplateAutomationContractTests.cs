@@ -1061,6 +1061,57 @@ public class TemplateAutomationContractTests
         Assert.Empty(openPr.Actions.OfType<EnqueueMergeActionSpec>());
     }
 
+    // ── Token-burn policy (simplification pass A1/A2/A4) ────────────────────
+
+    /// <summary>
+    /// A2: the watchdog probes once a day, not hourly, and its chain carries no consolidation
+    /// pass — a ticketless health probe generates no lessons worth a full LLM distillation run.
+    /// The automation id keeps its historical name; only the cadence changed.
+    /// </summary>
+    [Fact]
+    public void Token_policy_the_watchdog_probes_daily_without_a_consolidation_pass()
+    {
+        var config = LoadConfig();
+        var watchdog = Assert.Single(config.Automations, a => a.Id == "system-watchdog-hourly");
+
+        var trigger = Assert.IsType<IntervalTriggerSpec>(watchdog.Trigger);
+        Assert.Equal("0 6 * * *", trigger.Cron);
+
+        Assert.DoesNotContain(watchdog.Actions, a => a is ConsolidateAgentMemoryActionSpec);
+        var run = Assert.Single(watchdog.Actions.OfType<RunAgentActionSpec>());
+        Assert.Equal("claude-haiku-4-5", run.Model);
+    }
+
+    /// <summary>
+    /// A4: staging an already-final diff and writing its message does not need Sonnet. Pinned so
+    /// a template edit cannot quietly re-upgrade the most frequent Done-chain dispatch.
+    /// </summary>
+    [Fact]
+    public void Token_policy_the_committer_dispatches_on_haiku()
+    {
+        var config = LoadConfig();
+        var committer = Assert.Single(config.Automations, a => a.Id == "committer-on-done");
+        var run = Assert.Single(committer.Actions.OfType<RunAgentActionSpec>());
+        Assert.Equal("claude-haiku-4-5", run.Model);
+    }
+
+    /// <summary>
+    /// A1: every consolidation pass in the template pins a cheap model. An unpinned action falls
+    /// back to the CLI default — likely the most expensive tier — and doubles the parent run's
+    /// spend on mechanical summarization.
+    /// </summary>
+    [Fact]
+    public void Token_policy_every_consolidation_pass_pins_a_cheap_model()
+    {
+        var config = LoadConfig();
+        var consolidations = config.Automations
+            .SelectMany(a => a.Actions.OfType<ConsolidateAgentMemoryActionSpec>())
+            .ToList();
+
+        Assert.NotEmpty(consolidations);
+        Assert.All(consolidations, c => Assert.Equal("claude-haiku-4-5", c.Model));
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

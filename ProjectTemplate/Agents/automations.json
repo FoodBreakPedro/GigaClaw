@@ -245,7 +245,7 @@
           "concurrencyGroup": "git",
           "mutuallyExclusiveWith": [],
           "env": {},
-          "model": "claude-sonnet-4-6",
+          "model": "claude-haiku-4-5",
           "restoreStatusOnFail": false
         },
         {
@@ -1006,11 +1006,11 @@
     },
     {
       "id": "system-watchdog-hourly",
-      "name": "System Watchdog: hourly ticketless health probe",
+      "name": "System Watchdog: daily ticketless health probe",
       "enabled": true,
       "trigger": {
         "type": "interval",
-        "cron": "0 * * * *"
+        "cron": "0 6 * * *"
       },
       "conditions": [],
       "actions": [
@@ -1023,11 +1023,6 @@
           "env": {},
           "model": "claude-haiku-4-5",
           "restoreStatusOnFail": true
-        },
-        {
-          "type": "consolidateAgentMemory",
-          "agent": "system-watchdog",
-          "model": "claude-haiku-4-5"
         },
         {
           "type": "commitAgentMemory",
