@@ -1485,8 +1485,8 @@
     "semantic_hash": ""
   },
   "ProjectTemplate/Agents/blog-seo/SKILL.md": {
-    "mtime": 1785442894.7191153,
-    "ast_hash": "e417f1d296bbbea6d783d14ef1d0abff",
+    "mtime": 1785700069.9214742,
+    "ast_hash": "d8394b54d7fb7945cef5b0fb8291fc36",
     "semantic_hash": ""
   },
   "ProjectTemplate/Agents/blog-seo/memory/MEMORY.md": {
@@ -4607,6 +4607,11 @@
   "doc/assets/demo.mp4": {
     "mtime": 1784977378.6408355,
     "ast_hash": "ed40d13b35757cf2bf7e08dd7ec1c5c7",
+    "semantic_hash": ""
+  },
+  "ProjectTemplate/Agents/scripts/sync_draft_to_description.py": {
+    "mtime": 1785700054.5766232,
+    "ast_hash": "8de0754f25bd9ed93daf5938cba1aa21",
     "semantic_hash": ""
   }
 }

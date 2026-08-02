@@ -49,7 +49,7 @@ public sealed class CatalogGeneratorTests
         // and its supply-chain lane calls, + media_common.py, extracted as a shared sibling module
         // for load_object() (previously duplicated verbatim in media_generate.py/media_contract.py).
         // The catalog counts them because agents call them.
-        Assert.Equal(22, catalog.Summary.Scripts);
+        Assert.Equal(23, catalog.Summary.Scripts);
         var contentWriter = Assert.Single(catalog.Agents, agent => agent.Slug == "content-writer");
         Assert.True(contentWriter.ContractPresent);
         Assert.Equal("content-write", contentWriter.RiskClass);
