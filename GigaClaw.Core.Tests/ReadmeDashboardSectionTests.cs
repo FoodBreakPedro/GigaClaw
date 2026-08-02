@@ -59,7 +59,7 @@ public class ReadmeDashboardSectionTests
     [Fact]
     public void ScreenshotFile_ExistsAtCanonicalPath()
     {
-        var path = Path.Combine(RepoRoot, "docs", "assets", "dashboard.png");
+        var path = Path.Combine(RepoRoot, "doc", "assets", "dashboard.png");
         Assert.True(File.Exists(path),
             $"Expected screenshot at {path} — programmer must commit it.");
     }
