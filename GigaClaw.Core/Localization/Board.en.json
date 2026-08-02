@@ -127,5 +127,15 @@
   "ScheduledForLabel": "Scheduled:",
   "ScheduleEdit": "Edit schedule",
   "ScheduleButton": "Schedule…",
-  "ScheduleNoDate": "No date set"
+  "ScheduleNoDate": "No date set",
+  "BlockedByPrefix": "blocked by",
+  "BlockedBySection": "Blocked by",
+  "Approvals": "Approvals",
+  "ApprovalsInboxTitle": "Approvals inbox",
+  "NoApprovals": "No tickets pending approval.",
+  "Approve": "Approve",
+  "Reject": "Reject",
+  "LabeledAgo": "Labeled {0} ago",
+  "ApprovalConflict": "Ticket #{0} already left Review — the list has been refreshed.",
+  "RunsButtonLabel": "Runs"
 }

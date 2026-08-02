@@ -22,6 +22,7 @@ For a high-level overview see the root [README.md](../README.md). For repo layou
 - [Storage](./storage.md) — SQLite registry, per-project DBs, run logs, and workspace-side agent state.
 - [Kanban UI](./kanban-ui.md) — Blazor Server board, ticket panel, agent run drawer.
 - [Dashboard](./dashboard.md) — free-form tile view backed by `.dashboard/` Markdown files with drag-and-drop layout.
+- [Mission Control](./mission-control.md) — system-level `/mission` operations view: cross-project KPIs with vs-yesterday deltas, ticket velocity from daily snapshots, agent workload, attention queue, throughput, live runs and spend, and the first consumer of the evaluator's `scores.json`.
 - [Graphic charter](./graphic-charter.md) — palette, typography, spacing, form controls, button variants. Reference before adding any new UI.
 - [Update check](./update-check.md) — background poll of GitHub Releases that surfaces a dismissible "new version available" banner in the app shell.
 - [Telemetry](./telemetry.md) — anonymous daily heartbeat to Umami Cloud (instance id, version, OS); always on outside Development.

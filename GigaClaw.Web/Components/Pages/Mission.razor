@@ -1,0 +1,819 @@
+@page "/mission"
+@using System.Globalization
+@using GigaClaw.Core.Automation
+@inject MissionControlService MissionControl
+@inject TicketService TicketService
+@inject AgentRunsState AgentRuns
+@inject NavigationManager Navigation
+@inject LocalizationService L
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>@L["MissionTitle"]</PageTitle>
+
+<div class="mc-root">
+
+    <header class="mc-header">
+        <h1 class="mc-title">@L["MissionTitle"]</h1>
+        <span class="mc-tag">@L["MissionTag"]</span>
+        <span class="mc-spacer"></span>
+        @if (_snapshot is not null)
+        {
+            <span class="mc-generated">@_snapshot.GeneratedAtUtc.ToString("HH:mm 'UTC'", CultureInfo.InvariantCulture)</span>
+        }
+        <button class="mc-pill" @onclick="RefreshAsync" disabled="@_loading">@L["MissionRefresh"]</button>
+        <span class="mc-live-pill"><span class="mc-dot-live"></span><span class="num">@ActiveRuns.Count</span>&nbsp;@L["MissionAgentsRunning"]</span>
+    </header>
+
+    @if (_snapshot is null)
+    {
+        <p class="empty-hint">@L["MissionLoading"]</p>
+    }
+    else if (_snapshot.Projects.Count == 0)
+    {
+        <p class="empty-hint">@L["MissionNoProjects"]</p>
+    }
+    else
+    {
+        var snapshot = _snapshot;
+
+        <main class="mc-page">
+
+            @* ---------------- row 1 — ticket status KPIs ---------------- *@
+            <section class="mc-grid mc-row-kpi" aria-label="@L["MissionTicketStatus"]">
+                @foreach (var kpi in snapshot.Kpis)
+                {
+                    <div class="mc-kpi" style="--stripe: @KpiColor(kpi.Column)">
+                        <div class="mc-kpi-label">@KpiLabel(kpi.Column)</div>
+                        <div class="mc-kpi-val num">@kpi.Count</div>
+                        @if (kpi.Delta is int delta)
+                        {
+                            <span class="mc-delta @DeltaClass(kpi.Column, delta) num">
+                                @DeltaArrow(delta) @Math.Abs(delta) <span class="vs">@L["MissionVsYesterday"]</span>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="mc-delta flat">@L["MissionNoBaseline"]</span>
+                        }
+                    </div>
+                }
+            </section>
+
+            @* ---------------- row 2 — velocity / workload / attention ---------------- *@
+            <section class="mc-grid mc-row-2">
+
+                <article class="mc-card">
+                    <div class="mc-card-head">
+                        <div>
+                            <div class="mc-card-label">@L["MissionVelocity"]</div>
+                            <div class="mc-card-sub">@L["MissionVelocitySub"]</div>
+                        </div>
+                        <div class="mc-legend">
+                            <span class="mc-legend-item"><span class="mc-swatch" style="background: var(--mc-blue)"></span>@L["MissionSeriesCreated"]</span>
+                            <span class="mc-legend-item"><span class="mc-swatch" style="background: var(--mc-green)"></span>@L["MissionSeriesResolved"]</span>
+                            <span class="mc-legend-item"><span class="mc-swatch" style="background: var(--mc-red)"></span>@L["MissionSeriesBlocked"]</span>
+                        </div>
+                    </div>
+
+                    <div class="mc-chart">
+                        @{
+                            var series = snapshot.Velocity;
+                            var maxValue = Math.Max(1, series
+                                .SelectMany(s => new[] { s.Created, s.Resolved, s.Blocked ?? 0 })
+                                .DefaultIfEmpty(0)
+                                .Max());
+                            var createdLine = Polyline(series.Select((s, i) => (i, (int?)s.Created)), series.Count, maxValue);
+                            var resolvedLine = Polyline(series.Select((s, i) => (i, (int?)s.Resolved)), series.Count, maxValue);
+                            var blockedLine = Polyline(series.Select((s, i) => (i, s.Blocked)), series.Count, maxValue);
+                        }
+                        <svg viewBox="0 0 620 372" preserveAspectRatio="xMidYMid meet" role="img"
+                             aria-label="@L["MissionVelocity"]">
+                            <g stroke="var(--border)" stroke-width="1.4">
+                                <line x1="34" y1="20" x2="574" y2="20"></line>
+                                <line x1="34" y1="97.5" x2="574" y2="97.5"></line>
+                                <line x1="34" y1="175" x2="574" y2="175"></line>
+                                <line x1="34" y1="252.5" x2="574" y2="252.5"></line>
+                                <line x1="34" y1="330" x2="574" y2="330"></line>
+                            </g>
+                            <g fill="var(--text-muted)" font-size="14" text-anchor="end" class="num">
+                                <text x="26" y="25">@maxValue</text>
+                                <text x="26" y="180">@(maxValue / 2)</text>
+                                <text x="26" y="335">0</text>
+                            </g>
+
+                            <polyline points="@createdLine" fill="none" stroke="var(--mc-blue)" stroke-width="2.8"
+                                      stroke-linecap="round" stroke-linejoin="round"></polyline>
+                            <polyline points="@resolvedLine" fill="none" stroke="var(--mc-green)" stroke-width="2.8"
+                                      stroke-linecap="round" stroke-linejoin="round"></polyline>
+                            @* The blocked line covers only the days that actually have a snapshot —
+                               a past column count cannot be reconstructed, so a gap is the honest
+                               rendering rather than a zero. *@
+                            @if (blockedLine.Length > 0)
+                            {
+                                <polyline points="@blockedLine" fill="none" stroke="var(--mc-red)" stroke-width="2.8"
+                                          stroke-linecap="round" stroke-linejoin="round"></polyline>
+                            }
+
+                            <g fill="var(--text-muted)" font-size="13" text-anchor="middle">
+                                @for (var i = 0; i < series.Count; i++)
+                                {
+                                    @* The wrapping <g> is load-bearing: Razor reads a bare <text> at
+                                       the start of a code block as its own <text> control tag. *@
+                                    <g>
+                                        <text x="@Num(PointX(i, series.Count))" y="356">@series[i].Date.ToString("ddd d", CultureInfo.InvariantCulture)</text>
+                                    </g>
+                                }
+                            </g>
+                        </svg>
+                    </div>
+
+                    <div class="mc-series-totals">
+                        <div class="mc-series-total">
+                            <div class="mc-st-name"><span class="mc-swatch" style="background: var(--mc-blue)"></span>@L["MissionSeriesCreated"]</div>
+                            <div class="mc-st-val num">@series.Sum(s => s.Created)</div>
+                            <div class="mc-st-sub num">@Avg(series.Sum(s => s.Created), series.Count) @L["MissionPerDayAvg"]</div>
+                        </div>
+                        <div class="mc-series-total">
+                            <div class="mc-st-name"><span class="mc-swatch" style="background: var(--mc-green)"></span>@L["MissionSeriesResolved"]</div>
+                            <div class="mc-st-val num">@series.Sum(s => s.Resolved)</div>
+                            <div class="mc-st-sub num">@Avg(series.Sum(s => s.Resolved), series.Count) @L["MissionPerDayAvg"]</div>
+                        </div>
+                        <div class="mc-series-total">
+                            <div class="mc-st-name"><span class="mc-swatch" style="background: var(--mc-red)"></span>@L["MissionSeriesBlocked"]</div>
+                            @if (series.Any(s => s.Blocked is not null))
+                            {
+                                <div class="mc-st-val num">@series.Where(s => s.Blocked is not null).Max(s => s.Blocked!.Value)</div>
+                                <div class="mc-st-sub">@L["MissionSeriesBlockedPeak"]</div>
+                            }
+                            else
+                            {
+                                <div class="mc-st-val">@L["MissionNoData"]</div>
+                                <div class="mc-st-sub">@L["MissionBlockedNeedsSnapshots"]</div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mc-card-foot">
+                        <span class="mc-card-sub">
+                            @if (snapshot.SnapshotsSince is DateOnly since)
+                            {
+                                @L.Get("MissionCollectingSince", since.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+                            }
+                            else
+                            {
+                                @L["MissionCollectingToday"]
+                            }
+                        </span>
+                    </div>
+                </article>
+
+                <article class="mc-card">
+                    <div class="mc-card-head">
+                        <div>
+                            <div class="mc-card-label">@L["MissionWorkload"]</div>
+                            <div class="mc-card-sub">@L["MissionWorkloadSub"]</div>
+                        </div>
+                    </div>
+
+                    @if (snapshot.Workload.Count == 0)
+                    {
+                        <div class="mc-empty">@L["MissionWorkloadEmpty"]</div>
+                    }
+                    else
+                    {
+                        var maxDispatches = Math.Max(1, snapshot.Workload.Max(w => w.Dispatches));
+                        <div class="mc-bars">
+                            @foreach (var agent in snapshot.Workload.Take(12))
+                            {
+                                <div class="mc-bar-row">
+                                    <span class="mc-bar-name" title="@agent.Agent">
+                                        @if (agent.Running)
+                                        {
+                                            <span class="mc-dot-live sm"></span>
+                                        }
+                                        @agent.Agent
+                                    </span>
+                                    <span class="mc-bar-track">
+                                        <span class="mc-bar-fill @StalenessClass(agent.Staleness)"
+                                              style="width: @Num(agent.Dispatches * 100.0 / maxDispatches)%"></span>
+                                    </span>
+                                    <span class="mc-bar-meta">
+                                        <b class="num">@agent.Dispatches</b>
+                                        @if (agent.Running)
+                                        {
+                                            <span>· @L["MissionRunningNow"]</span>
+                                        }
+                                        else if (agent.LastRunAtUtc is DateTime last)
+                                        {
+                                            @if (agent.Staleness == "fresh")
+                                            {
+                                                <span>· @Since(last)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="mc-chip @StalenessClass(agent.Staleness)">@Since(last)</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            @* On the roster, never dispatched — the reddest state, not a blank. *@
+                                            <span class="mc-chip @StalenessClass(agent.Staleness)">@L["MissionStaleNever"]</span>
+                                        }
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <div class="mc-card-foot">
+                        <div class="mc-stale-legend">
+                            <span><i class="mc-sdot" style="background: var(--mc-blue)"></i>@L["MissionStaleFresh"]</span>
+                            <span><i class="mc-sdot" style="background: var(--mc-amber)"></i>@L["MissionStaleStale"]</span>
+                            @* One red bucket, two ways in: idle for over a week, or never dispatched. *@
+                            <span><i class="mc-sdot" style="background: var(--mc-red)"></i>@L["MissionStaleVeryStale"]</span>
+                        </div>
+                        <span class="mc-card-sub">@L.Get("MissionAgentsCount", snapshot.Workload.Count)</span>
+                    </div>
+                </article>
+
+                <article class="mc-card mc-card-hero">
+                    <div class="mc-card-head">
+                        <div>
+                            <div class="mc-card-label">@L["MissionAttention"]</div>
+                            <div class="mc-card-sub">@L.Get("MissionAttentionSub", snapshot.Attention.Count)</div>
+                        </div>
+                    </div>
+
+                    @if (_actionNotice is not null)
+                    {
+                        <div class="approval-notice">@_actionNotice</div>
+                    }
+                    @if (snapshot.Attention.Count == 0)
+                    {
+                        <div class="mc-empty">@L["MissionAttentionEmpty"]</div>
+                    }
+                    else
+                    {
+                        <div class="mc-att-list">
+                            @foreach (var item in snapshot.Attention.Take(8))
+                            {
+                                <div class="mc-att" style="--sev: @SeverityColor(item.Severity)">
+                                    <div class="mc-att-top">
+                                        <span class="mc-sev @item.Severity.ToString().ToLowerInvariant()">@SeverityLabel(item.Severity)</span>
+                                        <span class="mc-proj">@item.ProjectName</span>
+                                        @if (item.TicketId is int ticketId)
+                                        {
+                                            <span class="mc-att-id num">#@ticketId</span>
+                                        }
+                                    </div>
+                                    <div class="mc-att-title">@item.Title</div>
+                                    <div class="mc-att-meta">
+                                        @item.Detail
+                                        @if (item.SinceUtc is DateTime itemSince)
+                                        {
+                                            <span> · @Since(itemSince)</span>
+                                        }
+                                    </div>
+                                    @if (item.Progress is double progress)
+                                    {
+                                        <div class="mc-progress"><i style="width: @Num(progress * 100)%"></i></div>
+                                    }
+                                    <div class="mc-att-actions">
+                                        @if (item.TicketId is int id)
+                                        {
+                                            <button class="mc-ghost" @onclick="() => OpenTicket(item.ProjectSlug, id)">@L["MissionActionOpen"]</button>
+                                        }
+                                        @if (item.Kind == "approval" && item.TicketId is int approvalId)
+                                        {
+                                            <button class="mc-ghost" @onclick="() => ApproveAsync(item.ProjectSlug, approvalId)">@L["MissionActionApprove"]</button>
+                                            <button class="mc-ghost" @onclick="() => RejectAsync(item.ProjectSlug, approvalId)">@L["MissionActionReject"]</button>
+                                        }
+                                        @if (item.Kind == "budget")
+                                        {
+                                            <a class="mc-ghost" href="@AutomationsHref(item.ProjectSlug)">@L["MissionActionSettings"]</a>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </article>
+
+            </section>
+
+            @* ---------------- row 3 — throughput / mix / runs ---------------- *@
+            <section class="mc-grid mc-row-3">
+
+                <article class="mc-card">
+                    <div class="mc-card-head">
+                        <div>
+                            <div class="mc-card-label">@L["MissionThroughput"]</div>
+                            <div class="mc-card-sub">@L["MissionThroughputSub"]</div>
+                        </div>
+                    </div>
+                    <div class="mc-mini-grid">
+                        @foreach (var metric in snapshot.Throughput)
+                        {
+                            var delta = metric.ThisWeek - metric.LastWeek;
+                            <div class="mc-mini">
+                                <div class="mc-mini-label">@ThroughputLabel(metric.Metric)</div>
+                                <div class="mc-mini-row">
+                                    <div class="mc-mini-val num">@metric.ThisWeek</div>
+                                </div>
+                                <div class="mc-mini-delta @(delta > 0 ? "up" : delta < 0 ? "down" : "") num">
+                                    @(delta == 0 ? "—" : $"{DeltaArrow(delta)} {Math.Abs(delta)}")
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="mc-card-foot">
+                        <span class="mc-card-sub">@L["MissionThroughputFoot"]</span>
+                    </div>
+                </article>
+
+                <article class="mc-card">
+                    <div class="mc-card-head">
+                        <div>
+                            <div class="mc-card-label">@L["MissionStatusMix"]</div>
+                            <div class="mc-card-sub">@L["MissionStatusMixSub"]</div>
+                        </div>
+                    </div>
+                    @{
+                        var mix = snapshot.StatusMix
+                            .Where(kv => kv.Value > 0)
+                            .OrderByDescending(kv => kv.Value)
+                            .ToList();
+                        var mixTotal = mix.Sum(kv => kv.Value);
+                    }
+                    @if (mixTotal == 0)
+                    {
+                        <div class="mc-empty">@L["MissionStatusMixEmpty"]</div>
+                    }
+                    else
+                    {
+                        const double circumference = 263.89; // 2πr, r = 42
+                        var offset = 0.0;
+                        <div class="mc-donut-wrap">
+                            <div class="mc-donut">
+                                <svg viewBox="0 0 120 120" role="img" aria-label="@L["MissionStatusMix"]">
+                                    <g transform="rotate(-90 60 60)" fill="none" stroke-width="14">
+                                        @foreach (var slice in mix)
+                                        {
+                                            var length = slice.Value / (double)mixTotal * circumference;
+                                            var dash = $"{Num(length)} {Num(circumference - length)}";
+                                            var dashOffset = Num(-offset);
+                                            offset += length;
+                                            <circle cx="60" cy="60" r="42" stroke="@KpiColor(slice.Key)"
+                                                    stroke-dasharray="@dash" stroke-dashoffset="@dashOffset"></circle>
+                                        }
+                                    </g>
+                                </svg>
+                                <div class="mc-donut-center">
+                                    <b class="num">@mixTotal</b>
+                                    <span>@L["MissionOpenTickets"]</span>
+                                </div>
+                            </div>
+                            <div class="mc-mix-table">
+                                @foreach (var slice in mix)
+                                {
+                                    <div class="mc-mix-row">
+                                        <i class="mc-sdot" style="background: @KpiColor(slice.Key)"></i>
+                                        <span class="nm">@KpiLabel(slice.Key)</span>
+                                        <span class="vl num">@slice.Value</span>
+                                        <span class="pc num">@Num(slice.Value * 100.0 / mixTotal)%</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </article>
+
+                <article class="mc-card">
+                    <div class="mc-card-head">
+                        <div>
+                            <div class="mc-card-label">@L["MissionActiveRuns"]</div>
+                            <div class="mc-card-sub">@L.Get("MissionActiveRunsSub", ActiveRuns.Count)</div>
+                        </div>
+                    </div>
+
+                    @if (ActiveRuns.Count == 0)
+                    {
+                        <div class="mc-empty">@L["MissionActiveRunsEmpty"]</div>
+                    }
+                    else
+                    {
+                        <div class="mc-runs">
+                            @foreach (var run in ActiveRuns.Take(5))
+                            {
+                                <div class="mc-run">
+                                    <div class="mc-run-top">
+                                        <span class="mc-dot-live"></span>
+                                        <span class="mc-run-agent">@run.AgentName</span>
+                                        <span class="mc-run-arrow">→</span>
+                                        <span class="mc-proj">@run.ProjectSlug</span>
+                                        @if (run.TicketId is int runTicket)
+                                        {
+                                            <span class="mc-att-id num">#@runTicket</span>
+                                        }
+                                    </div>
+                                    <div class="mc-run-bot">
+                                        <span class="mc-run-meta num">@Elapsed(run.StartedAt)</span>
+                                        <button class="mc-ghost" @onclick="() => OpenRunDrawer(run.RunId)">@L["MissionViewLog"]</button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <div class="mc-cost-strip">
+                        <span>@L["MissionCostToday"] <b class="num">@Usd(snapshot.Cost.TodayUsd)</b></span>
+                        <span>@L["MissionCostWeek"] <b class="num">@Usd(snapshot.Cost.WeekUsd)</b></span>
+                        <span>
+                            @L["MissionCacheSavings"]
+                            <b class="num">@(snapshot.Cost.CacheSavingsPercent is double savings ? $"{savings:0}%" : L["MissionNoData"])</b>
+                        </span>
+                        <span>
+                            @L["MissionCostliest"]
+                            <b class="num">
+                                @(snapshot.Cost.CostliestTicketId is int costliest
+                                    ? $"#{costliest} ${snapshot.Cost.CostliestUsd.ToString("0.00", CultureInfo.InvariantCulture)}"
+                                    : L["MissionNoData"])
+                            </b>
+                        </span>
+                    </div>
+                </article>
+
+            </section>
+
+            @* ---------------- row 4 — recent tickets / activity feed ---------------- *@
+            <section class="mc-grid mc-row-4">
+
+                <article class="mc-card">
+                    <div class="mc-card-head">
+                        <div>
+                            <div class="mc-card-label">@L["MissionRecentTickets"]</div>
+                            <div class="mc-card-sub">@L["MissionRecentTicketsSub"]</div>
+                        </div>
+                    </div>
+                    @if (snapshot.RecentTickets.Count == 0)
+                    {
+                        <div class="mc-empty">@L["MissionRecentEmpty"]</div>
+                    }
+                    else
+                    {
+                        <div class="mc-table-wrap">
+                            <table class="mc-tickets">
+                                <thead>
+                                    <tr>
+                                        <th>@L["MissionColId"]</th>
+                                        <th>@L["MissionColTitle"]</th>
+                                        <th>@L["MissionColProject"]</th>
+                                        <th>@L["MissionColStatus"]</th>
+                                        <th>@L["MissionColPriority"]</th>
+                                        <th class="upd">@L["MissionColUpdated"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var ticket in snapshot.RecentTickets)
+                                    {
+                                        <tr @onclick="() => OpenTicket(ticket.ProjectSlug, ticket.TicketId)">
+                                            <td class="id num">#@ticket.TicketId</td>
+                                            <td>@ticket.Title</td>
+                                            <td class="proj-cell">@ticket.ProjectName</td>
+                                            <td>
+                                                <span class="mc-status-pill" style="--sc: @KpiColor(ticket.Status)">@KpiLabel(ticket.Status)</span>
+                                            </td>
+                                            <td class="prio">@PriorityLabel(ticket.Priority)</td>
+                                            <td class="upd num">@Since(ticket.UpdatedAtUtc)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </article>
+
+                <article class="mc-card">
+                    <div class="mc-card-head">
+                        <div>
+                            <div class="mc-card-label">@L["MissionActivity"]</div>
+                            <div class="mc-card-sub">@L["MissionActivitySub"]</div>
+                        </div>
+                    </div>
+                    @if (snapshot.Activity.Count == 0)
+                    {
+                        <div class="mc-empty">@L["MissionActivityEmpty"]</div>
+                    }
+                    else
+                    {
+                        <div class="mc-feed">
+                            @foreach (var item in snapshot.Activity)
+                            {
+                                <div class="mc-feed-item">
+                                    <i class="mc-feed-dot" style="background: @EventColor(item.Kind)"></i>
+                                    <span class="mc-feed-time num">@Since(item.AtUtc)</span>
+                                    <span class="mc-feed-body">
+                                        @item.Text
+                                        <span class="mc-feed-sub">@item.ProjectSlug@(item.Detail is null ? "" : $" · {item.Detail}")</span>
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </article>
+
+            </section>
+
+            @* ---------------- row 5 — evaluator scores (first consumer of scores.json) ---------------- *@
+            <section class="mc-grid mc-row-5">
+                <article class="mc-card">
+                    <div class="mc-card-head">
+                        <div>
+                            <div class="mc-card-label">@L["MissionScores"]</div>
+                            <div class="mc-card-sub">@L["MissionScoresSub"]</div>
+                        </div>
+                    </div>
+                    @if (snapshot.EvaluatorScores.Count == 0)
+                    {
+                        <div class="mc-empty">@L["MissionScoresEmpty"]</div>
+                    }
+                    else
+                    {
+                        <div class="mc-table-wrap">
+                            <table class="mc-tickets mc-scores">
+                                <thead>
+                                    <tr>
+                                        <th>@L["MissionColProject"]</th>
+                                        <th>@L["MissionScoreAgent"]</th>
+                                        <th>@L["MissionScoreOutcome"]</th>
+                                        <th>@L["MissionScoreProcess"]</th>
+                                        <th>@L["MissionScoreEfficiency"]</th>
+                                        <th>@L["MissionScoreCommunication"]</th>
+                                        <th>@L["MissionScoreFirstPass"]</th>
+                                        <th class="upd">@L["MissionScoreSamples"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var project in snapshot.EvaluatorScores)
+                                    {
+                                        @foreach (var score in project.Scores.Take(6))
+                                        {
+                                            <tr>
+                                                <td class="proj-cell">@project.ProjectName</td>
+                                                <td>@score.Agent</td>
+                                                <td class="num">@Score(score.Outcome)</td>
+                                                <td class="num">@Score(score.Process)</td>
+                                                <td class="num">@Score(score.Efficiency)</td>
+                                                <td class="num">@Score(score.Communication)</td>
+                                                <td class="num">@Percent(score.FirstPassRate)</td>
+                                                <td class="upd num">@score.Samples</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </article>
+            </section>
+
+        </main>
+    }
+</div>
+
+@if (_activeRunDrawerId is not null)
+{
+    <AgentRunDrawer RunId="@_activeRunDrawerId" OnClose="CloseRunDrawer" />
+}
+
+@code {
+    private MissionControlSnapshot? _snapshot;
+    private bool _loading;
+    private string? _activeRunDrawerId;
+    private string? _actionNotice;
+    // One token per component instance: a build in flight when the user navigates away must not
+    // keep hitting every project's SQLite after the circuit is gone.
+    private CancellationTokenSource? _refreshCts;
+
+    private List<AgentRun> ActiveRuns =>
+        _snapshot is null
+            ? []
+            : _snapshot.Projects
+                .SelectMany(p => AgentRuns.ActiveForProject(p.Slug))
+                .OrderByDescending(r => r.StartedAt)
+                .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        AgentRuns.OnChange += OnRunsChanged;
+        L.OnLanguageChanged += OnLanguageChanged;
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (_loading) return;
+        _loading = true;
+        // The button's disabled state is bound to _loading, so the frame has to be flushed before
+        // the (multi-second, multi-project) build begins — otherwise the only render happens after
+        // it finishes and the button never visibly disables.
+        StateHasChanged();
+        await Task.Yield();
+
+        _refreshCts?.Dispose();
+        _refreshCts = new CancellationTokenSource();
+        var token = _refreshCts.Token;
+        try { _snapshot = await MissionControl.BuildAsync(DateTime.UtcNow, token); }
+        catch (OperationCanceledException) { /* superseded or disposed — the newer build renders */ }
+        finally { _loading = false; }
+    }
+
+    // approval-mark-on-done / approval-clear-on-revision (automations.json) own the label swap once
+    // they observe the status change — exactly as the board's Phase 3.3 approvals drawer does.
+    private Task ApproveAsync(string slug, int ticketId) => DecideApprovalAsync(slug, ticketId, "Done");
+    private Task RejectAsync(string slug, int ticketId) => DecideApprovalAsync(slug, ticketId, "Todo");
+
+    /// <summary>
+    /// Approve → Done, Reject → Todo, and only out of Review. The attention queue is a snapshot
+    /// taken seconds or minutes ago; an unconditional move would yank a ticket an agent has since
+    /// advanced back to a column it already left. expectedStatus makes the guard atomic with the
+    /// write; a lost race is reported and the queue re-read.
+    /// </summary>
+    private async Task DecideApprovalAsync(string slug, int ticketId, string target)
+    {
+        _actionNotice = null;
+        try
+        {
+            await TicketService.TransitionTicketAsync(
+                slug, ticketId, target, assignedTo: null, author: "owner", expectedStatus: "Review");
+        }
+        catch (TicketTransitionConflictException)
+        {
+            _actionNotice = L.Get("MissionApprovalConflict", ticketId);
+        }
+        await RefreshAsync();
+    }
+
+    private void OpenTicket(string slug, int ticketId) =>
+        Navigation.NavigateTo(NavigationReturn.WithReturnTo($"/board/{slug}/ticket/{ticketId}", "/mission"));
+
+    private static string AutomationsHref(string slug) =>
+        NavigationReturn.WithReturnTo($"/board/{slug}/automations", "/mission");
+
+    private void OpenRunDrawer(string runId) => _activeRunDrawerId = runId;
+    private void CloseRunDrawer() => _activeRunDrawerId = null;
+
+    private void OnRunsChanged() => InvokeAsync(StateHasChanged);
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        AgentRuns.OnChange -= OnRunsChanged;
+        L.OnLanguageChanged -= OnLanguageChanged;
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
+        _refreshCts = null;
+    }
+
+    // ------------------------------------------------------------------ formatting
+
+    /// <summary>Invariant-culture number rendering. SVG geometry and CSS percentages are parsed by
+    /// the browser, which never accepts a comma decimal separator — so a French server locale would
+    /// otherwise silently produce an unrenderable chart.</summary>
+    private static string Num(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string Avg(int total, int days) =>
+        days == 0 ? "0" : (total / (double)days).ToString("0.0", CultureInfo.InvariantCulture);
+
+    private static string Usd(decimal value) => "$" + value.ToString("0.00", CultureInfo.InvariantCulture);
+
+    // Chart geometry, in the mockup's 620×372 viewBox: plot area x∈[34,574], y∈[20,330].
+    private static double PointX(int index, int count) =>
+        count > 1 ? 34 + index * (540.0 / (count - 1)) : 34;
+
+    private static double PointY(int value, int max) =>
+        330 - value / (double)Math.Max(1, max) * 310;
+
+    /// <summary>Renders one series as SVG polyline points, skipping days with no value — that is how
+    /// the blocked series stays absent on days that were never snapshotted instead of drawing a
+    /// zero nobody measured.</summary>
+    private static string Polyline(IEnumerable<(int Index, int? Value)> points, int count, int max) =>
+        string.Join(" ", points
+            .Where(p => p.Value is not null)
+            .Select(p => $"{Num(PointX(p.Index, count))},{Num(PointY(p.Value!.Value, max))}"));
+
+    private string Score(double? value) =>
+        value is double v ? v.ToString("0.0", CultureInfo.InvariantCulture) : L["MissionNoData"];
+
+    private string Percent(double? value) =>
+        value is double v ? (v * 100).ToString("0", CultureInfo.InvariantCulture) + "%" : L["MissionNoData"];
+
+    private static string Since(DateTime utc)
+    {
+        var span = DateTime.UtcNow - utc;
+        if (span.TotalDays >= 1) return $"{(int)span.TotalDays}d";
+        if (span.TotalHours >= 1) return $"{(int)span.TotalHours}h";
+        if (span.TotalMinutes >= 1) return $"{(int)span.TotalMinutes}m";
+        return $"{Math.Max(0, (int)span.TotalSeconds)}s";
+    }
+
+    private static string Elapsed(DateTime startedAt)
+    {
+        var span = DateTime.UtcNow - startedAt;
+        if (span < TimeSpan.Zero) span = TimeSpan.Zero;
+        return span.TotalHours >= 1
+            ? $"{(int)span.TotalHours}h {span.Minutes}m"
+            : $"{(int)span.TotalMinutes}m {span.Seconds}s";
+    }
+
+    private string KpiLabel(string column) => column switch
+    {
+        "Backlog" => L["MissionKpiBacklog"],
+        "Todo" => L["MissionKpiTodo"],
+        "InProgress" => L["MissionKpiInProgress"],
+        "Review" => L["MissionKpiReview"],
+        "Blocked" => L["MissionKpiBlocked"],
+        MissionControlService.ResolvedKpi => L["MissionKpiResolvedToday"],
+        _ => column
+    };
+
+    /// <summary>The same friendly, localized priority names the board shows — the enum's
+    /// "NiceToHave" is a code identifier, not a label a human reads in a table.</summary>
+    private string PriorityLabel(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Idea => L["PriorityIdea"],
+        TicketPriority.NiceToHave => L["PriorityNiceToHave"],
+        TicketPriority.Required => L["PriorityRequired"],
+        TicketPriority.Critical => L["PriorityCritical"],
+        _ => priority.ToString()
+    };
+
+    private static string KpiColor(string column) => column switch
+    {
+        "Backlog" => "var(--mc-purple)",
+        "Todo" => "var(--mc-blue)",
+        "InProgress" => "var(--mc-teal)",
+        "Review" => "var(--mc-amber)",
+        "Blocked" => "var(--mc-red)",
+        "Scheduled" => "var(--mc-indigo)",
+        "Done" => "var(--mc-green)",
+        MissionControlService.ResolvedKpi => "var(--mc-green)",
+        _ => "var(--border-strong)"
+    };
+
+    // Falling Backlog/Blocked is good news; falling Resolved is not. The arrow reports direction,
+    // the colour reports whether the direction is welcome.
+    private static string DeltaClass(string column, int delta)
+    {
+        if (delta == 0) return "flat";
+        var lowerIsBetter = column is "Backlog" or "Blocked" or "Review";
+        var good = lowerIsBetter ? delta < 0 : delta > 0;
+        return good ? "up" : "down";
+    }
+
+    private static string DeltaArrow(int delta) => delta > 0 ? "▲" : delta < 0 ? "▼" : "▬";
+
+    private static string StalenessClass(string staleness) => staleness switch
+    {
+        "very-stale" => "crit",
+        "stale" => "warn",
+        _ => ""
+    };
+
+    private string SeverityLabel(MissionSeverity severity) => severity switch
+    {
+        MissionSeverity.Critical => L["MissionSeverityCritical"],
+        MissionSeverity.Warning => L["MissionSeverityWarning"],
+        _ => L["MissionSeverityInfo"]
+    };
+
+    private static string SeverityColor(MissionSeverity severity) => severity switch
+    {
+        MissionSeverity.Critical => "var(--mc-red)",
+        MissionSeverity.Warning => "var(--mc-amber)",
+        _ => "var(--mc-blue)"
+    };
+
+    private string ThroughputLabel(string metric) => metric switch
+    {
+        "CodeTicketsDone" => L["MissionCodeTicketsDone"],
+        "PostsPublished" => L["MissionPostsPublished"],
+        "MediaApproved" => L["MissionMediaApproved"],
+        "DecisionsRecorded" => L["MissionDecisionsRecorded"],
+        _ => metric
+    };
+
+    private static string EventColor(string kind) => kind switch
+    {
+        "gate" => "var(--mc-green)",
+        "repair" => "var(--mc-amber)",
+        "rereview" => "var(--mc-amber)",
+        "costcap" => "var(--mc-red)",
+        "merge" => "var(--mc-teal)",
+        "run-failed" => "var(--mc-red)",
+        "run-started" => "var(--mc-blue)",
+        "run-completed" => "var(--mc-green)",
+        _ => "var(--mc-purple)"
+    };
+}

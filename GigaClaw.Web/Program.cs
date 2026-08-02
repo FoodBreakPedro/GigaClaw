@@ -97,6 +97,14 @@ builder.Services.AddSingleton<GigaClaw.Core.Services.DashboardRefreshService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GigaClaw.Core.Services.DashboardRefreshService>());
 // Auto-promote Scheduled tickets to their target column once FireAt fires (feature #99).
 builder.Services.AddHostedService<GigaClaw.Core.Services.ScheduledPromotionService>();
+// Plan 4.1 — daily ticket-stat snapshots (the only source of "yesterday" and of the velocity
+// series; see doc/mission-control.md). Its own hosted service rather than a hook on the
+// AutomationEngine tick: the engine skips paused projects, and a paused project's history must
+// keep accruing or it gets holes nothing can ever fill.
+builder.Services.AddSingleton<GigaClaw.Core.Services.TicketStatSnapshotService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GigaClaw.Core.Services.TicketStatSnapshotService>());
+// Plan 4.2 — cross-project aggregation behind /mission.
+builder.Services.AddSingleton<GigaClaw.Core.Services.MissionControlService>();
 builder.Services.AddSingleton<GigaClaw.Web.Services.AgentRunsState>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<GigaClaw.Web.Services.HermesAgentService>();
