@@ -72,6 +72,17 @@ def schema_types(value: Any) -> set[str]:
     return found
 
 
+def looks_like_howto(headings: list[tuple[int, str]]) -> bool:
+    """Shared how-to heading heuristic — reused by ai_citation_score.py so the
+    GEO score's HowTo-readiness check stays consistent with this contract's
+    own "HowTo schema without a how-to heading" warning rather than drifting
+    into a second, slightly different detector."""
+    return any(
+        re.search(r"\b(how to|step-by-step|steps to)\b", title, re.IGNORECASE)
+        for _, title in headings
+    )
+
+
 def check_url(url: str, document: Path, check_external: bool) -> list[str]:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme in {"http", "https"}:
@@ -160,11 +171,7 @@ def validate_article(path: Path, check_external: bool = False) -> dict[str, Any]
         except json.JSONDecodeError as error:
             errors.append(f"JSON-LD block {index} is invalid JSON: {error.msg}")
     heading_titles = [title.lower() for _, title in headings]
-    looks_like_howto = any(
-        re.search(r"\b(how to|step-by-step|steps to)\b", title, re.IGNORECASE)
-        for _, title in headings
-    )
-    if "HowTo" in found_types and not looks_like_howto:
+    if "HowTo" in found_types and not looks_like_howto(headings):
         warnings.append("HowTo schema exists but no how-to heading was detected")
 
     digest = hashlib.sha256(path.read_bytes()).hexdigest()

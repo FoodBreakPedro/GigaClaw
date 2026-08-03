@@ -54,13 +54,5 @@ __pycache__/
 *.pyc
 
 
-# Transient lock from the graphify hook (the graph output itself is tracked).
-graphify-out/.rebuild.lock
-
-# Graphify machine-local artifacts. Only the outputs agents consume stay tracked
-# (graph.json, GRAPH_REPORT.md, GRAPH_TREE.html, manifest.json and the top-level
-# dotfiles); the AST cache, dated snapshot dirs and the interactive graph page
-# are rebuild products that grow by tens of MB per active day.
-graphify-out/cache/
-graphify-out/20*/
-graphify-out/graph.html
+# knowledge graph output
+graphify-out/
