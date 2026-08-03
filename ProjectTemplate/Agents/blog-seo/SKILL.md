@@ -20,7 +20,12 @@ You run **after `blog-reviewer` approves** — the reviewer atomically reassigns
 
 ## Operating Procedure
 
-1. Read the post file in `content/posts/` (path from the ticket). Compute its digest and require a matching `BLOG-REVIEW APPROVE v1 artifact-sha256:<digest>` receipt. If the digest does not match, move to `Blocked`; a historic approval for another version is not authorization.
+1. Read the post file in `content/posts/` (path from the ticket). Recompute its sha256 digest directly from the file on disk (`python3 .agents/scripts/agent_ticket.py digest <filepath>`) and search the comment history for a matching `BLOG-REVIEW APPROVE v1 artifact-sha256:<digest>` or `GIGACLAW-VERDICT v1 blog-reviewer SHIP artifact-sha256:<digest>` receipt.
+   - **Receipt found for this exact digest**: proceed to step 2.
+   - **No receipt matches this digest** (a historic approval for another version is not authorization), **or the file cannot be read/parsed**: this is a mechanical discrepancy, not a human decision — never move straight to `Blocked` for it. Count existing `BLOG-REVIEW REJECT cycle N/2` / `BLOG-SEO RETURN cycle N/2` receipts on the ticket to find the current cycle (same shared budget used everywhere else in this pipeline):
+     - **File unreadable/unparseable, or it reads fine but fails the validators from step 3** (`ai_citation_score.py` < 85, or `content_contract.py` fails): the fix belongs to `blog-writer`. On cycle 1/2, hand back to `blog-writer` in `Todo` with the exact unreadable path or validator failures and `BLOG-SEO RETURN cycle 1/2 artifact-sha256:<current-digest-or-"unreadable">`.
+     - **File reads fine and passes both validators**: the content is very likely fine — it just needs a fresh sign-off against the current bytes, which is self-healing and requires no rewrite. On cycle 1/2, hand back to `blog-reviewer` in `Todo` with `BLOG-SEO RETURN cycle 1/2 artifact-sha256:<current-digest>`, asking for a fresh review of the current file.
+     - **Cycle 2/2 reached in either branch**: do not start a third loop. Sync the current file to the description first (`sync_draft_to_description.py`) so the owner can see exactly what is being decided, then hand to `owner` in `Blocked` with a specific question and enumerated options, e.g. *Option 1: accept the current file as-is and approve it manually. Option 2: discard it and restart from the last version that has a matching approval. Option 3: reject the draft outright.*
 2. Validate existing frontmatter and technical metadata. Do not inject or edit inline JSON-LD or script tags in the markdown body. Before editing, retain the approved input digest.
 3. Run both validators:
    ```bash
@@ -50,9 +55,19 @@ python3 .agents/scripts/agent_ticket.py \
   --marker "BLOG-SEO RETURN cycle 1/2 artifact-sha256:<digest>"
 ```
 
+For the step-1 digest-mismatch case where the current file already passes validators, use the same pattern but hand back to `blog-reviewer` for a fresh review instead of rewriting anything:
+
+```bash
+python3 .agents/scripts/agent_ticket.py \
+  --project {project-slug} --ticket {id} --author blog-seo \
+  handoff --assignee blog-reviewer --status Todo --expected-status InProgress \
+  --content-file ./seo-report.md \
+  --marker "BLOG-SEO RETURN cycle 1/2 artifact-sha256:<current-digest>"
+```
+
 For the successful owner-review path, run `sync_draft_to_description.py`, followed by checked `comment` and checked `status --to Review`; do not reassign. Delete scratch files after success.
 
-If you cannot read/parse the post or establish a matching approval chain, move the ticket to `Blocked` with a comment naming the path or digest mismatch. **Never end your turn with the ticket in `InProgress`.**
+Step 1 above covers every case where the post cannot be read, parsed, or matched to an approval receipt — hand back to `blog-writer` or `blog-reviewer` as described there; only cycle-2/2 exhaustion reaches `Blocked` directly. **Never end your turn with the ticket in `InProgress`.**
 
 
 ## Handoff Contract

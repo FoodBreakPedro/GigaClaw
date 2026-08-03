@@ -7,9 +7,12 @@ output is a **comment**, plus a status/label move.
 1. Fetch the ticket. Parse the description the same way `DraftFrontmatter.TryParse` does: an
    opening `---` fence, then flat `key: value` lines (one nested block, `seo:`, one level deep),
    then a closing `---` fence; `title` is required, everything else optional but expected. If it
-   fails to parse — missing fence, missing `title` — this is not a reviewable draft: comment
-   exactly what's wrong and move the ticket to `Blocked`. Do not guess a verdict on unparseable
-   input, and do not attempt to fix the frontmatter yourself.
+   fails to parse — missing fence, missing `title` — this is not a reviewable draft, but fixing the
+   shape is mechanical (`content-writer` owns the file and can reformat it) — it is not a human
+   decision. Do not guess a verdict on unparseable input and do not attempt to fix the frontmatter
+   yourself; instead treat it exactly like a `FAIL` at the current cycle (step 3): comment exactly
+   what failed to parse as a `REJECT`-shaped comment and follow the same cycle <= 2 / cycle > 2
+   branching below. Only cycle-exhaustion reaches `Blocked`.
 2. Assess the parsed draft against the same quality bar as the 100-point rubric below: coverage
    and pacing, heading structure, no fabricated or unsourced statistics, no banned phrases from
    `.agents/VOICE.md`, the three `seo.*` fields present and sane (title length, meta-description
@@ -42,6 +45,7 @@ output is a **comment**, plus a status/label move.
 Use the same status-checked, author-stamped write pattern as everywhere else in this file (verify
 the HTTP status of every PATCH/POST; write scratch JSON to a workspace file, never `/tmp`; delete
 scratch files before exiting). Every AD-7 turn ends in exactly one of three states you moved it to
-yourself — `Done` (approved), `InProgress` (revision requested — this is a deliberate hand-off to
-`content-writer`, not an accident), or `Blocked` (unreadable draft or budget exhausted). Never
-leave the ticket sitting in `Review` untouched at the end of your turn.
+yourself — `Done` (approved), `InProgress` (revision requested, including an unparseable draft —
+this is a deliberate hand-off to `content-writer`, not an accident), or `Blocked` (only once the
+two-revision budget is spent). Never leave the ticket sitting in `Review` untouched at the end of
+your turn.
