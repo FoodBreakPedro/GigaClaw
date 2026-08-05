@@ -89,7 +89,9 @@ public static partial class Endpoints
                 return Results.Conflict(new { error = ex.Message });
             }
 
-            var membersCreated = await template.EnsureAgentMembersAsync(slug, members);
+            var membersCreated = result.Plan.CanApply
+                ? await template.EnsureAgentMembersAsync(slug, members)
+                : [];
             var automationsReloaded = result.AppliedPaths.Contains(".agents/automations.json", StringComparer.Ordinal);
             if (automationsReloaded)
             {

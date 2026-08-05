@@ -61,7 +61,7 @@ public sealed class AgentTemplateSyncApiTests : IClassFixture<AgentTemplateSyncA
         Assert.Empty(applied.RootElement.GetProperty("appliedPaths").EnumerateArray());
         Assert.False(applied.RootElement.GetProperty("automationsReloaded").GetBoolean());
         Assert.False(Directory.Exists(Path.Combine(_factory.DataDirectory, "projects", slug, ".agents")));
-        Assert.NotEmpty(applied.RootElement.GetProperty("membersCreated").EnumerateArray());
+        Assert.Empty(applied.RootElement.GetProperty("membersCreated").EnumerateArray());
     }
 
     private async Task<string> CreateProjectAsync(string name)
