@@ -233,8 +233,11 @@ public sealed class AgentTemplateSyncService
         IDictionary<string, string> fingerprints,
         IDictionary<string, string> nextHashes)
     {
-        var intendedPaths = core.Files.Select(file => file.DestinationPath).ToHashSet(StringComparer.Ordinal);
-        foreach (var file in core.Files.OrderBy(file => file.DestinationPath, StringComparer.Ordinal))
+        var agentFiles = core.Files
+            .Where(file => IsAgentPath(file.DestinationPath))
+            .ToArray();
+        var intendedPaths = agentFiles.Select(file => file.DestinationPath).ToHashSet(StringComparer.Ordinal);
+        foreach (var file in agentFiles.OrderBy(file => file.DestinationPath, StringComparer.Ordinal))
         {
             var relative = file.DestinationPath;
             if (IsMemoryPath(relative))
@@ -286,6 +289,7 @@ public sealed class AgentTemplateSyncService
 
         foreach (var (relative, previousHash) in previous.FileHashes.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
+            if (!IsAgentPath(relative)) continue;
             if (intendedPaths.Contains(relative)) continue;
             if (IsMemoryPath(relative))
             {
@@ -884,6 +888,9 @@ public sealed class AgentTemplateSyncService
         var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length >= 3 && parts[0] == ".agents" && parts[2] == "memory";
     }
+
+    private static bool IsAgentPath(string path) =>
+        path.StartsWith(".agents/", StringComparison.Ordinal);
 
     private static void EnsureSafeDestination(string workspace, string relative)
     {

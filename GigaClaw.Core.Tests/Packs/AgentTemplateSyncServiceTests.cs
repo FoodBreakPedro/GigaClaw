@@ -117,6 +117,21 @@ public sealed class AgentTemplateSyncServiceTests
     }
 
     [Fact]
+    public async Task Preview_ignores_non_agent_template_files()
+    {
+        using var tmp = new TempDir();
+        await Initialize(tmp.Path);
+        var dashboardOutput = Full(tmp.Path, ".dashboard/content-health/output.json");
+        await File.WriteAllTextAsync(dashboardOutput, "owner dashboard output\n");
+
+        var preview = await new AgentTemplateSyncService(CorePack.Source()).PreviewAsync(tmp.Path);
+
+        Assert.DoesNotContain(preview.Changes, change =>
+            change.RelativePath.StartsWith(".dashboard/", StringComparison.Ordinal));
+        Assert.All(preview.Changes, change => Assert.StartsWith(".agents/", change.RelativePath));
+    }
+
+    [Fact]
     public async Task Apply_removes_a_retired_unmodified_core_file_but_preserves_a_modified_one()
     {
         using var first = new TempDir();
