@@ -292,6 +292,10 @@ public class ActionExecutorOutboundApprovalTests
         ---
         title: How to Ship Faster
         slug: how-to-ship-faster
+        categorySlug: guide
+        tags:
+          - delivery
+          - engineering
         excerpt: A short teaser.
         contentType: article
         seo:
@@ -341,28 +345,43 @@ public class ActionExecutorOutboundApprovalTests
     [Fact]
     public async Task Real_cms_dispatch_automation_still_sends_end_to_end_when_labels_align_and_host_is_approved()
     {
-        var handler = FakeHttpMessageHandler.Respond(
-            HttpStatusCode.OK,
-            """{"id":9,"slug":"how-to-ship-faster","adminUrl":"https://zz.example/admin/9"}""");
-        using var h = await BuildCmsDispatchHarnessAsync(handler);
-        h.OwnerApproves("zabalazone.example"); // the host the shipped automation targets
+        const string secret = "test-ai-draft-secret";
+        var previousSecret = Environment.GetEnvironmentVariable("AI_DRAFT_SECRET");
+        Environment.SetEnvironmentVariable("AI_DRAFT_SECRET", secret);
+        try
+        {
+            var handler = FakeHttpMessageHandler.Respond(
+                HttpStatusCode.OK,
+                """{"id":9,"slug":"how-to-ship-faster","adminUrl":"https://zz.example/admin/9"}""");
+            using var h = await BuildCmsDispatchHarnessAsync(handler);
+            h.OwnerApproves("zabalazone.example"); // the host the shipped automation targets
 
-        var automation = LoadRealCmsDispatchAutomation();
-        var firing = new TriggerFiring(h.TicketId, "Publish the launch post", "Done");
+            var automation = LoadRealCmsDispatchAutomation();
+            var firing = new TriggerFiring(h.TicketId, "Publish the launch post", "Done");
 
-        Assert.True(await h.Executor.ConditionsMatchAsync(h.Runtime, automation, firing),
-            "cms-dispatch-on-done conditions must match when labels align");
+            Assert.True(await h.Executor.ConditionsMatchAsync(h.Runtime, automation, firing),
+                "cms-dispatch-on-done conditions must match when labels align");
 
-        await RunToCompletionAsync(h, automation, firedStatus: "Done");
+            await RunToCompletionAsync(h, automation, firedStatus: "Done");
 
-        Assert.Single(h.Handler.Requests);
-        Assert.Equal("https://zabalazone.example/api/ai/draft", handler.LastRequest.RequestUri!.ToString());
-        using var doc = JsonDocument.Parse(handler.LastBody!);
-        Assert.Equal("How to Ship Faster", doc.RootElement.GetProperty("title").GetString());
-        Assert.Equal(h.Slug, doc.RootElement.GetProperty("venture").GetString());
-        Assert.DoesNotContain(await CommentsAsync(h), c => c.Contains("outbound-denial/v1"));
-        // The success receipt the automation itself writes still lands.
-        Assert.Contains(await CommentsAsync(h), c => c.StartsWith("Dispatched to CMS:"));
+            Assert.Single(h.Handler.Requests);
+            Assert.Equal("https://zabalazone.example/api/ai/draft", handler.LastRequest.RequestUri!.ToString());
+            Assert.Equal($"Bearer {secret}", Assert.Single(handler.LastRequest.Headers.GetValues("Authorization")));
+            using var doc = JsonDocument.Parse(handler.LastBody!);
+            Assert.Equal("How to Ship Faster", doc.RootElement.GetProperty("title").GetString());
+            Assert.Equal("guide", doc.RootElement.GetProperty("categorySlug").GetString());
+            Assert.Equal(
+                new[] { "delivery", "engineering" },
+                doc.RootElement.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).ToArray());
+            Assert.Equal(h.Slug, doc.RootElement.GetProperty("venture").GetString());
+            Assert.DoesNotContain(await CommentsAsync(h), c => c.Contains("outbound-denial/v1"));
+            // The success receipt the automation itself writes still lands.
+            Assert.Contains(await CommentsAsync(h), c => c.StartsWith("Dispatched to CMS:"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AI_DRAFT_SECRET", previousSecret);
+        }
     }
 
     [Fact]
