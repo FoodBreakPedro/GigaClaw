@@ -1165,7 +1165,7 @@
     },
     {
       "id": "cms-dispatch-on-done",
-      "name": "CMS dispatch: POST finished draft to CMS when ready-for-cms reaches Done (set the httpRequest action's url per instance — placeholder https://zabalazone.example/api/ai/draft — and set the AI_DRAFT_SECRET env var on the GigaClaw server process: secretRef reads it at dispatch time and adds Authorization: Bearer <token>; an unset variable sends the request unauthenticated, which the CMS may hang on rather than reject)",
+      "name": "CMS dispatch: POST finished draft to CMS when ready-for-cms reaches Done (set the httpRequest action's url per instance — placeholder https://zabalazone.example/api/ai/draft — and set the AI_DRAFT_SECRET env var on the GigaClaw server process; dispatch fails if the secret is unset)",
       "enabled": true,
       "trigger": {
         "type": "statusChange",
@@ -1201,7 +1201,7 @@
           "headers": {
             "Content-Type": "application/json"
           },
-          "bodyTemplate": "{\"title\":\"{draft.title}\",\"body\":\"{draft.body}\",\"venture\":\"{projectSlug}\",\"slug\":\"{draft.slug}\",\"excerpt\":\"{draft.excerpt}\",\"contentType\":\"{draft.contentType}\",\"seo\":{\"title\":\"{draft.seo.title}\",\"description\":\"{draft.seo.description}\",\"primaryKeyword\":\"{draft.seo.primaryKeyword}\"},\"sourceTicket\":\"{projectSlug}#{ticketId}\"}",
+          "bodyTemplate": "{\"title\":\"{draft.title}\",\"body\":\"{draft.body}\",\"venture\":\"{projectSlug}\",\"slug\":\"{draft.slug}\",\"excerpt\":\"{draft.excerpt}\",\"contentType\":\"{draft.contentType}\",\"categorySlug\":\"{draft.categorySlug}\",\"tags\":{draft.tags},\"seo\":{\"title\":\"{draft.seo.title}\",\"description\":\"{draft.seo.description}\",\"primaryKeyword\":\"{draft.seo.primaryKeyword}\"},\"sourceTicket\":\"{projectSlug}#{ticketId}\"}",
           "timeoutSeconds": 90,
           "abortOnFailure": true,
           "secretRef": "AI_DRAFT_SECRET",
