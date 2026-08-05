@@ -15,8 +15,9 @@
 | Semantic memory (P16), model routing (O3/O4) | Later pilots, shadow mode, hard-gated on O6 — per both the panel and the reconciliation |
 | Do-not-build | T15 consensus swarms, T16 federation, A14 queen agent, P14 GOAP, P17 signed receipts, O15 quantization, A12 business-ops. Unchanged |
 | Q3 confirmed (2026-07-31) | Owner confirms the explicit bindings as the intended reading: `security-auditor` → Sonnet, `threat-modeler` → Opus. The `models.json` header caveat is narrowed to match (no security-analysis agent on Fable; sub-Opus allowed where the criterion bounds or delegates the judgement) |
-| Runtime lane unparked (2026-07-31) | Owner unparks R4–R7 (leases → worktrees → merge queue → runner interface). R8 stays blocked on Codex usage cap |
+| Runtime lane unparked (2026-07-31) | Owner unparks R4–R7 (leases → worktrees → merge queue → runner interface). R8 remained usage-gated at that date and closed on 2026-08-05 |
 | SP-3 decisions (2026-08-01) | Worktree isolation + enqueueMerge default-on derived from the contract (code-touching write scopes only; content/media stays in-place under leases). Precondition: the F1 merge/lease hold interlock + F2 write-once denial receipts, fixed on this branch |
+| R8 / SP-4 closed (2026-08-05) | Codex usage available; real JSONL fixture + `CodexRunner` + typed per-member harness + hermetic mock + live authenticated smoke landed. Evidence: [`R8-EVIDENCE.md`](R8-EVIDENCE.md) |
 
 ## Lane model
 
@@ -34,19 +35,21 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 
 > **Session handoff:** [`SESSION-HANDOFF.md`](SESSION-HANDOFF.md) — current gate state, outstanding work, and the roadmap artifact link. Start there.
 >
-> **SP-3 gate evidence:** [`SP3-EVIDENCE.md`](SP3-EVIDENCE.md) — what the combined lease/cycle/join/merge integration suite proves, the receipts it observes, the open findings it records, and the two owner decisions (`enqueueMerge` by default? worktree isolation by default?) stated with the evidence for each. **Both decisions are still open.**
+> **Incremental execution ledger:** [`EXECUTION-PLAN-2026-08-05.md`](EXECUTION-PLAN-2026-08-05.md) — checkpoint commits, tests, propagation impact, sub-agent assignments, and the exact next action.
+>
+> **SP-3 gate evidence:** [`SP3-EVIDENCE.md`](SP3-EVIDENCE.md) — what the combined lease/cycle/join/merge integration suite proves, the receipts it observes, and the owner decisions. **Both decisions were recorded on 2026-08-01.**
 
 ## Lane status (living — updated by CL as the merge-queue owner)
 
-**Last updated 2026-08-01.** The orchestration lane C5, C7 and C8 landed via PR #11, **merged to `main` as `d1cce5d`**: `parallelRunAgents` + the validated workflow graph, the GitHub surface (issue import / PR owner feedback / CI check trigger), and the two executable team presets. Verified on the branch head: Core **1246/0**, Eval **39/0**, catalog `--strict` and `--strict-packs` **0**, replay **38/38**, judge **38/38 zero drift**. Scope notes live in the lane doc: the workflow graph is declared and validated but not yet executed, and the presets' specialist lanes (security/performance/architecture, investigator/lead) bind to real core agents until their packs land. The paragraph below is the 2026-07-31 state, kept for history.
+**Last updated 2026-08-05.** R8 is complete and SP-4 is closed: the second runner has hermetic and live authenticated evidence in [`R8-EVIDENCE.md`](R8-EVIDENCE.md). Verification is Core **1484/0** and Eval **45/0**. The older lane status below is kept for history.
 
-The runtime lane R3–R7 landed in full that session (owner unparked R4–R7; every task merged to `main` individually — see [`SESSION-HANDOFF.md`](SESSION-HANDOFF.md) for the commit map, verification numbers, and the closure of the Windows exemption list). R8 remains gated on the Codex usage cap. Earlier Phase-0 status below is kept for history. All Phase 0 foundation gates passed and approved: `lane/claude-orch` (C1, C2, C3, C4 parts 1-3, C6, C9 spec), `lane/cx-tooling` (T1–T5 judge & Monte Carlo), `lane/cx-runtime` (R1, R2, SP-1 inventory), and `lane/gemini-vol` (G1, G2 reviewer rewrites & UI-AUDIT chain). All branches pushed to origin.
+The runtime lane R3–R7 landed in full that session (owner unparked R4–R7; every task merged to `main` individually — see [`SESSION-HANDOFF.md`](SESSION-HANDOFF.md) for the commit map, verification numbers, and the closure of the Windows exemption list). R8 subsequently closed on 2026-08-05. Earlier Phase-0 status below is kept for history. All Phase 0 foundation gates passed and approved: `lane/claude-orch` (C1, C2, C3, C4 parts 1-3, C6, C9 spec), `lane/cx-tooling` (T1–T5 judge & Monte Carlo), `lane/cx-runtime` (R1, R2, SP-1 inventory), and `lane/gemini-vol` (G1, G2 reviewer rewrites & UI-AUDIT chain). All branches pushed to origin.
 
 **Owner Sign-offs Completed (2026-07-30):**
 - **SP-1 Approved**: SP-1 policy inventory reviewed & approved (unlocks R3 → R4 → R5/R6 → C5, C7).
 - **C9 Pack Infrastructure Approved**: All 4 escalated questions in [`doc/pack-infrastructure.md`](../pack-infrastructure.md) §10 decided by owner (unlocks T6 → G6).
 
-**Structural finding from the pack spec — ~~teams are compiled C# constants, so a pack cannot add a team or a membership without recompiling `GigaClaw.Core`; one of the five binding rules is unenforceable until teams move to data~~ — RESOLVED 2026-08-01 (T6).** D8 landed: the roster is `ProjectTemplate/Agents/teams.json` composed through `TeamSeed`, and `AgentTeamService` reads the workspace's own composed copy. Proven end to end rather than by assertion — `SecurityPackRoundTripTests.Binding_3_the_packs_team_reaches_the_runtime_roster_without_recompiling` installs the shipped Security pack into a temp workspace and finds its `security-review` team through `AgentTeamService`, through the member filter, and (`…_is_seeded_into_a_project_database`) in a project DB via `TeamStore`, while the same service with no workspace still cannot see it. Binding 3 is enforceable for packs. Codex reached its weekly usage cap on 2026-07-30; lanes CX-R and CX-T are reassigned to Claude subagents working in the existing lane worktrees, under the same file boundaries and verification bar. Gemini keeps lane GM.
+**Structural finding from the pack spec — ~~teams are compiled C# constants, so a pack cannot add a team or a membership without recompiling `GigaClaw.Core`; one of the five binding rules is unenforceable until teams move to data~~ — RESOLVED 2026-08-01 (T6).** D8 landed: the roster is `ProjectTemplate/Agents/teams.json` composed through `TeamSeed`, and `AgentTeamService` reads the workspace's own composed copy. Proven end to end rather than by assertion — `SecurityPackRoundTripTests.Binding_3_the_packs_team_reaches_the_runtime_roster_without_recompiling` installs the shipped Security pack into a temp workspace and finds its `security-review` team through `AgentTeamService`, through the member filter, and (`…_is_seeded_into_a_project_database`) in a project DB via `TeamStore`, while the same service with no workspace still cannot see it. Binding 3 is enforceable for packs. The 2026-07-30 Codex usage-cap reassignment is historical; R8 closed on 2026-08-05.
 
 | Task | Lane | State | Where |
 |---|---|---|---|
@@ -55,7 +58,7 @@ The runtime lane R3–R7 landed in full that session (owner unparked R4–R7; ev
 | R3 block mode | CX-R | **Landed** — outbound gate wired `2dc9c4b`; per-agent enforcement live since SP-1 sign-off | `main` |
 | R4 file leases | CX-R | **Landed** `eea24db` — durable lease table + reaper, handoff `ownedFiles` scope | `main` |
 | R5 worktrees | CX-R | **Landed** `d902ec5` — `isolation: worktree`, durable ticket state, fail-closed non-git | `main` |
-| R6 merge queue | CX-R | **Landed** `cd4317e` — opt-in vocabulary; default-on waits on SP-3 | `main` |
+| R6 merge queue | CX-R | **Landed** `cd4317e`; contract-derived default-on behavior decided 2026-08-01 | `main` |
 | R7 runner interface | CX-R | **Landed** `607e821` — `IAgentRunner`, zero behavior change | `main` |
 | T1 typed catalog | CX-T | Landed | `lane/cx-tooling` `4c404d1` |
 | T2 catalog CI | CX-T | Drift + baseline checks running; strict binding gate still red on the `content-writer` gap until GM's G1 merges; drift script retires after a green week | `lane/cx-tooling` `4c404d1`, `5cbe6f5` |
@@ -113,14 +116,14 @@ flowchart TD
     T2["✓ T2 Executable teams (CL C4; C8 presets merged d1cce5d)"]:::done
     T11["✓ T11 File-ownership enforcement (CX-R R4 leases)"]:::done
     U7["✓ U7/P10 Parallel branches + workflow graph (CL C5, merged d1cce5d — graph walker future work)"]:::done
-    U6["◐ U6 Worktree→PR→CI→merge lane — R5+R6 machinery landed, opt-in; end-to-end demo + default-on = SP-3/SP-4"]:::partial
-    P13["◐ P13 Runner adapter ✓ (R7 IAgentRunner) + ✕ R8 Codex harness (blocked: usage cap)"]:::blocked
+    U6["✓ U6 Worktree→PR→CI→merge lane — hermetic end-to-end evidence complete"]:::done
+    P13["✓ P13 Runner adapter — R7 interface + R8 Codex harness complete"]:::done
     U5["✓ U5 GitHub surface (CL C7, merged d1cce5d)"]:::done
     P9["◐ P9 Handoff artifacts — CL schema+plumbing ✓ (C6); GM G3 templates open"]:::partial
     O7["✓ O7 Pack infrastructure — C9 spec approved; T6 landed (manifest, composer, staged install/uninstall, lock, quarantine, strict-packs gate, packs embedded)"]:::done
     PACKS["Packs 1–6 (GM authoring + CL wiring) — Pack 1 proven end to end (install → 5 bindings → uninstall)"]:::open
     P7["P7/P12 Truth registries (CL) — open"]:::open
-    PILOTS["P16 / O3-O4 / O5 shadow pilots — gated on SP-4"]:::open
+    PILOTS["P16 / O3-O4 / O5 shadow pilots — SP-4 cleared; open"]:::open
 
     P3 --> T11 --> U6
     P3 --> U6

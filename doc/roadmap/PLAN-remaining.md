@@ -2,7 +2,7 @@
 
 Written after PR #11 (C5 + C7 + C8) merged to `main` as `d1cce5d`. Derived from the lane docs and the tree, not from reports. Item IDs refer to the reconciliation line items; per the decision log, this directory is the plan home and tickets are created manually as work starts.
 
-R8 is the only item *blocked on something external* (the Codex usage cap). Everything else below is open work with a clear owner and no external blocker.
+R8's external usage-cap blocker lifted and the harness closed on 2026-08-05. Everything else below is open work with a clear owner and no external blocker.
 
 ## 1. SP-3 gate — the next session (CX-R + CL, owner decision at the end)
 
@@ -37,7 +37,7 @@ The prerequisites (R4 leases, R5 worktrees, R6 queue, P4 edges, C4/C5 joins) all
 ## 6. Phase 3 completion → SP-4 (CX-R)
 
 13. ~~**U6 end-to-end demo**~~ **Proven hermetically 2026-08-01** (`73c261b` + `2d962b0`, [`U6-EVIDENCE.md`](U6-EVIDENCE.md)): one ticket worktree → PR (new `GitHubPullRequestService`, C7 patterns: PAT settings-only, P3-gated, `github-pull-request/v1` receipt, idempotent by asking GitHub) → CI (`gitHubCheckStatus` fires `enqueueMerge` — first proof of C7×R6 composing) → owner-gated ff merge, plus failure and restart legs. Real git/queue/triggers, faked GitHub HTTP only. ~~New small follow-ups it surfaced~~ **All three closed 2026-08-01** (`11bd29a`, `39dbd3c`, `bcc313a`): (a) the template ships `github-ci-success-enqueues-merge`, `github-ci-failure-records-check`, and `verdict-gate-qa-ship-open-pull-request` — **wired but `enabled: false`** (owner-decided: off unless a project opts in, consistent with local-first); (b) `openPullRequest` is a full automation action on every surface, failing closed with a note when the project has no GitHub config; (c) `{checkName}`/`{checkConclusion}` render in comments, and the previously weakened U6 failure-leg assertion is restored to prove it.
-14. **R8 Codex harness** — *when the usage cap lifts*: second `IAgentRunner` implementation against real `codex exec --json` fixtures, parity checklist from P13 (streaming/resume/policy for one agent, usage/cost or explicit unsupported).
+14. ~~**R8 Codex harness**~~ **Done 2026-08-05**: second `IAgentRunner` implementation against a real `codex exec --json` fixture; per-member typed harness selection plus an instance-wide outage override; JSONL streaming, resume/restart, queued steering, token usage, explicit unavailable priced cost, policy hooks, and process containment. Hermetic mock and real-CLI smoke are both green. Evidence: [`R8-EVIDENCE.md`](R8-EVIDENCE.md).
 
 ## 7. Phase 4 — packs (CX-T infra, GM volume, CL wiring)
 
@@ -55,5 +55,5 @@ The prerequisites (R4 leases, R5 worktrees, R6 queue, P4 edges, C4/C5 joins) all
 | Next | §1 SP-3 suite + Board-drag fix + owner call | Combined integration tests green in Release; decision recorded in the log |
 | +1 | §2 G2/C2 close-out, §3 items 6–7 | Five reviewers verdict-gated on the debug instance; drift dump committed |
 | +2 | §4 walker (+ §5 lands in parallel via GM) | A ticket walks a declared graph end-to-end hermetically |
-| +3 | §6 U6 demo (R8 if unblocked) → SP-4 | The one-ticket end-to-end flow recorded |
+| +3 | ~~§6 U6 demo + R8 → SP-4~~ **Completed 2026-08-05** | U6 and R8 evidence recorded; SP-4 closed |
 | Then | §7 packs, §8 pilots | Pack 1 installed/uninstalled cleanly under the five-binding gate |

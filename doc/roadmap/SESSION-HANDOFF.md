@@ -1,4 +1,8 @@
-# Session handoff — 2026-07-31 (addenda 2026-08-01, session-end 2026-08-01/02)
+# Session handoff — 2026-07-31 (addenda through 2026-08-05)
+
+## Addendum — 2026-08-05: R8 Codex harness checkpoint
+
+R8 is preserved on `codex/r8-codex-harness` as implementation commit `ecba804` plus model-map correction `8de75ca`. The corrected authenticated live test, 69 focused runtime tests, 1,484 Core tests, and 45 Eval tests are green. Incremental continuation status is recorded in [`EXECUTION-PLAN-2026-08-05.md`](EXECUTION-PLAN-2026-08-05.md); the next checkpoint is CMS category/tag dispatch.
 
 ## Session-end state — 2026-08-01 late (read this first)
 
@@ -66,11 +70,11 @@ What the next session inherits: the differing bytes live somewhere in the normal
 - **SP-1** — enforced; 31 agents block, `programmer`/`code-janitor` warn (both declare `**`).
 - **SP-2** — closed.
 - **SP-3** — the combined-semantics integration suite exists as of 2026-08-01: `GigaClaw.Core.Tests/Integration/Sp3GateTests.cs` (10 tests, green in Release and Debug) proves cycle detection, lease expiry, join semantics and ownership conflicts failing closed *together*, each with its receipt. Evidence is in [`SP3-EVIDENCE.md`](SP3-EVIDENCE.md). The owner's call on default-on `enqueueMerge` / worktree isolation is decided (2026-08-01, see `doc/roadmap/index.md`'s decision log): both derive from the contract's `allowedWriteGlobs`, not the ticket type, and are wired into `ProjectTemplate/Agents/automations.json` behind the F1 merge/lease hold interlock fix landing on this same branch. **The gate now closes when this branch merges** — its precondition is the F1 interlock fix, not a further owner decision. The Board-drag bypass from `PLAN-remaining.md` §1 item 3 is closed on the same branch (`3b6b108` — cleanup relocated to the `TicketService` choke point both entry paths share).
-- **SP-4** — the U6 half is **proven hermetically as of 2026-08-01** (`U6EndToEndTests` + [`U6-EVIDENCE.md`](U6-EVIDENCE.md): real git/queue/triggers, faked GitHub HTTP only; failure and restart legs included). R8 (Codex harness, usage-cap-gated) remains the other half; a live-GitHub run of the same flow is the only thing the hermetic proof does not cover.
+- **SP-4** — closed 2026-08-05. The U6 half is proven by `U6EndToEndTests` + [`U6-EVIDENCE.md`](U6-EVIDENCE.md); the R8 half is proven by hermetic fixtures plus a real authenticated Codex CLI run in [`R8-EVIDENCE.md`](R8-EVIDENCE.md). A live-GitHub U6 run remains deployment evidence, not a harness blocker.
 
 ## Outstanding
 
-- **R8 Codex harness** — now unblocked by R7, still gated on Codex CLI usage cap and real `codex exec --json` fixtures.
+- ~~**R8 Codex harness**~~ — closed 2026-08-05; see [`R8-EVIDENCE.md`](R8-EVIDENCE.md).
 - ~~**C5 / C7 / C8** — unparked by R4/R5 landing; not started tonight (owner unparked R4–R7 explicitly; the C-lane items were not named).~~ Landed 2026-08-01 on the `worktree-c5-c7-c8` PR branch — see the addendum at the top.
 - **Judge baselines for the 31 new fixtures were recorded, not reviewed** — same §9 posture the security four were in before G6. A G6-style review pass over the core judge baselines is cheap and closes the loop.
 - ~~**Manual Board drags to Done skip worktree cleanup** — R5 cleanup triggers only through `ActionExecutor`'s `moveTicketStatus`; a UI-path drag bypasses it. Small, known, documented in the R5 commit.~~ Fixed 2026-08-01 (`3b6b108`): one cleanup implementation at the `TicketService` status transition, both entry paths covered.

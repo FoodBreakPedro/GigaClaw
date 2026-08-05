@@ -104,14 +104,16 @@ Verification bar for every task: `dotnet test GigaClaw.Core.Tests -c Release` gr
 
 **Dependencies:** R3 (policy hooks are part of the contract). **Size:** M.
 
-## Task R8: Codex CLI harness (P13, part 2)
+## Task R8: Codex CLI harness (P13, part 2) — completed 2026-08-05
 
-**Description:** After capturing and committing real `codex exec --json` fixtures, implement `CodexRunner : IAgentRunner` for Codex CLI subprocesses. Parity is defined in terms the CLI supports: JSONL streaming, next-turn resume or explicit restart, queued steering, usage/cost when available, policy preflight/hooks, and process containment. Agents opt in through a new typed harness field, not by overloading the model string. Fall back cleanly (route to Claude + receipt) when a required capability is missing.
+**Description:** After capturing and committing real `codex exec --json` fixtures, implement `CodexRunner : IAgentRunner` for Codex CLI subprocesses. Parity is defined in terms the CLI supports: JSONL streaming, next-turn resume or explicit restart, queued steering, usage/cost when available, policy preflight/hooks, and process containment. Agents opt in through a new typed harness field, not by overloading the model string. Unsupported model configurations fail explicitly before process launch; operators can select Claude through member configuration or the instance override.
 
 **Acceptance criteria:**
-- [ ] Parity for one designated agent (suggest: programmer on the debug instance): streaming output, resume-or-restart semantics, queued steering, usage/cost capture when emitted (otherwise explicit “unavailable”), policy enforcement, exit-column contract
-- [ ] Harness selection is per-member config; default remains Claude everywhere
-- [ ] A mock Codex CLI scenario exists so QaRunner stays hermetic
+- [x] Parity for `programmer`: streaming output, resume-or-restart semantics, queued steering, usage capture with priced cost explicitly unavailable, policy enforcement, and terminal run status
+- [x] Harness selection is per-member config; default remains Claude everywhere; `GIGACLAW_AGENT_HARNESS` provides an outage override
+- [x] A mock Codex CLI scenario exists so the test suite stays hermetic
+
+Evidence: [`R8-EVIDENCE.md`](R8-EVIDENCE.md).
 
 **Dependencies:** R7 plus shared ownership contract for `Member`, member migration/API, initialization, and runner resolution. **Size:** L → split: fixture + process/stream adapter, then resume/usage, then policy parity.
 

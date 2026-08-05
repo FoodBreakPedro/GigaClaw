@@ -241,6 +241,8 @@ commit `4082184`, where Windows' default silently rewrote LF blobs on `git workt
 
 ### For the other half of SP-4 — R8
 
+> Closure update, 2026-08-05: R8 is complete; see [`R8-EVIDENCE.md`](R8-EVIDENCE.md). The text below records the dependency state when U6 evidence was written.
+
 `PLAN-remaining.md` §6 item 14: the **Codex harness**, gated on the usage cap lifting. A second
 `IAgentRunner` implementation driven against real `codex exec --json` fixtures, reaching the P13
 parity checklist for one agent — streaming, resume, and policy — and reporting usage/cost or an

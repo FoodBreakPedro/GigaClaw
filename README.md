@@ -14,14 +14,14 @@
   <a href="https://gigaclaw.dev">gigaclaw.dev</a> · <a href="https://gigaclaw.dev/#waitlist">Get early access</a>
 </p>
 
-A kanban board that **orchestrates agentic projects**. Each column is a workflow stage (`Backlog`, `Todo`, `InProgress`, `Blocked`, `Scheduled`, `Review`, `Done`). Each project has members that can be human owners or **LLM agents** (programmer, groomer, producer, qa-tester, committer, code-janitor, evaluator, documentalist). A background `AutomationEngine` dispatches these agents based on triggers (column changes, comments, intervals, git commits, …), running them as `claude` CLI subprocesses whose output streams into an in-app drawer.
+A kanban board that **orchestrates agentic projects**. Each column is a workflow stage (`Backlog`, `Todo`, `InProgress`, `Blocked`, `Scheduled`, `Review`, `Done`). Each project has members that can be human owners or **LLM agents** (programmer, groomer, producer, qa-tester, committer, code-janitor, evaluator, documentalist). A background `AutomationEngine` dispatches these agents based on triggers (column changes, comments, intervals, git commits, …), running them through the Claude Code or Codex CLI while output streams into an in-app drawer.
 
 ## Tech Stack
 
 - **.NET 10** / **Blazor Server** (interactive SSR)
 - **SQLite** via Entity Framework Core (one DB per project)
 - **OpenAPI** with auto-generated Markdown docs
-- External: **[Claude Code CLI](https://docs.claude.com/en/docs/claude-code/overview)** + **[Git](https://git-scm.com/downloads)** (required on PATH for agent dispatch and auto-commits)
+- External: **[Claude Code CLI](https://docs.claude.com/en/docs/claude-code/overview)** or **[Codex CLI](https://developers.openai.com/codex/cli/)** + **[Git](https://git-scm.com/downloads)** (required on PATH for agent dispatch and auto-commits)
 - Optional: **[Ollama](https://ollama.com)** — dispatch agents to a local model instead of the Anthropic cloud API ([details](doc/local-models.md))
 
 ## Getting Started
@@ -29,10 +29,10 @@ A kanban board that **orchestrates agentic projects**. Each column is a workflow
 ### Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Claude Code CLI](https://docs.claude.com/en/docs/claude-code/overview) — `claude` on your PATH
+- [Claude Code CLI](https://docs.claude.com/en/docs/claude-code/overview) (`claude`) or [Codex CLI](https://developers.openai.com/codex/cli/) (`codex`) on your PATH
 - [Git](https://git-scm.com/downloads) — `git` on your PATH
 
-On first launch an onboarding popup detects whether `claude` and `git` are available. You can continue without them, but agent runs and auto-commits will fail until they are installed and on the PATH.
+On first launch an onboarding popup detects `claude`, `codex`, and `git`. Agent dispatch is available when either agent CLI is installed and authenticated; auto-commits also require Git.
 
 ### Run
 
@@ -44,6 +44,18 @@ run.bat        (Windows)
 ```
 
 Both wrap `dotnet watch --project GigaClaw.Web --non-interactive` and serve the app at **http://localhost:5230** with hot reload enabled.
+
+### Running agents with Codex
+
+Choose `Codex` in a member's **Harness** field under project settings. Existing Claude model assignments are mapped by role: Haiku to `gpt-5.6-luna`, Sonnet to `gpt-5.6-terra`, and Opus/Fable to `gpt-5.6-sol`; an explicit GPT model on the member wins.
+
+To switch every dispatch on an instance immediately, set `GIGACLAW_AGENT_HARNESS=codex` when launching GigaClaw. The override is useful during a Claude usage outage and does not rewrite member settings:
+
+```bash
+GIGACLAW_AGENT_HARNESS=codex ./run.sh
+```
+
+Codex runs reuse the CLI's saved authentication. They stream JSONL events, persist resumable thread ids, enforce the same contract-policy hooks, and record token usage. The Codex CLI does not emit priced USD cost, so the run records that field as explicitly unavailable.
 
 ### Creating a project
 
@@ -78,6 +90,7 @@ Per-project agent state lives **in the workspace**: `<workspace>/.agents/{agent}
 | **GigaClaw.Web** | Blazor Server UI + REST API |
 | **GigaClaw.QaRunner** | Isolated test-instance launcher (Playwright + scenario runner) used by the qa-tester agent |
 | **GigaClaw.ClaudeMock** | Mock `claude` CLI used by `GigaClaw.QaRunner` for hermetic agent dispatch in tests |
+| **GigaClaw.CodexMock** | Mock `codex exec --json` CLI used for hermetic second-runner tests |
 | **ProjectTemplate/** | Source of truth for new-project initialization. Files under `Agents/` are written to `<workspace>/.agents/`; `CLAUDE.md` is written to the workspace root. |
 | **tools/** | Repo helpers (e.g. `publish-stable.ps1` to bundle Web + QaRunner + ClaudeMock for a stable channel) |
 
@@ -188,7 +201,7 @@ Tiles can be created from the dashboard's AI chat panel by describing what you w
 - **Conditions**: `ticketInColumn`, `ticketCountInColumn`, `fieldLength`, `priority`, `labels`, `assignedTo`, `hasParent`, `allSubTicketsInStatus`, `ticketAge`.
 - **Actions**: `runAgent`, `moveTicketStatus`, `setLabels`, `assignTicket`, `addComment`, `consolidateAgentMemory`, `commitAgentMemory`, `executePowerShell`, `createTicket`.
 - `{assignee}` placeholder in `runAgent.agent` / `runAgent.concurrencyGroup` resolves from the firing ticket's `assignedTo`.
-- Canonical post-run chain: `runAgent` → `consolidateAgentMemory` (focused claude pass that curates the agent's `memory/` index + topic files) → `commitAgentMemory` (commits the result).
+- Canonical post-run chain: `runAgent` → `consolidateAgentMemory` (focused agent pass that curates the agent's `memory/` index + topic files) → `commitAgentMemory` (commits the result).
 
 ## Telemetry
 
