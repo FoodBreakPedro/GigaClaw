@@ -199,6 +199,23 @@ public sealed class WorkspaceDriftCheckerTests
     }
 
     [Fact]
+    public async Task Template_memory_files_are_excluded_from_drift()
+    {
+        using var tmp = new TempDir();
+        await new AgentsTemplateService().InitializeAsync(tmp.Path, overwriteConflicts: true);
+        var memory = Path.Combine(tmp.Path, ".agents", "blog-writer", "memory", "MEMORY.md");
+        await File.WriteAllTextAsync(memory, "owner-maintained memory index");
+
+        var modified = WorkspaceDriftChecker.Check(tmp.Path);
+
+        Assert.DoesNotContain(modified.Drift, drift => drift.RelativePath.Contains("/memory/", StringComparison.Ordinal));
+
+        File.Delete(memory);
+        var deleted = WorkspaceDriftChecker.Check(tmp.Path);
+        Assert.DoesNotContain(deleted.Drift, drift => drift.RelativePath.Contains("/memory/", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Template_version_matches_the_committed_core_pack_manifest()
     {
         var version = WorkspaceDriftChecker.ReadTemplateVersion();

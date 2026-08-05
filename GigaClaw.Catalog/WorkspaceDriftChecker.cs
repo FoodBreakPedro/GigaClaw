@@ -19,9 +19,11 @@ namespace GigaClaw.Catalog;
 ///
 /// <para>
 /// This checker keeps that exact contract for <c>automations.json</c> — including the allowlist —
-/// and extends the same "missing / modified" comparison to every other file
+/// and extends the same "missing / modified" comparison to every other core-managed file
 /// <see cref="AgentsTemplateService"/> writes on Initialize: every <c>.agents/**</c> template path
-/// plus the workspace-root files (<c>CLAUDE.md</c>, <c>.gitignore</c>, <c>.dashboard/**</c>). It
+/// except <c>.agents/*/memory/**</c>, plus the workspace-root files (<c>CLAUDE.md</c>,
+/// <c>.gitignore</c>, <c>.dashboard/**</c>). Memory is runtime owner/agent state and is never a
+/// synchronization target. It
 /// deliberately does <b>not</b> generalize EXTRA to arbitrary files: <c>.agents/</c> legitimately
 /// accumulates files the template never shipped (per-topic memory notes, <c>packs.lock.json</c>,
 /// the allowlist file itself, an owner's <c>automation-overrides.json</c>), and flagging all of
@@ -91,6 +93,7 @@ public static class WorkspaceDriftChecker
 
         foreach (var relative in template.RelativePaths().OrderBy(path => path, StringComparer.Ordinal))
         {
+            if (IsAgentMemoryPath(relative)) continue;
             var displayPath = ".agents/" + relative;
             var workspaceFile = Path.Combine(agentsDir, ToNativePath(relative));
 
@@ -424,6 +427,12 @@ public static class WorkspaceDriftChecker
     // ------------------------------------------------------------------------------- helpers
 
     private static string ToNativePath(string relativePath) => relativePath.Replace('/', Path.DirectorySeparatorChar);
+
+    private static bool IsAgentMemoryPath(string relativePath)
+    {
+        var parts = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 3 && parts[1] == "memory";
+    }
 
     /// <summary>Order-independent object equality, order-sensitive arrays, exact scalars — the same
     /// notion of "same content" <c>jq -S</c> gave the retired script.</summary>
