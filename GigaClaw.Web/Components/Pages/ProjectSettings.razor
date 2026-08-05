@@ -1,10 +1,12 @@
 @page "/board/{Slug}/settings"
 @using GigaClaw.Core.Models
+@using GigaClaw.Core.Packs
 @using GigaClaw.Core.Services
 @inject ProjectService ProjectService
 @inject MemberService MemberService
 @inject LabelService LabelService
 @inject ColumnService ColumnService
+@inject AgentTemplateSyncService AgentTemplateSyncService
 @inject NavigationManager Nav
 @inject IHttpClientFactory HttpFactory
 @inject LocalizationService L
@@ -43,6 +45,54 @@ else
             @if (_workspaceStatus is not null)
             {
                 <div class="settings-status @_workspaceStatus.Value.css">@_workspaceStatus.Value.text</div>
+            }
+        </section>
+
+        <section class="settings-section agent-template-sync">
+            <div class="agent-template-sync-header">
+                <h2>@L["AgentTemplates"]</h2>
+                @if (_agentTemplatePlan is not null)
+                {
+                    <span class="agent-template-version">@L.Get("AgentTemplatesVersion", _agentTemplatePlan.TemplateVersion)</span>
+                }
+            </div>
+            <div class="settings-row agent-template-actions">
+                <button class="settings-browse" @onclick="PreviewAgentTemplateSync" disabled="@_previewingAgentTemplates">
+                    @(_previewingAgentTemplates ? "…" : L["CheckForUpdates"])
+                </button>
+                <button class="settings-primary" @onclick="ApplyAgentTemplateSync"
+                        disabled="@(!_agentTemplateCanApply || _applyingAgentTemplates)">
+                    @(_applyingAgentTemplates ? "…" : L["ApplySafeUpdates"])
+                </button>
+            </div>
+            @if (_agentTemplateStatus is not null)
+            {
+                <div class="settings-status @_agentTemplateStatus.Value.css">@_agentTemplateStatus.Value.text</div>
+            }
+            @if (_agentTemplatePlan is not null)
+            {
+                <div class="agent-template-summary" aria-label="@L["AgentTemplatesSummary"]">
+                    <span><strong>@_agentTemplatePlan.Additions</strong> @L["AgentTemplatesAdditions"]</span>
+                    <span><strong>@_agentTemplatePlan.Updates</strong> @L["AgentTemplatesUpdates"]</span>
+                    <span><strong>@_agentTemplatePlan.Removals</strong> @L["AgentTemplatesRemovals"]</span>
+                    <span><strong>@_agentTemplatePlan.Conflicts</strong> @L["AgentTemplatesRetainedCustomizations"]</span>
+                    <span><strong>@_agentTemplatePlan.DeletedByOwner</strong> @L["AgentTemplatesRetainedDeletions"]</span>
+                    <span><strong>@_agentTemplatePlan.SkippedMemory</strong> @L["AgentTemplatesMemorySkipped"]</span>
+                </div>
+                @if (_agentTemplatePlan.Changes.Any(change =>
+                    change.Kind is AgentTemplateSyncChangeKind.Conflict or AgentTemplateSyncChangeKind.ManualReviewRequired))
+                {
+                    <div class="agent-template-conflicts">
+                        <h3>@L["AgentTemplatesConflicts"]</h3>
+                        <ul>
+                            @foreach (var change in _agentTemplatePlan.Changes.Where(change =>
+                                change.Kind is AgentTemplateSyncChangeKind.Conflict or AgentTemplateSyncChangeKind.ManualReviewRequired))
+                            {
+                                <li><code>@change.RelativePath</code><span>@change.Detail</span></li>
+                            }
+                        </ul>
+                    </div>
+                }
             }
         </section>
 
@@ -372,6 +422,12 @@ else
     private bool _savingWorkspace, _browsing, _canBrowse;
     private (string text, string css)? _workspaceStatus;
 
+    private AgentTemplateSyncPlan? _agentTemplatePlan;
+    private bool _previewingAgentTemplates, _applyingAgentTemplates;
+    private (string text, string css)? _agentTemplateStatus;
+    private bool _agentTemplateCanApply =>
+        _agentTemplatePlan is { CanApply: true, HasApplicableChanges: true };
+
     private string _fallbackModel = "";
     private bool _savingFallback;
     private (string text, string css)? _fallbackStatus;
@@ -478,6 +534,59 @@ else
             if (resp.IsSuccessStatusCode) _project = await ProjectService.GetProjectAsync(Slug);
         }
         finally { _savingWorkspace = false; }
+    }
+
+    private async Task PreviewAgentTemplateSync()
+    {
+        if (string.IsNullOrWhiteSpace(_workspacePath))
+        {
+            _agentTemplatePlan = null;
+            _agentTemplateStatus = (L["AgentTemplatesWorkspaceRequired"], "settings-status-err");
+            return;
+        }
+
+        _previewingAgentTemplates = true;
+        _agentTemplateStatus = null;
+        try
+        {
+            _agentTemplatePlan = await AgentTemplateSyncService.PreviewAsync(_workspacePath.Trim());
+            _agentTemplateStatus = _agentTemplatePlan.CanApply
+                ? (_agentTemplatePlan.HasApplicableChanges
+                    ? (L["AgentTemplatesPreviewReady"], "settings-status-ok")
+                    : (L["AgentTemplatesNoChanges"], "settings-status-ok"))
+                : (L["AgentTemplatesManualReviewRequired"], "settings-status-err");
+        }
+        catch
+        {
+            _agentTemplatePlan = null;
+            _agentTemplateStatus = (L["AgentTemplatesPreviewFailed"], "settings-status-err");
+        }
+        finally { _previewingAgentTemplates = false; }
+    }
+
+    private async Task ApplyAgentTemplateSync()
+    {
+        if (!_agentTemplateCanApply || string.IsNullOrWhiteSpace(_workspacePath)) return;
+
+        var plan = _agentTemplatePlan!;
+        _applyingAgentTemplates = true;
+        _agentTemplateStatus = null;
+        try
+        {
+            await AgentTemplateSyncService.ApplyAsync(_workspacePath.Trim(), plan.PlanToken);
+            _agentTemplatePlan = null;
+            _agentTemplateStatus = (L["AgentTemplatesApplied"], "settings-status-ok");
+        }
+        catch (AgentTemplateSyncPlanChangedException)
+        {
+            _agentTemplatePlan = null;
+            _agentTemplateStatus = (L["AgentTemplatesStalePreview"], "settings-status-err");
+        }
+        catch
+        {
+            _agentTemplateStatus = (L["AgentTemplatesApplyFailed"], "settings-status-err");
+        }
+        finally { _applyingAgentTemplates = false; }
     }
 
     private async Task SaveFallbackModel()

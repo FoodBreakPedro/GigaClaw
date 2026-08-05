@@ -6,6 +6,31 @@ namespace GigaClaw.Core.Services;
 
 public class LocalizationService
 {
+    private static readonly IReadOnlyDictionary<string, string> DefaultEntries =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["AgentTemplates"] = "Agent templates",
+            ["AgentTemplatesSummary"] = "Agent template sync summary",
+            ["AgentTemplatesVersion"] = "Template {0}",
+            ["CheckForUpdates"] = "Check for updates",
+            ["ApplySafeUpdates"] = "Apply safe updates",
+            ["AgentTemplatesAdditions"] = "additions",
+            ["AgentTemplatesUpdates"] = "updates",
+            ["AgentTemplatesRemovals"] = "removals",
+            ["AgentTemplatesRetainedCustomizations"] = "retained customizations",
+            ["AgentTemplatesRetainedDeletions"] = "retained deletions",
+            ["AgentTemplatesMemorySkipped"] = "memory skipped",
+            ["AgentTemplatesConflicts"] = "Conflicts",
+            ["AgentTemplatesWorkspaceRequired"] = "Set a workspace path first.",
+            ["AgentTemplatesPreviewReady"] = "Preview ready.",
+            ["AgentTemplatesNoChanges"] = "No safe updates found.",
+            ["AgentTemplatesManualReviewRequired"] = "Manual review required before applying updates.",
+            ["AgentTemplatesPreviewFailed"] = "Could not check for updates.",
+            ["AgentTemplatesApplied"] = "Safe updates applied.",
+            ["AgentTemplatesStalePreview"] = "The workspace changed. Check for updates again.",
+            ["AgentTemplatesApplyFailed"] = "Could not apply safe updates.",
+        };
+
     private readonly AppSettingsService _settings;
     private readonly Dictionary<string, Dictionary<string, string>> _cache = [];
 
@@ -29,6 +54,8 @@ public class LocalizationService
             return value;
         if (_cache.TryGetValue("en", out var en) && en.TryGetValue(key, out var enValue))
             return enValue;
+        if (DefaultEntries.TryGetValue(key, out var defaultValue))
+            return defaultValue;
         return key;
     }
 
