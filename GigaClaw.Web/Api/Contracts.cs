@@ -1,9 +1,16 @@
 ﻿using GigaClaw.Core.Models;
+using GigaClaw.Core.Packs;
 
 namespace GigaClaw.Web.Api;
 
 public record CreateProjectRequest(string Name);
 public record InitializeProjectRequest(bool OverwriteConflicts = false);
+public record ApplyAgentTemplateSyncRequest(string PlanToken);
+public record AgentTemplateSyncApplyResponse(
+    AgentTemplateSyncPlan Plan,
+    IReadOnlyList<string> AppliedPaths,
+    IReadOnlyList<string> MembersCreated,
+    bool AutomationsReloaded);
 public record CreateTicketRequest(string Title, string CreatedBy, string Status, string Description = "", List<int>? LabelIds = null, TicketPriority Priority = TicketPriority.NiceToHave, string? AssignedTo = null, int? ParentId = null);
 public record UpdateTicketRequest(string Author, string? Title = null, string? Description = null, TicketPriority? Priority = null, string? AssignedTo = null, List<int>? LabelIds = null);
 public record MoveTicketRequest(string Status, string Author);

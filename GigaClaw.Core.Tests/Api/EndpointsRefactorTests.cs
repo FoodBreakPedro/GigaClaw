@@ -45,6 +45,8 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         "DELETE /api/projects/{slug}",
         "PATCH /api/projects/{slug}",
         "POST /api/projects/{slug}/initialize",
+        "GET /api/projects/{slug}/agent-templates/sync",
+        "POST /api/projects/{slug}/agent-templates/sync",
         "POST /api/projects/{slug}/pause",
         "PATCH /api/projects/{slug}/local-model",
         // Tickets
@@ -160,6 +162,8 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         ["DELETE /api/projects/{slug}"] = "Projects",
         ["PATCH /api/projects/{slug}"] = "Projects",
         ["POST /api/projects/{slug}/initialize"] = "Projects",
+        ["GET /api/projects/{slug}/agent-templates/sync"] = "Projects",
+        ["POST /api/projects/{slug}/agent-templates/sync"] = "Projects",
         ["POST /api/projects/{slug}/pause"] = "Projects",
         ["PATCH /api/projects/{slug}/local-model"] = "Projects",
         ["GET /api/projects/{slug}/tickets"] = "Tickets",

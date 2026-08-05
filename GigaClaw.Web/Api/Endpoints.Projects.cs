@@ -1,4 +1,5 @@
 using GigaClaw.Core.Services;
+using GigaClaw.Core.Packs;
 
 namespace GigaClaw.Web.Api;
 
@@ -54,6 +55,52 @@ public static partial class Endpoints
                 gitInit = result.GitInit.ToString(),
                 membersCreated,
             });
+        }).WithTags("Projects");
+
+        api.MapGet("/projects/{slug}/agent-templates/sync", async (string slug, ProjectService ps, AgentTemplateSyncService sync) =>
+        {
+            var project = await ps.GetProjectAsync(slug);
+            if (project is null) return Results.NotFound();
+
+            var workspace = ps.ResolveWorkspacePath(project);
+            return Results.Ok(await sync.PreviewAsync(workspace));
+        }).WithTags("Projects");
+
+        api.MapPost("/projects/{slug}/agent-templates/sync", async (
+            string slug,
+            ApplyAgentTemplateSyncRequest req,
+            ProjectService ps,
+            AgentTemplateSyncService sync,
+            AgentsTemplateService template,
+            MemberService members,
+            GigaClaw.Core.Automation.AutomationEngine engine) =>
+        {
+            var project = await ps.GetProjectAsync(slug);
+            if (project is null) return Results.NotFound();
+
+            var workspace = ps.ResolveWorkspacePath(project);
+            AgentTemplateSyncResult result;
+            try
+            {
+                result = await sync.ApplyAsync(workspace, req.PlanToken);
+            }
+            catch (AgentTemplateSyncPlanChangedException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+
+            var membersCreated = await template.EnsureAgentMembersAsync(slug, members);
+            var automationsReloaded = result.AppliedPaths.Contains(".agents/automations.json", StringComparer.Ordinal);
+            if (automationsReloaded)
+            {
+                await engine.ReloadProjectAsync(slug);
+            }
+
+            return Results.Ok(new AgentTemplateSyncApplyResponse(
+                result.Plan,
+                result.AppliedPaths,
+                membersCreated,
+                automationsReloaded));
         }).WithTags("Projects");
 
         api.MapPost("/projects/{slug}/pause", async (string slug, ProjectService ps) =>
