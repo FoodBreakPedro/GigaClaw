@@ -1205,8 +1205,8 @@
           "timeoutSeconds": 90,
           "abortOnFailure": true,
           "secretRef": "AI_DRAFT_SECRET",
-          "failureComment": "CMS dispatch failed (HTTP {http.status}): {http.error}. The `dispatched` label was not applied — fix the draft or the CMS configuration, then move the ticket back through Done to retry.",
-          "failureStatus": "Blocked"
+          "failureComment": "CMS dispatch failed (HTTP {http.status}): {http.error}. The `dispatched` label was not applied — fix the draft or CMS configuration, then move the ticket back to Done to retry.",
+          "failureStatus": "Review"
         },
         {
           "type": "setLabels",
