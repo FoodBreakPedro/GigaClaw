@@ -35,9 +35,10 @@ public sealed class AgentTemplateSyncUiTests
     {
         var source = Read("GigaClaw.Web/Components/Pages/ProjectSettings.razor");
 
-        Assert.Contains("AgentTemplateSyncService", source);
-        Assert.Contains("PreviewAsync(_workspacePath.Trim())", source);
-        Assert.Contains("ApplyAsync(_workspacePath.Trim(), plan.PlanToken)", source);
+        Assert.Contains("/api/projects/{Slug}/agent-templates/sync", source);
+        Assert.Contains("GetAsync", source);
+        Assert.Contains("PostAsJsonAsync", source);
+        Assert.Contains("planToken = plan.PlanToken", source);
         Assert.Contains("_agentTemplatePlan is { CanApply: true, HasApplicableChanges: true }", source);
         Assert.Contains("AgentTemplateSyncPlanChangedException", source);
         Assert.Contains("AgentTemplatesStalePreview", source);
@@ -60,7 +61,9 @@ public sealed class AgentTemplateSyncUiTests
     [Fact]
     public void AgentTemplatesUi_HasLocalizedLabelsAndResponsiveControls()
     {
-        var localization = Read("GigaClaw.Core/Services/LocalizationService.cs");
+        var localizations = new[] { "en", "fr", "es" }
+            .Select(language => Read($"GigaClaw.Core/Localization/ProjectSettings.{language}.json"))
+            .ToArray();
         var css = Read("GigaClaw.Web/wwwroot/app.css");
 
         foreach (var key in new[]
@@ -69,7 +72,7 @@ public sealed class AgentTemplateSyncUiTests
             "AgentTemplatesUpdates", "AgentTemplatesRemovals", "AgentTemplatesRetainedCustomizations",
             "AgentTemplatesRetainedDeletions", "AgentTemplatesMemorySkipped", "AgentTemplatesStalePreview",
         })
-            Assert.Contains($"[\"{key}\"]", localization);
+            Assert.All(localizations, localization => Assert.Contains($"\"{key}\"", localization));
 
         Assert.Contains(".agent-template-summary", css);
         Assert.Contains(".agent-template-conflicts", css);

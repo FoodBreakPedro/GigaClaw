@@ -6,7 +6,6 @@
 @inject MemberService MemberService
 @inject LabelService LabelService
 @inject ColumnService ColumnService
-@inject AgentTemplateSyncService AgentTemplateSyncService
 @inject NavigationManager Nav
 @inject IHttpClientFactory HttpFactory
 @inject LocalizationService L
@@ -538,18 +537,14 @@ else
 
     private async Task PreviewAgentTemplateSync()
     {
-        if (string.IsNullOrWhiteSpace(_workspacePath))
-        {
-            _agentTemplatePlan = null;
-            _agentTemplateStatus = (L["AgentTemplatesWorkspaceRequired"], "settings-status-err");
-            return;
-        }
-
         _previewingAgentTemplates = true;
         _agentTemplateStatus = null;
         try
         {
-            _agentTemplatePlan = await AgentTemplateSyncService.PreviewAsync(_workspacePath.Trim());
+            var response = await NewHttp().GetAsync($"/api/projects/{Slug}/agent-templates/sync");
+            response.EnsureSuccessStatusCode();
+            _agentTemplatePlan = await response.Content.ReadFromJsonAsync<AgentTemplateSyncPlan>();
+            if (_agentTemplatePlan is null) throw new InvalidOperationException("Sync preview was empty.");
             _agentTemplateStatus = _agentTemplatePlan.CanApply
                 ? (_agentTemplatePlan.HasApplicableChanges
                     ? (L["AgentTemplatesPreviewReady"], "settings-status-ok")
@@ -566,14 +561,19 @@ else
 
     private async Task ApplyAgentTemplateSync()
     {
-        if (!_agentTemplateCanApply || string.IsNullOrWhiteSpace(_workspacePath)) return;
+        if (!_agentTemplateCanApply) return;
 
         var plan = _agentTemplatePlan!;
         _applyingAgentTemplates = true;
         _agentTemplateStatus = null;
         try
         {
-            await AgentTemplateSyncService.ApplyAsync(_workspacePath.Trim(), plan.PlanToken);
+            var response = await NewHttp().PostAsJsonAsync(
+                $"/api/projects/{Slug}/agent-templates/sync",
+                new { planToken = plan.PlanToken });
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                throw new AgentTemplateSyncPlanChangedException();
+            response.EnsureSuccessStatusCode();
             _agentTemplatePlan = null;
             _agentTemplateStatus = (L["AgentTemplatesApplied"], "settings-status-ok");
         }
