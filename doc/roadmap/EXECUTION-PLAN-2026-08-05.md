@@ -4,7 +4,7 @@ This ledger keeps the remaining GigaClaw work recoverable across sessions and us
 
 ## Working rules
 
-- Work only in GigaClaw. Do not access or edit ZabalaZone or zabs-server.
+- Work only in GigaClaw. Do not edit ZabalaZone. zabs-server access is limited to the owner-authorized post-push deployment check.
 - Preserve `.obsidian/**`, `graphify-out/**`, and unrelated owner changes unless explicitly included in a named checkpoint.
 - Give sub-agents disjoint file ownership and record their model, scope, and result below.
 - Run focused tests before each implementation commit and the full affected suites before merging.
@@ -17,8 +17,8 @@ This ledger keeps the remaining GigaClaw work recoverable across sessions and us
 |---|---|---|---|
 | 0 | Stabilize and preserve the existing R8 Codex harness | Complete | `ecba804`, `8de75ca`, `e4bd3ce` |
 | 1 | CMS `categorySlug` and `tags` dispatch, authentication, and placeholder safety | Complete | `b68d020` through `d4c7bcc`; evidence commit follows this ledger update |
-| 2 | Non-destructive `.agents` synchronization with dry-run drift reporting | Next | - |
-| 3 | Deliverable catalog, ticket persistence, and deterministic entry routing | Pending | - |
+| 2 | Non-destructive `.agents` synchronization with dry-run drift reporting | Complete | `39f50ed` through `2dc4dad`; evidence commit follows this ledger update |
+| 3 | Deliverable catalog, ticket persistence, and deterministic entry routing | Next | - |
 | 4 | Deliverable-first ticket creation and human-readable pipeline progress | Pending | - |
 | 5 | Canonical content routes and bounded translator/content recovery | Pending | - |
 | 6 | End-to-end journey, propagation report, and deployment handoff | Pending | - |
@@ -90,6 +90,41 @@ Verification completed:
 
 Exact next action: implement checkpoint 2's non-destructive sync with dry-run reporting before introducing more embedded workflow files.
 
+## Checkpoint 2 log
+
+Branch: `codex/agents-safe-sync`
+
+Delivered:
+
+- A dedicated preview/apply sync operation updates unchanged core-managed `.agents` files, installs new files, and removes retired unmodified files.
+- Owner-modified and owner-deleted files are preserved and reported with exact paths; invalid or missing lock baselines fail closed for manual review.
+- `.agents/*/memory/**` is excluded from sync, plan-token fingerprints, and workspace drift reporting.
+- `automations.json`, `contracts.json`, `models.json`, and `teams.json` merge per entry so unrelated owner additions survive.
+- Stale plan tokens, symbolic-link destinations, duplicate structured IDs, and concurrent changes fail safely.
+- Explicit destructive initialization behavior is unchanged.
+- Project Settings exposes a localized **Agent templates** preview/apply flow backed by project API endpoints. Successful applies reload automations and seed newly introduced members.
+- The operation is scoped strictly to `.agents/**`; dashboard and other root-template drift is neither inspected nor reported.
+
+Implementation assignments:
+
+| Model | Scope | Result |
+|---|---|---|
+| GPT-5.5 | Sync architecture and adversarial review | Identified symlink, memory-token, metadata-baseline, token-shape, and duplicate-ID risks; fixes integrated |
+| Terra | Project API endpoints and integration tests | Implemented preview/apply routes, stale-plan handling, reload, and member seeding |
+| Luna | Settings UX, localization, and risk review | Implemented the preview/apply interface and UI coverage; localization was aligned with the existing resource pattern |
+| GPT-5.4 | Deployment-side verification support | Reserved for the post-push server checkpoint |
+
+Verification completed:
+
+- Focused sync service suite: 18 passed.
+- Combined sync, drift, API, route, initialization, localization, and Settings component suites passed during implementation.
+- Full solution: 1,522 Core tests and 45 Eval tests passed.
+- Catalog `check --strict`: exit 0.
+- Catalog `check --strict-packs`: exit 0.
+- No `ProjectTemplate/Agents/**` file changed, so no manifest regeneration was required.
+
+Exact next action: begin checkpoint 3 by defining the user-facing deliverable catalog and persisting `deliverableType` on tickets, then resolve that value into a deterministic entry automation without asking users to choose an agent or pipeline order.
+
 ## Propagation and deployment
 
 Checkpoint 0 does not modify `ProjectTemplate/Agents/**`, so it has no `.agents` propagation list.
@@ -99,9 +134,11 @@ Checkpoint 1 propagation list for every existing project:
 - `.agents/automations.json` — merge the `cms-dispatch-on-done` changes; do not overwrite unrelated owner automation edits.
 - `.agents/blog-writer/SKILL.md` — apply the taxonomy-frontmatter contract.
 
-Do not change any `.agents/*/memory/**` file. Until checkpoint 2 supplies the safe sync operation, propagate these two files by a reviewed merge rather than destructive initialization.
+Do not change any `.agents/*/memory/**` file. After checkpoint 2 is deployed, use the Project Settings **Agent templates** preview before applying these checkpoint 1 updates. Projects without a trustworthy `.agents/packs.lock.json` remain manual-review cases and are not changed.
 
-For zabs-server, the owner must pull the merged checkpoint, publish `GigaClaw.Web/GigaClaw.Web.csproj` in Release, deploy the resulting application set including the rebuilt `GigaClaw.Core.dll`, confirm `AI_DRAFT_SECRET` is set in the service environment, and restart the GigaClaw service. New projects receive the corrected embedded templates only after that deployment. Server access remains outside this work.
+Checkpoint 2 does not modify `ProjectTemplate/Agents/**`; its propagation list is empty. It does require deploying the rebuilt application and `GigaClaw.Core.dll` so existing projects can use the sync API and Settings flow.
+
+For zabs-server, pull the merged checkpoint, publish `GigaClaw.Web/GigaClaw.Web.csproj` in Release, deploy the resulting application set including the rebuilt `GigaClaw.Core.dll`, confirm `AI_DRAFT_SECRET` is set in the service environment, and restart the GigaClaw service. New projects receive corrected embedded templates only after deployment. The owner authorized a post-push SSH check of the automatic deployment; no server edits belong in this checkpoint.
 
 ## Graphify decision
 
