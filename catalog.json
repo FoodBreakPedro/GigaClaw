@@ -7,7 +7,7 @@
     "EnabledAutomations": 78,
     "ExplicitModelMappings": 37,
     "Teams": 12,
-    "Scripts": 22
+    "Scripts": 23
   },
   "Packs": [
     {
@@ -1825,6 +1825,7 @@
     "scripts/schema_check.py",
     "scripts/social_contract.py",
     "scripts/source_inventory.py",
+    "scripts/sync_draft_to_description.py",
     "scripts/translation_contract.py",
     "scripts/verdict.schema.json",
     "scripts/verdict_contract.py"
