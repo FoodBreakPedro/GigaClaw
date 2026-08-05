@@ -13,6 +13,10 @@ public class DraftFrontmatterTests
         ---
         title: How to Ship Faster
         slug: how-to-ship-faster
+        categorySlug: engineering
+        tags:
+          - delivery
+          - "team habits"
         excerpt: A short teaser.
         contentType: article
         seo:
@@ -33,6 +37,8 @@ public class DraftFrontmatterTests
         Assert.Null(error);
         Assert.Equal("How to Ship Faster", draft!.Title);
         Assert.Equal("how-to-ship-faster", draft.Slug);
+        Assert.Equal("engineering", draft.CategorySlug);
+        Assert.Equal(new[] { "delivery", "team habits" }, draft.Tags);
         Assert.Equal("A short teaser.", draft.Excerpt);
         Assert.Equal("article", draft.ContentType);
         Assert.Equal("a rocket launching from a laptop", draft.ImagePrompt);
@@ -70,12 +76,51 @@ public class DraftFrontmatterTests
         Assert.Null(error);
         Assert.Equal("Only A Title", draft!.Title);
         Assert.Equal("", draft.Slug);
+        Assert.Equal("", draft.CategorySlug);
+        Assert.Empty(draft.Tags);
         Assert.Equal("", draft.Excerpt);
         Assert.Equal("", draft.ContentType);
         Assert.Equal("", draft.ImagePrompt);
         Assert.Equal("", draft.SeoTitle);
         Assert.Equal("", draft.SeoDescription);
         Assert.Equal("", draft.SeoPrimaryKeyword);
+    }
+
+    [Fact]
+    public void Parses_single_tag_from_yaml_style_list()
+    {
+        const string description = """
+            ---
+            title: Tagged
+            tags:
+              - launch
+            ---
+            body
+            """;
+
+        Assert.True(DraftFrontmatter.TryParse(description, out var draft, out _));
+        Assert.Equal(new[] { "launch" }, draft!.Tags);
+    }
+
+    [Fact]
+    public void Parses_multiple_tags_with_quotes_and_colons()
+    {
+        const string description = """
+            ---
+            title: Tagged
+            tags:
+              - "ops:weekly"
+              - 'team focus'
+              - growth
+            seo:
+              title: Keep seo parsing
+            ---
+            body
+            """;
+
+        Assert.True(DraftFrontmatter.TryParse(description, out var draft, out _));
+        Assert.Equal(new[] { "ops:weekly", "team focus", "growth" }, draft!.Tags);
+        Assert.Equal("Keep seo parsing", draft.SeoTitle);
     }
 
     [Fact]
@@ -173,6 +218,61 @@ public class DraftFrontmatterTests
     }
 
     [Fact]
+    public void ToJsonEscapedValues_emits_category_slug_and_empty_tags_placeholders()
+    {
+        const string description = """
+            ---
+            title: Categorized
+            categorySlug: releases
+            ---
+            body
+            """;
+
+        Assert.True(DraftFrontmatter.TryParse(description, out var draft, out _));
+        var values = draft!.ToJsonEscapedValues();
+
+        Assert.Equal("releases", values["draft.categorySlug"]);
+        var jsonBody = $$"""{"categorySlug":"{{values["draft.categorySlug"]}}","tags":{{values["draft.tags"]}}}""";
+        using var doc = System.Text.Json.JsonDocument.Parse(jsonBody);
+        Assert.Equal("releases", doc.RootElement.GetProperty("categorySlug").GetString());
+        Assert.Empty(doc.RootElement.GetProperty("tags").EnumerateArray());
+    }
+
+    [Fact]
+    public void ToJsonEscapedValues_emits_raw_json_array_for_tags_with_escaping()
+    {
+        var description = """
+            ---
+            title: Tagged
+            tags:
+              - plain
+              - quote "double"
+              - slash \ path
+              - control  marker
+            ---
+            body
+            """;
+
+        Assert.True(DraftFrontmatter.TryParse(description, out var draft, out _));
+        var values = draft!.ToJsonEscapedValues();
+
+        Assert.StartsWith("[", values["draft.tags"]);
+        Assert.EndsWith("]", values["draft.tags"]);
+
+        var jsonBody = $$"""{"tags":{{values["draft.tags"]}}}""";
+        using var doc = System.Text.Json.JsonDocument.Parse(jsonBody);
+        var tags = doc.RootElement.GetProperty("tags").EnumerateArray().Select(x => x.GetString()).ToArray();
+
+        Assert.Equal(new[]
+        {
+            "plain",
+            "quote \"double\"",
+            "slash \\ path",
+            "control \u0007 marker",
+        }, tags);
+    }
+
+    [Fact]
     public void ToJsonEscapedValues_maps_every_documented_placeholder_key()
     {
         Assert.True(DraftFrontmatter.TryParse(FullExample, out var draft, out _));
@@ -180,7 +280,8 @@ public class DraftFrontmatterTests
 
         foreach (var key in new[]
         {
-            "draft.title", "draft.slug", "draft.excerpt", "draft.contentType", "draft.imagePrompt",
+            "draft.title", "draft.slug", "draft.categorySlug", "draft.tags",
+            "draft.excerpt", "draft.contentType", "draft.imagePrompt",
             "draft.seo.title", "draft.seo.description", "draft.seo.primaryKeyword", "draft.body",
         })
         {

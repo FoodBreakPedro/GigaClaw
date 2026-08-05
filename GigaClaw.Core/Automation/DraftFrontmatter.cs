@@ -33,6 +33,8 @@ public sealed class DraftFrontmatter
 {
     public string Title { get; init; } = "";
     public string Slug { get; init; } = "";
+    public string CategorySlug { get; init; } = "";
+    public IReadOnlyList<string> Tags { get; init; } = Array.Empty<string>();
     public string Excerpt { get; init; } = "";
     public string ContentType { get; init; } = "";
     public string ImagePrompt { get; init; } = "";
@@ -71,6 +73,7 @@ public sealed class DraftFrontmatter
 
         var flat = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var seo = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var tags = new List<string>();
         string? nestedKey = null;
         var closeIndex = -1;
 
@@ -82,6 +85,15 @@ public sealed class DraftFrontmatter
 
             var indented = line.Length > 0 && (line[0] == ' ' || line[0] == '\t');
             var trimmed = line.Trim();
+
+            if (indented &&
+                string.Equals(nestedKey, "tags", StringComparison.OrdinalIgnoreCase) &&
+                TryParseListItem(trimmed, out var tag))
+            {
+                tags.Add(tag);
+                continue;
+            }
+
             var colon = trimmed.IndexOf(':');
             if (colon < 0) continue; // tolerate stray non-key lines rather than failing the parse
 
@@ -124,6 +136,8 @@ public sealed class DraftFrontmatter
         {
             Title = title,
             Slug = flat.GetValueOrDefault("slug", ""),
+            CategorySlug = flat.GetValueOrDefault("categorySlug", ""),
+            Tags = tags,
             Excerpt = flat.GetValueOrDefault("excerpt", ""),
             ContentType = flat.GetValueOrDefault("contentType", ""),
             ImagePrompt = flat.GetValueOrDefault("imagePrompt", ""),
@@ -132,6 +146,16 @@ public sealed class DraftFrontmatter
             SeoPrimaryKeyword = seo.GetValueOrDefault("primaryKeyword", ""),
             Body = body,
         };
+        return true;
+    }
+
+    private static bool TryParseListItem(string s, out string value)
+    {
+        value = "";
+        if (!s.StartsWith("-", StringComparison.Ordinal))
+            return false;
+
+        value = StripQuotes(s[1..].TrimStart());
         return true;
     }
 
@@ -155,6 +179,8 @@ public sealed class DraftFrontmatter
     {
         ["draft.title"] = JsonEscape(Title),
         ["draft.slug"] = JsonEscape(Slug),
+        ["draft.categorySlug"] = JsonEscape(CategorySlug),
+        ["draft.tags"] = JsonArray(Tags),
         ["draft.excerpt"] = JsonEscape(Excerpt),
         ["draft.contentType"] = JsonEscape(ContentType),
         ["draft.imagePrompt"] = JsonEscape(ImagePrompt),
@@ -182,4 +208,7 @@ public sealed class DraftFrontmatter
         var json = JsonSerializer.Serialize(value, JsonEscapeOptions);
         return json[1..^1]; // strip the wrapping quotes JsonSerializer always adds for a string
     }
+
+    internal static string JsonArray(IEnumerable<string>? values)
+        => JsonSerializer.Serialize(values ?? Array.Empty<string>(), JsonEscapeOptions);
 }
