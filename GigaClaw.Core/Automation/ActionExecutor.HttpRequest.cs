@@ -107,7 +107,7 @@ internal sealed partial class ActionExecutor
             var reason = approval.Reason ?? "no trusted outbound approval";
             Publish("http.dryRun", "true");
             Publish("http.error", reason);
-            await WriteOutboundDenialReceiptAsync(slug, firing, actor, url, uri.Host, reason);
+            await WriteOutboundDenialReceiptAsync(slug!, firing, actor, url, uri.Host, reason);
             // Not sent means no response: actions downstream that assume a successful send must
             // not run when the spec opted into abort-on-failure. The receipt above — not the
             // spec's FailureComment/FailureStatus — is the record, because a dry run is the
@@ -127,7 +127,7 @@ internal sealed partial class ActionExecutor
             if (bodyTemplate.Contains("{draft.", StringComparison.Ordinal))
             {
                 var ticket = firing.TicketId is int draftTicketId
-                    ? await _tickets.GetTicketAsync(slug, draftTicketId)
+                    ? await _tickets.GetTicketAsync(slug!, draftTicketId)
                     : null;
                 if (!DraftFrontmatter.TryParse(ticket?.Description, out var draft, out var parseError))
                 {
