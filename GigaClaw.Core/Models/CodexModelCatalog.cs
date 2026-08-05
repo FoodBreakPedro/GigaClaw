@@ -36,7 +36,8 @@ public static class CodexModelCatalog
             model = "gpt-5.6-terra";
             return true;
         }
-        if (configured.Contains("opus", StringComparison.OrdinalIgnoreCase))
+        if (configured.Contains("opus", StringComparison.OrdinalIgnoreCase) ||
+            configured.Contains("fable", StringComparison.OrdinalIgnoreCase))
         {
             model = "gpt-5.6-sol";
             return true;

@@ -11,6 +11,7 @@ public sealed class CodexModelCatalogTests
     [InlineData("claude-haiku-4-5", "gpt-5.6-luna")]
     [InlineData("claude-sonnet-4-6", "gpt-5.6-terra")]
     [InlineData("claude-opus-4-6", "gpt-5.6-sol")]
+    [InlineData("claude-fable-5", "gpt-5.6-sol")]
     public void TryResolve_AcceptsSupportedModels(string? configured, string expected)
     {
         var valid = CodexModelCatalog.TryResolve(configured, out var resolved);
