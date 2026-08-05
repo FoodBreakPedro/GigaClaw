@@ -38,12 +38,13 @@ internal sealed partial class ActionExecutor
     {
         // Substitution always targets locals — the spec objects are the shared, mutable instances
         // held by the chain snapshot and by the on-disk config, and must never be written to.
-        string Render(string? s) => ActionTemplate.Render(s, ActionTemplate.Values(
+        var commonValues = ActionTemplate.Values(
             state,
             ("ticketId", firing.TicketId?.ToString() ?? ""),
             ("ticketTitle", firing.TicketTitle ?? ""),
             ("slug", slug ?? ""),
-            ("projectSlug", slug ?? "")));
+            ("projectSlug", slug ?? ""));
+        string Render(string? s) => ActionTemplate.Render(s, commonValues);
 
         void Publish(string key, string value)
         {
@@ -79,14 +80,14 @@ internal sealed partial class ActionExecutor
             return spec.AbortOnFailure;
         }
 
-        var url = Render(spec.Url).Trim();
-        if (TryFindUnresolvedTemplateToken(url, out var unresolvedUrlToken))
+        if (TryFindUnresolvedTemplateToken(spec.Url, commonValues, out var unresolvedUrlToken))
         {
             _logger.LogWarning(
                 "httpRequest: URL still contains unresolved placeholder '{Token}' — request not sent",
                 unresolvedUrlToken);
             return await FailAsync($"unresolved URL placeholder {unresolvedUrlToken}");
         }
+        var url = Render(spec.Url).Trim();
 
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
@@ -136,22 +137,35 @@ internal sealed partial class ActionExecutor
                     return await FailAsync($"frontmatter: {parseError}");
                 }
 
-                var values = ActionTemplate.Values(state,
-                    ("ticketId", firing.TicketId?.ToString() ?? ""),
-                    ("ticketTitle", firing.TicketTitle ?? ""),
-                    ("slug", slug ?? ""),
-                    ("projectSlug", slug ?? ""));
+                var values = new Dictionary<string, string?>(commonValues, StringComparer.Ordinal);
                 foreach (var (key, value) in draft!.ToJsonEscapedValues())
                     values[key] = value;
+                if (TryFindUnresolvedTemplateToken(bodyTemplate, values, out var unresolvedBodyToken))
+                {
+                    _logger.LogWarning(
+                        "httpRequest: body contains unresolved placeholder '{Token}' — request not sent",
+                        unresolvedBodyToken);
+                    return await FailAsync($"unresolved body placeholder {unresolvedBodyToken}");
+                }
                 body = ActionTemplate.Render(bodyTemplate, values);
             }
             else
             {
+                if (TryFindUnresolvedTemplateToken(bodyTemplate, commonValues, out var unresolvedBodyToken))
+                {
+                    _logger.LogWarning(
+                        "httpRequest: body contains unresolved placeholder '{Token}' — request not sent",
+                        unresolvedBodyToken);
+                    return await FailAsync($"unresolved body placeholder {unresolvedBodyToken}");
+                }
                 body = Render(bodyTemplate);
             }
 
+            var methodTemplate = string.IsNullOrWhiteSpace(spec.Method) ? "POST" : spec.Method.Trim();
+            if (TryFindUnresolvedTemplateToken(methodTemplate, commonValues, out var unresolvedMethodToken))
+                return await FailAsync($"unresolved method placeholder {unresolvedMethodToken}");
             using var request = new HttpRequestMessage(
-                new HttpMethod(string.IsNullOrWhiteSpace(spec.Method) ? "POST" : spec.Method.Trim().ToUpperInvariant()),
+                new HttpMethod(Render(methodTemplate).ToUpperInvariant()),
                 uri);
 
             string? contentType = null;
@@ -160,43 +174,25 @@ internal sealed partial class ActionExecutor
             foreach (var (name, rawValue) in spec.Headers)
             {
                 if (string.IsNullOrWhiteSpace(name)) continue;
+                if (TryFindUnresolvedTemplateToken(name, commonValues, out var unresolvedHeaderNameToken))
+                    return await FailAsync($"unresolved header name placeholder {unresolvedHeaderNameToken}");
+                if (TryFindUnresolvedTemplateToken(rawValue, commonValues, out var unresolvedHeaderToken))
+                    return await FailAsync($"unresolved header placeholder {unresolvedHeaderToken}");
+
+                var renderedName = Render(name);
                 var value = Render(rawValue);
-                if (string.Equals(name, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(renderedName, "Content-Type", StringComparison.OrdinalIgnoreCase))
                 {
                     contentType = value;
                     continue;
                 }
-                if (string.Equals(name, "Authorization", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(renderedName, "Authorization", StringComparison.OrdinalIgnoreCase))
                     hasAuthorization = true;
-                renderedHeaders.Add((name, value));
-            }
-
-            if (TryFindUnresolvedTemplateToken(body, out var unresolvedBodyToken))
-            {
-                _logger.LogWarning(
-                    "httpRequest: body still contains unresolved placeholder '{Token}' — request not sent",
-                    unresolvedBodyToken);
-                return await FailAsync($"unresolved body placeholder {unresolvedBodyToken}");
-            }
-
-            if (TryFindUnresolvedTemplateToken(contentType, out var unresolvedContentTypeToken))
-            {
-                _logger.LogWarning(
-                    "httpRequest: header 'Content-Type' still contains unresolved placeholder '{Token}' — request not sent",
-                    unresolvedContentTypeToken);
-                return await FailAsync($"unresolved header placeholder {unresolvedContentTypeToken}");
+                renderedHeaders.Add((renderedName, value));
             }
 
             foreach (var (name, value) in renderedHeaders)
             {
-                if (TryFindUnresolvedTemplateToken(value, out var unresolvedHeaderToken))
-                {
-                    _logger.LogWarning(
-                        "httpRequest: header '{Header}' still contains unresolved placeholder '{Token}' — request not sent",
-                        name, unresolvedHeaderToken);
-                    return await FailAsync($"unresolved header placeholder {unresolvedHeaderToken}");
-                }
-
                 if (!request.Headers.TryAddWithoutValidation(name, value))
                     _logger.LogWarning("httpRequest: header '{Header}' was rejected — skipping it", name);
             }
@@ -270,16 +266,23 @@ internal sealed partial class ActionExecutor
         }
     }
 
-    private static bool TryFindUnresolvedTemplateToken(string? value, out string token)
+    private static bool TryFindUnresolvedTemplateToken(
+        string? template,
+        IReadOnlyDictionary<string, string?> values,
+        out string token)
     {
         token = "";
-        if (string.IsNullOrEmpty(value)) return false;
+        if (string.IsNullOrEmpty(template)) return false;
 
-        var match = UnresolvedTemplateTokenRegex().Match(value);
-        if (!match.Success) return false;
+        foreach (Match match in UnresolvedTemplateTokenRegex().Matches(template))
+        {
+            var key = match.Value[1..^1];
+            if (values.ContainsKey(key)) continue;
 
-        token = match.Value;
-        return true;
+            token = match.Value;
+            return true;
+        }
+        return false;
     }
 
     [GeneratedRegex(@"\{[A-Za-z][A-Za-z0-9_.-]{0,127}\}", RegexOptions.CultureInvariant)]

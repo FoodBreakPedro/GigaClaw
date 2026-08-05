@@ -168,12 +168,12 @@ public sealed class DraftFrontmatter
 
     /// <summary>
     /// Flattens this draft into <c>draft.*</c> placeholder values — <c>draft.title</c>,
-    /// <c>draft.slug</c>, <c>draft.excerpt</c>, <c>draft.contentType</c>, <c>draft.imagePrompt</c>,
+    /// <c>draft.slug</c>, <c>draft.categorySlug</c>, <c>draft.tags</c>, <c>draft.excerpt</c>,
+    /// <c>draft.contentType</c>, <c>draft.imagePrompt</c>,
     /// <c>draft.seo.title</c>, <c>draft.seo.description</c>, <c>draft.seo.primaryKeyword</c>,
-    /// <c>draft.body</c> — each already JSON-string-escaped (quotes, backslashes, newlines,
-    /// control characters) via <see cref="JsonEscape"/>. Callers splice these directly between a
-    /// literal pair of <c>"</c> in a JSON <c>BodyTemplate</c>; they must never be used un-escaped
-    /// in a JSON context, and are not appropriate for a raw URL or header value.
+    /// <c>draft.body</c>. Scalar values are JSON-string-escaped via <see cref="JsonEscape"/> and
+    /// are spliced between quotes in a body template. <c>draft.tags</c> is a complete JSON array
+    /// and must be inserted without surrounding quotes.
     /// </summary>
     public IReadOnlyDictionary<string, string> ToJsonEscapedValues() => new Dictionary<string, string>(StringComparer.Ordinal)
     {

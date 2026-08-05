@@ -459,6 +459,21 @@ public class ActionExecutorHttpRequestTests
     }
 
     [Fact]
+    public async Task Unresolved_header_name_placeholder_blocks_dispatch_without_issuing_a_request()
+    {
+        var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
+        using var h = await BuildAsync(handler);
+
+        var spec = Post("https://cms.example/api/publish", abortOnFailure: true);
+        spec.Headers["X-{missingHeader}"] = "value";
+
+        await DispatchAsync(h, spec);
+
+        await Task.Delay(300);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
     public async Task Unresolved_content_type_placeholder_blocks_dispatch_without_issuing_a_request()
     {
         var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
@@ -504,6 +519,23 @@ public class ActionExecutorHttpRequestTests
         using var doc = System.Text.Json.JsonDocument.Parse(handler.LastBody!);
         Assert.True(doc.RootElement.GetProperty("meta").GetProperty("ok").GetBoolean());
         Assert.Equal("one", doc.RootElement.GetProperty("items")[0].GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public async Task Placeholder_shaped_text_from_a_draft_value_does_not_count_as_unresolved()
+    {
+        const string description = "---\ntitle: Literal braces\n---\nUse {example} in the article.";
+        var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
+        using var h = await BuildAsync(handler, description: description);
+
+        var spec = CmsDispatch();
+        spec.BodyTemplate = "{\"body\":\"{draft.body}\"}";
+
+        await RunToCompletionAsync(h, spec);
+
+        await WaitForRequestsAsync(h, 1);
+        using var doc = System.Text.Json.JsonDocument.Parse(handler.LastBody!);
+        Assert.Equal("Use {example} in the article.", doc.RootElement.GetProperty("body").GetString());
     }
 
     // ── Bad configuration ───────────────────────────────────────────────────
@@ -806,7 +838,8 @@ public class ActionExecutorHttpRequestTests
         var template = LoadRealCmsDispatchBodyTemplate();
         foreach (var placeholder in new[]
         {
-            "{draft.title}", "{draft.slug}", "{draft.body}", "{draft.excerpt}", "{draft.contentType}",
+            "{draft.title}", "{draft.slug}", "{draft.categorySlug}", "{draft.tags}",
+            "{draft.body}", "{draft.excerpt}", "{draft.contentType}",
             "{draft.seo.title}", "{draft.seo.description}", "{draft.seo.primaryKeyword}",
         })
         {
@@ -842,14 +875,11 @@ public class ActionExecutorHttpRequestTests
         Assert.Contains("Cycle time is the single number", doc.RootElement.GetProperty("body").GetString());
         Assert.Equal(h.Slug, doc.RootElement.GetProperty("venture").GetString());
         Assert.Equal($"{h.Slug}#{h.TicketId}", doc.RootElement.GetProperty("sourceTicket").GetString());
-        if (doc.RootElement.TryGetProperty("categorySlug", out var categorySlug))
-            Assert.Equal("operations", categorySlug.GetString());
-        if (doc.RootElement.TryGetProperty("tags", out var tags))
-        {
-            Assert.Equal(System.Text.Json.JsonValueKind.Array, tags.ValueKind);
-            Assert.Equal(
-                new[] { "workflow automation", "kanban", "AI-assisted publishing" },
-                tags.EnumerateArray().Select(tag => tag.GetString() ?? "").ToArray());
-        }
+        Assert.Equal("operations", doc.RootElement.GetProperty("categorySlug").GetString());
+        var tags = doc.RootElement.GetProperty("tags");
+        Assert.Equal(System.Text.Json.JsonValueKind.Array, tags.ValueKind);
+        Assert.Equal(
+            new[] { "workflow automation", "kanban", "AI-assisted publishing" },
+            tags.EnumerateArray().Select(tag => tag.GetString() ?? "").ToArray());
     }
 }
