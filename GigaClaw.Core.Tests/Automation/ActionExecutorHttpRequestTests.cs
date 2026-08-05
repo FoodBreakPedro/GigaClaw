@@ -396,41 +396,114 @@ public class ActionExecutorHttpRequestTests
     }
 
     [Fact]
-    public async Task Missing_SecretRef_proceeds_without_an_authorization_header()
+    public async Task Missing_SecretRef_blocks_dispatch_without_issuing_a_request()
     {
+        const string varName = "GIGACLAW_TEST_DEFINITELY_NOT_SET";
+        Environment.SetEnvironmentVariable(varName, null);
         var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
         using var h = await BuildAsync(handler);
 
-        var spec = Post("https://cms.example/api/publish");
-        spec.SecretRef = "GIGACLAW_TEST_DEFINITELY_NOT_SET";
+        var spec = Post("https://cms.example/api/publish", abortOnFailure: true);
+        spec.SecretRef = varName;
 
-        await RunToCompletionAsync(h, spec);
+        await DispatchAsync(h, spec);
 
-        await WaitForRequestsAsync(h, 1);
-        Assert.False(handler.LastRequest.Headers.Contains("Authorization"));
+        await Task.Delay(300);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
     public async Task Explicit_authorization_header_wins_over_SecretRef()
     {
         const string varName = "GIGACLAW_TEST_CMS_TOKEN_2";
-        Environment.SetEnvironmentVariable(varName, "from-env");
-        try
-        {
-            var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
-            using var h = await BuildAsync(handler);
+        Environment.SetEnvironmentVariable(varName, null);
+        var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
+        using var h = await BuildAsync(handler);
 
-            var spec = Post("https://cms.example/api/publish");
-            spec.SecretRef = varName;
-            spec.Headers["Authorization"] = "Basic explicit";
+        var spec = Post("https://cms.example/api/publish");
+        spec.SecretRef = varName;
+        spec.Headers["Authorization"] = "Basic explicit";
 
-            await RunToCompletionAsync(h, spec);
+        await RunToCompletionAsync(h, spec);
 
-            await WaitForRequestsAsync(h, 1);
-            Assert.Equal("Basic explicit",
-                Assert.Single(handler.LastRequest.Headers.GetValues("Authorization")));
-        }
-        finally { Environment.SetEnvironmentVariable(varName, null); }
+        await WaitForRequestsAsync(h, 1);
+        Assert.Equal("Basic explicit",
+            Assert.Single(handler.LastRequest.Headers.GetValues("Authorization")));
+    }
+
+    [Fact]
+    public async Task Unresolved_url_placeholder_blocks_dispatch_without_issuing_a_request()
+    {
+        var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
+        using var h = await BuildAsync(handler);
+
+        await DispatchAsync(h, Post("https://cms.example/api/{missingRoute}", abortOnFailure: true));
+
+        await Task.Delay(300);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Unresolved_header_placeholder_blocks_dispatch_without_issuing_a_request()
+    {
+        var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
+        using var h = await BuildAsync(handler);
+
+        var spec = Post("https://cms.example/api/publish", abortOnFailure: true);
+        spec.Headers["X-Trace"] = "{missingTraceId}";
+
+        await DispatchAsync(h, spec);
+
+        await Task.Delay(300);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Unresolved_content_type_placeholder_blocks_dispatch_without_issuing_a_request()
+    {
+        var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
+        using var h = await BuildAsync(handler);
+
+        var spec = Post("https://cms.example/api/publish", abortOnFailure: true);
+        spec.Headers["Content-Type"] = "application/{missingFormat}";
+        spec.BodyTemplate = """{"ok":true}""";
+
+        await DispatchAsync(h, spec);
+
+        await Task.Delay(300);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Unresolved_body_placeholder_blocks_dispatch_without_issuing_a_request()
+    {
+        var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
+        using var h = await BuildAsync(handler);
+
+        var spec = Post("https://cms.example/api/publish", abortOnFailure: true);
+        spec.BodyTemplate = """{"title":"{missingTitle}"}""";
+
+        await DispatchAsync(h, spec);
+
+        await Task.Delay(300);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Ordinary_json_braces_in_body_do_not_count_as_unresolved_placeholders()
+    {
+        var handler = FakeHttpMessageHandler.Respond(HttpStatusCode.OK, "{}");
+        using var h = await BuildAsync(handler);
+
+        var spec = Post("https://cms.example/api/publish");
+        spec.BodyTemplate = """{"meta":{"ok":true},"items":[{"name":"one"}]}""";
+
+        await RunToCompletionAsync(h, spec);
+
+        await WaitForRequestsAsync(h, 1);
+        using var doc = System.Text.Json.JsonDocument.Parse(handler.LastBody!);
+        Assert.True(doc.RootElement.GetProperty("meta").GetProperty("ok").GetBoolean());
+        Assert.Equal("one", doc.RootElement.GetProperty("items")[0].GetProperty("name").GetString());
     }
 
     // ── Bad configuration ───────────────────────────────────────────────────
@@ -661,8 +734,13 @@ public class ActionExecutorHttpRequestTests
         ---
         title: 5 Ways to Cut Kanban Cycle Time
         slug: cut-kanban-cycle-time
+        categorySlug: operations
         excerpt: Five field-tested changes that shrink the Todo-to-Done gap without adding headcount.
         contentType: article
+        tags:
+          - workflow automation
+          - kanban
+          - AI-assisted publishing
         seo:
           title: Cut Kanban Cycle Time: 5 Field-Tested Fixes
           description: Five practical, field-tested ways to shrink kanban cycle time without hiring — from WIP limits to automated quality gates.
@@ -714,6 +792,8 @@ public class ActionExecutorHttpRequestTests
         Assert.Null(error);
         Assert.Equal("5 Ways to Cut Kanban Cycle Time", draft!.Title);
         Assert.Equal("cut-kanban-cycle-time", draft.Slug);
+        Assert.Equal("operations", draft.CategorySlug);
+        Assert.Equal(["workflow automation", "kanban", "AI-assisted publishing"], draft.Tags);
         Assert.False(string.IsNullOrWhiteSpace(draft.Excerpt));
         Assert.Equal("article", draft.ContentType);
         Assert.False(string.IsNullOrWhiteSpace(draft.ImagePrompt)); // AD-8: always emitted
@@ -762,5 +842,14 @@ public class ActionExecutorHttpRequestTests
         Assert.Contains("Cycle time is the single number", doc.RootElement.GetProperty("body").GetString());
         Assert.Equal(h.Slug, doc.RootElement.GetProperty("venture").GetString());
         Assert.Equal($"{h.Slug}#{h.TicketId}", doc.RootElement.GetProperty("sourceTicket").GetString());
+        if (doc.RootElement.TryGetProperty("categorySlug", out var categorySlug))
+            Assert.Equal("operations", categorySlug.GetString());
+        if (doc.RootElement.TryGetProperty("tags", out var tags))
+        {
+            Assert.Equal(System.Text.Json.JsonValueKind.Array, tags.ValueKind);
+            Assert.Equal(
+                new[] { "workflow automation", "kanban", "AI-assisted publishing" },
+                tags.EnumerateArray().Select(tag => tag.GetString() ?? "").ToArray());
+        }
     }
 }

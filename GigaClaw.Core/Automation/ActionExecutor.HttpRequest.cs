@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using GigaClaw.Core.Automation.Triggers;
 using GigaClaw.Core.Automation.Handoffs;
@@ -79,6 +80,14 @@ internal sealed partial class ActionExecutor
         }
 
         var url = Render(spec.Url).Trim();
+        if (TryFindUnresolvedTemplateToken(url, out var unresolvedUrlToken))
+        {
+            _logger.LogWarning(
+                "httpRequest: URL still contains unresolved placeholder '{Token}' — request not sent",
+                unresolvedUrlToken);
+            return await FailAsync($"unresolved URL placeholder {unresolvedUrlToken}");
+        }
+
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
@@ -147,6 +156,7 @@ internal sealed partial class ActionExecutor
 
             string? contentType = null;
             var hasAuthorization = false;
+            var renderedHeaders = new List<(string Name, string Value)>();
             foreach (var (name, rawValue) in spec.Headers)
             {
                 if (string.IsNullOrWhiteSpace(name)) continue;
@@ -158,20 +168,54 @@ internal sealed partial class ActionExecutor
                 }
                 if (string.Equals(name, "Authorization", StringComparison.OrdinalIgnoreCase))
                     hasAuthorization = true;
+                renderedHeaders.Add((name, value));
+            }
+
+            if (TryFindUnresolvedTemplateToken(body, out var unresolvedBodyToken))
+            {
+                _logger.LogWarning(
+                    "httpRequest: body still contains unresolved placeholder '{Token}' — request not sent",
+                    unresolvedBodyToken);
+                return await FailAsync($"unresolved body placeholder {unresolvedBodyToken}");
+            }
+
+            if (TryFindUnresolvedTemplateToken(contentType, out var unresolvedContentTypeToken))
+            {
+                _logger.LogWarning(
+                    "httpRequest: header 'Content-Type' still contains unresolved placeholder '{Token}' — request not sent",
+                    unresolvedContentTypeToken);
+                return await FailAsync($"unresolved header placeholder {unresolvedContentTypeToken}");
+            }
+
+            foreach (var (name, value) in renderedHeaders)
+            {
+                if (TryFindUnresolvedTemplateToken(value, out var unresolvedHeaderToken))
+                {
+                    _logger.LogWarning(
+                        "httpRequest: header '{Header}' still contains unresolved placeholder '{Token}' — request not sent",
+                        name, unresolvedHeaderToken);
+                    return await FailAsync($"unresolved header placeholder {unresolvedHeaderToken}");
+                }
+
                 if (!request.Headers.TryAddWithoutValidation(name, value))
                     _logger.LogWarning("httpRequest: header '{Header}' was rejected — skipping it", name);
             }
 
-            if (!string.IsNullOrWhiteSpace(spec.SecretRef))
+            if (!string.IsNullOrWhiteSpace(spec.SecretRef) && hasAuthorization)
+            {
+                _logger.LogDebug("httpRequest: explicit Authorization header present — ignoring secretRef '{Name}'", spec.SecretRef);
+            }
+            else if (!string.IsNullOrWhiteSpace(spec.SecretRef))
             {
                 // Only the variable NAME is ever logged; the token itself is never written anywhere.
                 var token = Environment.GetEnvironmentVariable(spec.SecretRef);
                 if (string.IsNullOrEmpty(token))
+                {
                     _logger.LogWarning(
-                        "httpRequest: secretRef '{Name}' is not set on the server — sending the request without an Authorization header",
+                        "httpRequest: secretRef '{Name}' is not set on the server — request not sent",
                         spec.SecretRef);
-                else if (hasAuthorization)
-                    _logger.LogDebug("httpRequest: explicit Authorization header present — ignoring secretRef '{Name}'", spec.SecretRef);
+                    return await FailAsync($"secretRef '{spec.SecretRef}' is not set");
+                }
                 else
                     request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
             }
@@ -225,6 +269,21 @@ internal sealed partial class ActionExecutor
             return await FailAsync(ex.Message);
         }
     }
+
+    private static bool TryFindUnresolvedTemplateToken(string? value, out string token)
+    {
+        token = "";
+        if (string.IsNullOrEmpty(value)) return false;
+
+        var match = UnresolvedTemplateTokenRegex().Match(value);
+        if (!match.Success) return false;
+
+        token = match.Value;
+        return true;
+    }
+
+    [GeneratedRegex(@"\{[A-Za-z][A-Za-z0-9_.-]{0,127}\}", RegexOptions.CultureInvariant)]
+    private static partial Regex UnresolvedTemplateTokenRegex();
 
     /// <summary>
     /// Writes the queryable denial receipt for an outbound dry run: a structured
