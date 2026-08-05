@@ -215,6 +215,16 @@ public sealed class AgentsTemplateService
         catch { return false; }
     }
 
+    public bool IsCodexAvailable()
+    {
+        try
+        {
+            var (ok, _) = RunProcess("codex", "--version", workingDirectory: null);
+            return ok;
+        }
+        catch { return false; }
+    }
+
     private static (bool Ok, string Output) RunProcess(string file, string args, string? workingDirectory)
     {
         try

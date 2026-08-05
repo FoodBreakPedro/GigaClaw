@@ -5,6 +5,21 @@ namespace GigaClaw.Core.Tests.Services;
 
 public sealed class MemberServiceTests
 {
+    [Fact]
+    public async Task Harness_DefaultsToClaudeAndPersistsCodexUpdate()
+    {
+        using var tmp = new TempDir();
+        var (members, _, _, slug) = BuildSut(tmp);
+        var member = await members.CreateMemberAsync(slug, "Programmer");
+
+        Assert.Equal(AgentHarness.Claude, member.Harness);
+
+        await members.UpdateMemberAsync(slug, member.Id, harness: AgentHarness.Codex);
+        var reloaded = await members.GetMemberBySlugAsync(slug, member.Slug);
+
+        Assert.Equal(AgentHarness.Codex, reloaded!.Harness);
+    }
+
     private static (MemberService members, TicketService tickets, ProjectService projects, string slug) BuildSut(TempDir tmp)
     {
         var projects = new ProjectService(tmp.Path);

@@ -20,7 +20,7 @@ public record CreateColumnRequest(string Name, string Color = "#5a6a80");
 public record UpdateColumnRequest(string? Name = null, string? Color = null);
 public record ReorderColumnRequest(int ColumnId, int Index);
 public record CreateMemberRequest(string Name);
-public record UpdateMemberRequest(string? Name = null, string? DefaultModel = null);
+public record UpdateMemberRequest(string? Name = null, string? DefaultModel = null, AgentHarness? Harness = null);
 public record SetParentRequest(int ParentId);
 public record AddTicketDependencyRequest(int BlockingTicketId);
 public record UpdateProjectRequest(string? WorkspacePath = null, string? FallbackModel = null, bool UpdateFallbackModel = false);

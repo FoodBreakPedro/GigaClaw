@@ -39,6 +39,10 @@ public class TodoDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Member>()
+            .Property(member => member.Harness)
+            .HasConversion<string>();
+
         modelBuilder.Entity<Ticket>(e =>
         {
             e.HasKey(t => t.Id);

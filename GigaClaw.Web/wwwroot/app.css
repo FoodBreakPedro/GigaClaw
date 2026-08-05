@@ -2434,6 +2434,7 @@ details[open] .console-msg-summary::before { transform: rotate(90deg); }
     border-radius: 4px;
 }
 /* Unified list layout for settings subsections (members, columns, labels) */
+.settings-list-scroll { width: 100%; overflow-x: auto; }
 .settings-list { width: 100%; border-collapse: collapse; }
 .settings-list th, .settings-list td {
     text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--border, #333);

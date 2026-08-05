@@ -12,7 +12,7 @@
   "FolderCreated": "Carpeta creada.",
   "OnboardingTitle": "Bienvenido a GigaClaw",
   "OnboardingIntro1": "GigaClaw es un kanban que orquesta proyectos de agentes. Cada columna es una etapa, los tickets fluyen entre etapas y los agentes LLM (programmer, groomer, producer, QA, committer, code-janitor, evaluator) los asumen y procesan automáticamente según los activadores que configures.",
-  "OnboardingIntro2": "Creas un proyecto, lo apuntas a una carpeta de espacio de trabajo, inicializas las plantillas de agentes y el motor de fondo ejecuta subprocesos de Claude Code para trabajar en tus tickets.",
+  "OnboardingIntro2": "Creas un proyecto, lo apuntas a una carpeta de espacio de trabajo, inicializas las plantillas de agentes y el motor de fondo ejecuta subprocesos de Claude Code o Codex para trabajar en tus tickets.",
   "OnboardingRequirements": "Herramientas externas requeridas",
   "OnboardingInstall": "Instalar",
   "OnboardingMissingWarning": "GigaClaw puede funcionar sin ellas, pero la asignación de agentes y los commits de git fallarán. Instala las herramientas que faltan y asegúrate de que estén en tu PATH (variables de entorno), luego haz clic en Volver a comprobar.",

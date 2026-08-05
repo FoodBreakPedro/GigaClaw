@@ -22,11 +22,13 @@
     <ProjectReference Include="..\GigaClaw.Web\GigaClaw.Web.csproj" />
     <ProjectReference Include="..\GigaClaw.Catalog\GigaClaw.Catalog.csproj" />
     <ProjectReference Include="..\GigaClaw.ClaudeMock\GigaClaw.ClaudeMock.csproj" />
+    <ProjectReference Include="..\GigaClaw.CodexMock\GigaClaw.CodexMock.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Collections run in parallel. Fixtures that mutate process-wide env vars are serialized
-         through shared collections instead: "MockClaude" (GIGACLAW_CLAUDE_BIN) and "ApiHost"
+         through shared collections instead: "MockClaude" (GIGACLAW_CLAUDE_BIN), "MockCodex"
+         (GIGACLAW_CODEX_BIN), and "ApiHost"
          (GIGACLAW_DATA_DIR). -->
     <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

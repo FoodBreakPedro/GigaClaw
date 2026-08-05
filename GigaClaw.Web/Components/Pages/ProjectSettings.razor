@@ -88,8 +88,9 @@ else
         <section class="settings-section">
             <h2>@L["Members"]</h2>
             <p class="settings-hint">@L["MembersHint"]</p>
+            <div class="settings-list-scroll">
             <table class="settings-list">
-                <thead><tr><th>@L["Name"]</th><th>@L["Slug"]</th><th>@L["Model"]</th><th></th></tr></thead>
+                <thead><tr><th>@L["Name"]</th><th>@L["Slug"]</th><th>@L["Harness"]</th><th>@L["Model"]</th><th></th></tr></thead>
                 <tbody>
                     @foreach (var m in _members)
                     {
@@ -108,22 +109,49 @@ else
                             <td>
                                 @if (_editingMemberId == m.Id)
                                 {
+                                    <select class="settings-input"
+                                            @bind="_editingMemberHarness"
+                                            @bind:after="OnEditingHarnessChanged">
+                                        <option value="@AgentHarness.Claude">Claude</option>
+                                        <option value="@AgentHarness.Codex">Codex</option>
+                                    </select>
+                                }
+                                else
+                                {
+                                    <code>@m.Harness</code>
+                                }
+                            </td>
+                            <td>
+                                @if (_editingMemberId == m.Id)
+                                {
                                     <select class="settings-input" @bind="_editingMemberModel" style="max-width:220px">
                                         <option value="">@L["DefaultModelPlaceholder"]</option>
-                                        <optgroup label="Claude">
-                                            @foreach (var model in ClaudeModels)
-                                            {
-                                                <option value="@model">@model</option>
-                                            }
-                                        </optgroup>
-                                        @if (_discoveredModels.Count > 0)
+                                        @if (_editingMemberHarness == AgentHarness.Codex)
                                         {
-                                            <optgroup label="Local (Ollama)">
-                                                @foreach (var model in _discoveredModels)
+                                            <optgroup label="Codex">
+                                                @foreach (var model in CodexModels)
                                                 {
                                                     <option value="@model">@model</option>
                                                 }
                                             </optgroup>
+                                        }
+                                        else
+                                        {
+                                            <optgroup label="Claude">
+                                                @foreach (var model in ClaudeModels)
+                                                {
+                                                    <option value="@model">@model</option>
+                                                }
+                                            </optgroup>
+                                            @if (_discoveredModels.Count > 0)
+                                            {
+                                                <optgroup label="Local (Ollama)">
+                                                    @foreach (var model in _discoveredModels)
+                                                    {
+                                                        <option value="@model">@model</option>
+                                                    }
+                                                </optgroup>
+                                            }
                                         }
                                         @if (!string.IsNullOrEmpty(_editingMemberModel) && !AllModels.Contains(_editingMemberModel))
                                         {
@@ -144,7 +172,7 @@ else
                                 }
                                 else
                                 {
-                                    <button class="icon-btn" @onclick="() => { _editingMemberId = m.Id; _editingMemberName = m.Name; _editingMemberModel = m.DefaultModel; }">✎</button>
+                                    <button class="icon-btn" @onclick="() => { _editingMemberId = m.Id; _editingMemberName = m.Name; _editingMemberModel = m.DefaultModel; _editingMemberHarness = m.Harness; }">✎</button>
                                     <button class="icon-btn delete-icon" @onclick="() => _deleteConfirmMember = m">🗑</button>
                                 }
                             </td>
@@ -154,10 +182,12 @@ else
                         <td><input placeholder="@L["NewMemberSettingsPlaceholder"]" @bind="_newMemberName" @bind:event="oninput" @onkeydown="OnMemberKey" /></td>
                         <td></td>
                         <td></td>
+                        <td></td>
                         <td><button class="settings-primary" @onclick="CreateMember" disabled="@string.IsNullOrWhiteSpace(_newMemberName)">@L["Add"]</button></td>
                     </tr>
                 </tbody>
             </table>
+            </div>
         </section>
 
         <section class="settings-section">
@@ -351,12 +381,14 @@ else
     private List<string> _discoveredModels = new();
     private string? _localModelsError;
     private static readonly IReadOnlyList<string> ClaudeModels = ClaudeModelCatalog.Models;
-    private List<string> AllModels => ClaudeModels.Concat(_discoveredModels).ToList();
+    private static readonly IReadOnlyList<string> CodexModels = CodexModelCatalog.Models;
+    private List<string> AllModels => ClaudeModels.Concat(CodexModels).Concat(_discoveredModels).ToList();
 
     private List<Member> _members = new();
     private int? _editingMemberId;
     private string _editingMemberName = "";
     private string? _editingMemberModel;
+    private AgentHarness _editingMemberHarness = AgentHarness.Claude;
     private string _newMemberName = "";
     private Member? _deleteConfirmMember;
 
@@ -491,6 +523,15 @@ else
 
     private async Task OnMemberKey(KeyboardEventArgs e) { if (e.Key == "Enter") await CreateMember(); }
 
+    private void OnEditingHarnessChanged()
+    {
+        if (string.IsNullOrWhiteSpace(_editingMemberModel)) return;
+        var allowed = _editingMemberHarness == AgentHarness.Codex
+            ? CodexModels
+            : ClaudeModels.Concat(_discoveredModels);
+        if (!allowed.Contains(_editingMemberModel)) _editingMemberModel = null;
+    }
+
     private async Task CreateMember()
     {
         if (string.IsNullOrWhiteSpace(_newMemberName)) return;
@@ -505,7 +546,12 @@ else
     private async Task SaveMember(Member m)
     {
         if (string.IsNullOrWhiteSpace(_editingMemberName)) { _editingMemberId = null; return; }
-        var body = new { name = _editingMemberName.Trim(), defaultModel = _editingMemberModel };
+        var body = new
+        {
+            name = _editingMemberName.Trim(),
+            defaultModel = _editingMemberModel,
+            harness = _editingMemberHarness,
+        };
         var resp = await NewHttp().PatchAsJsonAsync($"/api/projects/{Slug}/members/{m.Id}", body);
         if (resp.IsSuccessStatusCode)
         {

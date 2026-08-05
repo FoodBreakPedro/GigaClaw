@@ -26,6 +26,16 @@
                        rel="noopener">@L["OnboardingInstall"]</a>
                 }
             </div>
+            <div class="onboarding-check @(_codexInstalled ? "ok" : "missing")">
+                <span>@(_codexInstalled ? "✓" : "✗") Codex</span>
+                @if (!_codexInstalled)
+                {
+                    <a class="header-action-btn"
+                       href="https://developers.openai.com/codex/cli/"
+                       target="_blank"
+                       rel="noopener">@L["OnboardingInstall"]</a>
+                }
+            </div>
             <div class="onboarding-check @(_gitInstalled ? "ok" : "missing")">
                 <span>@(_gitInstalled ? "✓" : "✗") Git</span>
                 @if (!_gitInstalled)
@@ -37,7 +47,7 @@
                 }
             </div>
 
-            @if (!_claudeInstalled || !_gitInstalled)
+            @if ((!_claudeInstalled && !_codexInstalled) || !_gitInstalled)
             {
                 <p class="settings-status settings-status-err" style="margin-top:0.75rem">@L["OnboardingMissingWarning"]</p>
             }
@@ -53,13 +63,14 @@
 @code {
     private bool _showOnboarding;
     private bool _claudeInstalled;
+    private bool _codexInstalled;
     private bool _gitInstalled;
     private IDisposable? _escOnboarding;
 
     protected override void OnInitialized()
     {
         RecheckTools();
-        _showOnboarding = !AppSettings.OnboardingSeen || !_claudeInstalled || !_gitInstalled;
+        _showOnboarding = !AppSettings.OnboardingSeen || (!_claudeInstalled && !_codexInstalled) || !_gitInstalled;
     }
 
     protected override Task OnAfterRenderAsync(bool firstRender)
@@ -78,6 +89,7 @@
     private void RecheckTools()
     {
         _claudeInstalled = AgentsTemplate.IsClaudeAvailable();
+        _codexInstalled = AgentsTemplate.IsCodexAvailable();
         _gitInstalled = AgentsTemplate.IsGitAvailable();
     }
 

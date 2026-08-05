@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using GigaClaw.Core.Automation.Policy;
 using GigaClaw.Core.Automation.Runners;
+using GigaClaw.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace GigaClaw.Core.Automation;
@@ -32,6 +33,7 @@ public sealed class ClaudeRunContext
     public string ConcurrencyGroup { get; init; } = "";
     public IDictionary<string, string> Env { get; init; } = new Dictionary<string, string>();
     public string? Model { get; init; }
+    public AgentHarness? Harness { get; init; }
 
     /// <summary>Project-wide fallback model. If a run hits a quota / usage-limit error from the claude CLI,
     /// the runner retries once with this model in the same AgentRun. Null disables the fallback.</summary>
@@ -56,6 +58,7 @@ public sealed class ClaudeRunContext
         ConcurrencyGroup = ConcurrencyGroup,
         Env = Env,
         Model = Model,
+        Harness = Harness,
         FallbackModel = FallbackModel,
         ExtraContext = steerText,
         InlineSkillContent = InlineSkillContent,
@@ -374,6 +377,7 @@ public sealed class ClaudeRunner : IAgentRunner
                     OnEventHook = ctx.OnEventHook,
                     ChatTarget = ctx.ChatTarget,
                     Model = ctx.Model,
+                    Harness = ctx.Harness,
                     FallbackModel = ctx.FallbackModel,
                     Env = ctx.Env,
                     PendingSteerMessages = run.PendingSteerMessages,
@@ -776,7 +780,7 @@ public sealed class ClaudeRunner : IAgentRunner
     private TimeSpan _resultExitGrace = TimeSpan.FromSeconds(15);
     internal TimeSpan ResultExitGrace { get => _resultExitGrace; set => _resultExitGrace = value; }
 
-    private static async Task<string> BuildPromptAsync(ClaudeRunContext ctx, string skillContent, bool isResume, CancellationToken ct)
+    internal static async Task<string> BuildPromptAsync(ClaudeRunContext ctx, string skillContent, bool isResume, CancellationToken ct)
     {
         var imagesBlock = BuildAttachedImagesBlock(ctx);
 
@@ -815,7 +819,7 @@ public sealed class ClaudeRunner : IAgentRunner
             : $"{prefix}{skillContent}\n\n{ctx.ExtraContext}{imagesBlock}";
     }
 
-    private static string BuildAttachedImagesBlock(ClaudeRunContext ctx)
+    internal static string BuildAttachedImagesBlock(ClaudeRunContext ctx)
     {
         if (!(ctx.ImagePaths != null && ctx.ImagePaths.Count > 0)) return "";
         var sb = new StringBuilder();
@@ -827,7 +831,7 @@ public sealed class ClaudeRunner : IAgentRunner
         return sb.ToString();
     }
 
-    private static void CleanupImageTempFiles(ClaudeRunContext ctx)
+    internal static void CleanupImageTempFiles(ClaudeRunContext ctx)
     {
         if (ctx.ImagePaths is null || ctx.ImagePaths.Count == 0) return;
         foreach (var p in ctx.ImagePaths)

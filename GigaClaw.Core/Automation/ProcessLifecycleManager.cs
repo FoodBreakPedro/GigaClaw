@@ -71,11 +71,18 @@ internal static class ProcessLifecycleManager
         return "claude";
     }
 
-    internal static ProcessStartInfo BuildProcessStartInfo(ClaudeRunContext ctx, IList<string> args)
+    internal static ProcessStartInfo BuildProcessStartInfo(ClaudeRunContext ctx, IList<string> args) =>
+        BuildProcessStartInfo(ctx, args, _claudeBinary.Value, isClaude: true);
+
+    internal static ProcessStartInfo BuildProcessStartInfo(
+        ClaudeRunContext ctx,
+        IList<string> args,
+        string binary,
+        bool isClaude)
     {
         var psi = new ProcessStartInfo
         {
-            FileName = _claudeBinary.Value,
+            FileName = binary,
             // R5: a worktree-isolated dispatch executes with the ticket's worktree as cwd; every
             // other workspace-relative read (skill, preamble, memory, …) still resolves against
             // ctx.WorkspacePath — see ClaudeRunContext.ExecutionPath.
@@ -94,7 +101,11 @@ internal static class ProcessLifecycleManager
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
 
-        psi.Environment["CLAUDE_AGENT"] = ctx.AgentName;
+        psi.Environment["GIGACLAW_AGENT"] = ctx.AgentName;
+        if (isClaude)
+            psi.Environment["CLAUDE_AGENT"] = ctx.AgentName;
+        else
+            psi.Environment["CODEX_AGENT"] = ctx.AgentName;
         // Disable Claude Code's built-in "auto memory" feature for dispatched agents. It is
         // on by default and injects instructions to maintain a per-host memory store under
         // ~/.claude/projects/<hash>/memory/ (MEMORY.md index + topic files) written with the
@@ -102,7 +113,8 @@ internal static class ProcessLifecycleManager
         // owns the agent memory layer (.agents/{agent}/memory.md, committed to the workspace),
         // so we suppress the native one to avoid two divergent, uncommitted memory stores.
         // Scoped to the subprocess only — the host user's own main-session memory is untouched.
-        psi.Environment["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1";
+        if (isClaude)
+            psi.Environment["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1";
         if (ctx.TicketId is int tid) psi.Environment["GIGACLAW_TICKET_ID"] = tid.ToString();
         // Tell skills which API URL to talk to. Skills resolve `${GIGACLAW_API_URL:-http://localhost:5230}`
         // so they hit the *current* host instance even when running on a non-default port (e.g. an

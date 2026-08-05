@@ -7,6 +7,7 @@ using GigaClaw.Core.Automation.Handoffs;
 using GigaClaw.Core.Automation.Policy;
 using GigaClaw.Core.Automation.Runners;
 using GigaClaw.Core.Automation.Verdicts;
+using GigaClaw.Core.Models;
 using GigaClaw.Core.Services;
 
 namespace GigaClaw.Core.Automation;
@@ -730,16 +731,21 @@ internal sealed partial class ActionExecutor
         var effectiveModel = a.Model;
         var effectiveEnv = a.Env;
         string? ollamaValidationError = null;
+        var member = await _members.GetMemberBySlugAsync(rt.Slug, agentName);
+        var effectiveHarness = AgentRunnerRouter.ResolveOverride()
+            ?? member?.Harness
+            ?? AgentHarness.Claude;
 
         // Resolve model from member's DefaultModel if action model is null
         if (effectiveModel is null)
         {
-            var member = await _members.GetMemberBySlugAsync(rt.Slug, agentName);
             var memberDefault = member?.DefaultModel ?? project?.LocalModelName;
             effectiveModel = string.IsNullOrWhiteSpace(memberDefault) ? null : memberDefault;
         }
 
-        if (effectiveModel is not null && !effectiveModel.StartsWith("claude-"))
+        if (effectiveHarness == AgentHarness.Claude &&
+            effectiveModel is not null &&
+            !effectiveModel.StartsWith("claude-"))
         {
             var baseUrl = project?.LocalModelBaseUrl;
             if (string.IsNullOrWhiteSpace(baseUrl))
@@ -795,6 +801,7 @@ internal sealed partial class ActionExecutor
             LockTimeoutMinutes = a.LockTimeoutMinutes,
             Env = effectiveEnv,
             Model = effectiveModel,
+            Harness = effectiveHarness,
             FallbackModel = fallbackModel,
             ExtraContext = await ComposeDispatchContextAsync(rt, firing.TicketId, a.Context),
             RetryOnResumeFailure = true,

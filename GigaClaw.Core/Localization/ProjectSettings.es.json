@@ -10,6 +10,7 @@
   "MembersHint": "Los miembros se utilizan para asignar tickets. Las automatizaciones se dirigen a un miembro por su slug (campo assigneeSlug).",
   "Slug": "Slug",
   "Model": "Modelo",
+  "Harness": "Motor",
   "DefaultModelPlaceholder": "(por defecto de la CLI)",
   "NewMemberSettingsPlaceholder": "Nuevo miembro…",
   "Columns": "Columnas",

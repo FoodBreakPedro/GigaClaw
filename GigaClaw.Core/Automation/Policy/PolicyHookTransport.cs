@@ -1062,6 +1062,7 @@ public sealed class PolicyHookRunSession : IAsyncDisposable
     }
 
     public string SettingsPath { get; }
+    public Uri Endpoint => _transport.Endpoint;
     public long AcknowledgementCount => _transport.AcknowledgementCount;
     public bool WasAcknowledged => _transport.WasAcknowledged;
     public IReadOnlyList<PolicyHookObservation> SnapshotObservations() =>

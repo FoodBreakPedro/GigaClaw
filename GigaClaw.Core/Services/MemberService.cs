@@ -39,6 +39,7 @@ public class MemberService
             await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Members ADD COLUMN Skill TEXT NULL");
             await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Members ADD COLUMN IsAgent INTEGER NOT NULL DEFAULT 0");
             await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Members ADD COLUMN DefaultModel TEXT NULL");
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Members ADD COLUMN Harness TEXT NOT NULL DEFAULT 'Claude'");
         });
 
         // Owner is the human user — referenced by string literal "owner" throughout the
@@ -93,18 +94,33 @@ public class MemberService
     /// called via <see cref="AgentsTemplateService.EnsureAgentMembersAsync"/>. Null leaves the
     /// member without an explicit default, falling back to the project's FallbackModel.
     /// </summary>
-    public async Task<Member> CreateMemberAsync(string projectSlug, string name, string? defaultModel = null)
+    public async Task<Member> CreateMemberAsync(
+        string projectSlug,
+        string name,
+        string? defaultModel = null,
+        AgentHarness harness = AgentHarness.Claude)
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureMemberTableAsync(db);
         await BackfillSlugsAsync(db);
-        var member = new Member { Name = name, Slug = Member.ToSlug(name), DefaultModel = defaultModel };
+        var member = new Member
+        {
+            Name = name,
+            Slug = Member.ToSlug(name),
+            DefaultModel = defaultModel,
+            Harness = harness,
+        };
         db.Members.Add(member);
         await db.SaveChangesAsync();
         return member;
     }
 
-    public async Task<Member?> UpdateMemberAsync(string projectSlug, int memberId, string? name = null, string? defaultModel = null)
+    public async Task<Member?> UpdateMemberAsync(
+        string projectSlug,
+        int memberId,
+        string? name = null,
+        string? defaultModel = null,
+        AgentHarness? harness = null)
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureMemberTableAsync(db);
@@ -116,6 +132,7 @@ public class MemberService
             member.Slug = Member.ToSlug(name);
         }
         if (defaultModel is not null) member.DefaultModel = defaultModel;
+        if (harness is not null) member.Harness = harness.Value;
         await db.SaveChangesAsync();
         return member;
     }
