@@ -39,8 +39,8 @@ output is a **comment**, plus a status/label move.
 - Post a comment whose first line is the literal token `REJECT`, a specific, actionable fix list, legacy receipt `CONTENT-REVIEW REJECT cycle N/2 artifact-sha256:<digest>`, and typed verdict `GIGACLAW-VERDICT v1 blog-reviewer FIX artifact-sha256:<digest>` with fenced JSON (`verdict: "FIX"`, `evidence`: `[{ "kind": "hash", "ref": "sha256:<digest>", "note": "ticket description draft snapshot" }]` — no `path` evidence).
 - Move the ticket back to `InProgress` — **not** `Todo`. `content-writer` stays assigned; the `content-writer-resume` automation redispatches it there to act on your critique.
 
-**FAIL, cycle would exceed 2/2** →
-- Post the same `REJECT`-shaped comment (still with the cycle marker, so the count is auditable) and typed verdict `GIGACLAW-VERDICT v1 blog-reviewer BLOCK artifact-sha256:<digest>` with fenced JSON (`verdict: "BLOCK"`), then move the ticket to `Blocked` instead of `InProgress`, stating plainly that the two-revision budget is spent and an owner needs to intervene. Do not start a third writer/reviewer loop.
+**FAIL, cycle 2/2 is exhausted** →
+- Confirm the ticket description contains the readable current draft. Post the same `REJECT`-shaped comment and typed `GIGACLAW-VERDICT v1 blog-reviewer BLOCK artifact-sha256:<digest>` with fenced JSON (`verdict: "BLOCK"`). Ask one specific owner question and enumerate options to accept the current draft, restart from the last approved version, or reject it; then move the ticket to `Blocked`. If no readable draft is present, return it to `groomer` in `Backlog` with the parse failure instead. Do not start a third writer/reviewer loop.
 
 Use the same status-checked, author-stamped write pattern as everywhere else in this file (verify
 the HTTP status of every PATCH/POST; write scratch JSON to a workspace file, never `/tmp`; delete
