@@ -200,7 +200,7 @@ Server constraints resolved:
 - `/home/zabalazone/gigaclaw/bin/update-from-main.sh` now retries health checks for up to 24 seconds. Backup: `update-from-main.sh.bak-20260806-cp5`. The first live deployment needed two retries before Kestrel answered, proving the prior false-negative race.
 - All eight legacy workspaces received a core `packs.lock.json` baseline without changing any other `.agents` byte; before/after inventories are under `/home/zabalazone/gigaclaw/logs/baseline-adoption-20260806`.
 - Five byte-identical historical core skill files and the two bounded resume automation entries were propagated with exact-hash guards. Backups are under `/home/zabalazone/gigaclaw/logs/template-propagation-20260806`.
-- Codex CLI 0.146.1 was installed under `~/.local`; device authentication and the instance-wide `GIGACLAW_AGENT_HARNESS=codex` override must both be complete before fallback dispatch is live.
+- Codex CLI 0.146.1 was installed under `~/.local`, authenticated with ChatGPT, and enabled through `GIGACLAW_AGENT_HARNESS=codex` plus an absolute `GIGACLAW_CODEX_BIN`. The opt-in real CLI smoke passed 1/1 on zabs-server.
 
 Review assignment:
 
