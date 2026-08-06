@@ -17,7 +17,7 @@ public static partial class Endpoints
         {
             try
             {
-                var ticket = await ts.CreateTicketAsync(slug, req.Title, req.Description, req.CreatedBy, req.Status, req.LabelIds, req.Priority, req.AssignedTo, req.ParentId);
+                var ticket = await ts.CreateTicketAsync(slug, req.Title, req.Description, req.CreatedBy, req.Status, req.LabelIds, req.Priority, req.AssignedTo, req.ParentId, req.DeliverableType);
                 notifier.NotifyProjectUpdated(slug);
                 return Results.Created($"/api/projects/{slug}/tickets/{ticket.Id}", ticket);
             }
@@ -33,7 +33,7 @@ public static partial class Endpoints
         {
             try
             {
-                var ticket = await ts.UpdateTicketAsync(slug, id, req.Title, req.Description, req.Author, req.Priority, req.AssignedTo);
+                var ticket = await ts.UpdateTicketAsync(slug, id, req.Title, req.Description, req.Author, req.Priority, req.AssignedTo, req.DeliverableType);
                 if (ticket is not null && req.LabelIds is not null)
                     await ts.SetTicketLabelsAsync(slug, id, req.LabelIds);
                 if (ticket is not null) notifier.NotifyProjectUpdated(slug);

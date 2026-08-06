@@ -9,6 +9,7 @@ public class Ticket
     public TicketPriority Priority { get; set; } = TicketPriority.NiceToHave;
     public int SortOrder { get; set; }
     public string? AssignedTo { get; set; }
+    public string? DeliverableType { get; set; }
     public string CreatedBy { get; set; } = "owner";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

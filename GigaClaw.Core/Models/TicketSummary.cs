@@ -29,6 +29,9 @@ public record TicketSummary(
     /// <summary>Cumulative USD cost of agent runs on this ticket, as priced by the claude CLI.</summary>
     public double AgentCostUsd { get; init; }
 
+    /// <summary>Requested user-facing deliverable type (for example <c>blog-post</c>), if set.</summary>
+    public string? DeliverableType { get; init; }
+
     /// <summary>Tickets that must complete before this ticket can proceed.</summary>
     public List<TicketDependencyInfo> BlockedBy { get; init; } = [];
 

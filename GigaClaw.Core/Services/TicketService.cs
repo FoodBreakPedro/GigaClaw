@@ -150,6 +150,21 @@ public class TicketService : ITicketDependencyQuery
             await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN WorktreeUpdatedAt TEXT NULL");
         });
 
+    private static Task EnsureDeliverableTypeColumnAsync(TodoDbContext db) =>
+        MigrationGate.RunOnceAsync(db, "tickets-deliverable-type", static d =>
+            MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN DeliverableType TEXT NULL"));
+
+    private static async Task EnsureTicketEntityColumnsAsync(TodoDbContext db)
+    {
+        await EnsureSortOrderColumnAsync(db);
+        await EnsureAssignedToColumnAsync(db);
+        await EnsureParentIdColumnAsync(db);
+        await EnsureScheduleColumnsAsync(db);
+        await EnsureAgentUsageColumnsAsync(db);
+        await EnsureWorktreeColumnsAsync(db);
+        await EnsureDeliverableTypeColumnAsync(db);
+    }
+
     // Hot-path indexes: status/parent filters run on every board render, and the activity
     // subquery in ListTicketsAsync scans per ticket. Must run after the column migrations.
     private static Task EnsureTicketIndexesAsync(TodoDbContext db) =>
@@ -170,6 +185,7 @@ public class TicketService : ITicketDependencyQuery
         await EnsureParentIdColumnAsync(db);
         await EnsureScheduleColumnsAsync(db);
         await EnsureAgentUsageColumnsAsync(db);
+        await EnsureDeliverableTypeColumnAsync(db);
         await EnsureTicketIndexesAsync(db);
         await EnsureTicketDependenciesTableAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
@@ -201,7 +217,8 @@ public class TicketService : ITicketDependencyQuery
                     FireAt = t.FireAt,
                     ScheduleTarget = t.ScheduleTarget,
                     AgentTokens = t.AgentTokens,
-                    AgentCostUsd = t.AgentCostUsd
+                    AgentCostUsd = t.AgentCostUsd,
+                    DeliverableType = t.DeliverableType
                 })
             .ToListAsync();
 
@@ -358,11 +375,7 @@ public class TicketService : ITicketDependencyQuery
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         await EnsureLabelTablesAsync(db);
-        await EnsureParentIdColumnAsync(db);
-        await EnsureAssignedToColumnAsync(db);
-        await EnsureScheduleColumnsAsync(db);
-        await EnsureAgentUsageColumnsAsync(db);
-        await EnsureWorktreeColumnsAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         await EnsureTicketDependenciesTableAsync(db);
         var ticket = await db.Tickets
             .Include(t => t.Comments.OrderBy(c => c.CreatedAt))
@@ -385,6 +398,7 @@ public class TicketService : ITicketDependencyQuery
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureAssignedToColumnAsync(db);
+        await EnsureDeliverableTypeColumnAsync(db);
         await EnsureTicketDependenciesTableAsync(db);
         if (!await db.Tickets.AsNoTracking().AnyAsync(ticket => ticket.Id == ticketId))
             return null;
@@ -622,6 +636,7 @@ public class TicketService : ITicketDependencyQuery
         await EnsureParentIdColumnAsync(db);
         await EnsureScheduleColumnsAsync(db);
         await EnsureAgentUsageColumnsAsync(db);
+        await EnsureDeliverableTypeColumnAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return;
         ticket.AgentTokens += tokens;
@@ -629,7 +644,7 @@ public class TicketService : ITicketDependencyQuery
         await db.SaveChangesAsync();
     }
 
-    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string status = "Backlog", List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null)
+    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string status = "Backlog", List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null, string? deliverableType = null)
     {
         if (string.IsNullOrWhiteSpace(createdBy))
             throw new InvalidOperationException("Le champ 'createdBy' est requis.");
@@ -638,8 +653,7 @@ public class TicketService : ITicketDependencyQuery
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         await EnsureLabelTablesAsync(db);
-        await EnsureAssignedToColumnAsync(db);
-        await EnsureParentIdColumnAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         if (parentId is not null)
         {
             var parentExists = await db.Tickets.AnyAsync(t => t.Id == parentId.Value);
@@ -656,7 +670,8 @@ public class TicketService : ITicketDependencyQuery
             Priority = priority,
             SortOrder = maxSort + 1,
             AssignedTo = assignedTo,
-            ParentId = parentId
+            ParentId = parentId,
+            DeliverableType = string.IsNullOrWhiteSpace(deliverableType) ? null : deliverableType.Trim()
         };
         if (labelIds is { Count: > 0 })
         {
@@ -685,8 +700,7 @@ public class TicketService : ITicketDependencyQuery
             throw new InvalidOperationException("The 'author' field is required.");
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
-        await EnsureScheduleColumnsAsync(db);
-        await EnsureWorktreeColumnsAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
         var columnExists = await db.BoardColumns.AnyAsync(c => c.Name == newStatus);
         if (!columnExists)
@@ -828,9 +842,7 @@ public class TicketService : ITicketDependencyQuery
 
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
-        await EnsureScheduleColumnsAsync(db);
-        await EnsureAssignedToColumnAsync(db);
-        await EnsureWorktreeColumnsAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
 
         if (!await db.BoardColumns.AnyAsync(column => column.Name == newStatus))
@@ -890,7 +902,7 @@ public class TicketService : ITicketDependencyQuery
             targetStatus = "Todo";
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
-        await EnsureScheduleColumnsAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
         var scheduledExists = await db.BoardColumns.AnyAsync(c => c.Name == "Scheduled");
         if (!scheduledExists)
@@ -924,6 +936,7 @@ public class TicketService : ITicketDependencyQuery
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureScheduleColumnsAsync(db);
+        await EnsureDeliverableTypeColumnAsync(db);
         return await db.Tickets
             .Where(t => t.Status == "Scheduled" && t.FireAt != null && t.FireAt <= now)
             .OrderBy(t => t.FireAt)
@@ -940,8 +953,7 @@ public class TicketService : ITicketDependencyQuery
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
-        await EnsureScheduleColumnsAsync(db);
-        await EnsureWorktreeColumnsAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null || !string.Equals(ticket.Status, "Scheduled", StringComparison.OrdinalIgnoreCase))
@@ -965,7 +977,7 @@ public class TicketService : ITicketDependencyQuery
         return ticket;
     }
 
-    public async Task<Ticket?> UpdateTicketAsync(string projectSlug, int ticketId, string? title = null, string? description = null, string author = "owner", TicketPriority? priority = null, string? assignedTo = null)
+    public async Task<Ticket?> UpdateTicketAsync(string projectSlug, int ticketId, string? title = null, string? description = null, string author = "owner", TicketPriority? priority = null, string? assignedTo = null, string? deliverableType = null)
     {
         if (string.IsNullOrWhiteSpace(author))
             throw new InvalidOperationException("The 'author' field is required.");
@@ -973,7 +985,7 @@ public class TicketService : ITicketDependencyQuery
             throw new InvalidOperationException($"Member '{assignedTo}' does not exist.");
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
-        await EnsureAssignedToColumnAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return null;
 
@@ -1020,6 +1032,21 @@ public class TicketService : ITicketDependencyQuery
                 Text = $"assigned the ticket: {old} → {ticket.AssignedTo ?? "nobody"}"
             });
         }
+        if (deliverableType is not null)
+        {
+            var normalizedDeliverableType = string.IsNullOrWhiteSpace(deliverableType) ? null : deliverableType.Trim();
+            if (!string.Equals(normalizedDeliverableType, ticket.DeliverableType, StringComparison.Ordinal))
+            {
+                var old = ticket.DeliverableType ?? "none";
+                ticket.DeliverableType = normalizedDeliverableType;
+                db.ActivityEntries.Add(new ActivityEntry
+                {
+                    TicketId = ticketId,
+                    Author = author,
+                    Text = $"changed deliverable type: {old} → {ticket.DeliverableType ?? "none"}"
+                });
+            }
+        }
         ticket.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return ticket;
@@ -1029,7 +1056,7 @@ public class TicketService : ITicketDependencyQuery
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
-        await EnsureParentIdColumnAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         await EnsureTicketDependenciesTableAsync(db);
         var ticket = await db.Tickets
             .Include(t => t.Comments)
@@ -1055,8 +1082,8 @@ public class TicketService : ITicketDependencyQuery
     {
         if (ticketId == parentId) return false;
         await using var db = _projectService.GetProjectDb(projectSlug);
-        await EnsureParentIdColumnAsync(db);
         await EnsureActivityTableAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         var parent = await db.Tickets.FindAsync(parentId);
         if (ticket is null || parent is null) return false;
@@ -1077,8 +1104,8 @@ public class TicketService : ITicketDependencyQuery
     public async Task<bool> UnparentAsync(string projectSlug, int ticketId, string author = "owner")
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
-        await EnsureParentIdColumnAsync(db);
         await EnsureActivityTableAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null || ticket.ParentId is null) return false;
         var oldParentId = ticket.ParentId.Value;
@@ -1099,6 +1126,7 @@ public class TicketService : ITicketDependencyQuery
         if (string.IsNullOrWhiteSpace(author))
             throw new InvalidOperationException("The 'author' field is required.");
         await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsureTicketEntityColumnsAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return null;
         var comment = new Comment
@@ -1118,6 +1146,7 @@ public class TicketService : ITicketDependencyQuery
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureLabelTablesAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         var ticket = await db.Tickets.Include(t => t.Labels).FirstOrDefaultAsync(t => t.Id == ticketId);
         if (ticket is null) return false;
         var labels = await db.Labels.Where(l => labelIds.Contains(l.Id)).ToListAsync();
@@ -1144,6 +1173,7 @@ public class TicketService : ITicketDependencyQuery
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureLabelTablesAsync(db);
         await EnsureActivityTableAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
 
         var ticket = await db.Tickets
             .Include(t => t.Labels)
@@ -1217,9 +1247,8 @@ public class TicketService : ITicketDependencyQuery
     public async Task ReorderTicketAsync(string projectSlug, int ticketId, string newStatus, int targetIndex)
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
-        await EnsureSortOrderColumnAsync(db);
         await EnsureActivityTableAsync(db);
-        await EnsureWorktreeColumnsAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
 
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return;
@@ -1275,6 +1304,7 @@ public class TicketService : ITicketDependencyQuery
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return;
         db.ActivityEntries.Add(new ActivityEntry { TicketId = ticketId, Author = author, Text = text });
@@ -1289,9 +1319,8 @@ public class TicketService : ITicketDependencyQuery
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureLabelTablesAsync(db);
-        await EnsureSortOrderColumnAsync(db);
-        await EnsureAssignedToColumnAsync(db);
         await EnsureActivityTableAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
 
         var mentionPattern = $"@{handle}";
 
