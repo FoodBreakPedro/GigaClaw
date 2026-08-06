@@ -16,8 +16,18 @@ Run only after the SEO pass when the ticket requests target locales. The current
 
 ## Operating Procedure
 
-1. **Check the versioned approval gate** described above by computing the current source digest. If the chain does not cover that digest, move the ticket to `Blocked`.
-2. **Resolve target locales**: take them from the ticket description (preferred) or from `.agents/BRAND.md` field **Target locales**. If neither specifies them, move the ticket to `Blocked` with a comment. Never guess locales.
+1. **Check the versioned approval gate** described above by computing the current source digest.
+   If the chain does not cover that digest, treat it as a mechanical discrepancy, not a human
+   decision. Count existing `BLOG-TRANSLATION RETURN cycle N/2` receipts. On cycle 1/2, atomically
+   hand the ticket to `blog-seo` in `Todo`, naming the current digest and requesting revalidation,
+   with marker `BLOG-TRANSLATION RETURN cycle 1/2 artifact-sha256:<digest-or-unreadable>`. On cycle
+   2/2 with a readable source, sync that draft to the description, record
+   `BLOG-TRANSLATION RETURN cycle 2/2 artifact-sha256:<digest>`, then hand to `owner` in `Blocked`
+   with a specific question and enumerated options: approve the current source manually, restore
+   the last SEO-validated version, or cancel translation. If the source is unreadable, return it to
+   `groomer` in `Backlog` with the path and error; there is no visible draft for an owner decision.
+   Never start a third recovery loop.
+2. **Resolve target locales**: take them from the ticket description (preferred) or from `.agents/BRAND.md` field **Target locales**. If neither specifies them, sync the source draft to the description and move the ticket to `Blocked` with the specific question "Which locales should be produced?" and enumerated locale options supported by the venture. Never guess locales.
 3. Read the source article in `content/posts/<slug>.md`.
 4. Generate the localized post under the target locale directory (e.g. `content/posts/<locale>/<slug>.md`).
 5. Update the `alternates:` frontmatter map in the new file, in the source file, and in every sibling locale file so the whole set stays reciprocal:
@@ -50,7 +60,18 @@ python3 .agents/scripts/agent_ticket.py \
   status --to Review
 ```
 
-Move to `Review` only once **all** requested locales are written and the `alternates:` maps are updated; otherwise move the ticket to `Blocked` with a comment on what is missing. **Never end your turn with the ticket in `InProgress`.**
+For the first mechanical approval-chain mismatch, put the evidence in `./tr-report.md` and use the
+atomic handoff; do not separately assign and move the ticket:
+
+```bash
+python3 .agents/scripts/agent_ticket.py \
+  --project {project-slug} --ticket {id} --author blog-translator \
+  handoff --assignee blog-seo --status Todo --expected-status InProgress \
+  --content-file ./tr-report.md \
+  --marker "BLOG-TRANSLATION RETURN cycle 1/2 artifact-sha256:<digest-or-unreadable>"
+```
+
+Move to `Review` only once **all** requested locales are written and the `alternates:` maps are updated. If one run is insufficient, leave the ticket assigned to you in `InProgress`; the bounded `assignee-resume` automation continues it and eventually returns unchanged work to the groomer in `Backlog`. Do not use `Blocked` for turn limits or mechanical failures.
 
 
 ## Handoff Contract

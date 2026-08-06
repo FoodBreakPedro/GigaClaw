@@ -21,6 +21,9 @@ title: <plain string, no surrounding quotes needed>
 slug: <url-safe-slug, lowercase, hyphenated>
 excerpt: <one to two sentence teaser>
 contentType: <article | guide | listicle | ... — whatever the ticket/brief calls for>
+categorySlug: <reviewer-validated CMS category slug>
+tags:
+  - <reviewer-validated-tag-slug>
 seo:
   title: <SEO title, ideally <= 60 chars>
   description: <meta description, 150-160 chars>
@@ -39,8 +42,9 @@ Hard rules, because a parser (not a person) reads this next:
   and `imagePrompt` are exactly what `cms-dispatch-on-done`'s `BodyTemplate` sends to the CMS; a
   draft missing one ships a payload with an empty field, which is a review-quality bug even though
   it won't fail to parse.
-- `seo:` is the only nested block the parser understands, and only one level deep. Indent
-  `title:`, `description:`, `primaryKeyword:` under it exactly as shown. Do not nest anything else.
+- `seo:` is the only nested mapping the parser understands, and only one level deep. Indent
+  `title:`, `description:`, `primaryKeyword:` under it exactly as shown. `tags:` is a YAML-style
+  scalar list; put one kebab-case tag slug on each indented `-` line.
 - Everything after the closing fence, verbatim, becomes the markdown body sent to the CMS. Don't
   add a second `---` inside the body unless it's a genuine markdown `<hr>` — the parser only looks
   for the fence pair at the top.
@@ -73,9 +77,10 @@ Never leave it blank and never write a non-answer like `"N/A"` or `"none"`.
 7. **Move the ticket to `Review`, leaving `assignedTo` unchanged.** The `content-reviewer-on-review`
    automation dispatches `blog-reviewer` from there only while the ticket stays assigned to you —
    reassigning it yourself stops the gate from firing.
-8. **If you cannot produce a draft** (missing brief, unusable topic, a required `BRAND.md` field
-   like canonical domain is unset), move the ticket to `Blocked` and comment exactly what's
-   missing. **Never end your turn with the ticket in `InProgress`.**
+8. **If the draft needs another agent turn**, leave the ticket assigned to you in `InProgress`;
+   `content-writer-resume` retries this boundedly and sends unchanged exhausted work to the groomer
+   in `Backlog`. Use `Blocked` only for a real owner decision, after the description contains the
+   best current draft and a comment asks one specific question with enumerated options.
 
 ### Revisions replace, never append
 
@@ -129,11 +134,11 @@ to `Review`), rather than re-writing the description.
 
 - Never put the draft — or any fragment of it — in a comment. Comments are delivery receipts and
   (from `blog-reviewer`) critique only.
-- Never overwrite an existing draft with a partial one. If you cannot finish, go to `Blocked`
-  instead of leaving a half-written description in `Review`.
+- Never overwrite an existing draft with a partial one. If you cannot finish in this run, preserve
+  the last complete description and remain in `InProgress` for the bounded resume trigger.
 - Never reassign the ticket away from yourself when moving to `Review` — that is what lets
   `content-reviewer-on-review` find it.
-- Never end your turn with the ticket in `InProgress`.
+- Never move to `Blocked` merely because one run ended before the draft was complete.
 
 
 ## Handoff Contract
