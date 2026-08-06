@@ -8,8 +8,8 @@ updated: 2026-07-18
 
 Feeds the daily Intel Digest workflow (`n8n-export/proposed/intel-digest.json`):
 the fresh-intel layer that surfaces "what these sources published in the past
-24-48h." Grounded in `ventures/hyperlanetravels/brand.md` (niche being tested:
-trips for gamers/nerds - theme cruises, convention travel) and
+24-48h." Grounded in `ventures/hyperlanetravels/brand.md` (hybrid positioning:
+core general travel/cruise concierge with periodic convention & fandom travel spotlights) and
 `ventures/hyperlanetravels/content-engine.md` (content-only pilot; NO
 lead/CRM/booking/supplier scope). Signal here is for ARTICLE IDEAS only, never
 operational research - watch the Cornerstone-relevant travel space for content

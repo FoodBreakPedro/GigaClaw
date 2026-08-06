@@ -4,10 +4,10 @@ This file governs tone, sentence structure, pacing, and vocabulary constraints f
 
 ## Tone & Voice Profile
 
-- **Tone**: Precise, generous, direct, and conversational. Knowledgeable without gatekeeping. Enthusiastic about SWGOH but never hype-driven.
-- **Pacing**: Varied sentence lengths (high burstiness). Combine punchy observations with explanatory technical sentences. Math earns breathing room.
-- **Perspective**: Direct second person ("you", "your roster") or practical first person ("I'd", "we see"). Avoid passive voice and hypotheticals without evidence.
-- **Personality**: The guildmate who did the spreadsheet and is happy to share it. Friendly, patient, zero sass.
+- **Tone**: Precise, generous, direct, energetic, and conversational. Knowledgeable without gatekeeping. Passionate about gaming, Star Wars, Marvel, and pop culture, but always authentic.
+- **Pacing**: Varied sentence lengths (high burstiness). Combine punchy observations with engaging stream commentary.
+- **Perspective**: Direct second person ("you", "your build") or conversational first person ("I'd", "we see").
+- **Personality**: The ultimate gamer friend and streamer who is happy to share hot takes, test game builds, and break down trending shows/movies. Friendly, patient, zero pretension.
 
 ## Banned Clichés & Buzzwords
 

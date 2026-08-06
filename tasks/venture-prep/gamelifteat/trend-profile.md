@@ -20,46 +20,41 @@ gamers actually buy.
 
 - gamer energy drink news / new energy drink launch
 - caffeine research gaming performance
-- esports nutrition study
-- paraxanthine / nootropics gaming
-- pre-workout for gamers
+- esports nutrition & gaming tech reviews
+- gaming desk setup & ergonomic tech
+- pre-workout & tech for gamers
 - high-protein snacks gaming
 - sleep and reaction time study
 - G FUEL / Ghost / competitor product news
-- meal kits for gamers
-- desk-worker fitness food habits
+- meal kits & tech gear for gamers
+- desk-worker fitness food & tech habits
+- trending gaming memes & gamer slang formats
 
 ## Sources to Watch
 
 - Peer-reviewed and preprint nutrition/performance studies (caffeine, sleep, reaction time, cognitive performance) — the evidence backbone.
-- Energy-drink and gaming-supplement brand launches, reformulations, and price changes (teardown fodder for the Energy Meta pillar).
-- Esports team/org content about player nutrition and training routines.
-- FDA/FTC actions on supplement claims — hype-culture accountability signal fits the brand's evidence-first stance.
-- Gaming-lifestyle communities discussing food, energy, and sleep (signal for what gamers actually ask, in their language).
+- Gaming tech & energy-drink brand launches, reformulations, and price changes.
+- Esports team/org content about player nutrition, tech setup, and training routines.
+- Gaming-lifestyle communities discussing food, tech, energy, and sleep (signal for what gamers actually ask, in their language).
+- Trending gaming memes, meme formats, and viral gamer culture.
 
 ## Competitors
 
 - Supplement-brand content arms (G FUEL blog etc.): hype-driven, no neutrality — watch claims to debunk or verify, never to imitate.
-- Evidence-based fitness media (Garage Gym Reviews model): trust-mechanics inspiration in an adjacent niche — watch format, not topics.
+- Evidence-based fitness media & tech reviewers: trust-mechanics inspiration in an adjacent niche — watch format, not topics.
 - Gaming-lifestyle channels touching health casually: shows the content gap GLE's rigor fills.
 
 ## Excluded Topics
 
-- Training programs, workout plans, gym-equipment reviews — that scope belongs to GamePowerGym (shared voice, separate scope).
 - Any signal that can only be covered as hype (no label, no study, no price to verify) — off-brand by strategy.
-- Medical claims territory (treatment, diagnosis, weight-loss drugs) — evidence-first does not mean medical advice.
+- Medical claims territory (treatment, diagnosis, prescription weight-loss drugs) — evidence-first does not mean medical advice.
+- Toxic hustle-culture or shame-based fitness content.
 - Sponsored-looking product placement angles; monetization is phased and gated, coverage must stay neutral.
 
 ## Content Angle
 
-Evidence-first teardown voice: every piece answers "should a gamer
-actually buy/eat/drink this, and what does the evidence say?" Energy
-Meta signal (caffeine, energy drinks, sleep, focus) takes first
-priority; food-for-gamers (snacks, meal kits, desk nutrition) is the
-secondary lane. An item scores well when it names a specific product,
-study, or claim that can be checked — not when it is merely trending.
-Fully AI-driven production per strategy; strictly fact-based execution
-is a ratified hard requirement.
+Practical, energetic, and encouraging voice: every piece answers how gamers, foodies, and desk athletes (ages 18–45) can level up their food, tech, and strength. Blends supportive coaching with gamer slang, trending meme references, and community features starring **Giga, the Venezuelan Oso Frontino** mascot. An item scores well when it names a specific recipe, tech gear, study, or claim that can be checked — not when it is merely trending.
+
 
 ## Cadence Notes
 

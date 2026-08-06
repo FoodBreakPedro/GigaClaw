@@ -9,8 +9,8 @@ created: 2026-07-02T00:00:00Z
 
 Feeds the nightly Night Research workflow (`workflows/night-research-v3.spec.md`)
 and the weekly `/trend-rollup` session (`prime/workflows/trend-rollup.md`).
-Grounded in `ventures/hyperlanetravels/brand.md` (audience niche being
-tested: trips for gamers/nerds -- theme cruises, convention travel) and
+Grounded in `ventures/hyperlanetravels/brand.md` (hybrid positioning:
+core general travel/cruise concierge with periodic convention & fandom travel spotlights) and
 `ventures/hyperlanetravels/content-engine.md` (content-only pilot; no
 lead/CRM/booking/supplier scope -- trend signal here is for article ideas
 only, never for operational research).

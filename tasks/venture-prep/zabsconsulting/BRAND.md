@@ -1,28 +1,39 @@
 # ZabsConsulting — Brand File
 
-> **Status: SKELETON.** The registered parent entity. ⚠️ fields need Pedro's input; legal-structure items are explicitly UNVERIFIED until checked against registration documents.
+> **Status: ACTIVE.** Registered parent entity and AI / Business Automation consultancy. Operating rules here are binding from day one.
 
-## Identity & structure
+## Identity & Structure
 
-- **Legal entity:** ZabsConsulting — registered with the government (⚠️ Pedro: record jurisdiction, entity type (LLC? sole prop?), registration date here — facts only, no document scans in the cloud vault).
-- **Working assumption (UNVERIFIED):** ZabsConsulting acts as the parent, with DBAs filed for GameLiftEat, GamePowerGym, and Hyperlane Travels. ⚠️ **Pedro: confirm against registration docs and local DBA rules before any venture signs contracts or opens accounts under its own name.** Until confirmed, treat each brand's legal status as "operates under ZabsConsulting."
-- **Domain/site:** zabsconsulting.com — live (confirmed by Pedro 2026-07-03). Repo: `GitHub/ZabsConsulting`.
+- **Legal Entity:** ZabsConsulting — registered parent entity.
+- **Entity Architecture:** ZabsConsulting acts as the parent umbrella, with operating DBAs/ventures including GameLiftEat, GamePowerGym, Hyperlane Travels, and Karalun Gaming. All bookkeeping, tax filings, legal agreements, and registrations funnel through ZabsConsulting.
+- **Domain/Site:** zabsconsulting.com — live. Repo: `GitHub/ZabsConsulting`.
 
-## What this venture actually is (two hats)
+## Core Offerings & Business Model
 
-1. **The holding/admin hat (active from Phase 1):** the entity under which everything runs — bookkeeping, taxes, registrations, insurance, contracts. The system's job here is *cadence*: surface deadlines and admin tasks in briefings before they're urgent.
-2. **The consulting-services hat (ACTIVATED 2026-07-03):** first offer defined by Pedro — **AI Visibility Audit (GEO/AEO)**, framed as a service on zabsconsulting.com. See `offer-ai-visibility-audit.md` for the brief. Scope/spec session still required before build (Phase 3 gate).
+ZabsConsulting operates with two primary functions:
 
-## Admin cadence (the system maintains in `10-ZabsConsulting/admin-calendar.md`)
+1. **Holding & Administrative Parent (Active):**
+   - The central entity for bookkeeping, taxes, corporate registrations, insurance, and vendor contracts.
+   - Cadence: automated 2-week advance reminders via `/briefing` and `/weekly-review`.
+   
+2. **AI & Business Automation Consultancy (Primary Revenue Engine):**
+   - **Core High-Ticket Service ($1,500 – $3,500+):** Custom n8n workflow automation, AI agent deployment, automated content engines, and operational pipelines for SMBs and solopreneurs.
+   - **Productized Lead Engine — AI Visibility Audit (Free / $49):** 100% automated audit report diagnosing ChatGPT, Perplexity, Gemini, and Google AI Overview citations.
+   - **Automated GEO Fix Package ($299):** 100% automated output generating custom JSON-LD schema, `llms.txt`, and optimized GBP descriptions.
+   - **Bilingual Differentiator (EN/ES):** Full capability to build automated workflows and deliver GEO packages in both English and Spanish for underserved Hispanic-owned businesses.
 
-- ⚠️ Pedro seeds: tax filing dates, registration renewals, insurance renewals, DBA filing tasks (once confirmed), bookkeeping rhythm.
-- `/briefing` surfaces items 2 weeks ahead; `/weekly-review` checks nothing is overdue.
-- Money/legal actions are `risk: high` approval items — the system reminds and drafts; Pedro executes.
+## Admin Cadence (`10-ZabsConsulting/admin-calendar.md`)
 
-## Voice (if/when consulting activates)
+- System tracks tax filing dates, registration renewals, insurance, and bookkeeping rhythm.
+- `/briefing` surfaces items 2 weeks ahead; `/weekly-review` checks for overdue items.
+- Financial and legal execution requires Pedro's explicit approval (`risk: high`).
 
-⚠️ tbd. Placeholder: competent, plainspoken, builder-credibility ("I run my businesses on systems I built") — no consultant-speak.
+## Voice & Positioning
 
-## Watch-topics (feeds `/trend-watch`, low priority)
+- **Tone:** Competent, plainspoken, builder-credibility ("I run my businesses on systems I built") — zero consultant jargon or empty fluff.
+- **Proof:** Portfolio ventures (Hyperlane, GameLiftEat, etc.) serve as living case studies proving system efficiency.
 
-`small business AI automation` , `solopreneur tooling`, ⚠️ + jurisdiction-specific small-business compliance changes
+## Watch-Topics (feeds `/trend-watch`)
+
+`small business AI automation`, `n8n agent workflows`, `AI visibility & AEO`, `LLM business impact`, `solopreneur tooling`, `SMB compliance`
+

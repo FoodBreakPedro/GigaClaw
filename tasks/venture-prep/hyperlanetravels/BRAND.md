@@ -1,22 +1,22 @@
 # Hyperlane Travels — Brand File
 
-> **Status: SKELETON.** Operating business (Pedro is a registered individual travel agent). ⚠️ fields need Pedro's input. Client-facing rules here are binding from day one.
+> **Status: ACTIVE.** Operating business (Pedro is a registered individual travel agent). Client-facing rules here are binding from day one.
 
 ## Identity
 
 - **Domain:** hyperlanetravels.com (repo: `FoodBreakPedro/HyperlaneTravels`; tooling: `FoodBreakPedro/CruisePlanner`, `cruise-planner-api`)
-- **One-liner:** ⚠️ draft — *Personal travel planning at lightspeed — itineraries built around you, booked by a real agent.* (Name leans Star-Wars "hyperlane"; brand may embrace subtle sci-fi flavor without being themed-restaurant about it. ⚠️ Pedro decides the dial.)
-- **Host agency / registrations:** ⚠️ Pedro: record host agency, IATA/CLIA numbers, E&O insurance facts here (facts only — credentials/logins never in the vault).
+- **One-liner:** *Personal travel planning at lightspeed — itineraries built around you, booked by a real agent.* (Name subtle sci-fi concierge tone without over-the-top gimmickry).
 
-## Audience
+## Audience & Positioning
 
-⚠️ Confirm: cruise-focused (the tooling suggests it)? Families? Group trips? Niche idea worth testing given the portfolio: **trips for gamers/nerds** (theme cruises, convention travel — synergy with GLE/GPG audiences) — ⚠️ Pedro's call, and note cross-venture promotion still requires his explicit approval per the separation rule.
+- **Hybrid Approach:** Core general travel & cruise planning concierge (families, couples, group travel, custom itineraries) paired with periodic featured guides for conventions and fandom cruises (synergy with gaming/tech community).
+- **Target Destinations & Hubs:** Caribbean, Alaska, European River & Mediterranean Cruises, Theme Parks (Orlando/Anaheim), and major US convention hubs (Las Vegas, San Diego, Boston).
 
 ## Voice (client-facing)
 
-Polished concierge: warm, precise, anticipatory, zero hype. Clients trust competence — every fact dated and sourced, every option framed around *their* stated preferences. Sci-fi flavor (if dialed up) lives in marketing copy, never in booking/confirmation communications.
+Polished concierge: warm, precise, anticipatory, zero hype. Clients trust competence — every fact dated and sourced, every option framed around *their* stated preferences. Subtle sci-fi flavor lives in marketing copy, never in booking/confirmation communications.
 
-## Operational rules (binding — see also `.claude/agents/hyperlane-lead.md`)
+## Operational Rules (binding)
 
 - Every client-facing message is `risk: high`, individually approved by Pedro. No exceptions.
 - Vault stores names + trip facts only; passport/payment data NEVER enters the system.
@@ -26,9 +26,10 @@ Polished concierge: warm, precise, anticipatory, zero hype. Clients trust compet
 
 ## Watch-topics (feeds `/trend-watch`)
 
-`cruise deals`, `cruise line news`, `travel advisories`, `flight deal trends`, `theme cruises`, `group travel trends`, ⚠️ + destinations Pedro actively sells
+`cruise deals`, `cruise line news`, `travel advisories`, `flight deal trends`, `theme cruises`, `group travel trends`, `caribbean cruises`, `alaska cruises`, `mediterranean cruises`, `european river cruises`, `theme park travel`, `convention travel`
 
 ## Channels & KPIs
 
-- v1: referral/word-of-mouth + site; content marketing later (destination guides have SEO value but Phase 4+).
+- v1: referral/word-of-mouth + site; content marketing (destination & convention travel guides).
 - KPIs: leads, quotes sent, bookings, commission revenue, response latency (agent-assisted target: same-day first response).
+

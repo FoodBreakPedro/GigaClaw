@@ -8,12 +8,9 @@ created: 2026-07-18T00:00:00Z
 # GamePowerGym Trend Profile
 
 Feeds the nightly Night Research workflow. Grounded in
-`ventures/gamepowergym/brand.md`. GPG is the training-only spinoff of
-GameLiftEat: same voice family (shared by design — Pedro, 2026-07-18),
-separate scope. The venture itself is PARKED until the GLE engine is
-proven — this profile keeps a light research bench warm so launch
-starts with a real backlog, not from zero. Research only; no content
-production is triggered from this signal while parked.
+`ventures/gamepowergym/brand.md`. GamePowerGym is the standalone gamified
+strength & movement brand focusing on character builds (workout programs),
+posture/RSI debuff counters, and fitness gamification.
 
 ## Keywords / Queries
 

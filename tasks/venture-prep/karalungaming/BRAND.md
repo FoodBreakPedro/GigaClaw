@@ -1,28 +1,28 @@
 # Karalun — Brand & Creator Persona File
 
-> **Status: ACTIVE.** Pedro's personal gaming, content creator, and influencer persona.
+> **Status: ACTIVE.** Pedro's personal gaming, content creator, and Twitch streamer persona.
 
 ## Core Identity
 
-- **Persona Name:** Karalun (Pedro's personal gaming handle, content creator, and influencer persona).
-- **One-liner:** *Gamer, creator, and nerd culture enthusiast.*
-- **Concept:** An authentic content creator persona spanning all gaming (mobile, console, PC, board games, chess), cosplay, Comic-Con conventions, fandoms, and gamer utility tools (such as Karalun's Era Planner).
+- **Persona Name:** Karalun (Pedro's personal gaming handle, content creator, and streamer persona).
+- **One-liner:** *Gamer, streamer, and pop-culture fandom enthusiast.*
+- **Concept:** An authentic content creator and Twitch streamer spanning gaming (PC, console, mobile, chess, board games), fandom breakdowns (Star Wars, Marvel, trending TV shows & movies), Comic-Con conventions, and community game nights.
 
 ## Content Pillars
 
-1. **Gaming & Strategy:** Gameplay, guides, theorycrafting, and streams across mobile (SWGOH), console, PC, and chess.
-2. **Nerd Culture & Fandom:** Comic-Con event coverage, cosplay spotlights, pop culture, and fandom discussions.
-3. **Board Games & Tabletop:** Tabletop sessions, reviews, and board game strategy.
-4. **Creator Tools & Utility:** Free web tools for gamers (e.g. Karalun's Era Planner).
+1. **Live Streaming & Gaming:** Twitch streams, gameplay walkthroughs, gaming challenges, and tier lists across PC, console, mobile, and tabletop/chess.
+2. **Pop-Culture & Fandom:** Hot takes, trailer reactions, episode breakdowns, and lore discussions for Star Wars, Marvel, and trending TV shows/movies through a gamer lens.
+3. **Convention & Events:** Comic-Con event coverage, cosplay highlights, and pop-culture convention experiences.
+4. **Community Hangouts:** Discord game nights, audience polls, and interactive stream events.
 
 ## Positioning & Tone
 
-- **Voice:** Authentic, passionate, community-driven, and engaging.
-- **Vibe:** The gamer & creator friend who loves the lore, builds the tools, plays the games, and celebrates nerd culture.
-- **No Artificial Boundaries:** As a personal creator persona, Karalun naturally spans gaming, conventions, cosplay, chess, and pop culture.
+- **Voice:** Authentic, energetic, conversational, nerdy, and community-first.
+- **Vibe:** The ultimate gamer friend who streams great games, hypes up the latest Marvel/Star Wars releases, and hangs out with the community.
 
-## Channels
+## Channels & Hub
 
-- **Hub & Tools:** Creator site / web tools (e.g., Era Planner)
-- **Social & Community:** Discord, Reddit, Twitter/X, Instagram, TikTok
-- **Video & Streams:** YouTube, Twitch, Shorts/Reels
+- **Creator Hub:** Standalone creator site (`karalungaming.com` / `karalun.com`)
+- **Video & Streams:** Twitch (Primary Live), YouTube (VODs & Shorts), TikTok, Instagram Reels
+- **Community:** Discord, X/Twitter, Reddit
+

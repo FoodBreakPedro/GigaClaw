@@ -9,10 +9,8 @@ updated: 2026-07-18
 Feeds the daily Intel Digest workflow (`n8n-export/proposed/intel-digest.json`):
 the fresh-intel layer that surfaces "what these competitors and creators did in
 the past 24-48h." Grounded in `ventures/gamepowergym/brand.md`. GPG is the
-training-only spinoff of GameLiftEat (shared voice, separate scope) and is
-PARKED until the GLE engine is proven - this watchlist keeps a light research
-bench warm so launch starts with a real backlog, not from zero. Research only;
-no content is produced from this signal while parked.
+standalone gamified strength & movement brand (training, posture debuffs,
+exercise tech, and gamified fitness apps).
 
 Each `###` block below is one watch target. `query_hints` are short topical
 phrases the collector ANDs with the target name to build a time-bounded search;

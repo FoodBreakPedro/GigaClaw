@@ -1,39 +1,38 @@
 # GamePowerGym — Brand File
 
-> **Status: SKELETON.** Pedro finalizes voice/pillars in a Phase 2 working session; ⚠️ fields need his input. Keep name, logo, brand colors.
+> **Status: ACTIVE.** Standalone brand identity contract and operational guidelines.
 
 ## Identity
 
-- **Domain:** gamepowergym.com (repo: `FoodBreakPedro/GamePowerGym`; data asset: `FoodBreakPedro/exercisedb`)
-- **One-liner:** ⚠️ draft — *Training for gamers: treat the gym like a skill tree and level your real-life character.*
-- **Logo / colors:** keep existing. ⚠️ Pedro: paste hex codes + asset paths.
-- **Relationship to GLE:** sibling brand, NEVER cross-promoted without explicit instruction. GPG = training/movement; GLE = eating/fueling. If a piece is about *food*, it belongs to GLE.
+- **Domain:** gamepowergym.com (repo: `FoodBreakPedro/GamePowerGym`; data engine: `FoodBreakPedro/exercisedb`)
+- **One-liner:** *Training for gamers: treat the gym like a skill tree and level your real-life character.*
+- **Visual Palette:** Dark Slate `#141414` · Pure White `#F7F7F7` · Electric Crimson `#E63946`; geometric typography and gamified HUD accents.
 
 ## Audience
 
-⚠️ Confirm: gamers who want to start or progress in lifting; people motivated by progression systems (PRs as boss kills, programs as quest lines); desk-bound players fighting posture/sedentary damage.
+Gamers, desk workers, and esports enthusiasts who want to start or progress in strength training; athletes motivated by progression systems (PRs as boss kills, workout blocks as season patches) and fighting posture/sedentary desk damage.
 
-## Voice
+## Voice & Tone
 
-Disciplined gym intensity through a gamer's lens — progression, builds, optimization. Loves systems: programs presented like skill trees, training blocks like seasons/patches. Distinct from GLE's coach energy; more "raid leader." Never: injury-glorifying max-out culture, shame content, equipment-gatekeeping.
+Disciplined gym intensity through a gamer's lens — progression, builds, optimization. Loves systems: training programs presented like skill trees, workout blocks like game patches. Tone is confident, encouraging, and authoritative ("Raid Leader" energy). Never injury-glorifying, toxic, or gatekeeping.
 
-## Content pillars (⚠️ confirm/edit)
+## Content Pillars
 
-1. **The build guide** — programs and progressions framed as character builds (powered by `exercisedb` data)
-2. **Counter the debuff** — posture, mobility, RSI prevention for desk/gaming hours
-3. **PR quest log** — progression strategies, plateau-breaking, tracking like a completionist
-4. **Gym for level 1s** — genuinely beginner-safe onboarding for gamers who've never lifted
+1. **The Build Guide:** Workout programs and movement progressions framed as character builds (powered by `exercisedb` data).
+2. **Counter the Debuff:** Posture, wrist/RSI prevention, and mobility routines for long gaming sessions.
+3. **PR Quest Log:** Progression strategies, plateau-breaking tactics, and lifting metrics tracked like an achievement log.
+4. **Level 1 Gym Onboarding:** Beginner-safe, intimidation-free onboarding for gamers stepping into a gym for the first time.
 
 ## Watch-topics (feeds `/trend-watch`)
 
-`fitness for gamers`, `esports athlete training`, `posture desk workers`, `beginner strength training trends`, `fitness gamification apps`, major game launches & esports events, `hybrid athlete`
+`esports athlete training`, `posture desk workers`, `beginner strength training trends`, `fitness gamification apps`, `strength training mechanics`, `hybrid athlete`
 
-## Channels & KPIs
+## Channels & Launch Strategy
 
-- v1: blog (Hostinger) + ⚠️ pick 2 social channels (recommend: YouTube + Instagram Reels — exercise demos need video).
-- KPIs: posts/week (target 2–3), organic sessions, followers, (later) program-guide sales/affiliate.
-- Platform notes: exercise demonstration content must show/credit safe form; text posts pair with exercisedb visuals where possible.
+- **Channels:** Blog (gamepowergym.com) + Video (YouTube exercise breakdowns & Instagram Reels).
+- **KPIs:** Published build guides per week, video views, site traffic, digital program downloads.
 
-## Monetization path (⚠️ tbd with Pedro)
+## Monetization Path
 
-Affiliate (equipment/apps) → training-program digital products ("build guides") → possible app angle using exercisedb.
+Affiliate equipment reviews → digital program build guides → gamified workout tracking app (powered by `exercisedb`).
+

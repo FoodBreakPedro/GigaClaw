@@ -1,32 +1,38 @@
 # GameLiftEat — Content Engine Config
 
-> Created 2026-07-02 (activation sprint). GLE runs the **proven GPG content loop** (see `GamePowerGym/content-ops/AGENT_WORKFLOW.md`) under GLE's brand contract. This file is what GLE-Lead/Scribe/Sentinel load.
+> **Status: ACTIVE.** Production loop for blog articles, recipes, short-form videos (TikTok/Shorts), and Instagram content.
 
-## Loop (identical mechanics to GPG)
+## Audience & Voice Profile
 
-1. **Topic** — from `20-GameLiftEat/calendar.md` (idea → proposed) fed by the GLE trend lane; GLE-Lead approves the brief.
-2. **Draft** — Scribe writes one JSON record into the site repo's `content/blog/<slug>.json`, loading this file + `brand.md` + the site's `CONTENT_SPEC.md`. Voice: brand.md formula; every claim sourced.
-3. **Gate** — `content-ops/validate.mjs` (schema, hard fail) + Sentinel checks: brand-scope table in `brand.md` (no GPG bleed: no programming/technique/gear), evidence bar, privacy.
-4. **Approve** — approval item to Pedro (Hard Rule 2). Model tier: T1 (Gemini Flash) drafts, T2 final pass only when flagged — respects the $50/mo cap.
-5. **Publish** — git commit to site repo `main` → Hostinger webhook build → live in minutes. Publisher/n8n holds the credentials, never agents.
+- **Target Audience:** Gamers, foodies, desk athletes, and fitness enthusiasts (ages 18–45).
+- **Voice & Tone:** Supportive coach + relatable teammate. Gamer slang and trending meme references used naturally. Never shame-based or dry.
+- **Brand Mascot:** **Giga**, the Venezuelan Oso Frontino (Spectacled Bear) — featured across content series, meme formats, and community posts.
 
-## Cadence & gate
+## Content Formats & Channels
 
-2–3 posts/week at <15 min human time each (Phase 4 ROI gate). Start: 2/week from the seed backlog.
+- **Blog Articles (gamelifteat.com):** In-depth recipes, approachable workout guides, gear/tech/snack reviews, energy/sleep optimization.
+- **Short-Form Video (TikTok & YouTube Shorts):** Recipe speedruns, quick workout tips, tech/gear breakdowns, meme reactions featuring Giga the Oso Frontino.
+- **Instagram Posts & Carousels:** Visual meal prep infographics, exercise breakdowns, "Giga's Pick of the Week" carousels.
 
-## Seed backlog (first 10 — from `20-GameLiftEat/calendar.md` + briefs)
+## Production Loop
 
-1. High-protein gamer snacks you can eat with one hand (existing brief: `briefs/2026-06-15-high-protein-gamer-snacks.md`)
+1. **Topic Selection:** Fed by trend monitor + seasonal game launches + recipe ideas + trending memes.
+2. **Drafting:** Blog content, video scripts, and visual captions generated via Scribe using brand guidelines.
+3. **Quality & Sentinel Check:** Verified for factual accuracy, encouraging voice, meme/slang natural tone, and brand isolation.
+4. **Human Approval:** Pedro approves content before publishing (`risk: medium`).
+5. **Publishing & Distribution:** Automated cross-posting / CMS upload.
+
+## Seed Content Backlog
+
+1. High-protein gamer snacks you can eat with one hand (Giga-approved)
 2. What to eat before ranked: a pre-session fueling loadout
-3. The caffeine meta: timing, dosing, and the crash debuff
+3. Approaches to your first gym quest: beginner strength program for gamers
 4. Gamer kitchen speedruns: 5 macro-friendly meals under 15 minutes
-5. Energy drinks vs. the evidence: what actually buffs focus
-6. Sleep is your longest respawn: recovery basics for players
-7. Creatine for gamers: the one supplement with a real stat sheet
-8. LAN-party/marathon-session nutrition survival guide
+5. Desk setup & gaming tech for better posture & energy
+6. Sleep is your longest respawn: recovery basics for players (ages 18–45)
+7. Creatine & energy supplements: evidence-based breakdown & stat sheet
+8. LAN-party & marathon session nutrition survival guide featuring Giga the Oso Frontino
 9. Blood sugar steadiness: why your aim drops at hour three
-10. Newbie Gains Challenge kickoff: the community quest line
+10. Fun protein dessert hacks that satisfy late-night gaming cravings
 
-## Trend lane
 
-Add `gamelifteat` lane to night research using `brand.md` watch-topics → reports land in `20-GameLiftEat/` → calendar ideas. (Trend-profile: `trend-profile.md` ⚠️ tune after first week of reports.)
