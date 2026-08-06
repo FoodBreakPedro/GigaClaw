@@ -648,8 +648,10 @@ public class TicketService : ITicketDependencyQuery
     {
         if (string.IsNullOrWhiteSpace(createdBy))
             throw new InvalidOperationException("Le champ 'createdBy' est requis.");
-        if (!string.IsNullOrEmpty(assignedTo) && !await _memberService.MemberExistsAsync(projectSlug, assignedTo))
-            throw new InvalidOperationException($"Le membre '{assignedTo}' n'existe pas.");
+        var deliverable = ResolveDeliverable(deliverableType);
+        var resolvedAssignee = string.IsNullOrEmpty(assignedTo) ? deliverable?.EntryAgent : assignedTo;
+        if (!string.IsNullOrEmpty(resolvedAssignee) && !await _memberService.MemberExistsAsync(projectSlug, resolvedAssignee))
+            throw new InvalidOperationException($"Le membre '{resolvedAssignee}' n'existe pas.");
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         await EnsureLabelTablesAsync(db);
@@ -669,9 +671,9 @@ public class TicketService : ITicketDependencyQuery
             Status = status,
             Priority = priority,
             SortOrder = maxSort + 1,
-            AssignedTo = assignedTo,
+            AssignedTo = resolvedAssignee,
             ParentId = parentId,
-            DeliverableType = string.IsNullOrWhiteSpace(deliverableType) ? null : deliverableType.Trim()
+            DeliverableType = deliverable?.Slug
         };
         if (labelIds is { Count: > 0 })
         {
@@ -811,7 +813,7 @@ public class TicketService : ITicketDependencyQuery
         string projectSlug, int ticketId, string branch, string path, string status)
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
-        await EnsureWorktreeColumnsAsync(db);
+        await EnsureTicketEntityColumnsAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return null;
         ticket.WorktreeBranch = branch;
@@ -981,6 +983,7 @@ public class TicketService : ITicketDependencyQuery
     {
         if (string.IsNullOrWhiteSpace(author))
             throw new InvalidOperationException("The 'author' field is required.");
+        var deliverable = deliverableType is null ? null : ResolveDeliverable(deliverableType);
         if (!string.IsNullOrEmpty(assignedTo) && !await _memberService.MemberExistsAsync(projectSlug, assignedTo))
             throw new InvalidOperationException($"Member '{assignedTo}' does not exist.");
         await using var db = _projectService.GetProjectDb(projectSlug);
@@ -1034,7 +1037,7 @@ public class TicketService : ITicketDependencyQuery
         }
         if (deliverableType is not null)
         {
-            var normalizedDeliverableType = string.IsNullOrWhiteSpace(deliverableType) ? null : deliverableType.Trim();
+            var normalizedDeliverableType = deliverable?.Slug;
             if (!string.Equals(normalizedDeliverableType, ticket.DeliverableType, StringComparison.Ordinal))
             {
                 var old = ticket.DeliverableType ?? "none";
@@ -1050,6 +1053,14 @@ public class TicketService : ITicketDependencyQuery
         ticket.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return ticket;
+    }
+
+    private static DeliverableDefinition? ResolveDeliverable(string? deliverableType)
+    {
+        if (string.IsNullOrWhiteSpace(deliverableType)) return null;
+        if (DeliverableCatalog.TryGet(deliverableType, out var deliverable)) return deliverable;
+
+        throw new InvalidOperationException($"Unknown deliverable type '{deliverableType.Trim()}'.");
     }
 
     public async Task<bool> DeleteTicketAsync(string projectSlug, int ticketId)

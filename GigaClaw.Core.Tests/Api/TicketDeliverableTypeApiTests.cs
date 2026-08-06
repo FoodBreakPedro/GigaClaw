@@ -23,6 +23,10 @@ public sealed class TicketDeliverableTypeApiTests :
     public async Task TicketEndpoints_RoundTripDeliverableTypeAcrossCreateUpdateListAndDetail()
     {
         var slug = await CreateProjectAsync("deliverable-api-" + Guid.NewGuid().ToString("N"));
+        var member = await _client.PostAsJsonAsync(
+            $"/api/projects/{slug}/members",
+            new CreateMemberRequest("email-copywriter"));
+        Assert.Equal(HttpStatusCode.Created, member.StatusCode);
 
         var create = await _client.PostAsJsonAsync(
             $"/api/projects/{slug}/tickets",
@@ -30,11 +34,12 @@ public sealed class TicketDeliverableTypeApiTests :
                 "Ship the newsletter",
                 "owner",
                 "Backlog",
-                DeliverableType: "email-newsletter"));
+                DeliverableType: "Email Newsletter"));
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
         var created = await create.Content.ReadFromJsonAsync<JsonElement>();
         var ticketId = created.GetProperty("id").GetInt32();
         Assert.Equal("email-newsletter", created.GetProperty("deliverableType").GetString());
+        Assert.Equal("email-copywriter", created.GetProperty("assignedTo").GetString());
 
         var list = await _client.GetFromJsonAsync<JsonElement>($"/api/projects/{slug}/tickets");
         var summary = Assert.Single(list.EnumerateArray());
@@ -52,6 +57,11 @@ public sealed class TicketDeliverableTypeApiTests :
 
         var updatedDetail = await _client.GetFromJsonAsync<JsonElement>($"/api/projects/{slug}/tickets/{ticketId}");
         Assert.True(updatedDetail.GetProperty("deliverableType").ValueKind is JsonValueKind.Null);
+
+        var invalid = await _client.PostAsJsonAsync(
+            $"/api/projects/{slug}/tickets",
+            new CreateTicketRequest("Unknown", "owner", "Backlog", DeliverableType: "podcast-episode"));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
     }
 
     private async Task<string> CreateProjectAsync(string name)

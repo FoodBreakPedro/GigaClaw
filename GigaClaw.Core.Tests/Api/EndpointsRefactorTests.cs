@@ -32,6 +32,8 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
 
     private static readonly HashSet<string> ExpectedRoutes = new(StringComparer.Ordinal)
     {
+        // Deliverables
+        "GET /api/deliverables",
         // Columns
         "GET /api/projects/{slug}/columns",
         "POST /api/projects/{slug}/columns",
@@ -151,6 +153,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
 
     private static readonly Dictionary<string, string> ExpectedTags = new(StringComparer.Ordinal)
     {
+        ["GET /api/deliverables"] = "Deliverables",
         ["GET /api/projects/{slug}/columns"] = "Columns",
         ["POST /api/projects/{slug}/columns"] = "Columns",
         ["PATCH /api/projects/{slug}/columns/{columnId}"] = "Columns",

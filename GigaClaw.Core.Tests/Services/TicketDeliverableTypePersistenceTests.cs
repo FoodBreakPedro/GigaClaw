@@ -13,22 +13,25 @@ public sealed class TicketDeliverableTypePersistenceTests
         using var tmp = new TempDir();
         var projects = new ProjectService(tmp.Path);
         var project = await projects.CreateProjectAsync("deliverable-type");
-        var tickets = new TicketService(projects, new MemberService(projects));
+        var members = new MemberService(projects);
+        await members.CreateMemberAsync(project.Slug, "email-copywriter");
+        var tickets = new TicketService(projects, members);
 
         var created = await tickets.CreateTicketAsync(
             project.Slug,
-            "Launch post",
-            deliverableType: "blog-post");
+            "Launch newsletter",
+            deliverableType: "Email Newsletter");
 
-        Assert.Equal("blog-post", created.DeliverableType);
+        Assert.Equal("email-newsletter", created.DeliverableType);
+        Assert.Equal("email-copywriter", created.AssignedTo);
 
         var detail = await tickets.GetTicketAsync(project.Slug, created.Id);
         Assert.NotNull(detail);
-        Assert.Equal("blog-post", detail.DeliverableType);
+        Assert.Equal("email-newsletter", detail.DeliverableType);
 
         var summaries = await tickets.ListTicketsAsync(project.Slug);
         var summary = Assert.Single(summaries);
-        Assert.Equal("blog-post", summary.DeliverableType);
+        Assert.Equal("email-newsletter", summary.DeliverableType);
 
         var updated = await tickets.UpdateTicketAsync(
             project.Slug,
@@ -87,7 +90,9 @@ public sealed class TicketDeliverableTypePersistenceTests
             await schema.ExecuteNonQueryAsync();
         }
 
-        var tickets = new TicketService(projects, new MemberService(projects));
+        var members = new MemberService(projects);
+        await members.CreateMemberAsync(project.Slug, "email-copywriter");
+        var tickets = new TicketService(projects, members);
         var created = await tickets.CreateTicketAsync(
             project.Slug,
             "Backfill me",
@@ -106,5 +111,30 @@ public sealed class TicketDeliverableTypePersistenceTests
         while (await reader.ReadAsync())
             columns.Add(reader.GetString(1));
         Assert.Contains("DeliverableType", columns);
+    }
+
+    [Fact]
+    public async Task CreateTicket_PreservesAnExplicitAssigneeAndRejectsUnknownDeliverables()
+    {
+        using var tmp = new TempDir();
+        var projects = new ProjectService(tmp.Path);
+        var project = await projects.CreateProjectAsync("deliverable-routing");
+        var members = new MemberService(projects);
+        await members.CreateMemberAsync(project.Slug, "blog-writer");
+        await members.CreateMemberAsync(project.Slug, "custom-editor");
+        var tickets = new TicketService(projects, members);
+
+        var created = await tickets.CreateTicketAsync(
+            project.Slug,
+            "Editorial exception",
+            assignedTo: "custom-editor",
+            deliverableType: "Blog Post");
+
+        Assert.Equal("blog-post", created.DeliverableType);
+        Assert.Equal("custom-editor", created.AssignedTo);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            tickets.CreateTicketAsync(project.Slug, "Unknown", deliverableType: "podcast-episode"));
+        Assert.Contains("Unknown deliverable type", error.Message, StringComparison.Ordinal);
+        Assert.Single(await tickets.ListTicketsAsync(project.Slug));
     }
 }

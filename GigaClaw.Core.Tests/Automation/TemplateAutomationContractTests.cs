@@ -86,6 +86,24 @@ public class TemplateAutomationContractTests
     }
 
     [Fact]
+    public void Every_deliverable_entry_agent_has_an_enabled_todo_dispatch()
+    {
+        var config = LoadConfig();
+
+        foreach (var deliverable in GigaClaw.Core.Models.DeliverableCatalog.GetAll())
+        {
+            Assert.Contains(config.Automations, automation =>
+                automation.Enabled
+                && automation.Trigger is TicketInColumnTriggerSpec trigger
+                && trigger.Columns.Contains("Todo", StringComparer.Ordinal)
+                && automation.Conditions.OfType<AssignedToConditionSpec>()
+                    .Any(condition => condition.Slugs.Contains(deliverable.EntryAgent, StringComparer.Ordinal))
+                && automation.Actions.OfType<RunAgentActionSpec>()
+                    .Any(action => action.Agent is "{assignee}" || action.Agent == deliverable.EntryAgent));
+        }
+    }
+
+    [Fact]
     public void Shared_contract_manifest_covers_every_template_agent()
     {
         using var document = JsonDocument.Parse(
