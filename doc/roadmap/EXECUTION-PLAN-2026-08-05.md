@@ -20,7 +20,7 @@ This ledger keeps the remaining GigaClaw work recoverable across sessions and us
 | 2 | Non-destructive `.agents` synchronization with dry-run drift reporting | Complete | `39f50ed` through `2dc4dad`; evidence commit follows this ledger update |
 | 3 | Deliverable catalog, ticket persistence, and deterministic entry routing | Complete | `b9f3bf5` through `7236382` |
 | 4 | Deliverable-first ticket creation and human-readable pipeline progress | Next | - |
-| 5 | Canonical content routes and bounded translator/content recovery | Pending | - |
+| 5 | Canonical content routes and bounded translator/content recovery | Complete | `0d22cac`, merged by `3737153` |
 | 6 | End-to-end journey, propagation report, and deployment handoff | Pending | - |
 | 7 | Security join, Codex budgets, model overrides, and specialist promotion | Pending | - |
 
@@ -175,6 +175,41 @@ Behavioral boundary for checkpoint 4: assigning an entry agent does not force a 
 
 Exact next action: implement checkpoint 4 in both Board creation surfaces by replacing the primary assignee choice with the localized deliverable catalog, passing the chosen slug to `TicketService`, and showing human-readable route/progress state while retaining an advanced explicit-assignee escape hatch.
 
+## Checkpoint 5 log
+
+Branch: `codex/checkpoint-5-content-recovery`
+
+Delivered:
+
+- Public Blog Post and Product Review deliverables remain on the file-backed `blog-writer` route; ticket-native `content-writer` remains an AD-7 compatibility route and is not a public deliverable.
+- `blog-reviewer` and `content-writer` now use the dispatch contract names `categorySlug` and `tags` consistently.
+- Translator approval-chain mismatches return to `blog-seo` once, then require a visible draft plus a specific owner question and enumerated options before `Blocked`; unreadable artifacts return to `groomer` in `Backlog`.
+- Content-writer incomplete turns remain in `InProgress` for the existing five-attempt resume trigger. Both content-specific and shared resume exhaustion route to `groomer` in `Backlog`, reserving `Blocked` for decisions.
+- Focused embedded-template tests pin taxonomy wording, bounded receipts, resume caps, and exhaustion destinations.
+
+Verification completed:
+
+- Focused recovery, manifest, and catalog contracts: 12 passed.
+- Manifest regeneration changed exactly four intended skill hashes: `blog-reviewer/SKILL.md`, `blog-reviewer/references/ad7-protocol.md`, `blog-translator/SKILL.md`, and `content-writer/SKILL.md`.
+- Full local solution: 1,553 Core tests and 45 Eval tests passed.
+- Catalog `check --strict` and `check --strict-packs`: exit 0.
+- zabs-server deployment at `3737153`: 1,553 Core and 45 Eval tests passed; home and board returned HTTP 200.
+
+Server constraints resolved:
+
+- `/home/zabalazone/gigaclaw/bin/update-from-main.sh` now retries health checks for up to 24 seconds. Backup: `update-from-main.sh.bak-20260806-cp5`. The first live deployment needed two retries before Kestrel answered, proving the prior false-negative race.
+- All eight legacy workspaces received a core `packs.lock.json` baseline without changing any other `.agents` byte; before/after inventories are under `/home/zabalazone/gigaclaw/logs/baseline-adoption-20260806`.
+- Five byte-identical historical core skill files and the two bounded resume automation entries were propagated with exact-hash guards. Backups are under `/home/zabalazone/gigaclaw/logs/template-propagation-20260806`.
+- Codex CLI 0.146.1 was installed under `~/.local`; device authentication and the instance-wide `GIGACLAW_AGENT_HARNESS=codex` override must both be complete before fallback dispatch is live.
+
+Review assignment:
+
+| Model | Scope | Result |
+|---|---|---|
+| GPT-5.5 | Read-only prompt and contract review | Found stale incomplete-work blocking and incomplete owner-decision requirements; both corrected before merge |
+
+Exact next action remains checkpoint 4. Checkpoint 5 was intentionally completed first at the owner's request; checkpoint 4 is still required for the simplified deliverable-first creation experience.
+
 ## Propagation and deployment
 
 Checkpoint 0 does not modify `ProjectTemplate/Agents/**`, so it has no `.agents` propagation list.
@@ -190,6 +225,16 @@ Checkpoint 2 does not modify `ProjectTemplate/Agents/**`; its propagation list i
 
 Checkpoint 3 does not modify `ProjectTemplate/Agents/**`; its propagation list is empty. Deploying the rebuilt application adds the ticket column migration, catalog API, and routing behavior.
 
+Checkpoint 5 propagation list for every existing project:
+
+- `.agents/blog-reviewer/SKILL.md`
+- `.agents/blog-reviewer/references/ad7-protocol.md`
+- `.agents/blog-translator/SKILL.md`
+- `.agents/content-writer/SKILL.md`
+- `.agents/automations.json` — merge only `content-writer-resume` and `assignee-resume`
+
+These checkpoint 5 paths were propagated on zabs-server with backups. `.agents/blog-writer/SKILL.md` from checkpoint 1 was propagated in the same guarded operation. The checkpoint 1 `cms-dispatch-on-done` automation remains an entry-level manual-review item because `gigaclaw-system` has a distinct local version and `payload-test` intentionally lacks the entry.
+
 For zabs-server, pull the merged checkpoint, publish `GigaClaw.Web/GigaClaw.Web.csproj` in Release, deploy the resulting application set including the rebuilt `GigaClaw.Core.dll`, confirm `AI_DRAFT_SECRET` is set in the service environment, and restart the GigaClaw service. New projects receive corrected embedded templates only after deployment. The owner authorized a post-push SSH check of the automatic deployment; no server edits belong in this checkpoint.
 
 ## Graphify decision
@@ -198,14 +243,13 @@ For zabs-server, pull the merged checkpoint, publish `GigaClaw.Web/GigaClaw.Web.
 
 ## End-of-week resume point
 
-Completed on main before checkpoint 3: R8 Codex fallback, CMS taxonomy dispatch, safe `.agents` sync, and the refreshed venture-prep operating briefs (`298bfbc`). Checkpoint 3 is complete on `codex/deliverable-routing` pending its final evidence commit, merge, push, and automatic deployment verification.
+Completed on main through checkpoint 5: R8 Codex fallback, CMS taxonomy dispatch, safe `.agents` sync, deliverable catalog/routing, bounded content recovery, and the refreshed venture-prep operating briefs (`298bfbc`). Checkpoint 4 was deliberately skipped at the owner's direction and remains next.
 
 Remaining user-experience path:
 
 1. **Checkpoint 4:** deliverable selector in `Board.razor` and `UnifiedBoard.razor`, localized labels, optional advanced assignee override, and readable pipeline progress.
-2. **Checkpoint 5:** settle the file-backed `blog-writer` versus ticket-native `content-writer` publishing boundary; repair stale taxonomy instructions; finish bounded translator digest recovery and verify the bounded content-writer resume path.
-3. **Checkpoint 6:** exercise each public deliverable from ticket creation through its first agent and review/approval exit; produce the final propagation and deployment report.
-4. **Checkpoint 7:** security-team join, Codex budgets/model overrides, and specialist promotion after the primary content journey is reliable.
+2. **Checkpoint 6:** exercise each public deliverable from ticket creation through its first agent and review/approval exit; produce the final propagation and deployment report.
+3. **Checkpoint 7:** security-team join, Codex budgets/model overrides, and specialist promotion after the primary content journey is reliable.
 
 Known operational constraints and blind spots:
 
