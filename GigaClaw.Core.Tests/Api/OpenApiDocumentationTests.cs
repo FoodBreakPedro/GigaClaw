@@ -83,6 +83,32 @@ public sealed class OpenApiDocumentationTests : IClassFixture<OpenApiDocumentati
         Assert.True(responses.TryGetProperty("404", out _), "404 NotFound must be declared on DELETE");
     }
 
+    [Fact]
+    public async Task OpenApiSpec_DeliverableCatalogAndTicketRequestExposeRoutingContract()
+    {
+        using var doc = await FetchOpenApiDoc();
+        var catalog = FindOperation(doc, "/deliverables", "get");
+        Assert.NotNull(catalog);
+        Assert.True(
+            catalog!.Value.GetProperty("responses").GetProperty("200").TryGetProperty("content", out _),
+            "GET /deliverables must publish its response schema.");
+
+        var createTicket = FindOperation(doc, "/tickets", "post");
+        Assert.NotNull(createTicket);
+        var requestSchema = createTicket!.Value
+            .GetProperty("requestBody")
+            .GetProperty("content")
+            .GetProperty("application/json")
+            .GetProperty("schema");
+        var schemaName = requestSchema.GetProperty("$ref").GetString()!.Split('/').Last();
+        var properties = doc.RootElement
+            .GetProperty("components")
+            .GetProperty("schemas")
+            .GetProperty(schemaName)
+            .GetProperty("properties");
+        Assert.True(properties.TryGetProperty("deliverableType", out _));
+    }
+
     private async Task<JsonDocument> FetchOpenApiDoc()
     {
         var json = await _client.GetStringAsync("/openapi/v1.json");
