@@ -644,14 +644,19 @@ public class TicketService : ITicketDependencyQuery
         await db.SaveChangesAsync();
     }
 
-    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string status = "Backlog", List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null, string? deliverableType = null)
+    /// <summary>
+    /// Creates a ticket. <paramref name="status"/> is optional: callers that omit it (REST clients
+    /// posting only a title, board imports carrying a null status) land in the board's first column
+    /// rather than tripping the NOT NULL constraint on Tickets.Status.
+    /// </summary>
+    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string? status = null, List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null, string? deliverableType = null)
     {
         if (string.IsNullOrWhiteSpace(createdBy))
-            throw new InvalidOperationException("Le champ 'createdBy' est requis.");
+            throw new InvalidOperationException("The 'createdBy' field is required.");
         var deliverable = ResolveDeliverable(deliverableType);
         var resolvedAssignee = string.IsNullOrEmpty(assignedTo) ? deliverable?.EntryAgent : assignedTo;
         if (!string.IsNullOrEmpty(resolvedAssignee) && !await _memberService.MemberExistsAsync(projectSlug, resolvedAssignee))
-            throw new InvalidOperationException($"Le membre '{resolvedAssignee}' n'existe pas.");
+            throw new InvalidOperationException($"Member '{resolvedAssignee}' does not exist.");
         await using var db = _projectService.GetProjectDb(projectSlug);
         await EnsureActivityTableAsync(db);
         await EnsureLabelTablesAsync(db);
@@ -660,15 +665,18 @@ public class TicketService : ITicketDependencyQuery
         {
             var parentExists = await db.Tickets.AnyAsync(t => t.Id == parentId.Value);
             if (!parentExists)
-                throw new InvalidOperationException($"Le ticket parent #{parentId} n'existe pas.");
+                throw new InvalidOperationException($"Parent ticket #{parentId} does not exist.");
         }
-        var maxSort = await db.Tickets.Where(t => t.Status == status).Select(t => (int?)t.SortOrder).MaxAsync() ?? -1;
+        var resolvedStatus = string.IsNullOrWhiteSpace(status)
+            ? await ResolveDefaultStatusAsync(db)
+            : status;
+        var maxSort = await db.Tickets.Where(t => t.Status == resolvedStatus).Select(t => (int?)t.SortOrder).MaxAsync() ?? -1;
         var ticket = new Ticket
         {
             Title = title,
             Description = description,
             CreatedBy = createdBy,
-            Status = status,
+            Status = resolvedStatus,
             Priority = priority,
             SortOrder = maxSort + 1,
             AssignedTo = resolvedAssignee,
@@ -694,6 +702,20 @@ public class TicketService : ITicketDependencyQuery
         await db.SaveChangesAsync();
         await tx.CommitAsync();
         return ticket;
+    }
+
+    /// <summary>
+    /// Landing column for a ticket created without an explicit status: the board's leftmost column,
+    /// falling back to "Backlog" (the seeded first column) if the board has none.
+    /// </summary>
+    private static async Task<string> ResolveDefaultStatusAsync(TodoDbContext db)
+    {
+        await ColumnService.EnsureBoardColumnsTableAsync(db);
+        var first = await db.BoardColumns
+            .OrderBy(c => c.SortOrder)
+            .Select(c => c.Name)
+            .FirstOrDefaultAsync();
+        return string.IsNullOrWhiteSpace(first) ? "Backlog" : first;
     }
 
     public async Task<Ticket?> MoveTicketAsync(string projectSlug, int ticketId, string newStatus, string author = "owner")
@@ -899,7 +921,7 @@ public class TicketService : ITicketDependencyQuery
     public async Task<Ticket?> ScheduleTicketAsync(string projectSlug, int ticketId, DateTime fireAt, string targetStatus = "Todo", string author = "owner")
     {
         if (string.IsNullOrWhiteSpace(author))
-            throw new InvalidOperationException("Le champ 'author' est requis.");
+            throw new InvalidOperationException("The 'author' field is required.");
         if (string.IsNullOrWhiteSpace(targetStatus))
             targetStatus = "Todo";
         await using var db = _projectService.GetProjectDb(projectSlug);
@@ -908,10 +930,10 @@ public class TicketService : ITicketDependencyQuery
         await ColumnService.EnsureBoardColumnsTableAsync(db);
         var scheduledExists = await db.BoardColumns.AnyAsync(c => c.Name == "Scheduled");
         if (!scheduledExists)
-            throw new InvalidOperationException("La colonne 'Scheduled' n'existe pas.");
+            throw new InvalidOperationException("Column 'Scheduled' does not exist.");
         var targetExists = await db.BoardColumns.AnyAsync(c => c.Name == targetStatus);
         if (!targetExists)
-            throw new InvalidOperationException($"La colonne cible '{targetStatus}' n'existe pas.");
+            throw new InvalidOperationException($"Target column '{targetStatus}' does not exist.");
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return null;
         var oldStatus = ticket.Status;

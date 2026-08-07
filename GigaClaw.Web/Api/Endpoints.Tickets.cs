@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using GigaClaw.Core.Models;
 using GigaClaw.Core.Services;
 using GigaClaw.Web.Services;
@@ -24,6 +25,13 @@ public static partial class Endpoints
             catch (InvalidOperationException ex)
             {
                 return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (DbUpdateException)
+            {
+                // A store constraint violation on insert means the payload was incomplete
+                // (e.g. a null title). Report it as bad input — the EF/SQLite exception would
+                // otherwise reach the client as a 500 with a stack trace exposing internals.
+                return Results.BadRequest(new { error = "The ticket could not be created: one or more required fields are missing or invalid." });
             }
         }).WithTags("Tickets")
         .Produces<Ticket>(StatusCodes.Status201Created)
