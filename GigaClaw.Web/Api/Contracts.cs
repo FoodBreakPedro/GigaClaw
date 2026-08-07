@@ -11,7 +11,7 @@ public record AgentTemplateSyncApplyResponse(
     IReadOnlyList<string> AppliedPaths,
     IReadOnlyList<string> MembersCreated,
     bool AutomationsReloaded);
-public record CreateTicketRequest(string Title, string CreatedBy, string Status, string Description = "", List<int>? LabelIds = null, TicketPriority Priority = TicketPriority.NiceToHave, string? AssignedTo = null, int? ParentId = null, string? DeliverableType = null);
+public record CreateTicketRequest(string Title, string CreatedBy, string? Status = null, string Description = "", List<int>? LabelIds = null, TicketPriority Priority = TicketPriority.NiceToHave, string? AssignedTo = null, int? ParentId = null, string? DeliverableType = null);
 public record UpdateTicketRequest(string Author, string? Title = null, string? Description = null, TicketPriority? Priority = null, string? AssignedTo = null, List<int>? LabelIds = null, string? DeliverableType = null);
 public record MoveTicketRequest(string Status, string Author);
 public record TransitionTicketRequest(string Status, string Author, string? AssignedTo = null, string? ExpectedStatus = null);
