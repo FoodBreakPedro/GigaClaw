@@ -37,6 +37,15 @@
       <LogicalName>GigaClaw.Core.AgentsTemplate/contracts.json</LogicalName>
       <WithCulture>false</WithCulture>
     </EmbeddedResource>
+    <!-- The declared shape of a deliverable's journey. Shipped as a *declaration*: it is what the
+         board reads to name a deliverable's stages and place a ticket among them. Nothing executes
+         it — the content pipeline is driven by the handoff automations in automations.json, and no
+         `startWorkflow` action fires it. Validated at every AutomationStore.LoadAsync, so a broken
+         graph here fails the whole automation reload; see doc/workflow-graph.md. -->
+    <EmbeddedResource Include="..\ProjectTemplate\Agents\workflow.json">
+      <LogicalName>GigaClaw.Core.AgentsTemplate/workflow.json</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
     <!-- AD-9 model seeding: agent-slug -> default Claude model id, read by
          AgentsTemplateService.DefaultModels() at member-creation time. -->
     <EmbeddedResource Include="..\ProjectTemplate\Agents\models.json">
