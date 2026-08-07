@@ -5507,3 +5507,55 @@ table.mc-tickets td.prio { white-space: nowrap; color: var(--text-muted); }
 .mc-feed-time { font-size: 0.68rem; color: var(--text-dim); padding-top: 2px; white-space: nowrap; }
 .mc-feed-body { font-size: 0.76rem; color: var(--text); min-width: 0; }
 .mc-feed-sub { display: block; font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Deliverable route: the declared pipeline a ticket follows ───────────────
+   The route is read from .agents/workflow.json (see doc/workflow-graph.md); the
+   board only renders it. Stage state is done / current / upcoming, plus an
+   "unknown" state for a ticket whose assignee is off the declared route. */
+.deliverable-route-hint {
+  margin: 0.35rem 0 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.deliverable-route-runs { color: var(--text-muted); }
+
+.deliverable-advanced-toggle {
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.deliverable-advanced-toggle:hover { color: var(--text); }
+.deliverable-advanced {
+  padding: 0.5rem 0 0 0.75rem;
+  border-left: 2px solid var(--border);
+  margin-top: 0.25rem;
+}
+
+.deliverable-progress { margin: 0.5rem 0 0.75rem; }
+.deliverable-stages {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.85rem;
+}
+.deliverable-stage {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.deliverable-stage-marker { font-size: 0.75rem; line-height: 1; }
+.deliverable-stage-done { color: var(--text-muted); }
+.deliverable-stage-done .deliverable-stage-marker { color: var(--success, #22c55e); }
+.deliverable-stage-current { color: var(--text); font-weight: 600; }
+.deliverable-stage-current .deliverable-stage-marker { color: var(--accent, #6366f1); }
+.deliverable-stage-upcoming { color: var(--text-muted); opacity: 0.75; }
+.deliverable-stage-unknown { color: var(--text-muted); opacity: 0.6; }

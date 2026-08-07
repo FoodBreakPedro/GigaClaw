@@ -22,6 +22,7 @@
 @inject IJSRuntime JS
 @inject LocalizationService L
 @inject GigaClaw.Web.Services.EscapeKeyStack EscapeStack
+@inject GigaClaw.Core.Automation.AutomationStore AutomationStore
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -428,26 +429,75 @@ else
                         }
                     </div>
 
-                    <label class="field-label">@L["AgentTeam"]</label>
-                    <div class="assignee-picker-wrapper" style="margin-bottom:0.5rem;">
-                        <select class="assignee-select" value="@_selectedTeamSlug" @onchange="OnTeamChanged">
-                            @foreach (var team in AgentTeamService.GetTeams(_workspacePath))
-                            {
-                                <option value="@team.Slug">@GetTeamDisplayName(team)</option>
-                            }
-                        </select>
-                    </div>
-
-                    <label class="field-label">@L["AssignTo"]</label>
+                    <label class="field-label">@L["Deliverable"]</label>
                     <div class="assignee-picker-wrapper">
-                        <select class="assignee-select" @bind="_newTicketAssignedTo">
-                            <option value="">@L["Unassigned"]</option>
-                            @foreach (var member in FilteredMembers)
+                        <select class="assignee-select" @bind="_newTicketDeliverable">
+                            <option value="">@L["DeliverableNone"]</option>
+                            @foreach (var deliverable in DeliverableCatalog.GetAll())
                             {
-                                <option value="@member.Slug">@member.Name (@member.Slug)</option>
+                                <option value="@deliverable.Slug">@deliverable.Name</option>
                             }
                         </select>
                     </div>
+                    @{
+                        var plannedRoute = PlannedRoute();
+                    }
+                    @if (plannedRoute.Count > 0)
+                    {
+                        <p class="deliverable-route-hint">
+                            <span class="deliverable-route-runs">@L["DeliverableRuns"]</span>
+                            @for (var i = 0; i < plannedRoute.Count; i++)
+                            {
+                                @(i > 0 ? " → " : " ")<strong>@MemberDisplayName(plannedRoute[i].Role)</strong>
+                            }
+                            <br />
+                            @if (_columns.Count > 0 && !IsDispatchColumn(_columns[0].Name))
+                            {
+                                @(L["DeliverableStartsAtTodo"])
+                            }
+                            else
+                            {
+                                @(L["DeliverableStartsNow"])
+                            }
+                        </p>
+                    }
+                    else if (!string.IsNullOrEmpty(_newTicketDeliverable))
+                    {
+                        <p class="deliverable-route-hint">@L["DeliverableNoRoute"]</p>
+                    }
+
+                    <button class="deliverable-advanced-toggle" @onclick="() => _showAdvancedAssignee = !_showAdvancedAssignee">
+                        @(_showAdvancedAssignee ? "▾" : "▸") @L["AdvancedAssignment"]
+                    </button>
+                    @if (_showAdvancedAssignee)
+                    {
+                        <div class="deliverable-advanced">
+                            <label class="field-label">@L["AgentTeam"]</label>
+                            <div class="assignee-picker-wrapper" style="margin-bottom:0.5rem;">
+                                <select class="assignee-select" value="@_selectedTeamSlug" @onchange="OnTeamChanged">
+                                    @foreach (var team in AgentTeamService.GetTeams(_workspacePath))
+                                    {
+                                        <option value="@team.Slug">@GetTeamDisplayName(team)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <label class="field-label">@L["AssignTo"]</label>
+                            <div class="assignee-picker-wrapper">
+                                <select class="assignee-select" @bind="_newTicketAssignedTo">
+                                    <option value="">@L["Unassigned"]</option>
+                                    @foreach (var member in FilteredMembers)
+                                    {
+                                        <option value="@member.Slug">@member.Name (@member.Slug)</option>
+                                    }
+                                </select>
+                            </div>
+                            @if (!string.IsNullOrEmpty(_newTicketAssignedTo) && !string.IsNullOrEmpty(_newTicketDeliverable))
+                            {
+                                <p class="deliverable-route-hint">@L["DeliverableAssigneeWins"]</p>
+                            }
+                        </div>
+                    }
                 </div>
                 <div class="create-popup-footer">
                     <button class="cancel-btn" @onclick="CloseCreatePopup">@L["Cancel"]</button>
@@ -529,6 +579,39 @@ else
                     }
                 </div>
             </div>
+
+            @* ── Pipeline progress: the ticket's place in its deliverable's declared route ── *@
+            @{
+                var progress = SelectedTicketProgress();
+            }
+            @if (progress is not null && progress.Stages.Count > 0)
+            {
+                <div class="deliverable-progress">
+                    <span class="section-label-sm">@L["DeliverableProgress"]</span>
+                    <ol class="deliverable-stages">
+                        @for (var i = 0; i < progress.Stages.Count; i++)
+                        {
+                            var stage = progress.Stages[i];
+                            var state = !progress.IsOnRoute ? "unknown"
+                                : i < progress.CurrentIndex ? "done"
+                                : i == progress.CurrentIndex ? "current"
+                                : "upcoming";
+                            <li class="deliverable-stage deliverable-stage-@state" title="@stage.Description">
+                                <span class="deliverable-stage-marker">
+                                    @(state switch { "done" => "✓", "current" => "●", _ => "○" })
+                                </span>
+                                <span class="deliverable-stage-role">@MemberDisplayName(stage.Role)</span>
+                            </li>
+                        }
+                    </ol>
+                    @if (!progress.IsOnRoute && !string.IsNullOrEmpty(_selectedTicket.AssignedTo))
+                    {
+                        <p class="deliverable-route-hint">
+                            @string.Format(L["DeliverableOffRoute"], MemberDisplayName(_selectedTicket.AssignedTo))
+                        </p>
+                    }
+                </div>
+            }
 
             @* ── Assignee row ── *@
             <div class="ticket-assignee-row">
@@ -962,6 +1045,40 @@ else
     // Members
     private List<Member> _allMembers = [];
     private string _newTicketAssignedTo = "";
+    private string _newTicketDeliverable = "";
+    private bool _showAdvancedAssignee = false;
+
+    /// <summary>
+    /// The route the chosen deliverable declares, read from the workspace's <c>workflow.json</c>.
+    /// Empty when no deliverable is chosen, or when the workspace has no graph — the creation form
+    /// still works, it just cannot promise what will run.
+    /// </summary>
+    private IReadOnlyList<GigaClaw.Core.Automation.Workflow.DeliverableStage> PlannedRoute()
+    {
+        if (!DeliverableCatalog.TryGet(_newTicketDeliverable, out var deliverable)) return [];
+        return GigaClaw.Core.Automation.Workflow.DeliverableRoute.Resolve(
+            AutomationStore.GetCachedWorkflow(Slug), deliverable);
+    }
+
+    /// <summary>
+    /// Where the open ticket sits in its deliverable's declared route, or null when it has no
+    /// deliverable — a plain ticket has no pipeline to show.
+    /// </summary>
+    private GigaClaw.Core.Automation.Workflow.DeliverableProgress? SelectedTicketProgress()
+    {
+        if (_selectedTicket is null) return null;
+        if (!DeliverableCatalog.TryGet(_selectedTicket.DeliverableType, out var deliverable)) return null;
+        return GigaClaw.Core.Automation.Workflow.DeliverableRoute.Locate(
+            AutomationStore.GetCachedWorkflow(Slug), deliverable, _selectedTicket.AssignedTo);
+    }
+
+    /// <summary>
+    /// Whether a column is the one the per-agent dispatch automation watches. A deliverable ticket
+    /// created into any other column is parked until someone moves it, and the form says so rather
+    /// than letting the owner assume work started.
+    /// </summary>
+    private static bool IsDispatchColumn(string column) =>
+        string.Equals(column, "Todo", StringComparison.OrdinalIgnoreCase);
 
     // Assignee autocomplete
     private string _assigneeSearch = "";
@@ -2031,6 +2148,8 @@ else
         _newTicketLabelIds = [];
         _newTicketPriority = TicketPriority.NiceToHave;
         _newTicketAssignedTo = "";
+        _newTicketDeliverable = "";
+        _showAdvancedAssignee = false;
         _showNewLabelForm = false;
         _showCreatePopup = true;
         _escCreatePopup?.Dispose();
@@ -2065,7 +2184,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_newTicketTitle) || _columns.Count == 0) return;
         var status = _columns[0].Name;
-        var ticket = await TicketService.CreateTicketAsync(Slug, _newTicketTitle.Trim(), _newTicketDescription.Trim(), status: status, labelIds: _newTicketLabelIds, priority: _newTicketPriority, assignedTo: string.IsNullOrEmpty(_newTicketAssignedTo) ? null : _newTicketAssignedTo, parentId: _subKanbanParentId);
+        var ticket = await TicketService.CreateTicketAsync(Slug, _newTicketTitle.Trim(), _newTicketDescription.Trim(), status: status, labelIds: _newTicketLabelIds, priority: _newTicketPriority, assignedTo: string.IsNullOrEmpty(_newTicketAssignedTo) ? null : _newTicketAssignedTo, parentId: _subKanbanParentId, deliverableType: string.IsNullOrEmpty(_newTicketDeliverable) ? null : _newTicketDeliverable);
         if (ticket is not null)
             PushUndo($"{L["UndoCreate"]} #{ticket.Id}", async () =>
                 await TicketService.DeleteTicketAsync(Slug, ticket.Id));
