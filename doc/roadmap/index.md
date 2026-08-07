@@ -30,6 +30,7 @@ Per owner direction: **Codex** takes the most complex surgical code changes (str
 | CL Orchestration | Claude Code + subagents | [lane-claude-orchestration.md](lane-claude-orchestration.md) | `automations.json`, `contracts.json`, engine trigger/action vocabulary, team services, verdict schemas, GitHub surface. Also owns cross-lane review + merge coordination |
 | GM Volume | Gemini CLI | [lane-gemini-templates.md](lane-gemini-templates.md) | `ProjectTemplate/**` markdown (SKILL.md, memory stubs, references), `models.json` completion, pack content authoring |
 | Packs & later | mixed | [packs-and-later.md](packs-and-later.md) | O7 pack infra, the five approved packs, P7 registries, later pilots, do-not-build |
+| Self-maintenance | — | [gigaclaw-self-maintenance.md](gigaclaw-self-maintenance.md) | `gigaclaw-system` as a code pipeline: ticket → agent on a branch → PR → owner merge → auto-deploy. Designed, not built; gaps measured against the live workspace |
 
 Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/cx-tooling`, `lane/claude-orch`, `lane/gemini-vol`). A lane never edits another lane's files outside a documented merge window; cross-lane needs are raised as notes in the lane doc and resolved at sync points. Lane CL runs the merge queue: every lane branch is reviewed (five-axis) before merging to main. Existing tests must pass with `dotnet test GigaClaw.Core.Tests -c Release`; new projects must also be built and have their own tests invoked explicitly by CI.
 

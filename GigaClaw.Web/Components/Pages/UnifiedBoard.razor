@@ -9,6 +9,7 @@
 @inject IJSRuntime JS
 @inject LocalizationService L
 @inject EscapeKeyStack EscapeStack
+@inject GigaClaw.Core.Automation.AutomationStore AutomationStore
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -222,6 +223,44 @@ else
                         }
                     </div>
                 </div>
+                <div>
+                    <label class="field-label">@L["Deliverable"]</label>
+                    <div class="assignee-picker-wrapper">
+                        <select class="assignee-select" @bind="_newTicketDeliverable">
+                            <option value="">@L["DeliverableNone"]</option>
+                            @foreach (var deliverable in DeliverableCatalog.GetAll())
+                            {
+                                <option value="@deliverable.Slug">@deliverable.Name</option>
+                            }
+                        </select>
+                    </div>
+                    @{
+                        var plannedRoute = PlannedRoute();
+                    }
+                    @if (plannedRoute.Count > 0)
+                    {
+                        <p class="deliverable-route-hint">
+                            <span class="deliverable-route-runs">@L["DeliverableRuns"]</span>
+                            @for (var i = 0; i < plannedRoute.Count; i++)
+                            {
+                                @(i > 0 ? " → " : " ")<strong>@plannedRoute[i].Role</strong>
+                            }
+                            <br />
+                            @if (IsDispatchColumn(_newTicketStatus))
+                            {
+                                @(L["DeliverableStartsNow"])
+                            }
+                            else
+                            {
+                                @(L["DeliverableStartsAtTodo"])
+                            }
+                        </p>
+                    }
+                    else if (!string.IsNullOrEmpty(_newTicketDeliverable))
+                    {
+                        <p class="deliverable-route-hint">@L["DeliverableNoRoute"]</p>
+                    }
+                </div>
                 @if (_newTicketError is not null)
                 {
                     <div class="settings-status settings-status-err">@_newTicketError</div>
@@ -276,7 +315,33 @@ else
     private string _newTicketTitle = "";
     private string _newTicketDescription = "";
     private TicketPriority _newTicketPriority = TicketPriority.NiceToHave;
+    private string _newTicketDeliverable = "";
     private string? _newTicketError;
+
+    /// <summary>
+    /// The route the chosen deliverable declares, read from the lane project's workflow.json. Empty
+    /// when no deliverable is chosen or the workspace declares no graph.
+    /// </summary>
+    /// <remarks>
+    /// Stage roles are shown as agent slugs here rather than member display names: this board spans
+    /// every project, and a roster lookup per lane on each paint would cost more than the label is
+    /// worth. The per-project board resolves display names.
+    /// </remarks>
+    private IReadOnlyList<GigaClaw.Core.Automation.Workflow.DeliverableStage> PlannedRoute()
+    {
+        if (_newTicketProjectSlug is null) return [];
+        if (!DeliverableCatalog.TryGet(_newTicketDeliverable, out var deliverable)) return [];
+        return GigaClaw.Core.Automation.Workflow.DeliverableRoute.Resolve(
+            AutomationStore.GetCachedWorkflow(_newTicketProjectSlug), deliverable);
+    }
+
+    /// <summary>
+    /// Whether the lane the ticket is being created into is the one the per-agent dispatch
+    /// automation watches. Unlike the per-project board this form already knows its target column,
+    /// so it can say plainly whether work starts now or waits.
+    /// </summary>
+    private static bool IsDispatchColumn(string column) =>
+        string.Equals(column, "Todo", StringComparison.OrdinalIgnoreCase);
     private bool _creatingTicket;
     private IDisposable? _escCreateTicket;
 
@@ -438,6 +503,7 @@ else
         _newTicketTitle = "";
         _newTicketDescription = "";
         _newTicketPriority = TicketPriority.NiceToHave;
+        _newTicketDeliverable = "";
         _newTicketError = null;
         _escCreateTicket?.Dispose();
         _escCreateTicket = EscapeStack.PushWithFocus(JS, () => InvokeAsync(() =>
@@ -471,7 +537,8 @@ else
                 _newTicketTitle.Trim(),
                 _newTicketDescription.Trim(),
                 status: _newTicketStatus,
-                priority: _newTicketPriority);
+                priority: _newTicketPriority,
+                deliverableType: string.IsNullOrEmpty(_newTicketDeliverable) ? null : _newTicketDeliverable);
 
             if (_lanes is not null)
             {

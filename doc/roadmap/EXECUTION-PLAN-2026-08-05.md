@@ -19,7 +19,7 @@ This ledger keeps the remaining GigaClaw work recoverable across sessions and us
 | 1 | CMS `categorySlug` and `tags` dispatch, authentication, and placeholder safety | Complete | `b68d020` through `d4c7bcc`; evidence commit follows this ledger update |
 | 2 | Non-destructive `.agents` synchronization with dry-run drift reporting | Complete | `39f50ed` through `2dc4dad`; evidence commit follows this ledger update |
 | 3 | Deliverable catalog, ticket persistence, and deterministic entry routing | Complete | `b9f3bf5` through `7236382` |
-| 4 | Deliverable-first ticket creation and human-readable pipeline progress | Next | - |
+| 4 | Deliverable-first ticket creation and human-readable pipeline progress | Complete | `0d636a9`, `58d61eb`, `+ this ledger update` |
 | 5 | Canonical content routes and bounded translator/content recovery | Complete | `0d22cac`, merged by `3737153` |
 | 6 | End-to-end journey, propagation report, and deployment handoff | Pending | - |
 | 7 | Security join, Codex budgets, model overrides, and specialist promotion | Pending | - |
@@ -210,6 +210,59 @@ Review assignment:
 
 Exact next action remains checkpoint 4. Checkpoint 5 was intentionally completed first at the owner's request; checkpoint 4 is still required for the simplified deliverable-first creation experience.
 
+## Checkpoint 4 log
+
+Branch: `codex/checkpoint-4-declared-route`
+
+Delivered:
+
+- `ProjectTemplate/Agents/workflow.json` declares each deliverable's route. Routing gates key on the
+  entry agent the catalog assigns at creation, so a deliverable ticket lands on its own chain without
+  the board asking the owner to pick one.
+- The route is **declared, not derived**. Deriving it from `automations.json` was tried and fails:
+  `blog-reviewer-on-review` dispatches with `runAgent` and never reassigns, so a walk over
+  `assignTicket` edges omits the reviewer and reports the blog route one stage short.
+- The graph is **declared and not executed**. `WorkflowWalker` materializes a sub-ticket per task
+  state, so starting a walk would put a second engine on a pipeline the handoff automations already
+  drive. `Graph_is_declared_only_and_nothing_starts_a_walk` fails if a `startWorkflow` action is ever
+  added, forcing that reconciliation to be designed first.
+- `DeliverableRoute` answers "what will run" and "where is this ticket", both read-only.
+- `Board.razor`: deliverable catalog as the primary control, a read-only line naming the agents it
+  runs in order, explicit Backlog-vs-Todo start semantics, and team/assignee collapsed into an
+  Advanced section that stays authoritative when set and says so.
+- `UnifiedBoard.razor`: the same selector and route preview, stated against the lane's target column.
+- Ticket panel renders declared stages as done/current/upcoming. An assignee that is not a stage —
+  the groomer recovery hop, or an owner-assigned specialist — renders **off-route** rather than
+  collapsing to stage one, which would report a restart that did not happen.
+- Only `blog-post` and `product-review` have a real pipeline. The other four deliverables get an
+  honest entry-plus-approval chain whose state descriptions say no further pipeline is configured,
+  rather than inventing stages the template does not implement.
+
+Verification completed:
+
+- Focused route, graph, and creation-surface suites: 23 passed.
+- Full local solution: 1,576 Core tests and 45 Eval tests passed.
+- Core-init manifest gained exactly one entry, `.agents/workflow.json`.
+- Localization parity: en/fr/es at 149 keys each.
+- Isolated debug instance (`:5232`, own data dir, mock CLI): a fresh workspace received
+  `workflow.json`; the engine logged `workflow graph: 19 state(s)`, which an invalid graph could not
+  do because validation failure aborts the whole automation reload; `deliverableType: "Blog Post"`
+  normalized to `blog-post` and derived `blog-writer` while correctly staying in `Backlog`; the
+  ticket panel rendered `● blog-writer ○ blog-reviewer ○ blog-seo`.
+
+Content pipeline health check (zabs-server, 2026-08-07): every ticket that reached `ready-for-cms`
+plus `approved` published — gamelifteat 4/4, karalungaming 2/2, zabsconsulting 2/2. Nothing stuck, no
+`Blocked`, no stalled `Review`. The constraint is throughput, not correctness: 8 published pieces
+total with every board empty apart from `Backlog` and `Done`.
+
+Found in passing, not fixed here: `POST /api/projects/{slug}/tickets` returns HTTP 500 with a raw EF
+stack trace when `status` is omitted, because the API passes the DTO's null through and defeats
+`CreateTicketAsync`'s `"Backlog"` default. The same endpoint returns a French error string for a
+missing `createdBy`. Handed to a separate session.
+
+Exact next action: checkpoint 6 — exercise each public deliverable from creation through its first
+agent and review/approval exit, and produce the final propagation and deployment report.
+
 ## Propagation and deployment
 
 Checkpoint 0 does not modify `ProjectTemplate/Agents/**`, so it has no `.agents` propagation list.
@@ -233,7 +286,28 @@ Checkpoint 5 propagation list for every existing project:
 - `.agents/content-writer/SKILL.md`
 - `.agents/automations.json` — merge only `content-writer-resume` and `assignee-resume`
 
-These checkpoint 5 paths were propagated on zabs-server with backups. `.agents/blog-writer/SKILL.md` from checkpoint 1 was propagated in the same guarded operation. The checkpoint 1 `cms-dispatch-on-done` automation remains an entry-level manual-review item because `gigaclaw-system` has a distinct local version and `payload-test` intentionally lacks the entry.
+These checkpoint 5 paths were propagated on zabs-server with backups. `.agents/blog-writer/SKILL.md` from checkpoint 1 was propagated in the same guarded operation.
+
+**`cms-dispatch-on-done` resolved 2026-08-07.** The seven workspaces holding the entry were not merely
+missing checkpoint 1 — they were frozen at the state *before* `7ec4349` (2026-08-03), so they also
+lacked that commit's timeout hardening (30s → 90s), its explicit `Content-Type` header, and its
+removal of the deleted `sourceSystem` field, on top of checkpoint 1's `categorySlug`/`tags` and
+`failureStatus: Review`. All seven were updated to the canonical entry with each instance's own
+`httpRequest.url` preserved — six at `https://zabalazone.com/api/ai/draft`, `gigaclaw-system` at its
+placeholder. Backups: `/home/zabalazone/gigaclaw/logs/cms-dispatch-repair-20260807/`. Verified exactly
+one automation entry changed per workspace; service restarted, home and board HTTP 200, all projects
+reloaded 29 entries with no errors.
+
+`payload-test` was left untouched and is not a gap: it has no `httpRequest` action at all and reaches
+its CMS through `n8n-dispatch-on-commit-receipt` instead.
+
+`gigaclaw-system`'s placeholder url is also not a gap but a symptom — it is a code project, not a
+content venture, and `cms-dispatch-on-done` does not belong there at all. See
+[gigaclaw-self-maintenance.md](./gigaclaw-self-maintenance.md).
+
+Note for future propagation: `update-from-main.sh` deploys the **application from main only**. It does
+not push `ProjectTemplate/**` changes into existing workspaces' `.agents/`, which is why the above had
+to be done by hand and why it survives the next poll.
 
 For zabs-server, pull the merged checkpoint, publish `GigaClaw.Web/GigaClaw.Web.csproj` in Release, deploy the resulting application set including the rebuilt `GigaClaw.Core.dll`, confirm `AI_DRAFT_SECRET` is set in the service environment, and restart the GigaClaw service. New projects receive corrected embedded templates only after deployment. The owner authorized a post-push SSH check of the automatic deployment; no server edits belong in this checkpoint.
 
