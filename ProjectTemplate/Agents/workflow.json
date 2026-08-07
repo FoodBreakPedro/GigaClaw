@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "initial": "route-blog",
+  "maxCycles": 3,
+  "trackVisitedRoles": true,
+  "states": [
+    {
+      "name": "route-blog",
+      "kind": "gate",
+      "description": "Routes a deliverable ticket to its pipeline. Keyed on the entry agent the deliverable catalog assigned at creation, so the board never asks the owner to pick a route.",
+      "gate": { "type": "assignedTo", "slugs": ["blog-writer"] },
+      "next": [
+        { "to": "blog-draft", "when": "PASS" },
+        { "to": "route-email", "when": "FAIL" }
+      ]
+    },
+    {
+      "name": "route-email",
+      "kind": "gate",
+      "gate": { "type": "assignedTo", "slugs": ["email-copywriter"] },
+      "next": [
+        { "to": "email-draft", "when": "PASS" },
+        { "to": "route-social", "when": "FAIL" }
+      ]
+    },
+    {
+      "name": "route-social",
+      "kind": "gate",
+      "gate": { "type": "assignedTo", "slugs": ["growth-writer"] },
+      "next": [
+        { "to": "social-draft", "when": "PASS" },
+        { "to": "route-lead", "when": "FAIL" }
+      ]
+    },
+    {
+      "name": "route-lead",
+      "kind": "gate",
+      "gate": { "type": "assignedTo", "slugs": ["lead-magnet-creator"] },
+      "next": [
+        { "to": "lead-draft", "when": "PASS" },
+        { "to": "route-series", "when": "FAIL" }
+      ]
+    },
+    {
+      "name": "route-series",
+      "kind": "gate",
+      "gate": { "type": "assignedTo", "slugs": ["content-series-planner"] },
+      "next": [
+        { "to": "series-plan", "when": "PASS" },
+        { "to": "unrouted", "when": "FAIL" }
+      ]
+    },
+
+    {
+      "name": "blog-draft",
+      "kind": "task",
+      "role": "blog-writer",
+      "description": "Write the article or product review against the ticket brief.",
+      "next": [{ "to": "blog-review" }]
+    },
+    {
+      "name": "blog-review",
+      "kind": "task",
+      "role": "blog-reviewer",
+      "description": "Score the draft and post a typed verdict.",
+      "next": [{ "to": "blog-verdict" }]
+    },
+    {
+      "name": "blog-verdict",
+      "kind": "gate",
+      "description": "The reviewer's typed verdict decides whether the draft ships, is repaired, or escalates.",
+      "gate": {
+        "type": "verdictIs",
+        "verdicts": ["SHIP"],
+        "agent": "blog-reviewer",
+        "requireFreshArtifact": true
+      },
+      "next": [
+        { "to": "blog-seo", "when": "SHIP" },
+        { "to": "blog-draft", "when": "FIX" },
+        { "to": "escalated", "when": "BLOCK" },
+        { "to": "escalated", "when": "MISSING" },
+        { "to": "escalated", "when": "INVALID" },
+        { "to": "escalated", "when": "STALE" }
+      ]
+    },
+    {
+      "name": "blog-seo",
+      "kind": "task",
+      "role": "blog-seo",
+      "description": "Validate on-page SEO and the publishable frontmatter contract.",
+      "next": [{ "to": "published" }]
+    },
+
+    {
+      "name": "email-draft",
+      "kind": "task",
+      "role": "email-copywriter",
+      "description": "Draft the subscriber email.",
+      "next": [{ "to": "email-approval" }]
+    },
+    {
+      "name": "email-approval",
+      "kind": "task",
+      "role": "approval-gatekeeper",
+      "description": "Owner-facing approval. No further pipeline is configured for this deliverable yet.",
+      "next": [{ "to": "published" }]
+    },
+
+    {
+      "name": "social-draft",
+      "kind": "task",
+      "role": "growth-writer",
+      "description": "Draft the platform-ready social copy.",
+      "next": [{ "to": "social-approval" }]
+    },
+    {
+      "name": "social-approval",
+      "kind": "task",
+      "role": "approval-gatekeeper",
+      "description": "Owner-facing approval. No further pipeline is configured for this deliverable yet.",
+      "next": [{ "to": "published" }]
+    },
+
+    {
+      "name": "lead-draft",
+      "kind": "task",
+      "role": "lead-magnet-creator",
+      "description": "Produce the downloadable resource.",
+      "next": [{ "to": "lead-approval" }]
+    },
+    {
+      "name": "lead-approval",
+      "kind": "task",
+      "role": "approval-gatekeeper",
+      "description": "Owner-facing approval. No further pipeline is configured for this deliverable yet.",
+      "next": [{ "to": "published" }]
+    },
+
+    {
+      "name": "series-plan",
+      "kind": "task",
+      "role": "content-series-planner",
+      "description": "Plan the multi-part editorial arc. No further pipeline is configured for this deliverable yet.",
+      "next": [{ "to": "published" }]
+    },
+
+    { "name": "published", "kind": "terminal", "description": "The deliverable reached its end state." },
+    { "name": "escalated", "kind": "terminal", "description": "The reviewer blocked the draft, or answered with no readable verdict." },
+    { "name": "unrouted", "kind": "terminal", "description": "The ticket carries no recognised deliverable entry agent, so no pipeline applies." }
+  ]
+}

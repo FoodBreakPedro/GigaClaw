@@ -105,6 +105,7 @@
   ".agents/ui-designer/memory/MEMORY.md": "sha256:3f91fba56610845d3ddc8441b0c02b1949ca3506b3e20c33ace8ecb7b80e3035",
   ".agents/wellness-coach/SKILL.md": "sha256:da0a49e282fcd5f8a860b408ad14146582225121b5f4e6f1b5e79638d3ab9999",
   ".agents/wellness-coach/memory/MEMORY.md": "sha256:1cd280d73df1b2950331e43ef0e19ed9fcde762849e37a6ff45be226c2df9327",
+  ".agents/workflow.json": "sha256:d814ff02fd9b785624b46479a0c56a313151a459a0a0baa08f1ab44218eeb600",
   ".dashboard/active-runs/script.js": "sha256:97a71d419587b0cab2e2395dd07bf2212924ec2195390b6d0be27b8568c975eb",
   ".dashboard/active-runs/tile.yaml": "sha256:f8e8785d46d6b755bf77f591a6e9526cf317b189b3ce3efa3981163df3dfccd9",
   ".dashboard/agent-leaderboard/script.py": "sha256:89e2ec7d6cec227db6873750c081389362617947ae78af93d6ee7ffa9af96fd5",

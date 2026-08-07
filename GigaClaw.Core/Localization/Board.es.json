@@ -137,5 +137,15 @@
   "Reject": "Rechazar",
   "LabeledAgo": "Etiquetado hace {0}",
   "ApprovalConflict": "El ticket #{0} ya salió de Revisión — la lista se ha actualizado.",
-  "RunsButtonLabel": "Ejecuciones"
+  "RunsButtonLabel": "Ejecuciones",
+  "Deliverable": "Entregable",
+  "DeliverableNone": "— Ninguno (ticket simple) —",
+  "DeliverableRuns": "Ejecuta:",
+  "DeliverableStartsAtTodo": "Se inicia automáticamente cuando el ticket llega a Todo.",
+  "DeliverableStartsNow": "Se inicia automáticamente en cuanto se crea el ticket.",
+  "DeliverableNoRoute": "No hay ningún pipeline declarado para este entregable en este espacio de trabajo.",
+  "AdvancedAssignment": "Asignación avanzada",
+  "DeliverableAssigneeWins": "Un asignado explícito sustituye al agente de entrada del entregable.",
+  "DeliverableProgress": "Pipeline",
+  "DeliverableOffRoute": "Actualmente con {0}, que no es una etapa de este pipeline."
 }
