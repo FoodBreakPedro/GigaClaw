@@ -122,7 +122,7 @@ entry agent when started, and its agent can distinguish Blog Post from Product R
 
 ### 6B - media preferences and portable briefs
 
-**Status:** Complete in `daf1785` on `codex/checkpoint-6b-media-preferences`; pending merge/deployment.
+**Status:** Complete in `daf1785`, merged through PR #21, and deployed to zabs-server at `86b44e4`.
 
 - Persist typed image/video preferences with conservative defaults by content type.
 - Expose the same controls on create and edit.
@@ -271,6 +271,10 @@ Verification:
 - Disposable local browser smoke: Blog Post defaulted to Pexels; ComfyUI local, OpenMontage local,
   and require-before-delivery survived create, detail, and reload. The narrow viewport had no
   overlap; the only console disconnects were caused by the deliberate local server restart.
+- Production deployment: the first gate passed 1,632 of 1,633 Core tests and hit the known
+  server-only project-creation 500 flake in `AgentTemplateSyncApiTests`; rollback and retry worked as
+  designed. The retry passed all 1,633 Core and 45 Eval tests, rebuilt `GigaClaw.Core.dll`, restarted
+  the user service, and returned HTTP 200 for home and the `gamelifteat` board.
 
 Sub-agent assignments:
 
@@ -280,8 +284,8 @@ Sub-agent assignments:
 | GPT-5.4 | Shared Claude/Codex media prompt propagation and focused tests | Implemented and integrated; 9 focused tests passed |
 
 6B does not modify `ProjectTemplate/Agents/**`, so it adds no propagation paths. The five 6A paths
-above remain pending for existing projects. Deploy the rebuilt application and Core DLL after 6B is
-merged so the schema, API, prompt contract, and UI become active.
+above remain pending for existing projects. The rebuilt application and Core DLL are deployed, so
+the schema, API, prompt contract, and UI are active.
 
 Exact next action: implement 6C's durable ticket attachment model and upload/download endpoints,
 then make Pexels, local generation, and manual upload converge on it. Do not add automatic local

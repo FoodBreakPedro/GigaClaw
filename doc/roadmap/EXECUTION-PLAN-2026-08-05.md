@@ -380,7 +380,7 @@ HTTP 200 for home and the `gamelifteat` board. Existing workspace template propa
 pending and must use non-destructive Agent templates preview/apply for the five paths listed in the
 checkpoint plan.
 
-Slice 6B is complete in `daf1785` on `codex/checkpoint-6b-media-preferences`, pending merge. Typed image/video
+Slice 6B is complete in `daf1785`, merged through PR #21, and deployed as `86b44e4`. Typed image/video
 preferences now round-trip through SQLite, REST/OpenAPI, shared Claude/Codex prompts, and both Board
 creation surfaces plus ticket edit. Blog, Product Review, Lead Magnet, and Social default to Pexels;
 video is opt-in; ComfyUI/OpenMontage always have a portable prompt/upload fallback. Browser smoke
@@ -389,6 +389,10 @@ proved local selections and the delivery gate survive reload on desktop and fit 
 Verification: focused 54/0; Release build 0 warnings/0 errors; Core 1,633/0; Eval tests 45/0;
 catalog strict and strict-packs exit 0; Eval strict 37 agents, 258 passes, 0 errors, the same one
 baselined prompt-size warning. 6B changes no ProjectTemplate file, so it adds no propagation paths.
+
+Production retry evidence: the first gate hit the known server-only project-creation 500 flake after
+1,632 Core passes. Automatic rollback/retry then passed all 1,633 Core and 45 Eval tests, rebuilt the
+Core DLL, restarted the user service, and returned HTTP 200 for home and the `gamelifteat` board.
 
 Exact next action: implement 6C's durable attachment model and upload/download endpoints, then
 connect Pexels, local generation, and manual upload to that shared record with availability-aware
