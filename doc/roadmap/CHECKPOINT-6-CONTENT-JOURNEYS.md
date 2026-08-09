@@ -108,8 +108,7 @@ image path must not be reused as durable storage.
 
 ### 6A - truthful classification and prompt context
 
-**Status:** Complete on branch in `cfeab60` and `34c9b53`, plus the post-smoke intake-race fix;
-pending merge.
+**Status:** Complete, merged through PR #19, and deployed to zabs-server at `1b3a838`.
 
 - Add Content type to ticket edit.
 - Derive the entry agent only for a safe unassigned Backlog classification; preserve active work.
@@ -212,6 +211,9 @@ Verification:
   held by `groomer`, exposing an intake/classification race. The bounded fix cancels only that
   system-owned groomer run and assigns `blog-writer`; the ticket remained in Backlog, displayed
   Product Review, the three-stage editorial route, and `Draft dispatched to the configured CMS`.
+- Production deployment gate: 1,612 Core and 45 Eval tests passed; the Release publish rebuilt
+  `GigaClaw.Core.dll`, restarted the user service, and returned HTTP 200 for home and the
+  `gamelifteat` board. The automatic poller's next run confirmed `main` already matched `1b3a838`.
 
 Sub-agent assignments:
 
@@ -231,6 +233,9 @@ Propagation to every existing content project after merge/deployment:
 Use the non-destructive Agent templates preview/apply flow. Do not alter any
 `.agents/*/memory/**` file. Rebuild and deploy the application including `GigaClaw.Core.dll` before
 syncing so the server carries the new embedded hashes and newly introduced reference.
+
+The application deployment is complete. Existing project template propagation is intentionally
+still pending; no server workspace files were changed during the deployment check.
 
 Exact next action: implement 6B's persisted image/video preference contract and expose contextual
 media controls on both create and edit. Do not start durable attachment storage until those values
