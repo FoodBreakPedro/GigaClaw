@@ -359,7 +359,8 @@ For zabs-server, pull the merged checkpoint, publish `GigaClaw.Web/GigaClaw.Web.
 
 Branch: `codex/checkpoint-6-content-journeys`
 
-Slice 6A is complete in `cfeab60` and `34c9b53`. Existing tickets now support safe content-type
+Slice 6A is complete in `cfeab60`, `34c9b53`, and `d2f9d19`, merged through PR #19 as `1b3a838`.
+Existing tickets now support safe content-type
 classification, the catalog and Board state truthful completion outcomes, and the shared
 Claude/Codex prompt path includes the requested type. Blog Post now emits a portable image prompt;
 Product Review has a distinct evidence-led writer/reviewer contract. Full evidence, propagation, and
@@ -373,7 +374,13 @@ by `groomer`; a bounded Board fix now cancels and supersedes only that system-ow
 hop. Its regression suite passed 12/0, and the live local ticket rendered Product Review ->
 blog-writer -> blog-reviewer -> blog-seo with the CMS-draft finish line.
 
-Exact next action: after local UI smoke and merge, begin 6B with typed persisted media preferences,
+Production deployment completed automatically on 2026-08-09. The server gate passed 1,612 Core and
+45 Eval tests, published a rebuilt `GigaClaw.Core.dll`, restarted the user service, and returned
+HTTP 200 for home and the `gamelifteat` board. Existing workspace template propagation is still
+pending and must use non-destructive Agent templates preview/apply for the five paths listed in the
+checkpoint plan.
+
+Exact next action: begin 6B with typed persisted media preferences,
 REST/OpenAPI round trips, and contextual create/edit controls.
 
 ## End-of-week resume point
@@ -381,8 +388,9 @@ REST/OpenAPI round trips, and contextual create/edit controls.
 Completed on main through checkpoint 5, including the later checkpoint 4 closure: R8 Codex fallback,
 CMS taxonomy dispatch, safe `.agents` sync, deliverable catalog/routing, deliverable-first Board UX,
 status-aware pipeline progress, bounded content recovery, and the refreshed venture-prep operating
-briefs (`298bfbc`). Production is at `a93d6f2`, healthy, and all eight existing projects have the
-declared workflow graph.
+briefs (`298bfbc`). Production is at `1b3a838`, healthy, and all eight existing projects have the
+checkpoint 4 workflow graph. Checkpoint 6A's five template changes are not yet propagated to those
+existing project workspaces.
 
 Remaining user-experience path:
 
