@@ -148,7 +148,7 @@
   "AdvancedAssignment": "Asignación avanzada",
   "DeliverableAssigneeWins": "Un asignado explícito sustituye al agente de entrada del entregable.",
   "DeliverableAssigneePreserved": "Se conserva el asignado existente; cambiar el tipo de contenido no reinicia el trabajo activo.",
-  "DeliverableEntryAgentAssigned": "Se asignó el agente de entrada del catálogo porque este ticket de Backlog no tenía asignado.",
+  "DeliverableEntryAgentAssigned": "Este ticket de Backlog está dirigido al flujo de contenido seleccionado. Muévelo a Todo cuando esté listo para empezar.",
   "DeliverableCompletionOutcome": "Resultado: {0}",
   "UndoDeliverable": "Cambiar tipo de contenido",
   "DeliverableProgress": "Pipeline",

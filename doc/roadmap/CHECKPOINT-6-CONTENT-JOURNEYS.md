@@ -13,7 +13,9 @@ specific than the older roadmap text.
 1. The owner chooses an intended content output, not an agent or agent order.
 2. Content type must be editable after creation because n8n commonly creates an unclassified ticket.
 3. Selecting a type on an unassigned Backlog ticket may derive its entry agent. Changing an active or
-   assigned ticket must not silently replace its worker; the UI must make the choice explicit.
+   assigned ticket must not silently replace its worker. The sole automatic exception is `groomer`
+   holding an unclassified Backlog intake ticket: classification cancels that system-owned intake
+   run and replaces it with the selected journey's entry agent.
 4. A route must state its real finish line. `Published` is reserved for an actual publishing action.
    Owner approval alone means `Approved and ready`, not sent or published.
 5. Blog Post and Product Review may share editorial machinery, but they require different prompt
@@ -106,6 +108,9 @@ image path must not be reused as durable storage.
 
 ### 6A - truthful classification and prompt context
 
+**Status:** Complete on branch in `cfeab60` and `34c9b53`, plus the post-smoke intake-race fix;
+pending merge.
+
 - Add Content type to ticket edit.
 - Derive the entry agent only for a safe unassigned Backlog classification; preserve active work.
 - Replace ambiguous route endpoints with truthful outcomes.
@@ -168,3 +173,65 @@ These do not block 6A or 6B:
 - The default OpenMontage workflow/model profile for optional image and video generation.
 
 Until configured, the correct terminal wording is `Approved and ready`.
+
+## 6A evidence - 2026-08-09
+
+Delivered:
+
+- Content type is editable in the ticket detail panel as well as selectable during creation.
+- `TicketService` derives the catalog entry agent only when classification is applied to an
+  unassigned Backlog ticket. The Board also supersedes and cancels `groomer` when it is the
+  system-owned intake placeholder on an unclassified Backlog ticket. Other assignees and active
+  tickets are preserved; undo restores both prior fields.
+- The catalog reports a concrete completion outcome and whether automated delivery is configured.
+  Board creation/detail surfaces show that finish line instead of implying every route publishes.
+- The declared workflow terminal is `complete`, with text that explicitly does not imply an
+  unperformed publish or send action.
+- Fresh and resumed automation prompts receive the canonical requested content type through the
+  shared Claude/Codex prompt builder.
+- Product Review now changes the writer contract and reviewer evidence gate. Detailed reviewer
+  requirements use a progressive-disclosure reference.
+- The public blog writer emits a portable `imagePrompt` usable by Pexels, local ComfyUI, or manual
+  generation/upload. Media remains non-blocking unless explicitly required.
+
+Verification:
+
+- Focused Checkpoint 6A integration suite: 124 passed.
+- Core init manifest regeneration: 2 passed; only the five intended template paths below changed or
+  were introduced.
+- Final focused template/manifest rerun after progressive disclosure: 5 passed.
+- Post-smoke intake-race regression suite: 12 passed.
+- Full Core Release suite: 1,612 passed.
+- Catalog `check --strict`: exit 0.
+- Catalog `check --strict-packs`: exit 0.
+- Eval `all --strict`: 37 agents, 258 passes, 0 errors, 1 baselined warning.
+- Known warning: `blog-reviewer` is 13,409 bytes against the 12,288-byte prompt warning threshold.
+  It was already over the threshold before 6A; the new detailed Product Review rubric was moved out
+  of the common prompt. Further decomposition is useful but does not block the user journey.
+- Local Development-mode UI smoke: a disposable n8n-style unclassified Backlog ticket was already
+  held by `groomer`, exposing an intake/classification race. The bounded fix cancels only that
+  system-owned groomer run and assigns `blog-writer`; the ticket remained in Backlog, displayed
+  Product Review, the three-stage editorial route, and `Draft dispatched to the configured CMS`.
+
+Sub-agent assignments:
+
+| Model | Scope | Result |
+|---|---|---|
+| Luna | Board edit classifier, truthful outcome UI, localization, focused UI contracts | Implemented and integrated |
+| GPT-5.4 | Deliverable context through shared Claude/Codex prompt construction | Implemented and integrated |
+
+Propagation to every existing content project after merge/deployment:
+
+- `.agents/workflow.json`
+- `.agents/blog-writer/SKILL.md`
+- `.agents/blog-reviewer/SKILL.md`
+- `.agents/blog-reviewer/references/scoring-rubric-details.md`
+- `.agents/blog-reviewer/references/product-review-contract.md`
+
+Use the non-destructive Agent templates preview/apply flow. Do not alter any
+`.agents/*/memory/**` file. Rebuild and deploy the application including `GigaClaw.Core.dll` before
+syncing so the server carries the new embedded hashes and newly introduced reference.
+
+Exact next action: implement 6B's persisted image/video preference contract and expose contextual
+media controls on both create and edit. Do not start durable attachment storage until those values
+round-trip through Core, REST/OpenAPI, and the Board.

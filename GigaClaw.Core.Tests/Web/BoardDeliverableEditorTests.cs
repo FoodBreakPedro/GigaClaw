@@ -39,14 +39,16 @@ public sealed class BoardDeliverableEditorTests
     }
 
     [Fact]
-    public void Board_Classification_DelegatesEntryAgentDerivationToTicketService()
+    public void Board_Classification_DelegatesUnassignedRoutingButSupersedesTheIntakeGroomer()
     {
         var src = File.ReadAllText(BoardPath());
         var handler = src[src.IndexOf("private async Task OnDeliverableTypeChanged", StringComparison.Ordinal)..];
         var forwardUpdate = handler[..handler.IndexOf("PushUndo", StringComparison.Ordinal)];
 
-        Assert.Contains("deliverableType: requestedType", src);
-        Assert.DoesNotContain("assignedTo:", forwardUpdate);
+        Assert.Contains("replacesIntakeGroomer", forwardUpdate);
+        Assert.Contains("AgentRuns.ActiveForTicket(Slug, ticketId)?.Cancellation.Cancel()", forwardUpdate);
+        Assert.Contains("assignedTo: replacesIntakeGroomer ? selectedDeliverable!.EntryAgent : null", forwardUpdate);
+        Assert.Contains("deliverableType: requestedType", forwardUpdate);
         Assert.Contains("assignedTo: oldAssignee", src);
     }
 

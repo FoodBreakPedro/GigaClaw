@@ -148,7 +148,7 @@
   "AdvancedAssignment": "Advanced assignment",
   "DeliverableAssigneeWins": "An explicit assignee overrides the deliverable's entry agent.",
   "DeliverableAssigneePreserved": "The existing assignee is preserved; changing content type does not restart active work.",
-  "DeliverableEntryAgentAssigned": "The catalog entry agent was assigned because this Backlog ticket was unassigned.",
+  "DeliverableEntryAgentAssigned": "This Backlog ticket is routed to the selected content workflow. Move it to Todo when ready to start.",
   "DeliverableCompletionOutcome": "Completion: {0}",
   "UndoDeliverable": "Change content type",
   "DeliverableProgress": "Pipeline",

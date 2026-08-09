@@ -355,6 +355,27 @@ For zabs-server, pull the merged checkpoint, publish `GigaClaw.Web/GigaClaw.Web.
 
 `graphify-out/` is ignored while existing generated files remain tracked. Do not untrack or delete them as part of these checkpoints. Any index cleanup requires separate owner approval.
 
+## Checkpoint 6 log
+
+Branch: `codex/checkpoint-6-content-journeys`
+
+Slice 6A is complete in `cfeab60` and `34c9b53`. Existing tickets now support safe content-type
+classification, the catalog and Board state truthful completion outcomes, and the shared
+Claude/Codex prompt path includes the requested type. Blog Post now emits a portable image prompt;
+Product Review has a distinct evidence-led writer/reviewer contract. Full evidence, propagation, and
+the exact 6B resume action are in
+[`CHECKPOINT-6-CONTENT-JOURNEYS.md`](CHECKPOINT-6-CONTENT-JOURNEYS.md).
+
+Verification: focused 124/0; Core Release 1,612/0; Core manifest 2/0 plus final template rerun 5/0;
+catalog strict and strict-packs exit 0; Eval strict 37 agents, 258 passes, 0 errors, one baselined
+`blog-reviewer` prompt-size warning. The post-gate UI smoke found the n8n intake ticket already held
+by `groomer`; a bounded Board fix now cancels and supersedes only that system-owned Backlog intake
+hop. Its regression suite passed 12/0, and the live local ticket rendered Product Review ->
+blog-writer -> blog-reviewer -> blog-seo with the CMS-draft finish line.
+
+Exact next action: after local UI smoke and merge, begin 6B with typed persisted media preferences,
+REST/OpenAPI round trips, and contextual create/edit controls.
+
 ## End-of-week resume point
 
 Completed on main through checkpoint 5, including the later checkpoint 4 closure: R8 Codex fallback,

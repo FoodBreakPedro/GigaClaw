@@ -2359,11 +2359,23 @@ else
         var oldType = _selectedTicket.DeliverableType ?? "";
         var oldAssignee = _selectedTicket.AssignedTo ?? "";
         var ticketId = _selectedTicket.Id;
+        var selectedDeliverable = ResolveDeliverable(requestedType);
+        var replacesIntakeGroomer = selectedDeliverable is not null
+            && string.Equals(_selectedTicket.Status, "Backlog", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(_selectedTicket.AssignedTo, "groomer", StringComparison.OrdinalIgnoreCase);
+
+        // Unclassified API/n8n intake is assigned to groomer immediately. Selecting a real content
+        // type supersedes that system-owned intake hop; stop its in-flight process before applying
+        // the catalog entry agent so it cannot later overwrite the owner's classification. Any
+        // other assigned or active worker remains untouched.
+        if (replacesIntakeGroomer)
+            AgentRuns.ActiveForTicket(Slug, ticketId)?.Cancellation.Cancel();
 
         await TicketService.UpdateTicketAsync(
             Slug,
             ticketId,
             author: "owner",
+            assignedTo: replacesIntakeGroomer ? selectedDeliverable!.EntryAgent : null,
             deliverableType: requestedType);
 
         PushUndo($"{L["UndoDeliverable"]} #{ticketId}", async () =>
