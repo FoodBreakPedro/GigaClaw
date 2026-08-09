@@ -68,6 +68,7 @@ public sealed class ClaudeRunContext
         OnEventHook = OnEventHook,
         ChatTarget = ChatTarget,
         PendingSteerMessages = null,
+        RequestedDeliverableType = RequestedDeliverableType,
         ImagePaths = null,
         MaxRunDuration = MaxRunDuration,
         LockTimeoutMinutes = LockTimeoutMinutes,
@@ -90,6 +91,11 @@ public sealed class ClaudeRunContext
 
     /// <summary>Steering messages that could not be delivered to the previous run (stdin already closed). BuildPromptAsync prepends them to the next chat-resume prompt so the agent receives them.</summary>
     public IReadOnlyList<string>? PendingSteerMessages { get; init; }
+
+    /// <summary>Persisted ticket deliverable type slug or label. Automation prompts surface this
+    /// so agents know the requested content outcome even when multiple deliverables share an entry
+    /// agent.</summary>
+    public string? RequestedDeliverableType { get; init; }
 
     /// <summary>Absolute paths to user-pasted image files saved under the workspace's channel/tmp. BuildPromptAsync surfaces them under an [Attached images] block; the runner best-effort deletes them after the process exits.</summary>
     public IReadOnlyList<string>? ImagePaths { get; init; }
@@ -806,6 +812,7 @@ public sealed class ClaudeRunner : IAgentRunner
         // polls (assignee-resume), so it must not assert that feedback exists when none was posted.
         if (isResume && ctx.TicketId is not null)
             return $"You have been re-dispatched on ticket #{ctx.TicketId}: {ctx.TicketTitle}\n" +
+                   $"{BuildRequestedDeliverableBlock(ctx)}" +
                    "Re-read the ticket first and check for NEW owner comments since your last turn. " +
                    "If there are any, address them. Otherwise continue or finish your pending work on this ticket. " +
                    "If nothing remains to do, follow your end-of-turn rules (move the ticket out of InProgress) instead of inventing new work.";
@@ -813,10 +820,42 @@ public sealed class ClaudeRunner : IAgentRunner
         var prefix = await BuildPreambleAsync(ctx, ct);
 
         if (ctx.TicketId is not null && ctx.SessionScope != "chat")
-            return $"{prefix}{skillContent}\n\nFocus on ticket #{ctx.TicketId}: {ctx.TicketTitle}";
+            return $"{prefix}{skillContent}\n\n{BuildTicketFocusBlock(ctx)}";
         return ctx.ExtraContext is null
             ? $"{prefix}{skillContent}{imagesBlock}"
             : $"{prefix}{skillContent}\n\n{ctx.ExtraContext}{imagesBlock}";
+    }
+
+    internal static string BuildTicketFocusBlock(ClaudeRunContext ctx)
+    {
+        var sb = new StringBuilder();
+        sb.Append($"Focus on ticket #{ctx.TicketId}: {ctx.TicketTitle}");
+        var deliverable = FormatRequestedDeliverableLine(ctx.RequestedDeliverableType);
+        if (deliverable is not null)
+        {
+            sb.AppendLine();
+            sb.Append(deliverable);
+        }
+
+        return sb.ToString();
+    }
+
+    internal static string BuildRequestedDeliverableBlock(ClaudeRunContext ctx)
+    {
+        var deliverable = FormatRequestedDeliverableLine(ctx.RequestedDeliverableType);
+        return deliverable is null ? "" : $"{deliverable}\n";
+    }
+
+    internal static string? FormatRequestedDeliverableLine(string? requestedDeliverableType)
+    {
+        if (string.IsNullOrWhiteSpace(requestedDeliverableType))
+            return null;
+
+        var raw = requestedDeliverableType.Trim();
+        if (DeliverableCatalog.TryGet(raw, out var definition) && definition is not null)
+            return $"Requested content type: {definition.Name} ({definition.Slug}).";
+
+        return $"Requested content type: {raw}.";
     }
 
     internal static string BuildAttachedImagesBlock(ClaudeRunContext ctx)

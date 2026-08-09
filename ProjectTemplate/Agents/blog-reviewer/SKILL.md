@@ -31,6 +31,12 @@ Evaluate drafts strictly across these 5 categories (minimum 90/100 required to p
 
 - See detailed sub-item bullet points in [Scoring Rubric Reference](references/scoring-rubric-details.md).
 
+### Product Review Contract
+
+When the requested content type is **Product Review**, read and enforce the complete
+[Product Review Contract](references/product-review-contract.md) before scoring. Its evidence and
+disclosure requirements are part of the SHIP gate, not advisory guidance.
+
 ## Deterministic Quality Script Integration
 
 Run available python scripts against the target post before scoring:

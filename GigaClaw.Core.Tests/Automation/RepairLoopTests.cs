@@ -287,10 +287,10 @@ public class RepairLoopTests
 
         // The re-dispatch carries the reviewer's findings, not just the ticket description.
         var context = await harness.Executor.ComposeDispatchContextAsync(runtime, ticket.Id, "fix it");
-        Assert.Contains("Repair round 1 of 2", context!, StringComparison.Ordinal);
-        Assert.Contains("cite-your-sources", context, StringComparison.Ordinal);
-        Assert.Contains("Evidence 4/10", context, StringComparison.Ordinal);
-        Assert.EndsWith("fix it", context, StringComparison.Ordinal);
+        Assert.Contains("Repair round 1 of 2", context.ExtraContext!, StringComparison.Ordinal);
+        Assert.Contains("cite-your-sources", context.ExtraContext, StringComparison.Ordinal);
+        Assert.Contains("Evidence 4/10", context.ExtraContext, StringComparison.Ordinal);
+        Assert.EndsWith("fix it", context.ExtraContext, StringComparison.Ordinal);
 
         // The producer repairs and the reviewer ships on the second look: inside the cap, so the
         // ticket advances instead of escalating, and the repair brief stops being injected.
@@ -301,7 +301,7 @@ public class RepairLoopTests
         Assert.True(await harness.Executor.ConditionsMatchAsync(runtime, advance, firing));
         Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, repair, firing));
         Assert.False(await harness.Executor.ConditionsMatchAsync(runtime, escalate, firing));
-        Assert.Equal("fix it", await harness.Executor.ComposeDispatchContextAsync(runtime, ticket.Id, "fix it"));
+        Assert.Equal("fix it", (await harness.Executor.ComposeDispatchContextAsync(runtime, ticket.Id, "fix it")).ExtraContext);
     }
 
     [Fact]

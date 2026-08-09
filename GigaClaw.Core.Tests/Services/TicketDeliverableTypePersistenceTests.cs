@@ -137,4 +137,62 @@ public sealed class TicketDeliverableTypePersistenceTests
         Assert.Contains("Unknown deliverable type", error.Message, StringComparison.Ordinal);
         Assert.Single(await tickets.ListTicketsAsync(project.Slug));
     }
+
+    [Fact]
+    public async Task ClassifyingAnUnassignedBacklogTicket_DerivesTheEntryAgent()
+    {
+        using var tmp = new TempDir();
+        var projects = new ProjectService(tmp.Path);
+        var project = await projects.CreateProjectAsync("classify-backlog");
+        var members = new MemberService(projects);
+        await members.CreateMemberAsync(project.Slug, "blog-writer");
+        var tickets = new TicketService(projects, members);
+        var created = await tickets.CreateTicketAsync(project.Slug, "n8n intake");
+
+        var updated = await tickets.UpdateTicketAsync(
+            project.Slug,
+            created.Id,
+            author: "owner",
+            deliverableType: "Product Review");
+
+        Assert.NotNull(updated);
+        Assert.Equal("product-review", updated.DeliverableType);
+        Assert.Equal("blog-writer", updated.AssignedTo);
+        var activity = (await tickets.GetTicketAsync(project.Slug, created.Id))!.Activities;
+        Assert.Contains(activity, entry =>
+            entry.Text.Contains("from deliverable type", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Backlog", "custom-editor")]
+    [InlineData("Todo", null)]
+    [InlineData("InProgress", null)]
+    public async Task ClassifyingAssignedOrActiveTickets_DoesNotReplaceOrDeriveTheWorker(
+        string status,
+        string? assignedTo)
+    {
+        using var tmp = new TempDir();
+        var projects = new ProjectService(tmp.Path);
+        var project = await projects.CreateProjectAsync($"classify-{status}-{assignedTo ?? "none"}");
+        var members = new MemberService(projects);
+        await members.CreateMemberAsync(project.Slug, "blog-writer");
+        if (assignedTo is not null)
+            await members.CreateMemberAsync(project.Slug, assignedTo);
+        var tickets = new TicketService(projects, members);
+        var created = await tickets.CreateTicketAsync(
+            project.Slug,
+            "Existing work",
+            status: status,
+            assignedTo: assignedTo);
+
+        var updated = await tickets.UpdateTicketAsync(
+            project.Slug,
+            created.Id,
+            author: "owner",
+            deliverableType: "Blog Post");
+
+        Assert.NotNull(updated);
+        Assert.Equal("blog-post", updated.DeliverableType);
+        Assert.Equal(assignedTo, updated.AssignedTo);
+    }
 }

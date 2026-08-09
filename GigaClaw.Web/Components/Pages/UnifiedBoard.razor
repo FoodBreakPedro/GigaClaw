@@ -224,7 +224,7 @@ else
                     </div>
                 </div>
                 <div>
-                    <label class="field-label">@L["Deliverable"]</label>
+                    <label class="field-label">@L["ContentType"]</label>
                     <div class="assignee-picker-wrapper">
                         <select class="assignee-select" @bind="_newTicketDeliverable">
                             <option value="">@L["DeliverableNone"]</option>
@@ -259,6 +259,13 @@ else
                     else if (!string.IsNullOrEmpty(_newTicketDeliverable))
                     {
                         <p class="deliverable-route-hint">@L["DeliverableNoRoute"]</p>
+                    }
+                    @if (DeliverableCatalog.TryGet(_newTicketDeliverable, out var selectedCreateDeliverable)
+                         && selectedCreateDeliverable is not null)
+                    {
+                        <p class="deliverable-route-hint">
+                            @L.Get("DeliverableCompletionOutcome", selectedCreateDeliverable.CompletionOutcome)
+                        </p>
                     }
                 </div>
                 @if (_newTicketError is not null)

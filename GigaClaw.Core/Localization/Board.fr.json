@@ -139,6 +139,7 @@
   "ApprovalConflict": "Le ticket #{0} a déjà quitté Revue — la liste a été actualisée.",
   "RunsButtonLabel": "Exécutions",
   "Deliverable": "Livrable",
+  "ContentType": "Type de contenu",
   "DeliverableNone": "— Aucun (ticket simple) —",
   "DeliverableRuns": "Exécute :",
   "DeliverableStartsAtTodo": "Démarre automatiquement dès que le ticket atteint Todo.",
@@ -146,6 +147,10 @@
   "DeliverableNoRoute": "Aucun pipeline n'est déclaré pour ce livrable dans cet espace de travail.",
   "AdvancedAssignment": "Affectation avancée",
   "DeliverableAssigneeWins": "Un assigné explicite remplace l'agent d'entrée du livrable.",
+  "DeliverableAssigneePreserved": "L'assigné existant est conservé ; changer le type de contenu ne relance pas le travail actif.",
+  "DeliverableEntryAgentAssigned": "Ce ticket Backlog suit le parcours de contenu sélectionné. Déplacez-le vers Todo lorsqu'il est prêt à démarrer.",
+  "DeliverableCompletionOutcome": "Résultat : {0}",
+  "UndoDeliverable": "Modifier le type de contenu",
   "DeliverableProgress": "Pipeline",
   "DeliverableOffRoute": "Actuellement chez {0}, qui n'est pas une étape de ce pipeline."
 }

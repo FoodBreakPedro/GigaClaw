@@ -21,7 +21,7 @@ This ledger keeps the remaining GigaClaw work recoverable across sessions and us
 | 3 | Deliverable catalog, ticket persistence, and deterministic entry routing | Complete | `b9f3bf5` through `7236382` |
 | 4 | Deliverable-first ticket creation and human-readable pipeline progress | Complete | `0d636a9`, `58d61eb`, `898aa0d`, `a93d6f2` |
 | 5 | Canonical content routes and bounded translator/content recovery | Complete | `0d22cac`, merged by `3737153` |
-| 6 | End-to-end journey, propagation report, and deployment handoff | Pending | - |
+| 6 | Truthful content journeys, optional media, propagation, and deployment handoff | In progress | [`CHECKPOINT-6-CONTENT-JOURNEYS.md`](CHECKPOINT-6-CONTENT-JOURNEYS.md) |
 | 7 | Security join, Codex budgets, model overrides, and specialist promotion | Pending | - |
 
 ## Checkpoint 0 log
@@ -355,6 +355,27 @@ For zabs-server, pull the merged checkpoint, publish `GigaClaw.Web/GigaClaw.Web.
 
 `graphify-out/` is ignored while existing generated files remain tracked. Do not untrack or delete them as part of these checkpoints. Any index cleanup requires separate owner approval.
 
+## Checkpoint 6 log
+
+Branch: `codex/checkpoint-6-content-journeys`
+
+Slice 6A is complete in `cfeab60` and `34c9b53`. Existing tickets now support safe content-type
+classification, the catalog and Board state truthful completion outcomes, and the shared
+Claude/Codex prompt path includes the requested type. Blog Post now emits a portable image prompt;
+Product Review has a distinct evidence-led writer/reviewer contract. Full evidence, propagation, and
+the exact 6B resume action are in
+[`CHECKPOINT-6-CONTENT-JOURNEYS.md`](CHECKPOINT-6-CONTENT-JOURNEYS.md).
+
+Verification: focused 124/0; Core Release 1,612/0; Core manifest 2/0 plus final template rerun 5/0;
+catalog strict and strict-packs exit 0; Eval strict 37 agents, 258 passes, 0 errors, one baselined
+`blog-reviewer` prompt-size warning. The post-gate UI smoke found the n8n intake ticket already held
+by `groomer`; a bounded Board fix now cancels and supersedes only that system-owned Backlog intake
+hop. Its regression suite passed 12/0, and the live local ticket rendered Product Review ->
+blog-writer -> blog-reviewer -> blog-seo with the CMS-draft finish line.
+
+Exact next action: after local UI smoke and merge, begin 6B with typed persisted media preferences,
+REST/OpenAPI round trips, and contextual create/edit controls.
+
 ## End-of-week resume point
 
 Completed on main through checkpoint 5, including the later checkpoint 4 closure: R8 Codex fallback,
@@ -365,7 +386,7 @@ declared workflow graph.
 
 Remaining user-experience path:
 
-1. **Checkpoint 6:** exercise each public deliverable from ticket creation through its first agent and review/approval exit; produce the final propagation and deployment report.
+1. **Checkpoint 6:** implement the incremental content-journey and optional-media plan in [`CHECKPOINT-6-CONTENT-JOURNEYS.md`](CHECKPOINT-6-CONTENT-JOURNEYS.md), then exercise each public deliverable through its truthful finish line and produce the propagation/deployment report.
 2. **Checkpoint 7:** security-team join, Codex budgets/model overrides, and specialist promotion after the primary content journey is reliable.
 
 Preserved parallel work, not merged:

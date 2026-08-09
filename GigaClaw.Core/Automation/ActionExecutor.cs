@@ -400,19 +400,23 @@ internal sealed partial class ActionExecutor
     /// previous run's handoff. An unreadable handoff, verdict or feedback comment is skipped rather
     /// than injected half-parsed, and a ticket with none of them dispatches exactly as before.
     /// </summary>
-    internal async Task<string?> ComposeDispatchContextAsync(ProjectRuntime rt, int? ticketId, string? actionContext)
+    internal sealed record DispatchPromptContext(string? ExtraContext, string? RequestedDeliverableType);
+
+    internal async Task<DispatchPromptContext> ComposeDispatchContextAsync(ProjectRuntime rt, int? ticketId, string? actionContext)
     {
         if (ticketId is null)
-            return actionContext;
+            return new DispatchPromptContext(actionContext, null);
 
         RunHandoff? handoff = null;
         string? repairBrief = null;
         string? feedbackBrief = null;
+        string? requestedDeliverableType = null;
         try
         {
             var ticket = await _tickets.GetTicketAsync(rt.Slug, ticketId.Value);
             if (ticket is not null)
             {
+                requestedDeliverableType = ticket.DeliverableType;
                 var bodies = ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList();
                 handoff = HandoffReader.Latest(bodies);
 
@@ -438,14 +442,14 @@ internal sealed partial class ActionExecutor
         if (handoff is null
             && string.IsNullOrWhiteSpace(repairBrief)
             && string.IsNullOrWhiteSpace(feedbackBrief))
-            return actionContext;
+            return new DispatchPromptContext(actionContext, requestedDeliverableType);
 
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(repairBrief)) parts.Add(repairBrief);
         if (!string.IsNullOrWhiteSpace(feedbackBrief)) parts.Add(feedbackBrief);
         if (handoff is not null) parts.Add(HandoffReader.Render(handoff));
         if (!string.IsNullOrWhiteSpace(actionContext)) parts.Add(actionContext);
-        return string.Join("\n\n", parts);
+        return new DispatchPromptContext(string.Join("\n\n", parts), requestedDeliverableType);
     }
 
     // ── Action execution ────────────────────────────────────────────────────
@@ -785,6 +789,8 @@ internal sealed partial class ActionExecutor
                 return (true, null, agentName, null);
         }
 
+        var dispatchContext = await ComposeDispatchContextAsync(rt, firing.TicketId, a.Context);
+
         var runCtx = new ClaudeRunContext
         {
             PresetRunId = runId,
@@ -803,7 +809,8 @@ internal sealed partial class ActionExecutor
             Model = effectiveModel,
             Harness = effectiveHarness,
             FallbackModel = fallbackModel,
-            ExtraContext = await ComposeDispatchContextAsync(rt, firing.TicketId, a.Context),
+            ExtraContext = dispatchContext.ExtraContext,
+            RequestedDeliverableType = dispatchContext.RequestedDeliverableType,
             RetryOnResumeFailure = true,
             OllamaValidationError = ollamaValidationError,
             MaxRunDuration = TimeSpan.FromMinutes(30),

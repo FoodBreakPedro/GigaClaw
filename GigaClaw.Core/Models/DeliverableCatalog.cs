@@ -14,37 +14,57 @@ public static class DeliverableCatalog
             "Blog Post",
             "A researched, reviewable article for publication on the blog.",
             "blog-writer",
-            "Editorial article"),
+            "Editorial article")
+        {
+            CompletionOutcome = "Draft dispatched to the configured CMS.",
+            HasAutomatedDelivery = true,
+        },
         new DeliverableDefinition(
             "email-newsletter",
             "Email Newsletter",
             "A subscriber email with a clear topic, structure, and call to action.",
             "email-copywriter",
-            "Email campaign"),
+            "Email campaign")
+        {
+            CompletionOutcome = "Owner-approved email package. Sending is not configured.",
+        },
         new DeliverableDefinition(
             "social-media-content",
             "Social Media Content",
             "Platform-ready social copy and creative direction for a campaign or update.",
             "growth-writer",
-            "Social post"),
+            "Social post")
+        {
+            CompletionOutcome = "Owner-approved social content package. Publishing is not configured.",
+        },
         new DeliverableDefinition(
             "product-review",
             "Product Review",
             "An evidence-led review of a product, service, or experience.",
             "blog-writer",
-            "Review article"),
+            "Review article")
+        {
+            CompletionOutcome = "Draft dispatched to the configured CMS.",
+            HasAutomatedDelivery = true,
+        },
         new DeliverableDefinition(
             "lead-magnet",
             "Lead Magnet",
             "A useful downloadable resource designed to earn an audience opt-in.",
             "lead-magnet-creator",
-            "Downloadable resource"),
+            "Downloadable resource")
+        {
+            CompletionOutcome = "Owner-approved downloadable package. Distribution is not configured.",
+        },
         new DeliverableDefinition(
             "content-series",
             "Content Series",
             "A coordinated multi-part content plan with a clear editorial arc.",
             "content-series-planner",
-            "Content program"),
+            "Content program")
+        {
+            CompletionOutcome = "Content series plan. Child-ticket production is not configured.",
+        },
     ]);
 
     private static readonly DeliverableCatalogValidationResult CatalogValidation = Validate(Definitions);
@@ -174,6 +194,7 @@ public static class DeliverableCatalog
             AddRequiredFieldError(errors, definition.Description, index, "description");
             AddRequiredFieldError(errors, definition.EntryAgent, index, "entry agent");
             AddRequiredFieldError(errors, definition.OutputCategory, index, "output category");
+            AddRequiredFieldError(errors, definition.CompletionOutcome, index, "completion outcome");
         }
 
         if (index == 0)

@@ -429,7 +429,7 @@ else
                         }
                     </div>
 
-                    <label class="field-label">@L["Deliverable"]</label>
+                    <label class="field-label">@L["ContentType"]</label>
                     <div class="assignee-picker-wrapper">
                         <select class="assignee-select" @bind="_newTicketDeliverable">
                             <option value="">@L["DeliverableNone"]</option>
@@ -464,6 +464,13 @@ else
                     else if (!string.IsNullOrEmpty(_newTicketDeliverable))
                     {
                         <p class="deliverable-route-hint">@L["DeliverableNoRoute"]</p>
+                    }
+                    @if (DeliverableCatalog.TryGet(_newTicketDeliverable, out var selectedCreateDeliverable)
+                         && selectedCreateDeliverable is not null)
+                    {
+                        <p class="deliverable-route-hint">
+                            @L.Get("DeliverableCompletionOutcome", selectedCreateDeliverable.CompletionOutcome)
+                        </p>
                     }
 
                     <button class="deliverable-advanced-toggle" @onclick="() => _showAdvancedAssignee = !_showAdvancedAssignee">
@@ -580,30 +587,73 @@ else
                 </div>
             </div>
 
+            @{
+                var selectedDetailDeliverable = ResolveDeliverable(_selectedTicket.DeliverableType);
+            }
+            @* ── Content type: classification is editable after API/import creation ── *@
+            <div class="ticket-assignee-row">
+                <span class="section-label-sm">@L["ContentType"]</span>
+                <select class="assignee-select"
+                        aria-label="@L["ContentType"]"
+                        value="@(_selectedTicket.DeliverableType ?? "")"
+                        @onchange="OnDeliverableTypeChanged">
+                    <option value="">@L["DeliverableNone"]</option>
+                    @foreach (var deliverable in DeliverableCatalog.GetAll())
+                    {
+                        <option value="@deliverable.Slug">@deliverable.Name</option>
+                    }
+                </select>
+                @if (selectedDetailDeliverable is not null
+                     && !string.IsNullOrWhiteSpace(_selectedTicket.AssignedTo)
+                     && !string.Equals(_selectedTicket.AssignedTo, selectedDetailDeliverable.EntryAgent, StringComparison.OrdinalIgnoreCase))
+                {
+                    <span class="deliverable-route-hint">@L["DeliverableAssigneePreserved"]</span>
+                }
+                else if (selectedDetailDeliverable is not null
+                         && string.Equals(_selectedTicket.Status, "Backlog", StringComparison.OrdinalIgnoreCase)
+                         && string.Equals(_selectedTicket.AssignedTo, selectedDetailDeliverable.EntryAgent, StringComparison.OrdinalIgnoreCase))
+                {
+                    <span class="deliverable-route-hint">@L["DeliverableEntryAgentAssigned"]</span>
+                }
+            </div>
+
             @* ── Pipeline progress: the ticket's place in its deliverable's declared route ── *@
             @{
                 var progress = SelectedTicketProgress();
             }
-            @if (progress is not null && progress.Stages.Count > 0)
+            @if (progress is not null)
             {
                 <div class="deliverable-progress">
                     <span class="section-label-sm">@L["DeliverableProgress"]</span>
-                    <ol class="deliverable-stages">
-                        @for (var i = 0; i < progress.Stages.Count; i++)
-                        {
-                            var stage = progress.Stages[i];
-                            var state = !progress.IsOnRoute ? "unknown"
-                                : i < progress.CurrentIndex ? "done"
-                                : i == progress.CurrentIndex ? "current"
-                                : "upcoming";
-                            <li class="deliverable-stage deliverable-stage-@state" title="@stage.Description">
-                                <span class="deliverable-stage-marker">
-                                    @(state switch { "done" => "✓", "current" => "●", _ => "○" })
-                                </span>
-                                <span class="deliverable-stage-role">@MemberDisplayName(stage.Role)</span>
-                            </li>
-                        }
-                    </ol>
+                    @if (selectedDetailDeliverable is not null)
+                    {
+                        <p class="deliverable-route-hint">
+                            @L.Get("DeliverableCompletionOutcome", selectedDetailDeliverable.CompletionOutcome)
+                        </p>
+                    }
+                    @if (progress.Stages.Count > 0)
+                    {
+                        <ol class="deliverable-stages">
+                            @for (var i = 0; i < progress.Stages.Count; i++)
+                            {
+                                var stage = progress.Stages[i];
+                                var state = !progress.IsOnRoute ? "unknown"
+                                    : i < progress.CurrentIndex ? "done"
+                                    : i == progress.CurrentIndex ? "current"
+                                    : "upcoming";
+                                <li class="deliverable-stage deliverable-stage-@state" title="@stage.Description">
+                                    <span class="deliverable-stage-marker">
+                                        @(state switch { "done" => "✓", "current" => "●", _ => "○" })
+                                    </span>
+                                    <span class="deliverable-stage-role">@MemberDisplayName(stage.Role)</span>
+                                </li>
+                            }
+                        </ol>
+                    }
+                    else
+                    {
+                        <p class="deliverable-route-hint">@L["DeliverableNoRoute"]</p>
+                    }
                     @if (!progress.IsOnRoute && !string.IsNullOrEmpty(_selectedTicket.AssignedTo))
                     {
                         <p class="deliverable-route-hint">
@@ -1059,6 +1109,9 @@ else
         return GigaClaw.Core.Automation.Workflow.DeliverableRoute.Resolve(
             AutomationStore.GetCachedWorkflow(Slug), deliverable);
     }
+
+    private static DeliverableDefinition? ResolveDeliverable(string? value) =>
+        DeliverableCatalog.TryGet(value, out var deliverable) ? deliverable : null;
 
     /// <summary>
     /// Where the open ticket sits in its deliverable's declared route, or null when it has no
@@ -2293,6 +2346,45 @@ else
         PushUndo($"{L["UndoRename"]} #{ticketId}", async () =>
             await TicketService.UpdateTicketAsync(Slug, ticketId, title: oldTitle));
         _editingTitle = false;
+        _selectedTicket = await TicketService.GetTicketAsync(Slug, ticketId);
+        await RefreshTicketsAndTouch();
+        await RebuildPipelineAsync();
+    }
+
+    private async Task OnDeliverableTypeChanged(ChangeEventArgs e)
+    {
+        if (_selectedTicket is null) return;
+
+        var requestedType = e.Value?.ToString() ?? "";
+        var oldType = _selectedTicket.DeliverableType ?? "";
+        var oldAssignee = _selectedTicket.AssignedTo ?? "";
+        var ticketId = _selectedTicket.Id;
+        var selectedDeliverable = ResolveDeliverable(requestedType);
+        var replacesIntakeGroomer = selectedDeliverable is not null
+            && string.Equals(_selectedTicket.Status, "Backlog", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(_selectedTicket.AssignedTo, "groomer", StringComparison.OrdinalIgnoreCase);
+
+        // Unclassified API/n8n intake is assigned to groomer immediately. Selecting a real content
+        // type supersedes that system-owned intake hop; stop its in-flight process before applying
+        // the catalog entry agent so it cannot later overwrite the owner's classification. Any
+        // other assigned or active worker remains untouched.
+        if (replacesIntakeGroomer)
+            AgentRuns.ActiveForTicket(Slug, ticketId)?.Cancellation.Cancel();
+
+        await TicketService.UpdateTicketAsync(
+            Slug,
+            ticketId,
+            author: "owner",
+            assignedTo: replacesIntakeGroomer ? selectedDeliverable!.EntryAgent : null,
+            deliverableType: requestedType);
+
+        PushUndo($"{L["UndoDeliverable"]} #{ticketId}", async () =>
+            await TicketService.UpdateTicketAsync(
+                Slug,
+                ticketId,
+                assignedTo: oldAssignee,
+                deliverableType: oldType));
+
         _selectedTicket = await TicketService.GetTicketAsync(Slug, ticketId);
         await RefreshTicketsAndTouch();
         await RebuildPipelineAsync();
