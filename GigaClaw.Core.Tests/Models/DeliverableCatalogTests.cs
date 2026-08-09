@@ -25,6 +25,7 @@ public sealed class DeliverableCatalogTests
             Assert.False(string.IsNullOrWhiteSpace(definition.Description));
             Assert.False(string.IsNullOrWhiteSpace(definition.EntryAgent));
             Assert.False(string.IsNullOrWhiteSpace(definition.OutputCategory));
+            Assert.False(string.IsNullOrWhiteSpace(definition.CompletionOutcome));
         });
         Assert.True(DeliverableCatalog.Validate(definitions).IsValid);
     }
@@ -89,7 +90,8 @@ public sealed class DeliverableCatalogTests
     {
         var result = DeliverableCatalog.Validate(
         [
-            new DeliverableDefinition("blog-post", "Blog Post", "Article", "blog-writer", "Article"),
+            new DeliverableDefinition("blog-post", "Blog Post", "Article", "blog-writer", "Article")
+                { CompletionOutcome = "CMS draft" },
             new DeliverableDefinition("blog-post", "", "", "", ""),
             new DeliverableDefinition("not/a-slug", "Bad", "Bad", "writer", "Article"),
         ]);
@@ -101,5 +103,24 @@ public sealed class DeliverableCatalogTests
         Assert.Contains(result.Errors, error => error.Contains("requires a description", StringComparison.Ordinal));
         Assert.Contains(result.Errors, error => error.Contains("requires an entry agent", StringComparison.Ordinal));
         Assert.Contains(result.Errors, error => error.Contains("requires an output category", StringComparison.Ordinal));
+        Assert.Contains(result.Errors, error => error.Contains("requires a completion outcome", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("blog-post", true, "CMS")]
+    [InlineData("product-review", true, "CMS")]
+    [InlineData("email-newsletter", false, "not configured")]
+    [InlineData("social-media-content", false, "not configured")]
+    [InlineData("lead-magnet", false, "not configured")]
+    [InlineData("content-series", false, "not configured")]
+    public void Definitions_state_the_truthful_finish_line(
+        string slug,
+        bool hasAutomatedDelivery,
+        string expectedOutcomeText)
+    {
+        Assert.True(DeliverableCatalog.TryGet(slug, out var definition));
+
+        Assert.Equal(hasAutomatedDelivery, definition!.HasAutomatedDelivery);
+        Assert.Contains(expectedOutcomeText, definition.CompletionOutcome, StringComparison.OrdinalIgnoreCase);
     }
 }

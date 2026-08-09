@@ -297,15 +297,15 @@ public class GitHubPrFeedbackTests
             Config = new AutomationConfig(),
         };
 
-        Assert.Equal("do the work", await executor.ComposeDispatchContextAsync(runtime, ticketId, "do the work"));
+        Assert.Equal("do the work", (await executor.ComposeDispatchContextAsync(runtime, ticketId, "do the work")).ExtraContext);
 
         await Trigger(harness).EvaluateAsync(Context(harness, Rule()), CancellationToken.None);
 
         var composed = await executor.ComposeDispatchContextAsync(runtime, ticketId, "do the work");
-        Assert.Contains("Owner feedback", composed!, StringComparison.Ordinal);
-        Assert.Contains("the header row is dropped on empty input", composed, StringComparison.Ordinal);
-        Assert.Contains("octocat", composed, StringComparison.Ordinal);
-        Assert.EndsWith("do the work", composed, StringComparison.Ordinal);
+        Assert.Contains("Owner feedback", composed.ExtraContext!, StringComparison.Ordinal);
+        Assert.Contains("the header row is dropped on empty input", composed.ExtraContext, StringComparison.Ordinal);
+        Assert.Contains("octocat", composed.ExtraContext, StringComparison.Ordinal);
+        Assert.EndsWith("do the work", composed.ExtraContext, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -320,7 +320,7 @@ public class GitHubPrFeedbackTests
             Config = new AutomationConfig(),
         };
 
-        Assert.Equal("do the work", await executor.ComposeDispatchContextAsync(runtime, ticketId, "do the work"));
+        Assert.Equal("do the work", (await executor.ComposeDispatchContextAsync(runtime, ticketId, "do the work")).ExtraContext);
     }
 
     private static ActionExecutor BuildExecutor(GitHubTestHarness h)

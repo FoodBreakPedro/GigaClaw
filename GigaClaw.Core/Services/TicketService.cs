@@ -1071,6 +1071,27 @@ public class TicketService : ITicketDependencyQuery
                     Text = $"changed deliverable type: {old} → {ticket.DeliverableType ?? "none"}"
                 });
             }
+
+            // n8n and other intake paths commonly create an unclassified Backlog ticket for the
+            // owner to classify later. That is the one state where deriving the catalog's entry
+            // agent cannot interrupt work or replace an intentional assignment. An explicit
+            // assignedTo value (including an explicit clear) remains authoritative.
+            if (deliverable is not null
+                && assignedTo is null
+                && string.IsNullOrWhiteSpace(ticket.AssignedTo)
+                && string.Equals(ticket.Status, "Backlog", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!await _memberService.MemberExistsAsync(projectSlug, deliverable.EntryAgent))
+                    throw new InvalidOperationException($"Member '{deliverable.EntryAgent}' does not exist.");
+
+                ticket.AssignedTo = deliverable.EntryAgent;
+                db.ActivityEntries.Add(new ActivityEntry
+                {
+                    TicketId = ticketId,
+                    Author = author,
+                    Text = $"assigned the ticket: nobody → {ticket.AssignedTo} from deliverable type"
+                });
+            }
         }
         ticket.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();

@@ -31,6 +31,22 @@ Evaluate drafts strictly across these 5 categories (minimum 90/100 required to p
 
 - See detailed sub-item bullet points in [Scoring Rubric Reference](references/scoring-rubric-details.md).
 
+### Product Review Contract
+
+When the automation prompt identifies the requested content type as **Product Review**, the draft
+must also satisfy all of the following before it can SHIP:
+
+- explains what was evaluated and the evaluation method;
+- distinguishes direct experience from cited third-party evidence;
+- contains material pros, cons, limitations, price/value context, and meaningful alternatives;
+- says who the product is and is not for;
+- discloses affiliate, sponsorship, or supplied-product relationships;
+- does not imply hands-on testing that the evidence cannot establish;
+- uses the reviewer-validated product-review CMS category.
+
+Treat invented testing, unsupported specifications, or a missing material relationship disclosure as
+P0 trust failures. A merely generic article with a review-shaped title cannot pass as a Product Review.
+
 ## Deterministic Quality Script Integration
 
 Run available python scripts against the target post before scoring:

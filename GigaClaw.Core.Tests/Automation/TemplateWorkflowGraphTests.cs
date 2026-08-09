@@ -91,4 +91,14 @@ public class TemplateWorkflowGraphTests
         var automations = File.ReadAllText(Path.Combine(TemplateAgentsDir(), "automations.json"));
         Assert.DoesNotContain("startWorkflow", automations, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Terminal_does_not_claim_unconfigured_delivery()
+    {
+        var graph = Graph();
+
+        Assert.DoesNotContain(graph.States, state => state.Name == "published");
+        var terminal = Assert.Single(graph.States, state => state.Name == "complete");
+        Assert.Contains("does not imply publishing or sending", terminal.Description, StringComparison.OrdinalIgnoreCase);
+    }
 }

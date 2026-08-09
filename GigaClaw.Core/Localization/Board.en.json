@@ -139,6 +139,7 @@
   "ApprovalConflict": "Ticket #{0} already left Review — the list has been refreshed.",
   "RunsButtonLabel": "Runs",
   "Deliverable": "Deliverable",
+  "ContentType": "Content type",
   "DeliverableNone": "— None (plain ticket) —",
   "DeliverableRuns": "Runs:",
   "DeliverableStartsAtTodo": "Starts automatically once the ticket reaches Todo.",
@@ -146,6 +147,10 @@
   "DeliverableNoRoute": "No pipeline is declared for this deliverable in this workspace.",
   "AdvancedAssignment": "Advanced assignment",
   "DeliverableAssigneeWins": "An explicit assignee overrides the deliverable's entry agent.",
+  "DeliverableAssigneePreserved": "The existing assignee is preserved; changing content type does not restart active work.",
+  "DeliverableEntryAgentAssigned": "The catalog entry agent was assigned because this Backlog ticket was unassigned.",
+  "DeliverableCompletionOutcome": "Completion: {0}",
+  "UndoDeliverable": "Change content type",
   "DeliverableProgress": "Pipeline",
   "DeliverableOffRoute": "Currently with {0}, which is not a stage of this pipeline."
 }

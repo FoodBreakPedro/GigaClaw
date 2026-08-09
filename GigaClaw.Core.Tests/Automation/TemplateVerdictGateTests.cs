@@ -242,8 +242,8 @@ public class TemplateVerdictGateTests
 
         // The re-dispatch carries what was refused, so the producer is told rather than guessing.
         var context = await harness.Executor.ComposeDispatchContextAsync(runtime, ticket.Id, null);
-        Assert.Contains("Repair round 1 of 2", context!, StringComparison.Ordinal);
-        Assert.Contains("failing-acceptance-criterion", context, StringComparison.Ordinal);
+        Assert.Contains("Repair round 1 of 2", context.ExtraContext!, StringComparison.Ordinal);
+        Assert.Contains("failing-acceptance-criterion", context.ExtraContext, StringComparison.Ordinal);
 
         // Round two spends the budget: the arms swap over.
         await harness.CommentAsync(

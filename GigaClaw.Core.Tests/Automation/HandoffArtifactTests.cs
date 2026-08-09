@@ -119,15 +119,15 @@ public class HandoffArtifactTests
         // Before the producing agent posts anything, dispatch context is just the action's own.
         Assert.Equal(
             "review it",
-            await harness.Executor.ComposeDispatchContextAsync(runtime, ticket.Id, "review it"));
+            (await harness.Executor.ComposeDispatchContextAsync(runtime, ticket.Id, "review it")).ExtraContext);
 
         await harness.Tickets.AddCommentAsync(project.Slug, ticket.Id, Comment(), "programmer");
 
         var composed = await harness.Executor.ComposeDispatchContextAsync(runtime, ticket.Id, "review it");
 
-        Assert.Contains("Handoff from programmer", composed!, StringComparison.Ordinal);
-        Assert.Contains("Repair loop returns FIX to the producer", composed, StringComparison.Ordinal);
-        Assert.EndsWith("review it", composed, StringComparison.Ordinal);
+        Assert.Contains("Handoff from programmer", composed.ExtraContext!, StringComparison.Ordinal);
+        Assert.Contains("Repair loop returns FIX to the producer", composed.ExtraContext, StringComparison.Ordinal);
+        Assert.EndsWith("review it", composed.ExtraContext, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -142,13 +142,13 @@ public class HandoffArtifactTests
             Config = new AutomationConfig(),
         };
 
-        Assert.Equal("ctx", await harness.Executor.ComposeDispatchContextAsync(runtime, null, "ctx"));
+        Assert.Equal("ctx", (await harness.Executor.ComposeDispatchContextAsync(runtime, null, "ctx")).ExtraContext);
 
         await harness.Tickets.AddCommentAsync(
             project.Slug, ticket.Id,
             "GIGACLAW-HANDOFF v1 programmer ticket-1 run-x\n\n```json\n{ broken\n```\n", "programmer");
 
-        Assert.Equal("ctx", await harness.Executor.ComposeDispatchContextAsync(runtime, ticket.Id, "ctx"));
+        Assert.Equal("ctx", (await harness.Executor.ComposeDispatchContextAsync(runtime, ticket.Id, "ctx")).ExtraContext);
     }
 
     [Fact]
