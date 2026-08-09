@@ -380,8 +380,19 @@ HTTP 200 for home and the `gamelifteat` board. Existing workspace template propa
 pending and must use non-destructive Agent templates preview/apply for the five paths listed in the
 checkpoint plan.
 
-Exact next action: begin 6B with typed persisted media preferences,
-REST/OpenAPI round trips, and contextual create/edit controls.
+Slice 6B is complete in `daf1785` on `codex/checkpoint-6b-media-preferences`, pending merge. Typed image/video
+preferences now round-trip through SQLite, REST/OpenAPI, shared Claude/Codex prompts, and both Board
+creation surfaces plus ticket edit. Blog, Product Review, Lead Magnet, and Social default to Pexels;
+video is opt-in; ComfyUI/OpenMontage always have a portable prompt/upload fallback. Browser smoke
+proved local selections and the delivery gate survive reload on desktop and fit a narrow viewport.
+
+Verification: focused 54/0; Release build 0 warnings/0 errors; Core 1,633/0; Eval tests 45/0;
+catalog strict and strict-packs exit 0; Eval strict 37 agents, 258 passes, 0 errors, the same one
+baselined prompt-size warning. 6B changes no ProjectTemplate file, so it adds no propagation paths.
+
+Exact next action: implement 6C's durable attachment model and upload/download endpoints, then
+connect Pexels, local generation, and manual upload to that shared record with availability-aware
+fallbacks.
 
 ## End-of-week resume point
 
