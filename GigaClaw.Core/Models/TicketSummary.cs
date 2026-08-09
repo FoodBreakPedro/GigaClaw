@@ -32,6 +32,14 @@ public record TicketSummary(
     /// <summary>Requested user-facing deliverable type (for example <c>blog-post</c>), if set.</summary>
     public string? DeliverableType { get; init; }
 
+    public ImageSourcePreference ImageSource { get; init; }
+
+    public VideoSourcePreference VideoSource { get; init; }
+
+    public bool RequireMediaBeforeDelivery { get; init; }
+
+    internal bool MediaPreferencesCustomized { get; init; }
+
     /// <summary>Tickets that must complete before this ticket can proceed.</summary>
     public List<TicketDependencyInfo> BlockedBy { get; init; } = [];
 

@@ -152,5 +152,22 @@
   "DeliverableCompletionOutcome": "Completion: {0}",
   "UndoDeliverable": "Change content type",
   "DeliverableProgress": "Pipeline",
-  "DeliverableOffRoute": "Currently with {0}, which is not a stage of this pipeline."
+  "DeliverableOffRoute": "Currently with {0}, which is not a stage of this pipeline.",
+  "VisualAssets": "Visual assets",
+  "Images": "Images",
+  "ImageSource": "Image source",
+  "ImageSourcePexels": "Pexels",
+  "ImageSourceLocal": "ComfyUI local",
+  "ImageSourcePromptUpload": "Prompt + upload",
+  "Video": "Video",
+  "VideoSource": "Video source",
+  "VideoSourceLocal": "OpenMontage local",
+  "VideoSourcePromptUpload": "Prompt + upload",
+  "RequireMediaBeforeDelivery": "Require media before delivery",
+  "MediaAutomatic": "Automatic stock search with attribution.",
+  "MediaLocalFallback": "Uses the local Mac when available; otherwise leaves a production prompt for upload.",
+  "MediaPromptUpload": "Produces a portable prompt; attach the finished asset when ready.",
+  "MediaOptional": "Media is optional and will not hold delivery.",
+  "MediaRequired": "Delivery waits until the requested media is ready.",
+  "UndoMediaPreferences": "Change visual assets"
 }

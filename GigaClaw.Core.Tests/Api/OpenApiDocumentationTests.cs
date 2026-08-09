@@ -107,6 +107,15 @@ public sealed class OpenApiDocumentationTests : IClassFixture<OpenApiDocumentati
             .GetProperty(schemaName)
             .GetProperty("properties");
         Assert.True(properties.TryGetProperty("deliverableType", out _));
+        Assert.True(properties.TryGetProperty("imageSource", out _));
+        Assert.True(properties.TryGetProperty("videoSource", out _));
+        Assert.True(properties.TryGetProperty("requireMediaBeforeDelivery", out _));
+
+        var ticketSchema = doc.RootElement.GetProperty("components").GetProperty("schemas").GetProperty("Ticket");
+        var ticketProperties = ticketSchema.GetProperty("properties");
+        Assert.True(ticketProperties.TryGetProperty("imageSource", out _));
+        Assert.True(ticketProperties.TryGetProperty("videoSource", out _));
+        Assert.True(ticketProperties.TryGetProperty("requireMediaBeforeDelivery", out _));
     }
 
     private async Task<JsonDocument> FetchOpenApiDoc()

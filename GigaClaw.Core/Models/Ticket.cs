@@ -10,6 +10,10 @@ public class Ticket
     public int SortOrder { get; set; }
     public string? AssignedTo { get; set; }
     public string? DeliverableType { get; set; }
+    public ImageSourcePreference ImageSource { get; set; }
+    public VideoSourcePreference VideoSource { get; set; }
+    public bool RequireMediaBeforeDelivery { get; set; }
+    internal bool MediaPreferencesCustomized { get; set; }
     public string CreatedBy { get; set; } = "owner";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

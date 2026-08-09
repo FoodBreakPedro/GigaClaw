@@ -431,7 +431,7 @@ else
 
                     <label class="field-label">@L["ContentType"]</label>
                     <div class="assignee-picker-wrapper">
-                        <select class="assignee-select" @bind="_newTicketDeliverable">
+                        <select class="assignee-select" value="@_newTicketDeliverable" @onchange="OnNewDeliverableChanged">
                             <option value="">@L["DeliverableNone"]</option>
                             @foreach (var deliverable in DeliverableCatalog.GetAll())
                             {
@@ -471,6 +471,13 @@ else
                         <p class="deliverable-route-hint">
                             @L.Get("DeliverableCompletionOutcome", selectedCreateDeliverable.CompletionOutcome)
                         </p>
+                        <MediaPreferencesEditor
+                            ImageSource="@_newTicketImageSource"
+                            ImageSourceChanged="OnNewImageSourceChanged"
+                            VideoSource="@_newTicketVideoSource"
+                            VideoSourceChanged="OnNewVideoSourceChanged"
+                            RequireMediaBeforeDelivery="@_newTicketRequireMedia"
+                            RequireMediaBeforeDeliveryChanged="OnNewRequireMediaChanged" />
                     }
 
                     <button class="deliverable-advanced-toggle" @onclick="() => _showAdvancedAssignee = !_showAdvancedAssignee">
@@ -616,6 +623,19 @@ else
                     <span class="deliverable-route-hint">@L["DeliverableEntryAgentAssigned"]</span>
                 }
             </div>
+
+            @if (selectedDetailDeliverable is not null)
+            {
+                <div class="ticket-media-preferences">
+                    <MediaPreferencesEditor
+                        ImageSource="@_selectedTicket.ImageSource"
+                        ImageSourceChanged="OnSelectedImageSourceChanged"
+                        VideoSource="@_selectedTicket.VideoSource"
+                        VideoSourceChanged="OnSelectedVideoSourceChanged"
+                        RequireMediaBeforeDelivery="@_selectedTicket.RequireMediaBeforeDelivery"
+                        RequireMediaBeforeDeliveryChanged="OnSelectedRequireMediaChanged" />
+                </div>
+            }
 
             @* ── Pipeline progress: the ticket's place in its deliverable's declared route ── *@
             @{
@@ -1096,6 +1116,10 @@ else
     private List<Member> _allMembers = [];
     private string _newTicketAssignedTo = "";
     private string _newTicketDeliverable = "";
+    private ImageSourcePreference _newTicketImageSource = ImageSourcePreference.None;
+    private VideoSourcePreference _newTicketVideoSource = VideoSourcePreference.None;
+    private bool _newTicketRequireMedia;
+    private bool _newTicketMediaCustomized;
     private bool _showAdvancedAssignee = false;
 
     /// <summary>
@@ -2202,6 +2226,10 @@ else
         _newTicketPriority = TicketPriority.NiceToHave;
         _newTicketAssignedTo = "";
         _newTicketDeliverable = "";
+        _newTicketImageSource = ImageSourcePreference.None;
+        _newTicketVideoSource = VideoSourcePreference.None;
+        _newTicketRequireMedia = false;
+        _newTicketMediaCustomized = false;
         _showAdvancedAssignee = false;
         _showNewLabelForm = false;
         _showCreatePopup = true;
@@ -2237,7 +2265,10 @@ else
     {
         if (string.IsNullOrWhiteSpace(_newTicketTitle) || _columns.Count == 0) return;
         var status = _columns[0].Name;
-        var ticket = await TicketService.CreateTicketAsync(Slug, _newTicketTitle.Trim(), _newTicketDescription.Trim(), status: status, labelIds: _newTicketLabelIds, priority: _newTicketPriority, assignedTo: string.IsNullOrEmpty(_newTicketAssignedTo) ? null : _newTicketAssignedTo, parentId: _subKanbanParentId, deliverableType: string.IsNullOrEmpty(_newTicketDeliverable) ? null : _newTicketDeliverable);
+        var ticket = await TicketService.CreateTicketAsync(Slug, _newTicketTitle.Trim(), _newTicketDescription.Trim(), status: status, labelIds: _newTicketLabelIds, priority: _newTicketPriority, assignedTo: string.IsNullOrEmpty(_newTicketAssignedTo) ? null : _newTicketAssignedTo, parentId: _subKanbanParentId, deliverableType: string.IsNullOrEmpty(_newTicketDeliverable) ? null : _newTicketDeliverable,
+            imageSource: _newTicketMediaCustomized ? _newTicketImageSource : null,
+            videoSource: _newTicketMediaCustomized ? _newTicketVideoSource : null,
+            requireMediaBeforeDelivery: _newTicketMediaCustomized ? _newTicketRequireMedia : null);
         if (ticket is not null)
             PushUndo($"{L["UndoCreate"]} #{ticket.Id}", async () =>
                 await TicketService.DeleteTicketAsync(Slug, ticket.Id));
@@ -2301,7 +2332,11 @@ else
         var labelIds = t.Labels.Select(l => l.Id).ToList();
         await TicketService.DeleteTicketAsync(Slug, t.Id);
         PushUndo($"{L["UndoDelete"]} #{t.Id}", async () =>
-            await TicketService.CreateTicketAsync(Slug, t.Title, t.Description, t.CreatedBy, t.Status, labelIds, t.Priority, t.AssignedTo, t.ParentId));
+            await TicketService.CreateTicketAsync(Slug, t.Title, t.Description, t.CreatedBy, t.Status, labelIds, t.Priority, t.AssignedTo, t.ParentId,
+                deliverableType: t.DeliverableType,
+                imageSource: t.ImageSource,
+                videoSource: t.VideoSource,
+                requireMediaBeforeDelivery: t.RequireMediaBeforeDelivery));
         _selectedTicket = null;
         _confirmDelete = false;
         await RefreshTicketsAndTouch();
@@ -2388,6 +2423,99 @@ else
         _selectedTicket = await TicketService.GetTicketAsync(Slug, ticketId);
         await RefreshTicketsAndTouch();
         await RebuildPipelineAsync();
+    }
+
+    private void OnNewDeliverableChanged(ChangeEventArgs e)
+    {
+        _newTicketDeliverable = e.Value?.ToString() ?? "";
+        if (_newTicketMediaCustomized) return;
+
+        var deliverable = ResolveDeliverable(_newTicketDeliverable);
+        _newTicketImageSource = deliverable?.DefaultImageSource ?? ImageSourcePreference.None;
+        _newTicketVideoSource = deliverable?.DefaultVideoSource ?? VideoSourcePreference.None;
+        _newTicketRequireMedia = deliverable?.DefaultRequireMediaBeforeDelivery ?? false;
+    }
+
+    private Task OnNewImageSourceChanged(ImageSourcePreference source)
+    {
+        _newTicketImageSource = source;
+        _newTicketMediaCustomized = true;
+        if (source == ImageSourcePreference.None && _newTicketVideoSource == VideoSourcePreference.None)
+            _newTicketRequireMedia = false;
+        return Task.CompletedTask;
+    }
+
+    private Task OnNewVideoSourceChanged(VideoSourcePreference source)
+    {
+        _newTicketVideoSource = source;
+        _newTicketMediaCustomized = true;
+        if (source == VideoSourcePreference.None && _newTicketImageSource == ImageSourcePreference.None)
+            _newTicketRequireMedia = false;
+        return Task.CompletedTask;
+    }
+
+    private Task OnNewRequireMediaChanged(bool required)
+    {
+        _newTicketRequireMedia = required;
+        _newTicketMediaCustomized = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnSelectedImageSourceChanged(ImageSourcePreference source)
+    {
+        if (_selectedTicket is null) return;
+        var require = source == ImageSourcePreference.None
+            && _selectedTicket.VideoSource == VideoSourcePreference.None
+            ? false
+            : _selectedTicket.RequireMediaBeforeDelivery;
+        await UpdateSelectedMediaAsync(source, _selectedTicket.VideoSource, require);
+    }
+
+    private async Task OnSelectedVideoSourceChanged(VideoSourcePreference source)
+    {
+        if (_selectedTicket is null) return;
+        var require = source == VideoSourcePreference.None
+            && _selectedTicket.ImageSource == ImageSourcePreference.None
+            ? false
+            : _selectedTicket.RequireMediaBeforeDelivery;
+        await UpdateSelectedMediaAsync(_selectedTicket.ImageSource, source, require);
+    }
+
+    private async Task OnSelectedRequireMediaChanged(bool required)
+    {
+        if (_selectedTicket is null) return;
+        await UpdateSelectedMediaAsync(_selectedTicket.ImageSource, _selectedTicket.VideoSource, required);
+    }
+
+    private async Task UpdateSelectedMediaAsync(
+        ImageSourcePreference imageSource,
+        VideoSourcePreference videoSource,
+        bool requireMediaBeforeDelivery)
+    {
+        if (_selectedTicket is null) return;
+        var ticketId = _selectedTicket.Id;
+        var oldImage = _selectedTicket.ImageSource;
+        var oldVideo = _selectedTicket.VideoSource;
+        var oldRequire = _selectedTicket.RequireMediaBeforeDelivery;
+
+        await TicketService.UpdateTicketAsync(
+            Slug,
+            ticketId,
+            author: "owner",
+            imageSource: imageSource,
+            videoSource: videoSource,
+            requireMediaBeforeDelivery: requireMediaBeforeDelivery);
+
+        PushUndo($"{L["UndoMediaPreferences"]} #{ticketId}", async () =>
+            await TicketService.UpdateTicketAsync(
+                Slug,
+                ticketId,
+                imageSource: oldImage,
+                videoSource: oldVideo,
+                requireMediaBeforeDelivery: oldRequire));
+
+        _selectedTicket = await TicketService.GetTicketAsync(Slug, ticketId);
+        await RefreshTicketsAndTouch();
     }
 
     private async Task HandleTitleKeyDown(KeyboardEventArgs e)

@@ -152,5 +152,22 @@
   "DeliverableCompletionOutcome": "Resultado: {0}",
   "UndoDeliverable": "Cambiar tipo de contenido",
   "DeliverableProgress": "Pipeline",
-  "DeliverableOffRoute": "Actualmente con {0}, que no es una etapa de este pipeline."
+  "DeliverableOffRoute": "Actualmente con {0}, que no es una etapa de este pipeline.",
+  "VisualAssets": "Recursos visuales",
+  "Images": "Imágenes",
+  "ImageSource": "Fuente de imágenes",
+  "ImageSourcePexels": "Pexels",
+  "ImageSourceLocal": "ComfyUI local",
+  "ImageSourcePromptUpload": "Prompt + subir",
+  "Video": "Vídeo",
+  "VideoSource": "Fuente de vídeo",
+  "VideoSourceLocal": "OpenMontage local",
+  "VideoSourcePromptUpload": "Prompt + subir",
+  "RequireMediaBeforeDelivery": "Requerir recursos antes de entregar",
+  "MediaAutomatic": "Búsqueda automática de stock con atribución.",
+  "MediaLocalFallback": "Usa el Mac local cuando está disponible; si no, deja un prompt de producción para subir.",
+  "MediaPromptUpload": "Produce un prompt portátil; adjunta el recurso terminado cuando esté listo.",
+  "MediaOptional": "Los recursos son opcionales y no detendrán la entrega.",
+  "MediaRequired": "La entrega espera hasta que los recursos solicitados estén listos.",
+  "UndoMediaPreferences": "Cambiar recursos visuales"
 }

@@ -1,0 +1,116 @@
+@using GigaClaw.Core.Models
+@inject LocalizationService L
+
+<div class="media-preferences">
+    <h3 class="media-preferences-title">@L["VisualAssets"]</h3>
+
+    <div class="media-preference-row">
+        <label class="media-preference-toggle">
+            <input type="checkbox"
+                   checked="@(ImageSource != ImageSourcePreference.None)"
+                   @onchange="ToggleImages" />
+            <span>@L["Images"]</span>
+        </label>
+        @if (ImageSource != ImageSourcePreference.None)
+        {
+            <select class="assignee-select media-source-select"
+                    aria-label="@L["ImageSource"]"
+                    value="@ImageSource"
+                    @onchange="ChangeImageSource">
+                <option value="@ImageSourcePreference.Pexels">@L["ImageSourcePexels"]</option>
+                <option value="@ImageSourcePreference.LocalGeneration">@L["ImageSourceLocal"]</option>
+                <option value="@ImageSourcePreference.PromptAndUpload">@L["ImageSourcePromptUpload"]</option>
+            </select>
+            <p class="media-preference-hint">@SourceHint(ImageSource)</p>
+        }
+    </div>
+
+    <div class="media-preference-row">
+        <label class="media-preference-toggle">
+            <input type="checkbox"
+                   checked="@(VideoSource != VideoSourcePreference.None)"
+                   @onchange="ToggleVideo" />
+            <span>@L["Video"]</span>
+        </label>
+        @if (VideoSource != VideoSourcePreference.None)
+        {
+            <select class="assignee-select media-source-select"
+                    aria-label="@L["VideoSource"]"
+                    value="@VideoSource"
+                    @onchange="ChangeVideoSource">
+                <option value="@VideoSourcePreference.OpenMontage">@L["VideoSourceLocal"]</option>
+                <option value="@VideoSourcePreference.PromptAndUpload">@L["VideoSourcePromptUpload"]</option>
+            </select>
+            <p class="media-preference-hint">@SourceHint(VideoSource)</p>
+        }
+    </div>
+
+    @if (ImageSource != ImageSourcePreference.None || VideoSource != VideoSourcePreference.None)
+    {
+        <div class="media-preference-row">
+            <label class="media-preference-toggle">
+                <input type="checkbox"
+                       checked="@RequireMediaBeforeDelivery"
+                       @onchange="ChangeRequired" />
+                <span>@L["RequireMediaBeforeDelivery"]</span>
+            </label>
+            <p class="media-preference-hint">
+                @(RequireMediaBeforeDelivery ? L["MediaRequired"] : L["MediaOptional"])
+            </p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public ImageSourcePreference ImageSource { get; set; }
+    [Parameter] public EventCallback<ImageSourcePreference> ImageSourceChanged { get; set; }
+    [Parameter] public VideoSourcePreference VideoSource { get; set; }
+    [Parameter] public EventCallback<VideoSourcePreference> VideoSourceChanged { get; set; }
+    [Parameter] public bool RequireMediaBeforeDelivery { get; set; }
+    [Parameter] public EventCallback<bool> RequireMediaBeforeDeliveryChanged { get; set; }
+
+    private async Task ToggleImages(ChangeEventArgs args)
+    {
+        var enabled = args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        await ImageSourceChanged.InvokeAsync(enabled ? ImageSourcePreference.Pexels : ImageSourcePreference.None);
+    }
+
+    private async Task ToggleVideo(ChangeEventArgs args)
+    {
+        var enabled = args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        await VideoSourceChanged.InvokeAsync(enabled ? VideoSourcePreference.PromptAndUpload : VideoSourcePreference.None);
+    }
+
+    private async Task ChangeImageSource(ChangeEventArgs args)
+    {
+        if (Enum.TryParse<ImageSourcePreference>(args.Value?.ToString(), out var source))
+            await ImageSourceChanged.InvokeAsync(source);
+    }
+
+    private async Task ChangeVideoSource(ChangeEventArgs args)
+    {
+        if (Enum.TryParse<VideoSourcePreference>(args.Value?.ToString(), out var source))
+            await VideoSourceChanged.InvokeAsync(source);
+    }
+
+    private Task ChangeRequired(ChangeEventArgs args)
+    {
+        var required = args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        return RequireMediaBeforeDeliveryChanged.InvokeAsync(required);
+    }
+
+    private string SourceHint(ImageSourcePreference source) => source switch
+    {
+        ImageSourcePreference.Pexels => L["MediaAutomatic"],
+        ImageSourcePreference.LocalGeneration => L["MediaLocalFallback"],
+        ImageSourcePreference.PromptAndUpload => L["MediaPromptUpload"],
+        _ => "",
+    };
+
+    private string SourceHint(VideoSourcePreference source) => source switch
+    {
+        VideoSourcePreference.OpenMontage => L["MediaLocalFallback"],
+        VideoSourcePreference.PromptAndUpload => L["MediaPromptUpload"],
+        _ => "",
+    };
+}

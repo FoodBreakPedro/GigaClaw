@@ -154,6 +154,21 @@ public class TicketService : ITicketDependencyQuery
         MigrationGate.RunOnceAsync(db, "tickets-deliverable-type", static d =>
             MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN DeliverableType TEXT NULL"));
 
+    private static Task EnsureMediaPreferenceColumnsAsync(TodoDbContext db) =>
+        MigrationGate.RunOnceAsync(db, "tickets-media-preferences", static async d =>
+        {
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN ImageSource TEXT NOT NULL DEFAULT 'None'");
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN VideoSource TEXT NOT NULL DEFAULT 'None'");
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN RequireMediaBeforeDelivery INTEGER NOT NULL DEFAULT 0");
+            await MigrationGate.AddColumnIfMissingAsync(d, "ALTER TABLE Tickets ADD COLUMN MediaPreferencesCustomized INTEGER NOT NULL DEFAULT 0");
+            await d.Database.ExecuteSqlRawAsync("""
+                UPDATE Tickets
+                SET ImageSource = 'Pexels'
+                WHERE COALESCE(MediaPreferencesCustomized, 0) = 0
+                  AND DeliverableType IN ('blog-post', 'product-review', 'lead-magnet', 'social-media-content')
+            """);
+        });
+
     private static async Task EnsureTicketEntityColumnsAsync(TodoDbContext db)
     {
         await EnsureSortOrderColumnAsync(db);
@@ -163,6 +178,7 @@ public class TicketService : ITicketDependencyQuery
         await EnsureAgentUsageColumnsAsync(db);
         await EnsureWorktreeColumnsAsync(db);
         await EnsureDeliverableTypeColumnAsync(db);
+        await EnsureMediaPreferenceColumnsAsync(db);
     }
 
     // Hot-path indexes: status/parent filters run on every board render, and the activity
@@ -186,6 +202,7 @@ public class TicketService : ITicketDependencyQuery
         await EnsureScheduleColumnsAsync(db);
         await EnsureAgentUsageColumnsAsync(db);
         await EnsureDeliverableTypeColumnAsync(db);
+        await EnsureMediaPreferenceColumnsAsync(db);
         await EnsureTicketIndexesAsync(db);
         await EnsureTicketDependenciesTableAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
@@ -218,7 +235,11 @@ public class TicketService : ITicketDependencyQuery
                     ScheduleTarget = t.ScheduleTarget,
                     AgentTokens = t.AgentTokens,
                     AgentCostUsd = t.AgentCostUsd,
-                    DeliverableType = t.DeliverableType
+                    DeliverableType = t.DeliverableType,
+                    ImageSource = t.ImageSource,
+                    VideoSource = t.VideoSource,
+                    RequireMediaBeforeDelivery = t.RequireMediaBeforeDelivery,
+                    MediaPreferencesCustomized = t.MediaPreferencesCustomized
                 })
             .ToListAsync();
 
@@ -637,6 +658,7 @@ public class TicketService : ITicketDependencyQuery
         await EnsureScheduleColumnsAsync(db);
         await EnsureAgentUsageColumnsAsync(db);
         await EnsureDeliverableTypeColumnAsync(db);
+        await EnsureMediaPreferenceColumnsAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return;
         ticket.AgentTokens += tokens;
@@ -649,11 +671,16 @@ public class TicketService : ITicketDependencyQuery
     /// posting only a title, board imports carrying a null status) land in the board's first column
     /// rather than tripping the NOT NULL constraint on Tickets.Status.
     /// </summary>
-    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string? status = null, List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null, string? deliverableType = null)
+    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string? status = null, List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null, string? deliverableType = null, ImageSourcePreference? imageSource = null, VideoSourcePreference? videoSource = null, bool? requireMediaBeforeDelivery = null)
     {
         if (string.IsNullOrWhiteSpace(createdBy))
             throw new InvalidOperationException("The 'createdBy' field is required.");
         var deliverable = ResolveDeliverable(deliverableType);
+        var resolvedImageSource = imageSource ?? DeliverableCatalog.DefaultImageSource(deliverable?.Slug);
+        var resolvedVideoSource = videoSource ?? DeliverableCatalog.DefaultVideoSource(deliverable?.Slug);
+        var resolvedRequireMedia = requireMediaBeforeDelivery
+            ?? DeliverableCatalog.DefaultRequireMediaBeforeDelivery(deliverable?.Slug);
+        ValidateMediaPreferences(resolvedImageSource, resolvedVideoSource, resolvedRequireMedia);
         var resolvedAssignee = string.IsNullOrEmpty(assignedTo) ? deliverable?.EntryAgent : assignedTo;
         if (!string.IsNullOrEmpty(resolvedAssignee) && !await _memberService.MemberExistsAsync(projectSlug, resolvedAssignee))
             throw new InvalidOperationException($"Member '{resolvedAssignee}' does not exist.");
@@ -681,7 +708,11 @@ public class TicketService : ITicketDependencyQuery
             SortOrder = maxSort + 1,
             AssignedTo = resolvedAssignee,
             ParentId = parentId,
-            DeliverableType = deliverable?.Slug
+            DeliverableType = deliverable?.Slug,
+            ImageSource = resolvedImageSource,
+            VideoSource = resolvedVideoSource,
+            RequireMediaBeforeDelivery = resolvedRequireMedia,
+            MediaPreferencesCustomized = imageSource.HasValue || videoSource.HasValue || requireMediaBeforeDelivery.HasValue
         };
         if (labelIds is { Count: > 0 })
         {
@@ -1001,7 +1032,7 @@ public class TicketService : ITicketDependencyQuery
         return ticket;
     }
 
-    public async Task<Ticket?> UpdateTicketAsync(string projectSlug, int ticketId, string? title = null, string? description = null, string author = "owner", TicketPriority? priority = null, string? assignedTo = null, string? deliverableType = null)
+    public async Task<Ticket?> UpdateTicketAsync(string projectSlug, int ticketId, string? title = null, string? description = null, string author = "owner", TicketPriority? priority = null, string? assignedTo = null, string? deliverableType = null, ImageSourcePreference? imageSource = null, VideoSourcePreference? videoSource = null, bool? requireMediaBeforeDelivery = null)
     {
         if (string.IsNullOrWhiteSpace(author))
             throw new InvalidOperationException("The 'author' field is required.");
@@ -1093,6 +1124,35 @@ public class TicketService : ITicketDependencyQuery
                 });
             }
         }
+        var mediaExplicit = imageSource.HasValue || videoSource.HasValue || requireMediaBeforeDelivery.HasValue;
+        if (mediaExplicit)
+        {
+            var nextImageSource = imageSource ?? ticket.ImageSource;
+            var nextVideoSource = videoSource ?? ticket.VideoSource;
+            var nextRequireMedia = requireMediaBeforeDelivery ?? ticket.RequireMediaBeforeDelivery;
+            ValidateMediaPreferences(nextImageSource, nextVideoSource, nextRequireMedia);
+            if (nextImageSource != ticket.ImageSource
+                || nextVideoSource != ticket.VideoSource
+                || nextRequireMedia != ticket.RequireMediaBeforeDelivery)
+            {
+                db.ActivityEntries.Add(new ActivityEntry
+                {
+                    TicketId = ticketId,
+                    Author = author,
+                    Text = $"changed visual assets: images {ticket.ImageSource} → {nextImageSource}; video {ticket.VideoSource} → {nextVideoSource}; required {(nextRequireMedia ? "yes" : "no")}"
+                });
+            }
+            ticket.ImageSource = nextImageSource;
+            ticket.VideoSource = nextVideoSource;
+            ticket.RequireMediaBeforeDelivery = nextRequireMedia;
+            ticket.MediaPreferencesCustomized = true;
+        }
+        else if (deliverableType is not null && !ticket.MediaPreferencesCustomized)
+        {
+            ticket.ImageSource = DeliverableCatalog.DefaultImageSource(ticket.DeliverableType);
+            ticket.VideoSource = DeliverableCatalog.DefaultVideoSource(ticket.DeliverableType);
+            ticket.RequireMediaBeforeDelivery = false;
+        }
         ticket.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return ticket;
@@ -1104,6 +1164,20 @@ public class TicketService : ITicketDependencyQuery
         if (DeliverableCatalog.TryGet(deliverableType, out var deliverable)) return deliverable;
 
         throw new InvalidOperationException($"Unknown deliverable type '{deliverableType.Trim()}'.");
+    }
+
+    private static void ValidateMediaPreferences(
+        ImageSourcePreference imageSource,
+        VideoSourcePreference videoSource,
+        bool requireMediaBeforeDelivery)
+    {
+        if (requireMediaBeforeDelivery
+            && imageSource == ImageSourcePreference.None
+            && videoSource == VideoSourcePreference.None)
+        {
+            throw new InvalidOperationException(
+                "RequireMediaBeforeDelivery cannot be true when both imageSource and videoSource are None.");
+        }
     }
 
     public async Task<bool> DeleteTicketAsync(string projectSlug, int ticketId)

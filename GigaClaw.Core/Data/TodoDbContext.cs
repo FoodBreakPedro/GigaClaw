@@ -49,6 +49,9 @@ public class TodoDbContext : DbContext
             e.HasMany(t => t.Comments).WithOne(c => c.Ticket).HasForeignKey(c => c.TicketId);
             e.HasMany(t => t.Activities).WithOne(a => a.Ticket).HasForeignKey(a => a.TicketId);
             e.HasMany(t => t.Labels).WithMany(l => l.Tickets).UsingEntity("TicketLabels");
+            e.Property(t => t.ImageSource).HasConversion<string>();
+            e.Property(t => t.VideoSource).HasConversion<string>();
+            e.Property(t => t.MediaPreferencesCustomized);
         });
 
         modelBuilder.Entity<TicketDependency>(e =>

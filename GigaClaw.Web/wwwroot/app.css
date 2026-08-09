@@ -1757,6 +1757,7 @@ button:disabled { opacity: 0.4; cursor: default; }
     border: 1px solid var(--border);
     border-radius: 14px;
     width: min(96vw, 560px);
+    max-height: min(92vh, 760px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1779,6 +1780,8 @@ button:disabled { opacity: 0.4; cursor: default; }
     flex-direction: column;
     gap: 1.1rem;
     padding: 1.25rem;
+    min-height: 0;
+    overflow-y: auto;
 }
 .create-popup-footer {
     display: flex;
@@ -5519,6 +5522,56 @@ table.mc-tickets td.prio { white-space: nowrap; color: var(--text-muted); }
   color: var(--text-muted);
 }
 .deliverable-route-runs { color: var(--text-muted); }
+
+.media-preferences {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 0.7rem;
+}
+.media-preferences-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.media-preference-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) minmax(11rem, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+}
+.media-preference-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  justify-self: start;
+  gap: 0.45rem;
+  width: auto;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.media-preference-toggle input { margin: 0; }
+.media-source-select { width: 100%; }
+.media-preference-hint {
+  grid-column: 2;
+  margin: -0.35rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.ticket-media-preferences {
+  padding: 0.7rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.ticket-media-preferences .media-preferences { margin-top: 0; padding-top: 0; border-top: 0; }
+@media (max-width: 560px) {
+  .media-preference-row { grid-template-columns: 1fr; }
+  .media-preference-hint { grid-column: 1; }
+}
 
 .deliverable-advanced-toggle {
   background: none;

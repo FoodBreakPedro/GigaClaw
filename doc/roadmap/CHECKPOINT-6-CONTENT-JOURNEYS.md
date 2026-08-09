@@ -122,6 +122,8 @@ entry agent when started, and its agent can distinguish Blog Post from Product R
 
 ### 6B - media preferences and portable briefs
 
+**Status:** Complete in `daf1785` on `codex/checkpoint-6b-media-preferences`; pending merge/deployment.
+
 - Persist typed image/video preferences with conservative defaults by content type.
 - Expose the same controls on create and edit.
 - Inject the media contract into agent prompts and require portable briefs.
@@ -237,6 +239,50 @@ syncing so the server carries the new embedded hashes and newly introduced refer
 The application deployment is complete. Existing project template propagation is intentionally
 still pending; no server workspace files were changed during the deployment check.
 
-Exact next action: implement 6B's persisted image/video preference contract and expose contextual
-media controls on both create and edit. Do not start durable attachment storage until those values
-round-trip through Core, REST/OpenAPI, and the Board.
+## 6B evidence - 2026-08-09
+
+Delivered:
+
+- Tickets persist typed image source, video source, and require-before-delivery preferences. An
+  internal customization flag preserves explicit choices while allowing uncustomized preferences
+  to follow a changed content type.
+- Blog Post, Product Review, Lead Magnet, and Social Media Content default to Pexels images. Email
+  Newsletter, Content Series, and plain tickets default to no media; video remains opt-in.
+- Idempotent SQLite migration columns use readable enum values and backfill existing eligible
+  deliverables to Pexels without marking them customized.
+- Create, update, list, detail, and OpenAPI contracts round-trip the media fields. Required media
+  with neither an image nor video source is rejected.
+- Project and unified create forms share the same visual-assets editor. Ticket detail exposes the
+  same editor and records undoable updates. The create dialog now has a bounded, scrollable body so
+  expanded controls remain reachable on short and mobile viewports.
+- Both Claude and Codex receive the same fresh/resumed media contract, including engine names,
+  portable brief requirements, and a non-blocking ComfyUI/OpenMontage fallback. Missing local
+  hardware never moves a ticket to Blocked; required media leaves delivery incomplete instead.
+
+Verification:
+
+- Focused Core/API/automation/UI integration suite: 54 passed.
+- Release build: 0 warnings, 0 errors.
+- Full Core Release suite: 1,633 passed.
+- Full Eval Release suite: 45 passed.
+- Catalog `check --strict` and `check --strict-packs`: exit 0.
+- Eval `all --strict`: 37 agents, 258 passes, 0 errors, the same baselined `blog-reviewer`
+  prompt-size warning.
+- Disposable local browser smoke: Blog Post defaulted to Pexels; ComfyUI local, OpenMontage local,
+  and require-before-delivery survived create, detail, and reload. The narrow viewport had no
+  overlap; the only console disconnects were caused by the deliberate local server restart.
+
+Sub-agent assignments:
+
+| Model | Scope | Result |
+|---|---|---|
+| Luna | Typed Core persistence, migration/backfill, REST/OpenAPI contracts, focused tests | Implemented and integrated; 25 focused tests passed |
+| GPT-5.4 | Shared Claude/Codex media prompt propagation and focused tests | Implemented and integrated; 9 focused tests passed |
+
+6B does not modify `ProjectTemplate/Agents/**`, so it adds no propagation paths. The five 6A paths
+above remain pending for existing projects. Deploy the rebuilt application and Core DLL after 6B is
+merged so the schema, API, prompt contract, and UI become active.
+
+Exact next action: implement 6C's durable ticket attachment model and upload/download endpoints,
+then make Pexels, local generation, and manual upload converge on it. Do not add automatic local
+execution until availability detection and the portable fallback are both covered end to end.
