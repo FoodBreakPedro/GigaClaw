@@ -38,6 +38,8 @@ Rules: each lane works in its own git worktree/branch (`lane/cx-runtime`, `lane/
 >
 > **Incremental execution ledger:** [`EXECUTION-PLAN-2026-08-05.md`](EXECUTION-PLAN-2026-08-05.md) — checkpoint commits, tests, propagation impact, sub-agent assignments, and the exact next action.
 >
+> **Checkpoint 6 content journeys:** [`CHECKPOINT-6-CONTENT-JOURNEYS.md`](CHECKPOINT-6-CONTENT-JOURNEYS.md) — owner-approved content classification, truthful outcomes, optional Pexels/OpenMontage media, and incremental handoff gates.
+>
 > **SP-3 gate evidence:** [`SP3-EVIDENCE.md`](SP3-EVIDENCE.md) — what the combined lease/cycle/join/merge integration suite proves, the receipts it observes, and the owner decisions. **Both decisions were recorded on 2026-08-01.**
 
 ## Lane status (living — updated by CL as the merge-queue owner)

@@ -21,7 +21,7 @@ This ledger keeps the remaining GigaClaw work recoverable across sessions and us
 | 3 | Deliverable catalog, ticket persistence, and deterministic entry routing | Complete | `b9f3bf5` through `7236382` |
 | 4 | Deliverable-first ticket creation and human-readable pipeline progress | Complete | `0d636a9`, `58d61eb`, `898aa0d`, `a93d6f2` |
 | 5 | Canonical content routes and bounded translator/content recovery | Complete | `0d22cac`, merged by `3737153` |
-| 6 | End-to-end journey, propagation report, and deployment handoff | Pending | - |
+| 6 | Truthful content journeys, optional media, propagation, and deployment handoff | In progress | [`CHECKPOINT-6-CONTENT-JOURNEYS.md`](CHECKPOINT-6-CONTENT-JOURNEYS.md) |
 | 7 | Security join, Codex budgets, model overrides, and specialist promotion | Pending | - |
 
 ## Checkpoint 0 log
@@ -365,7 +365,7 @@ declared workflow graph.
 
 Remaining user-experience path:
 
-1. **Checkpoint 6:** exercise each public deliverable from ticket creation through its first agent and review/approval exit; produce the final propagation and deployment report.
+1. **Checkpoint 6:** implement the incremental content-journey and optional-media plan in [`CHECKPOINT-6-CONTENT-JOURNEYS.md`](CHECKPOINT-6-CONTENT-JOURNEYS.md), then exercise each public deliverable through its truthful finish line and produce the propagation/deployment report.
 2. **Checkpoint 7:** security-team join, Codex budgets/model overrides, and specialist promotion after the primary content journey is reliable.
 
 Preserved parallel work, not merged:
