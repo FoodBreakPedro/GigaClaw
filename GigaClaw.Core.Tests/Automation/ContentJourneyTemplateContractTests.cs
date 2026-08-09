@@ -35,9 +35,12 @@ public sealed class ContentJourneyTemplateContractTests
     {
         var skill = Asset("blog-reviewer/SKILL.md");
         var rubric = Asset("blog-reviewer/references/scoring-rubric-details.md");
+        var productReview = Asset("blog-reviewer/references/product-review-contract.md");
 
         Assert.Contains("Product Review Contract", skill, StringComparison.Ordinal);
-        Assert.Contains("evaluation method", skill, StringComparison.Ordinal);
+        Assert.Contains("references/product-review-contract.md", skill, StringComparison.Ordinal);
+        Assert.Contains("evaluation method", productReview, StringComparison.Ordinal);
+        Assert.Contains("hands-on testing", productReview, StringComparison.Ordinal);
         Assert.Contains("affiliate", rubric, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("P0 trust failure", rubric, StringComparison.Ordinal);
     }

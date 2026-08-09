@@ -33,19 +33,9 @@ Evaluate drafts strictly across these 5 categories (minimum 90/100 required to p
 
 ### Product Review Contract
 
-When the automation prompt identifies the requested content type as **Product Review**, the draft
-must also satisfy all of the following before it can SHIP:
-
-- explains what was evaluated and the evaluation method;
-- distinguishes direct experience from cited third-party evidence;
-- contains material pros, cons, limitations, price/value context, and meaningful alternatives;
-- says who the product is and is not for;
-- discloses affiliate, sponsorship, or supplied-product relationships;
-- does not imply hands-on testing that the evidence cannot establish;
-- uses the reviewer-validated product-review CMS category.
-
-Treat invented testing, unsupported specifications, or a missing material relationship disclosure as
-P0 trust failures. A merely generic article with a review-shaped title cannot pass as a Product Review.
+When the requested content type is **Product Review**, read and enforce the complete
+[Product Review Contract](references/product-review-contract.md) before scoring. Its evidence and
+disclosure requirements are part of the SHIP gate, not advisory guidance.
 
 ## Deterministic Quality Script Integration
 
