@@ -260,6 +260,19 @@ stack trace when `status` is omitted, because the API passes the DTO's null thro
 `CreateTicketAsync`'s `"Backlog"` default. The same endpoint returns a French error string for a
 missing `createdBy`. Handed to a separate session.
 
+Server constraints resolved (2026-08-07):
+
+Deploying checkpoint 4 exposed two pre-existing bugs in `/home/zabalazone/gigaclaw/bin/update-from-main.sh`. Both are fixed; backup `update-from-main.sh.bak-20260807-cp4`.
+
+- **The poller wedged on any failed deploy.** `git pull --ff-only` advances the checkout *before* the tests run, so a failing test left `src` at the new SHA. The next poll compared `before == remote`, logged `No update needed`, and never retried — the box served a stale build indefinitely while the service, health checks, and poll log all reported green. It happened twice in one evening and stranded production on an Aug 6 build for ~35 minutes. The ERR trap now calls `rollback_src_on_failure`, which rewinds `src` to where the run started so the next poll sees a real delta and retries.
+- **A build/test race failed a green deploy.** `dotnet test GigaClaw.slnx` builds and tests in one pass, so `GigaClaw.Eval.Tests` could start while `GigaClaw.ClaudeMock` was still being written — and `ReplayRunner` execs that binary as the mock claude CLI. It replayed against a half-written `claude.dll` and failed `EveryPipelineFamilyHasAFixtureThatReplaysGreen`, which passed standalone on the same commit on the same box. Now `dotnet build --no-restore` followed by `dotnet test --no-restore --no-build`.
+
+Deployment verified end to end: `0aab610` deployed 22:15:33, `GigaClaw.Core.dll` rebuilt, `/app.css` serving the deliverable rules, `/api/deliverables` returning all six, service active, home HTTP 200.
+
+Known unresolved: `TicketDependencyApiTests.DependencyEndpoints_ExposeCrudProjectionAndStableValidationErrors` fails intermittently **on the server only** (500 from `CreateProjectAsync`, 15 s for a test that runs in 656 ms locally); it passes locally and passed the next server run. Production data was ruled out — `GIGACLAW_DATA_DIR` is set only in the systemd unit, not the login shell — as was stale state, since neither default app-data root exists. With the rollback in place this now self-heals by retrying rather than wedging, but a gate that retries every five minutes on a flake is its own problem.
+
+Not yet propagated: the eight existing workspaces have no `.agents/workflow.json`, so they log `workflow graph: none` and show the deliverable selector without the route preview or stage tracker. `DeliverableRoute` degrades to an empty route by design. New projects get the graph on Initialize.
+
 Exact next action: checkpoint 6 — exercise each public deliverable from creation through its first
 agent and review/approval exit, and produce the final propagation and deployment report.
 

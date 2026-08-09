@@ -55,10 +55,14 @@ needs its own clone, with per-ticket worktrees branching off it.
 output and a running deployment that auto-updates every five minutes. Anything that lets an
 automation merge its own PR removes it.
 
-**Verify the deploy fails closed before increasing throughput here.** A merged PR that does not
-compile would be pulled by the poller within five minutes. The `app-prev-*` directories suggest
-rollback exists; that behaviour has not been tested and should be, before agents are producing
-GigaClaw changes at any volume.
+**The deploy gate fails closed, but it is not yet trustworthy enough for agent-volume changes.**
+Observed 2026-08-07: the pipeline correctly refuses to publish when a test fails, so a merged PR that
+does not compile will not reach production. But two bugs surfaced on the first real exercise — the
+poller wedged permanently after a failed deploy, and a build/test race failed a green commit. Both
+are fixed (see [EXECUTION-PLAN-2026-08-05.md](./EXECUTION-PLAN-2026-08-05.md)). A third is open: at
+least one API test fails intermittently on the server and passes locally. **Fix that flake before
+agents are opening PRs at volume** — with the rollback in place a flaky gate now retries every five
+minutes instead of stopping, so a persistent failure becomes a loop rather than a silent stall.
 
 **Disable `cms-dispatch-on-done` in this project** regardless of when the rest is built. It is a
 content-publishing automation aimed at a fake domain in a project that publishes nothing. Low risk

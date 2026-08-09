@@ -32,7 +32,32 @@ rather than beside it.
 ## Where the graph lives
 `<workspace>/.agents/workflow.json`, beside `automations.json`, because it is the same kind of thing:
 declarative workspace config the engine reads, the owner edits, and a pack may compose into. A
-workspace **without** the file is the normal case and not an error — nothing today requires a graph.
+workspace **without** the file is not an error — nothing requires a graph.
+
+### The shipped graph is declared, not executed
+
+`ProjectTemplate/Agents/workflow.json` ships one graph: routing gates keyed on the entry agent
+`DeliverableCatalog` assigns at ticket creation, then each deliverable's stages. It exists so the
+board can name a deliverable's stages and place a ticket among them — see
+[Kanban UI](./kanban-ui.md) — and it is read through `DeliverableRoute`, never walked.
+
+**No template automation starts a walk, and that is deliberate.** The content pipeline is already
+driven end to end by the handoff automations in `automations.json`. A `task` state materializes a
+sub-ticket assigned to its role, so walking the same tickets would put a second engine on a pipeline
+that already has one, and both would dispatch.
+`TemplateWorkflowGraphTests.Graph_is_declared_only_and_nothing_starts_a_walk` asserts that
+`automations.json` contains no `startWorkflow` action; adding one fails that test, which is the point
+— the reconciliation between walker and handoff automations has to be designed before either can
+drive the same ticket.
+
+Two consequences worth knowing before editing the shipped graph:
+
+- It is validated at **every** `AutomationStore.LoadAsync`, and an invalid graph fails the whole
+  automation reload — a typo here freezes a project on its last good runtime rather than breaking
+  loudly. `TemplateWorkflowGraphTests` is the gate that keeps that from reaching a workspace.
+- The route is **declared** because it cannot be derived. `blog-reviewer-on-review` dispatches with
+  `runAgent` and never reassigns the ticket, so walking `assignTicket` edges over `automations.json`
+  omits the reviewer entirely and reports the blog route one stage short.
 
 ```jsonc
 {
