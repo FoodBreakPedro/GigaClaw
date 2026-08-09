@@ -347,13 +347,9 @@
           "concurrencyGroup": "git",
           "mutuallyExclusiveWith": [],
           "env": {},
-          "model": "claude-sonnet-4-6",
+          "model": "claude-haiku-4-5",
+          "fallbackModel": "gpt-5.4-mini",
           "restoreStatusOnFail": false
-        },
-        {
-          "type": "consolidateAgentMemory",
-          "agent": "code-janitor",
-          "model": "claude-haiku-4-5"
         },
         {
           "type": "commitAgentMemory",
@@ -1022,6 +1018,7 @@
           "mutuallyExclusiveWith": [],
           "env": {},
           "model": "claude-haiku-4-5",
+          "fallbackModel": "gpt-5.4-mini",
           "restoreStatusOnFail": true
         },
         {

@@ -20,6 +20,7 @@
   "ConcurrencyPlaceholder": "codigo, productor, ceo…",
   "MutuallyExclusive": "Mutuamente exclusivo con (grupos, separados por comas)",
   "Model": "Modelo",
+  "ActionFallbackModel": "Modelo alternativo (tras un fallo)",
   "ModelCustom": "(personalizado)",
   "ModelDefault": "(por defecto del miembro)",
   "NewColumn": "Nueva columna",

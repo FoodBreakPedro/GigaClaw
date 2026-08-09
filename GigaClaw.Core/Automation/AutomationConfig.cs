@@ -456,6 +456,9 @@ public sealed class RunAgentActionSpec : ActionSpec
     public string? Context { get; set; }
     public Dictionary<string, string> Env { get; set; } = new();
     public string? Model { get; set; }
+    /// <summary>Optional action-scoped fallback model. When set, it takes precedence over the
+    /// project's fallback and is retried once after the primary model fails.</summary>
+    public string? FallbackModel { get; set; }
     public bool RestoreStatusOnFail { get; set; } = true;
     /// <summary>
     /// R5 (doc/roadmap/lane-codex-runtime.md): when set to <c>"worktree"</c>, the dispatch runs in
@@ -526,6 +529,8 @@ public sealed class ConsolidateAgentMemoryActionSpec : ActionSpec
     /// Null falls back to the CLI default. Distillation is mechanical summarization, so the shipped
     /// template pins a cheap model here rather than paying the parent run's tier twice.</summary>
     public string? Model { get; set; }
+    /// <summary>Optional action-scoped fallback model for the consolidation pass.</summary>
+    public string? FallbackModel { get; set; }
 }
 
 /// <summary>

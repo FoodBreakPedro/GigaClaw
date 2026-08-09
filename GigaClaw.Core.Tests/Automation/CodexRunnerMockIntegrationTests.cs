@@ -103,6 +103,38 @@ public sealed class CodexRunnerMockIntegrationTests
     }
 
     [Fact]
+    public async Task FailedPrimary_RetriesOnceWithActionFallbackModel()
+    {
+        using var temp = new TempDir();
+        var projects = new ProjectService(temp.Path);
+        var project = await projects.CreateProjectAsync("codex-fallback");
+        var workspace = projects.ResolveWorkspacePath(project);
+        Directory.CreateDirectory(workspace);
+        TestSkillBuilder.Create(workspace, "programmer", scenario: "default");
+        Environment.SetEnvironmentVariable("GIGACLAW_CODEX_MOCK_SCENARIO", "primary-model-fails");
+        try
+        {
+            var runner = new CodexRunner(
+                new SessionRegistry(),
+                new AgentRunRegistry(),
+                new RunConcurrencyGate(1),
+                NullLogger<CodexRunner>.Instance);
+            var context = Context(project.Slug, workspace, fallbackModel: "gpt-5.4-mini");
+
+            var run = await runner.RunAsync(context, CancellationToken.None);
+
+            Assert.Equal(AgentRunStatus.Completed, run.Status);
+            Assert.Equal("gpt-5.4-mini", run.Model);
+            Assert.Contains(run.SnapshotBuffer(), e =>
+                e.Kind == "fallback" && e.Text.Contains("gpt-5.4-mini", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("GIGACLAW_CODEX_MOCK_SCENARIO", null);
+        }
+    }
+
+    [Fact]
     public async Task CompletedTurnFollowedByLingeringProcess_CompletesAfterResultExitGrace()
     {
         using var temp = new TempDir();
@@ -165,13 +197,15 @@ public sealed class CodexRunnerMockIntegrationTests
     private static ClaudeRunContext Context(
         string slug,
         string workspace,
-        string? model = "claude-sonnet-4-6") => new()
+        string? model = "claude-sonnet-4-6",
+        string? fallbackModel = null) => new()
     {
         ProjectSlug = slug,
         WorkspacePath = workspace,
         AgentName = "programmer",
         SkillFile = "programmer/SKILL.md",
         Model = model,
+        FallbackModel = fallbackModel,
         MaxRunDuration = TimeSpan.FromSeconds(30),
     };
 }

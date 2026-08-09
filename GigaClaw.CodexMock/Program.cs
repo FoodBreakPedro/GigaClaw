@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 var prompt = await Console.In.ReadToEndAsync();
 var scenario = Environment.GetEnvironmentVariable("GIGACLAW_CODEX_MOCK_SCENARIO") ?? "default";
 var sessionId = ResolveSessionId(args) ?? "019fd288-363e-7093-92f5-cba942f8eb57";
+var model = ResolveOption(args, "--model");
 
 var endpoint = args
     .Select(arg => Regex.Match(arg, @"http://127\.0\.0\.1:\d+/policy/[a-f0-9]+"))
@@ -30,7 +31,8 @@ if (endpoint is not null)
 Write(new { type = "thread.started", thread_id = sessionId });
 Write(new { type = "turn.started" });
 
-if (scenario == "error-exit")
+if (scenario == "error-exit"
+    || (scenario == "primary-model-fails" && model != "gpt-5.4-mini"))
 {
     Write(new { type = "turn.failed", error = new { message = "mock Codex failure" } });
     return 1;
@@ -65,6 +67,12 @@ static string? ResolveSessionId(string[] args)
 {
     var resume = Array.IndexOf(args, "resume");
     return resume >= 0 && resume + 1 < args.Length ? args[resume + 1] : null;
+}
+
+static string? ResolveOption(string[] args, string option)
+{
+    var index = Array.IndexOf(args, option);
+    return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
 }
 
 static void Write(object value) => Console.WriteLine(JsonSerializer.Serialize(value));

@@ -20,6 +20,7 @@
   "ConcurrencyPlaceholder": "code, producer, ceo\u2026",
   "MutuallyExclusive": "Mutually exclusive with (groups, comma-separated)",
   "Model": "Model",
+  "ActionFallbackModel": "Fallback model (after failure)",
   "ModelCustom": "(custom)",
   "ModelDefault": "(member default)",
   "NewColumn": "New column",

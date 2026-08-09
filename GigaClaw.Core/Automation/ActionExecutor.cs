@@ -726,7 +726,9 @@ internal sealed partial class ActionExecutor
         if (await _runState.ShouldSkipAsync(rt, a, firing, agentName, group)) return (true, null, agentName, null);
 
         var project = await _projects.GetProjectAsync(rt.Slug);
-        var fallbackModel = project?.FallbackModel;
+        var fallbackModel = string.IsNullOrWhiteSpace(a.FallbackModel)
+            ? project?.FallbackModel
+            : a.FallbackModel.Trim();
 
         var effectiveModel = a.Model;
         var effectiveEnv = a.Env;
@@ -1226,6 +1228,7 @@ internal sealed partial class ActionExecutor
                     : eventsSummary,
                 SessionScope = scope,
                 Model = spec.Model,
+                FallbackModel = spec.FallbackModel,
                 RetryOnResumeFailure = true,
                 MaxRunDuration = TimeSpan.FromMinutes(30),
             };

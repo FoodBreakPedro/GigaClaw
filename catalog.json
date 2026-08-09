@@ -184,7 +184,7 @@
       "ExplicitModelMapping": "claude-haiku-4-5",
       "ModelCriterion": "Applies formatting and dead-code removal a linter has already located; the diff is mechanical and fully reviewable.",
       "ActionModels": [
-        "claude-sonnet-4-6"
+        "claude-haiku-4-5"
       ],
       "ProjectFallbackRequired": false,
       "Teams": [
@@ -795,8 +795,8 @@
       "Pack": "core",
       "ContractPresent": true,
       "RiskClass": "monitoring",
-      "ExplicitModelMapping": "claude-opus-4-8",
-      "ModelCriterion": "Adversarial reasoning over runtime anomalies nobody told it to look for; the failure mode is not noticing.",
+      "ExplicitModelMapping": "claude-haiku-4-5",
+      "ModelCriterion": "Runs a bounded checklist of read-only health probes; confirmed failures are escalated to the owner rather than diagnosed autonomously.",
       "ActionModels": [
         "claude-haiku-4-5",
         "claude-sonnet-4-6"
@@ -1176,7 +1176,7 @@
         "code-janitor"
       ],
       "Models": [
-        "claude-sonnet-4-6"
+        "claude-haiku-4-5"
       ]
     },
     {

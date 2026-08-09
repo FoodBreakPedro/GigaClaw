@@ -155,6 +155,34 @@ public sealed class CodexRunner : IAgentRunner
                 }
             }
 
+            // Action/project fallback: retry a failed Codex attempt once with the configured
+            // fallback. The fallback is deliberately resolved through the Codex catalog so a
+            // Claude tier alias (for example Haiku) and an explicit gpt-* model both work.
+            if (attempt.Exit != 0
+                && !string.IsNullOrWhiteSpace(ctx.FallbackModel)
+                && CodexModelCatalog.TryResolve(ctx.FallbackModel, out var fallbackModel)
+                && !string.Equals(fallbackModel, model, StringComparison.OrdinalIgnoreCase))
+            {
+                run.Push(new StreamEvent(DateTime.UtcNow, "fallback",
+                    $"Primary model {model} failed — retrying once with {fallbackModel}"));
+                _logger.LogWarning("Codex attempt failed for {Agent} (model={Model}); falling back to {Fallback}",
+                    ctx.AgentName, model, fallbackModel);
+                _sessions.Clear(ctx.WorkspacePath, scopedAgent, ctx.TicketId);
+                sessionId = null;
+                run.SessionId = null;
+                run.ExternalRunId = null;
+                run.Model = fallbackModel;
+                attempt = await SpawnAndWaitAsync(
+                    ctx, run, skillContent, scopedAgent, sessionId, isResume: false,
+                    fallbackModel, policyHooks, ct);
+                if (attempt.Cancelled)
+                {
+                    await PublishPolicyAsync();
+                    _runs.Complete(run.RunId, AgentRunStatus.Stopped, null);
+                    return run;
+                }
+            }
+
             while (ctx.SessionScope == "chat" && attempt.Exit == 0 && run.PendingSteerMessages.Count > 0)
             {
                 var messages = run.DrainPendingSteerMessages();

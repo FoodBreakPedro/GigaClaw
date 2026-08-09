@@ -128,8 +128,8 @@
     "criterion": "Gating verdict on rendered media — the only check standing between a bad render and publication."
   },
   "system-watchdog": {
-    "model": "claude-opus-4-8",
-    "criterion": "Adversarial reasoning over runtime anomalies nobody told it to look for; the failure mode is not noticing."
+    "model": "claude-haiku-4-5",
+    "criterion": "Runs a bounded checklist of read-only health probes; confirmed failures are escalated to the owner rather than diagnosed autonomously."
   },
   "ui-auditor": {
     "model": "claude-opus-4-8",

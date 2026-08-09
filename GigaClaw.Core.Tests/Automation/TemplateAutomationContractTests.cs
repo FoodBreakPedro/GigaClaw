@@ -1098,6 +1098,19 @@ public class TemplateAutomationContractTests
         Assert.DoesNotContain(watchdog.Actions, a => a is ConsolidateAgentMemoryActionSpec);
         var run = Assert.Single(watchdog.Actions.OfType<RunAgentActionSpec>());
         Assert.Equal("claude-haiku-4-5", run.Model);
+        Assert.Equal("gpt-5.4-mini", run.FallbackModel);
+    }
+
+    [Fact]
+    public void Token_policy_the_code_janitor_uses_haiku_with_mini_fallback_without_consolidation()
+    {
+        var config = LoadConfig();
+        var janitor = Assert.Single(config.Automations, a => a.Id == "code-janitor-nightly");
+
+        Assert.DoesNotContain(janitor.Actions, a => a is ConsolidateAgentMemoryActionSpec);
+        var run = Assert.Single(janitor.Actions.OfType<RunAgentActionSpec>());
+        Assert.Equal("claude-haiku-4-5", run.Model);
+        Assert.Equal("gpt-5.4-mini", run.FallbackModel);
     }
 
     /// <summary>

@@ -72,6 +72,10 @@
                     }
                 </select>
             </label>
+            <label>@L["ActionFallbackModel"]
+                <input value="@(s.FallbackModel ?? "")" placeholder="gpt-5.4-mini"
+                       @onchange="e => s.FallbackModel = string.IsNullOrWhiteSpace((string?)e.Value) ? null : ((string)e.Value!).Trim()" />
+            </label>
             break;
         case MoveTicketStatusActionSpec s:
             <label>@L["NewColumn"]
@@ -135,6 +139,14 @@
             </label>
             <label>@L["CsmInstructionFile"]
                 <input placeholder=".agents/memory-consolidation.md" @bind="s.InstructionFile" />
+            </label>
+            <label>@L["Model"]
+                <input value="@(s.Model ?? "")"
+                       @onchange="e => s.Model = string.IsNullOrWhiteSpace((string?)e.Value) ? null : ((string)e.Value!).Trim()" />
+            </label>
+            <label>@L["ActionFallbackModel"]
+                <input value="@(s.FallbackModel ?? "")" placeholder="gpt-5.4-mini"
+                       @onchange="e => s.FallbackModel = string.IsNullOrWhiteSpace((string?)e.Value) ? null : ((string)e.Value!).Trim()" />
             </label>
             break;
         case CreateTicketActionSpec s:
