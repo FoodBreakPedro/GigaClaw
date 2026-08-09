@@ -21,6 +21,9 @@ The tail of the loop is real and verified (2026-08-07):
 - `gigaclaw-main-poll.timer` runs `update-from-main.sh --delivery systemd-poll` every 5 minutes.
 - The script retries health checks for up to 24 seconds, which fixed a false-negative race where the
   probe ran before Kestrel bound port 5230.
+- The script refuses to fetch or pull when its source checkout has tracked, staged, or untracked
+  changes, so its failure rollback cannot erase local work (`2026-08-09` guard test: dirty exit 12,
+  clean dry-run exit 0).
 - Previous application sets are retained as `~/gigaclaw/app-prev-*`, so a bad deploy has something to
   fall back to.
 

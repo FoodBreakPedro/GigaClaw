@@ -19,7 +19,7 @@ This ledger keeps the remaining GigaClaw work recoverable across sessions and us
 | 1 | CMS `categorySlug` and `tags` dispatch, authentication, and placeholder safety | Complete | `b68d020` through `d4c7bcc`; evidence commit follows this ledger update |
 | 2 | Non-destructive `.agents` synchronization with dry-run drift reporting | Complete | `39f50ed` through `2dc4dad`; evidence commit follows this ledger update |
 | 3 | Deliverable catalog, ticket persistence, and deterministic entry routing | Complete | `b9f3bf5` through `7236382` |
-| 4 | Deliverable-first ticket creation and human-readable pipeline progress | Complete | `0d636a9`, `58d61eb`, `+ this ledger update` |
+| 4 | Deliverable-first ticket creation and human-readable pipeline progress | Complete | `0d636a9`, `58d61eb`, `898aa0d`, `a93d6f2` |
 | 5 | Canonical content routes and bounded translator/content recovery | Complete | `0d22cac`, merged by `3737153` |
 | 6 | End-to-end journey, propagation report, and deployment handoff | Pending | - |
 | 7 | Security join, Codex budgets, model overrides, and specialist promotion | Pending | - |
@@ -234,6 +234,11 @@ Delivered:
 - Ticket panel renders declared stages as done/current/upcoming. An assignee that is not a stage —
   the groomer recovery hop, or an owner-assigned specialist — renders **off-route** rather than
   collapsing to stage one, which would report a restart that did not happen.
+- Progress is status-aware: `Review` shows the declared reviewer/approval stage even though the
+  corresponding `runAgent` automation deliberately leaves assignment on the writer, and `Done`
+  marks every declared stage complete.
+- Safe sync reloads the runtime when `workflow.json` changes, independently of whether
+  `automations.json` changed, so an added graph becomes visible without a service restart.
 - Only `blog-post` and `product-review` have a real pipeline. The other four deliverables get an
   honest entry-plus-approval chain whose state descriptions say no further pipeline is configured,
   rather than inventing stages the template does not implement.
@@ -249,16 +254,19 @@ Verification completed:
   do because validation failure aborts the whole automation reload; `deliverableType: "Blog Post"`
   normalized to `blog-post` and derived `blog-writer` while correctly staying in `Backlog`; the
   ticket panel rendered `● blog-writer ○ blog-reviewer ○ blog-seo`.
+- Completion gate (2026-08-09): 29 focused route, Board, and sync API tests passed; the full local
+  solution passed 1,588 Core and 45 Eval tests. A GPT-5.5 read-only review found no correctness
+  issues. One timing-only policy-hook benchmark exceeded its shadow target under the first full
+  run, then passed alone and in the complete rerun.
 
 Content pipeline health check (zabs-server, 2026-08-07): every ticket that reached `ready-for-cms`
 plus `approved` published — gamelifteat 4/4, karalungaming 2/2, zabsconsulting 2/2. Nothing stuck, no
 `Blocked`, no stalled `Review`. The constraint is throughput, not correctness: 8 published pieces
 total with every board empty apart from `Backlog` and `Done`.
 
-Found in passing, not fixed here: `POST /api/projects/{slug}/tickets` returns HTTP 500 with a raw EF
-stack trace when `status` is omitted, because the API passes the DTO's null through and defeats
-`CreateTicketAsync`'s `"Backlog"` default. The same endpoint returns a French error string for a
-missing `createdBy`. Handed to a separate session.
+Found in passing and fixed by follow-up `93a0afc`: `POST /api/projects/{slug}/tickets` now applies
+the `"Backlog"` default when `status` is omitted and maps persistence failures to stable API errors
+instead of exposing a raw EF stack trace.
 
 Server constraints resolved (2026-08-07):
 
@@ -271,7 +279,18 @@ Deployment verified end to end: `0aab610` deployed 22:15:33, `GigaClaw.Core.dll`
 
 Known unresolved: `TicketDependencyApiTests.DependencyEndpoints_ExposeCrudProjectionAndStableValidationErrors` fails intermittently **on the server only** (500 from `CreateProjectAsync`, 15 s for a test that runs in 656 ms locally); it passes locally and passed the next server run. Production data was ruled out — `GIGACLAW_DATA_DIR` is set only in the systemd unit, not the login shell — as was stale state, since neither default app-data root exists. With the rollback in place this now self-heals by retrying rather than wedging, but a gate that retries every five minutes on a flake is its own problem.
 
-Not yet propagated: the eight existing workspaces have no `.agents/workflow.json`, so they log `workflow graph: none` and show the deliverable selector without the route preview or stage tracker. `DeliverableRoute` degrades to an empty route by design. New projects get the graph on Initialize.
+Propagation and deployment completed (2026-08-09): `a93d6f2` passed the zabs-server gate with
+1,588 Core and 45 Eval tests, published, restarted, and returned HTTP 200 for home and board. Safe
+sync added `.agents/workflow.json` to all eight existing projects and updated only the corresponding
+`packs.lock.json` metadata; `automations.json` hashes were unchanged. Every project now loads 19
+states and reports zero remaining applicable sync changes. Backups are under
+`/home/zabalazone/gigaclaw/logs/workflow-propagation-20260809_135842` and
+`workflow-propagation-20260809_135956`.
+
+The server deploy script now refuses automatic updates when the source checkout has tracked,
+staged, or untracked changes, before any fetch/pull or rollback point is recorded. A disposable
+dirty-marker test exited 12 without moving HEAD; a clean dry-run then no-op'd normally. Backup:
+`/home/zabalazone/gigaclaw/bin/update-from-main.sh.bak-20260809-cp4-progress`.
 
 Exact next action: checkpoint 6 — exercise each public deliverable from creation through its first
 agent and review/approval exit, and produce the final propagation and deployment report.
@@ -290,6 +309,14 @@ Do not change any `.agents/*/memory/**` file. After checkpoint 2 is deployed, us
 Checkpoint 2 does not modify `ProjectTemplate/Agents/**`; its propagation list is empty. It does require deploying the rebuilt application and `GigaClaw.Core.dll` so existing projects can use the sync API and Settings flow.
 
 Checkpoint 3 does not modify `ProjectTemplate/Agents/**`; its propagation list is empty. Deploying the rebuilt application adds the ticket column migration, catalog API, and routing behavior.
+
+Checkpoint 4 propagation list for every existing project:
+
+- `.agents/workflow.json` — add the declared 19-state deliverable graph through safe sync.
+
+This file was propagated to all eight zabs-server projects on 2026-08-09. Safe sync changed only the
+new file and `packs.lock.json` metadata, preserved every owner conflict/deletion, reloaded each
+runtime, and left no remaining applicable changes.
 
 Checkpoint 5 propagation list for every existing project:
 
@@ -330,18 +357,28 @@ For zabs-server, pull the merged checkpoint, publish `GigaClaw.Web/GigaClaw.Web.
 
 ## End-of-week resume point
 
-Completed on main through checkpoint 5: R8 Codex fallback, CMS taxonomy dispatch, safe `.agents` sync, deliverable catalog/routing, bounded content recovery, and the refreshed venture-prep operating briefs (`298bfbc`). Checkpoint 4 was deliberately skipped at the owner's direction and remains next.
+Completed on main through checkpoint 5, including the later checkpoint 4 closure: R8 Codex fallback,
+CMS taxonomy dispatch, safe `.agents` sync, deliverable catalog/routing, deliverable-first Board UX,
+status-aware pipeline progress, bounded content recovery, and the refreshed venture-prep operating
+briefs (`298bfbc`). Production is at `a93d6f2`, healthy, and all eight existing projects have the
+declared workflow graph.
 
 Remaining user-experience path:
 
-1. **Checkpoint 4:** deliverable selector in `Board.razor` and `UnifiedBoard.razor`, localized labels, optional advanced assignee override, and readable pipeline progress.
-2. **Checkpoint 6:** exercise each public deliverable from ticket creation through its first agent and review/approval exit; produce the final propagation and deployment report.
-3. **Checkpoint 7:** security-team join, Codex budgets/model overrides, and specialist promotion after the primary content journey is reliable.
+1. **Checkpoint 6:** exercise each public deliverable from ticket creation through its first agent and review/approval exit; produce the final propagation and deployment report.
+2. **Checkpoint 7:** security-team join, Codex budgets/model overrides, and specialist promotion after the primary content journey is reliable.
+
+Preserved parallel work, not merged:
+
+- `codex/action-fallback-wip` at pushed commit `6a35ce0` contains Claude's action-scoped fallback
+  model work. It has focused coverage but has not received the full release gate and is intentionally
+  outside `main`.
+- Local stash `graphify post-commit rebuild for action-fallback-wip` preserves Graphify output that
+  completed after the WIP commit. Local stash `graphify branch-switch rebuild before checkpoint-4
+  completion` preserves the unrelated branch-switch graph rebuild. The older Obsidian/Graphify stash
+  remains untouched.
 
 Known operational constraints and blind spots:
 
-- Existing zabs-server projects currently lack `.agents/packs.lock.json`; safe sync correctly reports manual review instead of adopting ownership. A reviewed baseline-adoption workflow is still needed before those projects can automatically receive checkpoint 1 template changes.
-- `blog-reviewer` still refers to legacy `category` wording in one protocol section, and `content-writer` does not yet document `categorySlug`/`tags`; handle this with the canonical content-route decision in checkpoint 5.
-- Changing `deliverableType` on an existing ticket does not reassign an in-flight worker. This is intentionally conservative; checkpoint 4 must make the distinction visible.
-- The zabs-server deploy probe can run before Kestrel binds port 5230 and record a false failure even though the service becomes healthy. Add bounded health-check retries in the deployment tooling when that server-owned script is next edited.
+- Changing `deliverableType` on an existing ticket does not reassign an in-flight worker. This remains intentionally conservative; the Board's route/progress display exposes the resulting state.
 - The only persistent local changes intentionally left outside these commits are `.obsidian/**` and tracked `graphify-out/**`; do not stage, delete, or untrack them without explicit owner approval.
