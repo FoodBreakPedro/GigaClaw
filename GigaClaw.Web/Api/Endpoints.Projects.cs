@@ -93,7 +93,8 @@ public static partial class Endpoints
                 ? await template.EnsureAgentMembersAsync(slug, members)
                 : [];
             var automationsReloaded = result.AppliedPaths.Contains(".agents/automations.json", StringComparer.Ordinal);
-            if (automationsReloaded)
+            var workflowReloaded = result.AppliedPaths.Contains(".agents/workflow.json", StringComparer.Ordinal);
+            if (automationsReloaded || workflowReloaded)
             {
                 await engine.ReloadProjectAsync(slug);
             }
@@ -102,7 +103,8 @@ public static partial class Endpoints
                 result.Plan,
                 result.AppliedPaths,
                 membersCreated,
-                automationsReloaded));
+                automationsReloaded,
+                workflowReloaded));
         }).WithTags("Projects");
 
         api.MapPost("/projects/{slug}/pause", async (string slug, ProjectService ps) =>

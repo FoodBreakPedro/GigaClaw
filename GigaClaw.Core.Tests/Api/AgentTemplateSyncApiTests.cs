@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using GigaClaw.Core.Automation;
+using GigaClaw.Core.Packs;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using GigaClaw.Web.Api;
 
 namespace GigaClaw.Core.Tests.Api;
@@ -60,8 +63,63 @@ public sealed class AgentTemplateSyncApiTests : IClassFixture<AgentTemplateSyncA
 
         Assert.Empty(applied.RootElement.GetProperty("appliedPaths").EnumerateArray());
         Assert.False(applied.RootElement.GetProperty("automationsReloaded").GetBoolean());
+        Assert.False(applied.RootElement.GetProperty("workflowReloaded").GetBoolean());
         Assert.False(Directory.Exists(Path.Combine(_factory.DataDirectory, "projects", slug, ".agents")));
         Assert.Empty(applied.RootElement.GetProperty("membersCreated").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Applying_a_new_workflow_file_reloads_the_runtime_cache()
+    {
+        var slug = await CreateProjectAsync("Workflow Sync");
+        var initialize = await _client.PostAsJsonAsync(
+            $"/api/projects/{slug}/initialize",
+            new InitializeProjectRequest());
+        initialize.EnsureSuccessStatusCode();
+
+        var workspace = Path.Combine(_factory.DataDirectory, "projects", slug);
+        var workflowPath = Path.Combine(workspace, ".agents", "workflow.json");
+        var lockPath = Path.Combine(workspace, ".agents", PackLockFile.FileName);
+
+        // Model an existing project installed before workflow.json was introduced: neither the
+        // workspace nor its trustworthy core baseline knows the file, so safe sync must add it.
+        File.Delete(workflowPath);
+        var lockFile = PackLockSerializer.Parse(await File.ReadAllTextAsync(lockPath));
+        var core = Assert.Single(lockFile.Packs, pack => pack.Id == CorePack.Id);
+        var oldHashes = core.FileHashes
+            .Where(pair => pair.Key != ".agents/workflow.json")
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        var oldCore = core with { FileHashes = oldHashes };
+        var oldLock = lockFile with
+        {
+            Packs = lockFile.Packs.Select(pack => pack.Id == CorePack.Id ? oldCore : pack).ToArray(),
+        };
+        await File.WriteAllTextAsync(lockPath, PackLockSerializer.ToJson(oldLock));
+
+        using var scope = _factory.Services.CreateScope();
+        var engine = scope.ServiceProvider.GetRequiredService<AutomationEngine>();
+        var store = scope.ServiceProvider.GetRequiredService<AutomationStore>();
+        await engine.ReloadProjectAsync(slug);
+        Assert.Null(store.GetCachedWorkflow(slug));
+
+        var previewResponse = await _client.GetAsync($"/api/projects/{slug}/agent-templates/sync");
+        previewResponse.EnsureSuccessStatusCode();
+        using var preview = JsonDocument.Parse(await previewResponse.Content.ReadAsStringAsync());
+        var token = preview.RootElement.GetProperty("planToken").GetString();
+        Assert.Contains(preview.RootElement.GetProperty("changes").EnumerateArray(), change =>
+            change.GetProperty("relativePath").GetString() == ".agents/workflow.json"
+            && change.GetProperty("kind").GetString() == "Add");
+
+        var applyResponse = await _client.PostAsJsonAsync(
+            $"/api/projects/{slug}/agent-templates/sync",
+            new ApplyAgentTemplateSyncRequest(token!));
+        applyResponse.EnsureSuccessStatusCode();
+        using var applied = JsonDocument.Parse(await applyResponse.Content.ReadAsStringAsync());
+
+        Assert.False(applied.RootElement.GetProperty("automationsReloaded").GetBoolean());
+        Assert.True(applied.RootElement.GetProperty("workflowReloaded").GetBoolean());
+        Assert.True(File.Exists(workflowPath));
+        Assert.NotNull(store.GetCachedWorkflow(slug));
     }
 
     private async Task<string> CreateProjectAsync(string name)

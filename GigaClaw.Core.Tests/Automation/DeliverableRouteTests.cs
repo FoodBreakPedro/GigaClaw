@@ -86,6 +86,39 @@ public class DeliverableRouteTests
         Assert.Equal(1, progress.CurrentIndex);
     }
 
+    [Theory]
+    [InlineData("blog-post", "blog-writer", "blog-reviewer")]
+    [InlineData("email-newsletter", "email-copywriter", "approval-gatekeeper")]
+    public void Review_places_the_ticket_on_the_next_declared_stage(
+        string slug, string assignedTo, string expectedRole)
+    {
+        var progress = DeliverableRoute.Locate(Graph(), Deliverable(slug), assignedTo, "Review");
+
+        Assert.True(progress.IsOnRoute);
+        Assert.False(progress.IsComplete);
+        Assert.Equal(expectedRole, progress.Stages[progress.CurrentIndex].Role);
+    }
+
+    [Fact]
+    public void Review_at_the_last_declared_stage_stays_on_that_stage()
+    {
+        var progress = DeliverableRoute.Locate(
+            Graph(), Deliverable("blog-post"), "blog-seo", "Review");
+
+        Assert.Equal(2, progress.CurrentIndex);
+        Assert.False(progress.IsComplete);
+    }
+
+    [Fact]
+    public void Done_marks_every_declared_stage_complete_even_without_an_assignee()
+    {
+        var progress = DeliverableRoute.Locate(Graph(), Deliverable("blog-post"), null, "Done");
+
+        Assert.True(progress.IsOnRoute);
+        Assert.True(progress.IsComplete);
+        Assert.Equal(progress.Stages.Count, progress.CurrentIndex);
+    }
+
     [Fact]
     public void An_assignee_outside_the_route_is_reported_off_route_not_as_stage_one()
     {
@@ -94,6 +127,14 @@ public class DeliverableRouteTests
         var progress = DeliverableRoute.Locate(Graph(), Deliverable("blog-post"), "groomer");
         Assert.False(progress.IsOnRoute);
         Assert.Equal(3, progress.Stages.Count);
+    }
+
+    [Fact]
+    public void Review_does_not_hide_an_assignee_outside_the_declared_route()
+    {
+        var progress = DeliverableRoute.Locate(Graph(), Deliverable("blog-post"), "groomer", "Review");
+
+        Assert.False(progress.IsOnRoute);
     }
 
     [Fact]

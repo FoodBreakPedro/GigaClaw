@@ -10,7 +10,8 @@ public record AgentTemplateSyncApplyResponse(
     AgentTemplateSyncPlan Plan,
     IReadOnlyList<string> AppliedPaths,
     IReadOnlyList<string> MembersCreated,
-    bool AutomationsReloaded);
+    bool AutomationsReloaded,
+    bool WorkflowReloaded);
 public record CreateTicketRequest(string Title, string CreatedBy, string? Status = null, string Description = "", List<int>? LabelIds = null, TicketPriority Priority = TicketPriority.NiceToHave, string? AssignedTo = null, int? ParentId = null, string? DeliverableType = null);
 public record UpdateTicketRequest(string Author, string? Title = null, string? Description = null, TicketPriority? Priority = null, string? AssignedTo = null, List<int>? LabelIds = null, string? DeliverableType = null);
 public record MoveTicketRequest(string Status, string Author);

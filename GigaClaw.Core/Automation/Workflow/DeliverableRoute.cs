@@ -13,13 +13,15 @@ public sealed record DeliverableStage(string State, string Role, string? Descrip
 /// <summary>
 /// Where a ticket sits among its deliverable's stages. <see cref="CurrentIndex"/> is -1 when the
 /// ticket's assignee is not one of the stages — an owner-assigned specialist, or a recovery hop to
-/// the groomer — which the board must render as "off-route" rather than silently as stage one.
+/// the groomer — which the board must render as "off-route" rather than silently as stage one. A
+/// completed route uses <c>Stages.Count</c>, leaving every declared stage behind the current index.
 /// </summary>
 public sealed record DeliverableProgress(
     IReadOnlyList<DeliverableStage> Stages,
     int CurrentIndex)
 {
     public bool IsOnRoute => CurrentIndex >= 0;
+    public bool IsComplete => Stages.Count > 0 && CurrentIndex == Stages.Count;
 }
 
 /// <summary>
@@ -72,19 +74,33 @@ public static class DeliverableRoute
     }
 
     /// <summary>
-    /// Places <paramref name="assignedTo"/> among the deliverable's stages.
+    /// Places a ticket among the deliverable's stages. Review dispatches in the shipped automation
+    /// run the next agent without reassigning the ticket, so <paramref name="status"/> advances one
+    /// declared stage while preserving off-route detection. Done completes the whole route.
     /// </summary>
     public static DeliverableProgress Locate(
-        WorkflowGraph? graph, DeliverableDefinition? deliverable, string? assignedTo)
+        WorkflowGraph? graph,
+        DeliverableDefinition? deliverable,
+        string? assignedTo,
+        string? status = null)
     {
         var stages = Resolve(graph, deliverable);
+        if (stages.Count > 0 && string.Equals(status, "Done", StringComparison.OrdinalIgnoreCase))
+            return new DeliverableProgress(stages, stages.Count);
+
         if (stages.Count == 0 || string.IsNullOrWhiteSpace(assignedTo))
             return new DeliverableProgress(stages, -1);
 
         for (var i = 0; i < stages.Count; i++)
         {
             if (string.Equals(stages[i].Role, assignedTo, StringComparison.OrdinalIgnoreCase))
-                return new DeliverableProgress(stages, i);
+            {
+                var current = string.Equals(status, "Review", StringComparison.OrdinalIgnoreCase)
+                              && i + 1 < stages.Count
+                    ? i + 1
+                    : i;
+                return new DeliverableProgress(stages, current);
+            }
         }
 
         return new DeliverableProgress(stages, -1);

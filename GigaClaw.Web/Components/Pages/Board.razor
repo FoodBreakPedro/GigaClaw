@@ -1069,7 +1069,7 @@ else
         if (_selectedTicket is null) return null;
         if (!DeliverableCatalog.TryGet(_selectedTicket.DeliverableType, out var deliverable)) return null;
         return GigaClaw.Core.Automation.Workflow.DeliverableRoute.Locate(
-            AutomationStore.GetCachedWorkflow(Slug), deliverable, _selectedTicket.AssignedTo);
+            AutomationStore.GetCachedWorkflow(Slug), deliverable, _selectedTicket.AssignedTo, _selectedTicket.Status);
     }
 
     /// <summary>

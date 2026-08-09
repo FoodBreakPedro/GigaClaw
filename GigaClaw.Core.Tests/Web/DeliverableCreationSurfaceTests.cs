@@ -65,6 +65,13 @@ public class DeliverableCreationSurfaceTests
     }
 
     [Fact]
+    public void Board_progress_uses_ticket_status_as_well_as_assignee()
+    {
+        var source = Pages("Board.razor");
+        Assert.Contains("_selectedTicket.AssignedTo, _selectedTicket.Status", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Every_deliverable_localization_key_the_surfaces_use_exists_in_english()
     {
         // The fallback chain ends at the raw key, so a typo ships "DeliverableRuns" to the user
