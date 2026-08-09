@@ -18,6 +18,7 @@ public static class DeliverableCatalog
         {
             CompletionOutcome = "Draft dispatched to the configured CMS.",
             HasAutomatedDelivery = true,
+            DefaultImageSource = ImageSourcePreference.Pexels,
         },
         new DeliverableDefinition(
             "email-newsletter",
@@ -36,6 +37,7 @@ public static class DeliverableCatalog
             "Social post")
         {
             CompletionOutcome = "Owner-approved social content package. Publishing is not configured.",
+            DefaultImageSource = ImageSourcePreference.Pexels,
         },
         new DeliverableDefinition(
             "product-review",
@@ -46,6 +48,7 @@ public static class DeliverableCatalog
         {
             CompletionOutcome = "Draft dispatched to the configured CMS.",
             HasAutomatedDelivery = true,
+            DefaultImageSource = ImageSourcePreference.Pexels,
         },
         new DeliverableDefinition(
             "lead-magnet",
@@ -55,6 +58,7 @@ public static class DeliverableCatalog
             "Downloadable resource")
         {
             CompletionOutcome = "Owner-approved downloadable package. Distribution is not configured.",
+            DefaultImageSource = ImageSourcePreference.Pexels,
         },
         new DeliverableDefinition(
             "content-series",
@@ -82,6 +86,20 @@ public static class DeliverableCatalog
     /// Returns every supported deliverable in stable display order.
     /// </summary>
     public static IReadOnlyList<DeliverableDefinition> GetAll() => Definitions;
+
+    public static ImageSourcePreference DefaultImageSource(string? deliverableType) =>
+        TryGet(deliverableType, out var definition) && definition is not null
+            ? definition.DefaultImageSource
+            : ImageSourcePreference.None;
+
+    public static VideoSourcePreference DefaultVideoSource(string? deliverableType) =>
+        TryGet(deliverableType, out var definition) && definition is not null
+            ? definition.DefaultVideoSource
+            : VideoSourcePreference.None;
+
+    public static bool DefaultRequireMediaBeforeDelivery(string? deliverableType) =>
+        TryGet(deliverableType, out var definition) && definition is not null
+            && definition.DefaultRequireMediaBeforeDelivery;
 
     /// <summary>
     /// Resolves a user or API supplied deliverable identifier after normalizing harmless separators and casing.

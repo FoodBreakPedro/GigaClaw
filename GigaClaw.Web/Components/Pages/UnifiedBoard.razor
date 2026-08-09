@@ -226,7 +226,7 @@ else
                 <div>
                     <label class="field-label">@L["ContentType"]</label>
                     <div class="assignee-picker-wrapper">
-                        <select class="assignee-select" @bind="_newTicketDeliverable">
+                        <select class="assignee-select" value="@_newTicketDeliverable" @onchange="OnNewDeliverableChanged">
                             <option value="">@L["DeliverableNone"]</option>
                             @foreach (var deliverable in DeliverableCatalog.GetAll())
                             {
@@ -266,6 +266,13 @@ else
                         <p class="deliverable-route-hint">
                             @L.Get("DeliverableCompletionOutcome", selectedCreateDeliverable.CompletionOutcome)
                         </p>
+                        <MediaPreferencesEditor
+                            ImageSource="@_newTicketImageSource"
+                            ImageSourceChanged="OnNewImageSourceChanged"
+                            VideoSource="@_newTicketVideoSource"
+                            VideoSourceChanged="OnNewVideoSourceChanged"
+                            RequireMediaBeforeDelivery="@_newTicketRequireMedia"
+                            RequireMediaBeforeDeliveryChanged="OnNewRequireMediaChanged" />
                     }
                 </div>
                 @if (_newTicketError is not null)
@@ -323,6 +330,10 @@ else
     private string _newTicketDescription = "";
     private TicketPriority _newTicketPriority = TicketPriority.NiceToHave;
     private string _newTicketDeliverable = "";
+    private ImageSourcePreference _newTicketImageSource = ImageSourcePreference.None;
+    private VideoSourcePreference _newTicketVideoSource = VideoSourcePreference.None;
+    private bool _newTicketRequireMedia;
+    private bool _newTicketMediaCustomized;
     private string? _newTicketError;
 
     /// <summary>
@@ -511,6 +522,10 @@ else
         _newTicketDescription = "";
         _newTicketPriority = TicketPriority.NiceToHave;
         _newTicketDeliverable = "";
+        _newTicketImageSource = ImageSourcePreference.None;
+        _newTicketVideoSource = VideoSourcePreference.None;
+        _newTicketRequireMedia = false;
+        _newTicketMediaCustomized = false;
         _newTicketError = null;
         _escCreateTicket?.Dispose();
         _escCreateTicket = EscapeStack.PushWithFocus(JS, () => InvokeAsync(() =>
@@ -545,7 +560,10 @@ else
                 _newTicketDescription.Trim(),
                 status: _newTicketStatus,
                 priority: _newTicketPriority,
-                deliverableType: string.IsNullOrEmpty(_newTicketDeliverable) ? null : _newTicketDeliverable);
+                deliverableType: string.IsNullOrEmpty(_newTicketDeliverable) ? null : _newTicketDeliverable,
+                imageSource: _newTicketMediaCustomized ? _newTicketImageSource : null,
+                videoSource: _newTicketMediaCustomized ? _newTicketVideoSource : null,
+                requireMediaBeforeDelivery: _newTicketMediaCustomized ? _newTicketRequireMedia : null);
 
             if (_lanes is not null)
             {
@@ -565,6 +583,44 @@ else
         {
             _creatingTicket = false;
         }
+    }
+
+    private void OnNewDeliverableChanged(ChangeEventArgs e)
+    {
+        _newTicketDeliverable = e.Value?.ToString() ?? "";
+        if (_newTicketMediaCustomized) return;
+
+        var deliverable = DeliverableCatalog.TryGet(_newTicketDeliverable, out var selected)
+            ? selected
+            : null;
+        _newTicketImageSource = deliverable?.DefaultImageSource ?? ImageSourcePreference.None;
+        _newTicketVideoSource = deliverable?.DefaultVideoSource ?? VideoSourcePreference.None;
+        _newTicketRequireMedia = deliverable?.DefaultRequireMediaBeforeDelivery ?? false;
+    }
+
+    private Task OnNewImageSourceChanged(ImageSourcePreference source)
+    {
+        _newTicketImageSource = source;
+        _newTicketMediaCustomized = true;
+        if (source == ImageSourcePreference.None && _newTicketVideoSource == VideoSourcePreference.None)
+            _newTicketRequireMedia = false;
+        return Task.CompletedTask;
+    }
+
+    private Task OnNewVideoSourceChanged(VideoSourcePreference source)
+    {
+        _newTicketVideoSource = source;
+        _newTicketMediaCustomized = true;
+        if (source == VideoSourcePreference.None && _newTicketImageSource == ImageSourcePreference.None)
+            _newTicketRequireMedia = false;
+        return Task.CompletedTask;
+    }
+
+    private Task OnNewRequireMediaChanged(bool required)
+    {
+        _newTicketRequireMedia = required;
+        _newTicketMediaCustomized = true;
+        return Task.CompletedTask;
     }
 
     private string MemberDisplayName(LaneData lane, string? slug)

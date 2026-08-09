@@ -69,6 +69,9 @@ public sealed class ClaudeRunContext
         ChatTarget = ChatTarget,
         PendingSteerMessages = null,
         RequestedDeliverableType = RequestedDeliverableType,
+        RequestedImageSource = RequestedImageSource,
+        RequestedVideoSource = RequestedVideoSource,
+        RequireMediaBeforeDelivery = RequireMediaBeforeDelivery,
         ImagePaths = null,
         MaxRunDuration = MaxRunDuration,
         LockTimeoutMinutes = LockTimeoutMinutes,
@@ -96,6 +99,15 @@ public sealed class ClaudeRunContext
     /// so agents know the requested content outcome even when multiple deliverables share an entry
     /// agent.</summary>
     public string? RequestedDeliverableType { get; init; }
+
+    /// <summary>Persisted ticket image source preference surfaced as part of the shared media contract.</summary>
+    public ImageSourcePreference RequestedImageSource { get; init; }
+
+    /// <summary>Persisted ticket video source preference surfaced as part of the shared media contract.</summary>
+    public VideoSourcePreference RequestedVideoSource { get; init; }
+
+    /// <summary>When true, the prompt must treat media as a completion requirement, not a nice-to-have.</summary>
+    public bool RequireMediaBeforeDelivery { get; init; }
 
     /// <summary>Absolute paths to user-pasted image files saved under the workspace's channel/tmp. BuildPromptAsync surfaces them under an [Attached images] block; the runner best-effort deletes them after the process exits.</summary>
     public IReadOnlyList<string>? ImagePaths { get; init; }
@@ -837,13 +849,32 @@ public sealed class ClaudeRunner : IAgentRunner
             sb.Append(deliverable);
         }
 
+        var mediaContract = FormatMediaContractBlock(
+            ctx.RequestedImageSource,
+            ctx.RequestedVideoSource,
+            ctx.RequireMediaBeforeDelivery);
+        if (mediaContract is not null)
+        {
+            sb.AppendLine();
+            sb.Append(mediaContract);
+        }
+
         return sb.ToString();
     }
 
     internal static string BuildRequestedDeliverableBlock(ClaudeRunContext ctx)
     {
+        var blocks = new List<string>();
         var deliverable = FormatRequestedDeliverableLine(ctx.RequestedDeliverableType);
-        return deliverable is null ? "" : $"{deliverable}\n";
+        if (deliverable is not null)
+            blocks.Add(deliverable);
+        var mediaContract = FormatMediaContractBlock(
+            ctx.RequestedImageSource,
+            ctx.RequestedVideoSource,
+            ctx.RequireMediaBeforeDelivery);
+        if (mediaContract is not null)
+            blocks.Add(mediaContract);
+        return blocks.Count == 0 ? "" : $"{string.Join("\n", blocks)}\n";
     }
 
     internal static string? FormatRequestedDeliverableLine(string? requestedDeliverableType)
@@ -857,6 +888,50 @@ public sealed class ClaudeRunner : IAgentRunner
 
         return $"Requested content type: {raw}.";
     }
+
+    internal static string? FormatMediaContractBlock(
+        ImageSourcePreference requestedImageSource,
+        VideoSourcePreference requestedVideoSource,
+        bool requireMediaBeforeDelivery)
+    {
+        if (requestedImageSource == ImageSourcePreference.None
+            && requestedVideoSource == VideoSourcePreference.None
+            && !requireMediaBeforeDelivery)
+        {
+            return null;
+        }
+
+        var lines = new List<string>
+        {
+            $"Media contract: image source {FormatImageSource(requestedImageSource)}; video source {FormatVideoSource(requestedVideoSource)}; media required before delivery: {(requireMediaBeforeDelivery ? "yes" : "no")}.",
+            "Include a portable media brief in the ticket artifact: purpose, format or aspect ratio, search terms or generation prompt, alt text or caption, and attribution requirements."
+        };
+
+        if (requestedImageSource == ImageSourcePreference.LocalGeneration
+            || requestedVideoSource == VideoSourcePreference.OpenMontage)
+        {
+            lines.Add("If local generation is unavailable here, produce a portable prompt/upload handoff instead. Never move the ticket to Blocked for local hardware availability. When media is required, leave delivery incomplete until the handoff is fulfilled.");
+        }
+
+        return string.Join("\n", lines);
+    }
+
+    private static string FormatImageSource(ImageSourcePreference source) => source switch
+    {
+        ImageSourcePreference.None => "None",
+        ImageSourcePreference.Pexels => "Pexels",
+        ImageSourcePreference.LocalGeneration => "ComfyUI local",
+        ImageSourcePreference.PromptAndUpload => "prompt and upload",
+        _ => source.ToString()
+    };
+
+    private static string FormatVideoSource(VideoSourcePreference source) => source switch
+    {
+        VideoSourcePreference.None => "None",
+        VideoSourcePreference.OpenMontage => "OpenMontage local",
+        VideoSourcePreference.PromptAndUpload => "prompt and upload",
+        _ => source.ToString()
+    };
 
     internal static string BuildAttachedImagesBlock(ClaudeRunContext ctx)
     {

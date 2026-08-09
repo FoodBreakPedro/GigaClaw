@@ -20,4 +20,10 @@ public sealed record DeliverableDefinition(
     /// Whether the shipped route performs an automated delivery action after content production.
     /// </summary>
     public bool HasAutomatedDelivery { get; init; }
+
+    public ImageSourcePreference DefaultImageSource { get; init; }
+
+    public VideoSourcePreference DefaultVideoSource { get; init; }
+
+    public bool DefaultRequireMediaBeforeDelivery { get; init; }
 }

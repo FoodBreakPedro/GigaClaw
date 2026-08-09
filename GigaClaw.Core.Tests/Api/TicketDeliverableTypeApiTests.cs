@@ -64,6 +64,54 @@ public sealed class TicketDeliverableTypeApiTests :
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
     }
 
+    [Fact]
+    public async Task TicketEndpoints_RoundTripMediaPreferencesAcrossCreateUpdateListAndDetail()
+    {
+        var slug = await CreateProjectAsync("media-api-" + Guid.NewGuid().ToString("N"));
+        foreach (var member in new[] { "blog-writer" })
+        {
+            var memberResponse = await _client.PostAsJsonAsync(
+                $"/api/projects/{slug}/members", new CreateMemberRequest(member));
+            Assert.Equal(HttpStatusCode.Created, memberResponse.StatusCode);
+        }
+        var create = await _client.PostAsJsonAsync(
+            $"/api/projects/{slug}/tickets",
+            new CreateTicketRequest(
+                "Create a visual campaign",
+                "owner",
+                "Backlog",
+                ImageSource: ImageSourcePreference.PromptAndUpload,
+                VideoSource: VideoSourcePreference.OpenMontage,
+                RequireMediaBeforeDelivery: true));
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var created = await create.Content.ReadFromJsonAsync<JsonElement>();
+        var ticketId = created.GetProperty("id").GetInt32();
+        Assert.Equal("PromptAndUpload", created.GetProperty("imageSource").GetString());
+        Assert.Equal("OpenMontage", created.GetProperty("videoSource").GetString());
+        Assert.True(created.GetProperty("requireMediaBeforeDelivery").GetBoolean());
+
+        var list = await _client.GetFromJsonAsync<JsonElement>($"/api/projects/{slug}/tickets");
+        var summary = Assert.Single(list.EnumerateArray());
+        Assert.Equal("PromptAndUpload", summary.GetProperty("imageSource").GetString());
+        Assert.Equal("OpenMontage", summary.GetProperty("videoSource").GetString());
+
+        var detail = await _client.GetFromJsonAsync<JsonElement>($"/api/projects/{slug}/tickets/{ticketId}");
+        Assert.Equal("PromptAndUpload", detail.GetProperty("imageSource").GetString());
+        Assert.Equal("OpenMontage", detail.GetProperty("videoSource").GetString());
+
+        var update = await _client.PatchAsJsonAsync(
+            $"/api/projects/{slug}/tickets/{ticketId}",
+            new UpdateTicketRequest("owner", DeliverableType: "Blog Post"));
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+        var updated = await update.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("PromptAndUpload", updated.GetProperty("imageSource").GetString());
+
+        var invalid = await _client.PostAsJsonAsync(
+            $"/api/projects/{slug}/tickets",
+            new CreateTicketRequest("Invalid media", "owner", "Backlog", RequireMediaBeforeDelivery: true));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+    }
+
     private async Task<string> CreateProjectAsync(string name)
     {
         var response = await _client.PostAsJsonAsync("/api/projects", new CreateProjectRequest(name));

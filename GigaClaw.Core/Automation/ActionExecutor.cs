@@ -400,23 +400,39 @@ internal sealed partial class ActionExecutor
     /// previous run's handoff. An unreadable handoff, verdict or feedback comment is skipped rather
     /// than injected half-parsed, and a ticket with none of them dispatches exactly as before.
     /// </summary>
-    internal sealed record DispatchPromptContext(string? ExtraContext, string? RequestedDeliverableType);
+    internal sealed record DispatchPromptContext(
+        string? ExtraContext,
+        string? RequestedDeliverableType,
+        ImageSourcePreference RequestedImageSource,
+        VideoSourcePreference RequestedVideoSource,
+        bool RequireMediaBeforeDelivery);
 
     internal async Task<DispatchPromptContext> ComposeDispatchContextAsync(ProjectRuntime rt, int? ticketId, string? actionContext)
     {
         if (ticketId is null)
-            return new DispatchPromptContext(actionContext, null);
+            return new DispatchPromptContext(
+                actionContext,
+                null,
+                ImageSourcePreference.None,
+                VideoSourcePreference.None,
+                false);
 
         RunHandoff? handoff = null;
         string? repairBrief = null;
         string? feedbackBrief = null;
         string? requestedDeliverableType = null;
+        var requestedImageSource = ImageSourcePreference.None;
+        var requestedVideoSource = VideoSourcePreference.None;
+        var requireMediaBeforeDelivery = false;
         try
         {
             var ticket = await _tickets.GetTicketAsync(rt.Slug, ticketId.Value);
             if (ticket is not null)
             {
                 requestedDeliverableType = ticket.DeliverableType;
+                requestedImageSource = ticket.ImageSource;
+                requestedVideoSource = ticket.VideoSource;
+                requireMediaBeforeDelivery = ticket.RequireMediaBeforeDelivery;
                 var bodies = ticket.Comments.OrderBy(c => c.CreatedAt).Select(c => c.Content).ToList();
                 handoff = HandoffReader.Latest(bodies);
 
@@ -442,14 +458,24 @@ internal sealed partial class ActionExecutor
         if (handoff is null
             && string.IsNullOrWhiteSpace(repairBrief)
             && string.IsNullOrWhiteSpace(feedbackBrief))
-            return new DispatchPromptContext(actionContext, requestedDeliverableType);
+            return new DispatchPromptContext(
+                actionContext,
+                requestedDeliverableType,
+                requestedImageSource,
+                requestedVideoSource,
+                requireMediaBeforeDelivery);
 
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(repairBrief)) parts.Add(repairBrief);
         if (!string.IsNullOrWhiteSpace(feedbackBrief)) parts.Add(feedbackBrief);
         if (handoff is not null) parts.Add(HandoffReader.Render(handoff));
         if (!string.IsNullOrWhiteSpace(actionContext)) parts.Add(actionContext);
-        return new DispatchPromptContext(string.Join("\n\n", parts), requestedDeliverableType);
+        return new DispatchPromptContext(
+            string.Join("\n\n", parts),
+            requestedDeliverableType,
+            requestedImageSource,
+            requestedVideoSource,
+            requireMediaBeforeDelivery);
     }
 
     // ── Action execution ────────────────────────────────────────────────────
@@ -811,6 +837,9 @@ internal sealed partial class ActionExecutor
             FallbackModel = fallbackModel,
             ExtraContext = dispatchContext.ExtraContext,
             RequestedDeliverableType = dispatchContext.RequestedDeliverableType,
+            RequestedImageSource = dispatchContext.RequestedImageSource,
+            RequestedVideoSource = dispatchContext.RequestedVideoSource,
+            RequireMediaBeforeDelivery = dispatchContext.RequireMediaBeforeDelivery,
             RetryOnResumeFailure = true,
             OllamaValidationError = ollamaValidationError,
             MaxRunDuration = TimeSpan.FromMinutes(30),
