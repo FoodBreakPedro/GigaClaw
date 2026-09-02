@@ -82,14 +82,17 @@ public sealed class TicketInColumnTriggerSpec : TriggerSpec
     public bool Unassigned { get; set; }
     public int DebounceSeconds { get; set; } = 0;
     /// <summary>
-    /// Maximum number of consecutive action-chain completions while a ticket remains
-    /// unchanged in a matching column. Prevents a parked ticket from dispatching forever.
-    /// A ticket edit or status transition resets the counter. Set to 0 to opt out.
+    /// Maximum number of consecutive *successful* action-chain completions while a ticket
+    /// remains unchanged in a matching column. Prevents a parked ticket from dispatching
+    /// forever. A ticket edit or status transition resets the counter; failed chains do not
+    /// count — they back off exponentially instead (see <see cref="RetryBackoffSeconds"/>).
+    /// Set to 0 to opt out.
     /// </summary>
     public int MaxConsecutiveFirings { get; set; } = 3;
     /// <summary>
     /// Minimum delay after either a successful or failed action chain before the same
-    /// unchanged ticket may be dispatched again. This state is persisted across restarts.
+    /// unchanged ticket may be dispatched again. Consecutive failures double this delay,
+    /// capped at 32×. This state is persisted across restarts.
     /// </summary>
     public int RetryBackoffSeconds { get; set; } = 30;
     /// <summary>

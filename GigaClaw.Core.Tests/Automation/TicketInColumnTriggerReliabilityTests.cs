@@ -68,7 +68,7 @@ public class TicketInColumnTriggerReliabilityTests
 
         var first = new TicketInColumnTrigger(spec);
         Assert.Single(await first.EvaluateAsync(ctx, CancellationToken.None));
-        await first.CompleteFiringAsync(ctx, firing, succeeded: false, start);
+        await first.CompleteFiringAsync(ctx, firing, succeeded: true, start);
 
         var afterBackoff = At(ctx, start.AddSeconds(11));
         var restarted = new TicketInColumnTrigger(spec);
@@ -95,7 +95,7 @@ public class TicketInColumnTriggerReliabilityTests
         var (ctx, tickets, ticketId) = await BuildAsync(tmp.Path, spec, start);
         var trigger = new TicketInColumnTrigger(spec);
         var firing = new TriggerFiring(ticketId, "Parked", "Todo");
-        await trigger.CompleteFiringAsync(ctx, firing, succeeded: false, start);
+        await trigger.CompleteFiringAsync(ctx, firing, succeeded: true, start);
 
         var suspended = new TicketInColumnTrigger(spec);
         Assert.Empty(await suspended.EvaluateAsync(At(ctx, start.AddSeconds(1)), CancellationToken.None));
@@ -148,8 +148,8 @@ public class TicketInColumnTriggerReliabilityTests
         var trigger = new TicketInColumnTrigger(spec);
         var firing = new TriggerFiring(ticketId, "Parked", "Todo");
 
-        await trigger.CompleteFiringAsync(ctx, firing, succeeded: false, start);
-        await trigger.CompleteFiringAsync(ctx, firing, succeeded: false, start.AddSeconds(1));
+        await trigger.CompleteFiringAsync(ctx, firing, succeeded: true, start);
+        await trigger.CompleteFiringAsync(ctx, firing, succeeded: true, start.AddSeconds(1));
 
         var ticket = await tickets.GetTicketAsync(ctx.ProjectSlug, ticketId);
         Assert.NotNull(ticket);
@@ -157,5 +157,85 @@ public class TicketInColumnTriggerReliabilityTests
         Assert.Single(
             ticket.Comments,
             c => c.Author == "automation" && c.Content == spec.ExhaustedComment);
+    }
+
+    [Fact]
+    public async Task Failed_chains_do_not_spend_the_attempt_budget()
+    {
+        using var tmp = new TempDir();
+        var start = DateTime.UtcNow;
+        var spec = new TicketInColumnTriggerSpec
+        {
+            Columns = ["Todo"],
+            Seconds = 1,
+            MaxConsecutiveFirings = 1,
+            RetryBackoffSeconds = 0,
+            ExhaustedStatus = "Blocked",
+            ExhaustedComment = "Automation stopped after the retry cap.",
+        };
+        var (ctx, tickets, ticketId) = await BuildAsync(tmp.Path, spec, start);
+        var trigger = new TicketInColumnTrigger(spec);
+        var firing = new TriggerFiring(ticketId, "Parked", "Todo");
+
+        for (var i = 0; i < 3; i++)
+            await trigger.CompleteFiringAsync(ctx, firing, succeeded: false, start.AddSeconds(i));
+
+        var ticket = await tickets.GetTicketAsync(ctx.ProjectSlug, ticketId);
+        Assert.NotNull(ticket);
+        Assert.Equal("Todo", ticket.Status);
+        Assert.Empty(ticket.Comments);
+        Assert.Single(await new TicketInColumnTrigger(spec)
+            .EvaluateAsync(At(ctx, start.AddSeconds(4)), CancellationToken.None));
+
+        await trigger.CompleteFiringAsync(ctx, firing, succeeded: true, start.AddSeconds(5));
+
+        ticket = await tickets.GetTicketAsync(ctx.ProjectSlug, ticketId);
+        Assert.NotNull(ticket);
+        Assert.Equal("Blocked", ticket.Status);
+        Assert.Single(
+            ticket.Comments,
+            c => c.Author == "automation" && c.Content == spec.ExhaustedComment);
+    }
+
+    [Fact]
+    public async Task Failure_backoff_doubles_and_caps_at_32x()
+    {
+        using var tmp = new TempDir();
+        var start = DateTime.UtcNow;
+        var spec = new TicketInColumnTriggerSpec
+        {
+            Columns = ["Todo"],
+            Seconds = 1,
+            MaxConsecutiveFirings = 3,
+            RetryBackoffSeconds = 10,
+        };
+        var (ctx, _, ticketId) = await BuildAsync(tmp.Path, spec, start);
+        var trigger = new TicketInColumnTrigger(spec);
+        var firing = new TriggerFiring(ticketId, "Parked", "Todo");
+
+        await trigger.CompleteFiringAsync(ctx, firing, succeeded: false, start);
+        Assert.Empty(await new TicketInColumnTrigger(spec)
+            .EvaluateAsync(At(ctx, start.AddSeconds(9)), CancellationToken.None));
+        Assert.Single(await new TicketInColumnTrigger(spec)
+            .EvaluateAsync(At(ctx, start.AddSeconds(11)), CancellationToken.None));
+
+        var second = start.AddSeconds(11);
+        await trigger.CompleteFiringAsync(ctx, firing, succeeded: false, second);
+        Assert.Empty(await new TicketInColumnTrigger(spec)
+            .EvaluateAsync(At(ctx, second.AddSeconds(19)), CancellationToken.None));
+        Assert.Single(await new TicketInColumnTrigger(spec)
+            .EvaluateAsync(At(ctx, second.AddSeconds(21)), CancellationToken.None));
+
+        // Streak 6 reaches the 32× cap; further failures must not widen it again.
+        var at = second;
+        for (var i = 0; i < 5; i++)
+        {
+            at = at.AddSeconds(1000);
+            await trigger.CompleteFiringAsync(ctx, firing, succeeded: false, at);
+        }
+        Assert.Empty(await new TicketInColumnTrigger(spec)
+            .EvaluateAsync(At(ctx, at.AddSeconds(319)), CancellationToken.None));
+        Assert.Single(await new TicketInColumnTrigger(spec)
+            .EvaluateAsync(At(ctx, at.AddSeconds(321)), CancellationToken.None));
     }
 }
