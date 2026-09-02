@@ -232,7 +232,7 @@ public class ActionExecutorDeferredCommitTests
     }
 
     [Fact]
-    public async Task Repeated_failed_dispatch_with_restore_reaches_cap_and_blocks_ticket()
+    public async Task Repeated_failed_dispatch_with_restore_backs_off_without_blocking_ticket()
     {
         using var tmp = new TempDir();
         var (executor, rt, tickets, sessions, runs, ticketId) =
@@ -290,11 +290,27 @@ public class ActionExecutorDeferredCommitTests
             rt, automation, firing, CancellationToken.None, trigger, tctx);
         await WaitForRunEndAsync(runs, rt.Slug, TimeSpan.FromSeconds(15));
 
-        var exhausted = await tickets.GetTicketAsync(rt.Slug, ticketId);
-        Assert.NotNull(exhausted);
-        Assert.Equal("Blocked", exhausted.Status);
-        Assert.Single(
-            exhausted.Comments,
+        // Failed dispatches do not spend the MaxConsecutiveFirings budget: the ticket is
+        // restored to its column and stays eligible (with backoff) instead of being parked
+        // in the exhausted status — an agent-harness outage must not block every ticket.
+        var after = await tickets.GetTicketAsync(rt.Slug, ticketId);
+        Assert.NotNull(after);
+        Assert.Equal("Todo", after.Status);
+        Assert.DoesNotContain(
+            after.Comments,
             c => c.Author == "automation" && c.Content == triggerSpec.ExhaustedComment);
+        var later = new TriggerContext
+        {
+            ProjectSlug = tctx.ProjectSlug,
+            WorkspacePath = tctx.WorkspacePath,
+            Automation = tctx.Automation,
+            Tickets = tctx.Tickets,
+            Members = tctx.Members,
+            Sessions = tctx.Sessions,
+            Runs = tctx.Runs,
+            Now = DateTime.UtcNow.AddSeconds(5),
+        };
+        Assert.Single(await new TicketInColumnTrigger(triggerSpec)
+            .EvaluateAsync(later, CancellationToken.None));
     }
 }

@@ -138,7 +138,7 @@ public class TicketInColumnTriggerIntakeTests
 
         var trigger = new TicketInColumnTrigger(spec);
         await trigger.CompleteFiringAsync(
-            f.Context, new TriggerFiring(ticket.Id, "Parked", "Todo"), succeeded: false, start);
+            f.Context, new TriggerFiring(ticket.Id, "Parked", "Todo"), succeeded: true, start);
 
         var after = (await f.Tickets.GetTicketAsync(f.Slug, ticket.Id))!;
         Assert.Equal("groomer", after.AssignedTo);
@@ -169,7 +169,7 @@ public class TicketInColumnTriggerIntakeTests
             f.Slug, "Parked", status: "Todo", assignedTo: "programmer");
 
         await new TicketInColumnTrigger(spec).CompleteFiringAsync(
-            f.Context, new TriggerFiring(ticket.Id, "Parked", "Todo"), succeeded: false, start);
+            f.Context, new TriggerFiring(ticket.Id, "Parked", "Todo"), succeeded: true, start);
 
         var after = (await f.Tickets.GetTicketAsync(f.Slug, ticket.Id))!;
         Assert.Equal("programmer", after.AssignedTo);
@@ -202,13 +202,13 @@ public class TicketInColumnTriggerIntakeTests
             f.Slug, "Parked", status: "Todo", assignedTo: "programmer");
         var firing = new TriggerFiring(ticket.Id, "Parked", "Todo");
 
-        await new TicketInColumnTrigger(spec).CompleteFiringAsync(f.Context, firing, succeeded: false, start);
+        await new TicketInColumnTrigger(spec).CompleteFiringAsync(f.Context, firing, succeeded: true, start);
         Assert.Equal("groomer", (await f.Tickets.GetTicketAsync(f.Slug, ticket.Id))!.AssignedTo);
 
         // Replaying the completion against an unchanged ticket is a no-op, and the ticket is no
         // longer served to the automation that gave up on it.
         var later = At(f.Context, start.AddSeconds(5));
-        await new TicketInColumnTrigger(spec).CompleteFiringAsync(later, firing, succeeded: false, later.Now);
+        await new TicketInColumnTrigger(spec).CompleteFiringAsync(later, firing, succeeded: true, later.Now);
         Assert.Equal("groomer", (await f.Tickets.GetTicketAsync(f.Slug, ticket.Id))!.AssignedTo);
         Assert.Empty(await new TicketInColumnTrigger(spec).EvaluateAsync(later, CancellationToken.None));
     }

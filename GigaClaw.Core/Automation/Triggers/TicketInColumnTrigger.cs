@@ -10,8 +10,11 @@ namespace GigaClaw.Core.Automation.Triggers;
 /// Dedup against active runs is handled by the engine (via AgentRunRegistry).
 /// Optional per-ticket debounce prevents re-firing within a configurable window.
 /// Consecutive outcomes and their retry cooldown are persisted per ticket. By default,
-/// an unchanged ticket is suspended after three completed action chains; editing or
-/// transitioning the ticket resets the attempt series.
+/// an unchanged ticket is suspended after three successfully completed action chains;
+/// editing or transitioning the ticket resets the attempt series. Failed chains never
+/// spend that budget — they widen the retry backoff exponentially instead, so an
+/// infrastructure outage (expired CLI auth, network down) self-heals when it ends
+/// rather than parking every matching ticket in the exhausted status.
 ///
 /// The debounce marker is only written to disk after the full action chain succeeds
 /// via <see cref="CommitFiringAsync"/> — firings skipped by transient gates are retried.
@@ -124,8 +127,24 @@ public sealed class TicketInColumnTrigger : ITrigger
                 var ticketChanged = fingerprint is not null
                     && previousFingerprint is not null
                     && !string.Equals(fingerprint, previousFingerprint, StringComparison.Ordinal);
-                var count = ticketChanged ? 1 : (previous?["count"]?.GetValue<int>() ?? 0) + 1;
+                // Only a completed chain that left the ticket unchanged spends the
+                // MaxConsecutiveFirings budget: that budget parks a ticket the agent runs on
+                // without making progress. A failed chain says nothing about the ticket — when
+                // dispatch itself is broken (expired CLI auth, network down) every attempt
+                // fails instantly, and counting those toward exhaustion blocked every matching
+                // ticket on every board at once. Failures instead grow a streak that doubles
+                // the retry backoff up to 32×, a deliberate trade-off: a dispatch that always
+                // crashes keeps retrying at the capped interval, visible in its own column,
+                // instead of accumulating silently in the exhausted status.
+                var count = ticketChanged
+                    ? (succeeded ? 1 : 0)
+                    : (previous?["count"]?.GetValue<int>() ?? 0) + (succeeded ? 1 : 0);
+                var failureStreak = succeeded
+                    ? 0
+                    : (ticketChanged ? 0 : previous?["failureStreak"]?.GetValue<int>() ?? 0) + 1;
                 var backoff = Math.Max(0, _spec.RetryBackoffSeconds);
+                if (failureStreak > 1)
+                    backoff *= 1 << Math.Min(failureStreak - 1, 5);
                 var previouslyHandled = !ticketChanged
                     && (previous?["exhaustionHandled"]?.GetValue<bool>() ?? false);
                 shouldHandleExhaustion = _spec.MaxConsecutiveFirings > 0
@@ -137,6 +156,7 @@ public sealed class TicketInColumnTrigger : ITrigger
                 attempts[key] = new JsonObject
                 {
                     ["count"] = count,
+                    ["failureStreak"] = failureStreak,
                     ["lastCompletedAt"] = at.ToString("o"),
                     ["nextEligibleAt"] = at.AddSeconds(backoff).ToString("o"),
                     ["ticketFingerprint"] = fingerprint,
