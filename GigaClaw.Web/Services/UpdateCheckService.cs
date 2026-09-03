@@ -53,18 +53,28 @@ public class UpdateCheckService : BackgroundService
         {
             var client = _httpFactory.CreateClient();
             client.DefaultRequestHeaders.UserAgent.ParseAdd("GigaClaw-UpdateCheck");
+            // An update check is never worth holding a connection open for a minute; the default
+            // 100s timeout let a stalled api.github.com call block this task for ~60s per attempt.
+            client.Timeout = TimeSpan.FromSeconds(15);
             var resp = await client.GetFromJsonAsync<GitHubRelease>(
                 "https://api.github.com/repos/FoodBreakPedro/GigaClaw/releases/latest", ct);
             if (resp is not null && !string.IsNullOrWhiteSpace(resp.TagName))
             {
                 _latestVersion = resp.TagName;
-                _settings.UpdateCheckLastRun = DateTime.UtcNow;
                 OnChange?.Invoke();
             }
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Update check failed");
+        }
+        finally
+        {
+            // Stamp the attempt whether or not it succeeded. A repo with no published release
+            // answers 404 forever, and only stamping on success meant retrying every hour for
+            // good. Worst case a transient outage delays discovery of a release by 24h, which is
+            // the cadence this check is already built around.
+            if (!ct.IsCancellationRequested) _settings.UpdateCheckLastRun = DateTime.UtcNow;
         }
     }
 

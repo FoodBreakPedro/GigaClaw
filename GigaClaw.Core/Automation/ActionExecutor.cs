@@ -1482,9 +1482,28 @@ internal sealed partial class ActionExecutor
                 return;
             }
 
-            // Pathspecs cover the new memory/ dir (recursively) and the legacy flat file. Git tolerates
-            // pathspecs for paths that don't exist on disk (e.g. only the dir is present), so list both.
-            var pathArgs = $"\"{relBase}/memory\" \"{relBase}/memory.md\"";
+            // Pathspecs cover the new memory/ dir (recursively) and the legacy flat file. `git diff`
+            // and `git status` tolerate a pathspec matching nothing, but `git add` and
+            // `git commit -- <pathspec>` abort with "did not match any files" — so listing both
+            // unconditionally aborted every commit once an agent had migrated off the flat file
+            // (and git matches files, not directories, so an empty memory/ dir aborts too).
+            // Keep only pathspecs that can actually match: content on disk, or a still-tracked path
+            // so a deletion is staged rather than silently skipped.
+            var specs = new List<string>();
+            foreach (var (rel, abs) in new[] { ($"{relBase}/memory", memoryDirAbs), ($"{relBase}/memory.md", legacyAbs) })
+            {
+                var onDisk = Directory.Exists(abs)
+                    ? Directory.EnumerateFiles(abs, "*", SearchOption.AllDirectories).Any()
+                    : File.Exists(abs);
+                if (onDisk || !string.IsNullOrWhiteSpace((await RunGitAsync(gitCwd, $"ls-files -- \"{rel}\"")).stdout))
+                    specs.Add(rel);
+            }
+            if (specs.Count == 0)
+            {
+                _logger.LogDebug("commitAgentMemory: no committable memory paths for {Agent}", agent);
+                return;
+            }
+            var pathArgs = string.Join(" ", specs.Select(s => $"\"{s}\""));
 
             var gitLock = _gitLocks.GetOrAdd(gitCwd, _ => new SemaphoreSlim(1, 1));
             await gitLock.WaitAsync();
