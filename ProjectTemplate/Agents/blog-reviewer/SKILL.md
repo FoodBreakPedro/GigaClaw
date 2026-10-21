@@ -13,9 +13,9 @@ Detect which applies from the draft's shape: **read the ticket description first
 
 ### AD-7 Protocol Overview
 - Draft lives in ticket description; output is a comment + status/label move.
-- `APPROVE`: Post comment with legacy receipt `CONTENT-REVIEW APPROVE v1 artifact-sha256:<digest>`, typed verdict `GIGACLAW-VERDICT v1 blog-reviewer SHIP artifact-sha256:<digest>` with fenced JSON (`verdict: "SHIP"`, `evidence`: `[{ "kind": "hash", "ref": "sha256:<digest>", "note": "ticket description draft snapshot" }]`), add `ready-for-cms` label, move to `Done`.
-- `REJECT`: Post comment with legacy receipt `CONTENT-REVIEW REJECT cycle N/2 artifact-sha256:<digest>`, typed verdict `GIGACLAW-VERDICT v1 blog-reviewer FIX artifact-sha256:<digest>` with fenced JSON (`verdict: "FIX"`, `evidence`: `[{ "kind": "hash", "ref": "sha256:<digest>", "note": "ticket description draft snapshot" }]`), and move back to `InProgress`. At cycle 2/2, use `Blocked` only when the description holds the readable current draft and the owner receives one specific question with enumerated options.
-- Full step-by-step AD-7 execution rules are in [AD-7 Protocol Reference](references/ad7-protocol.md).
+- `APPROVE`: post the `CONTENT-REVIEW APPROVE v1` + `GIGACLAW-VERDICT v1 blog-reviewer SHIP` receipts with fenced JSON, add the `ready-for-cms` label, move to `Done`.
+- `REJECT`: post the `CONTENT-REVIEW REJECT cycle N/2` + `GIGACLAW-VERDICT v1 blog-reviewer FIX` receipts with fenced JSON, move back to `InProgress`. At cycle 2/2 use `Blocked` only when the description holds the readable current draft and the owner receives one specific question with enumerated options.
+- Exact receipt strings, evidence shape and step-by-step execution rules are in [AD-7 Protocol Reference](references/ad7-protocol.md) — follow it verbatim, do not reconstruct the markers from memory.
 
 ---
 
@@ -51,28 +51,14 @@ python3 .agents/scripts/content_contract.py <filepath> --check-external
 
 ## Category & Tag Validation Protocol
 
-Before scoring, `blog-reviewer` must validate the post frontmatter `categorySlug` and `tags` against the CMS taxonomy.
+Before scoring, validate the post frontmatter `categorySlug` and `tags` against the CMS taxonomy: discover the venture's enabled categories over the anonymous REST API, then resolve the proposed slug against them.
 
-### 1. CMS Category Discovery
-Discover enabled categories for the target venture using anonymous REST calls (using the CMS URL from `.agents/BRAND.md`, defaulting to `https://zabalazone.com`):
-1. `GET https://zabalazone.com/api/ventures?where[slug][equals]=<venture-slug>&limit=1` -> resolve venture ID
-2. `GET https://zabalazone.com/api/categories?where[ventures.venture][in]=<venture-id>&limit=100` -> fetch `availableCategories` (`[{ name, slug }]`)
+- **Valid**: proceed with review.
+- **Near-miss / typo / alias** (e.g. `affiliate-reviews` -> `product-review`): self-correct to the valid slug.
+- **Invalid / new**: **new categories ALWAYS require human approval.** Never auto-create one and never guess a mapping — set verdict `FIX` or `BLOCK`, add veto item `unresolved-category-escalation`, enumerate the owner's options in the report, confirm the description holds the readable draft, and hand off to `owner` in `Blocked`.
+- **Tags**: kebab-case slugs. Unknown tags do **NOT** escalate — CMS intake creates them with `needsReview: true`. Only category additions escalate.
 
-### 2. Category Resolution & Escalation
-- **Valid Category**: Proposed frontmatter `categorySlug` matches an entry in `availableCategories`. Proceed with review.
-- **Near-Miss / Typo / Alias**: If the proposed `categorySlug` is a minor typo or alias of an available category (e.g. `affiliate-reviews` -> `product-review`, `themed-cruises` -> `experience`), self-correct it to the valid matching category slug.
-- **Invalid / New Category**: **New categories ALWAYS require human approval.** Do not auto-create new categories. Instead:
-  1. Set verdict to `FIX` or `BLOCK`.
-  2. Add machine-checkable veto item `unresolved-category-escalation`.
-  3. Include actionable options for the owner in the review report:
-     - **Option 1**: Create new category `<proposed-slug>` in CMS taxonomy.
-     - **Option 2**: Map to an existing available category: `[list of availableCategories]`.
-     - **Option 3**: Reject draft.
-  4. Confirm the ticket description already holds this exact draft (`blog-writer` syncs it at step 7 of its own procedure; re-run `sync_draft_to_description.py` yourself only if the description is missing or stale) — the owner must be able to read the content they are deciding about, not just the error.
-  5. Handoff ticket to `owner` in status `Blocked`. This is a genuine taxonomy decision — never auto-create the category and never guess a mapping.
-
-### 3. Tag Validation
-- **Tags**: Verify tags are formatted as kebab-case slugs. Unknown tags do **NOT** escalate — the CMS intake automatically creates new tags with `needsReview: true`. Only category additions require human escalation.
+- Discovery endpoints, resolution rules and the escalation template are in [Category & Tag Validation Reference](references/category-tag-validation.md).
 
 ## Review Execution Protocol
 
